@@ -6,11 +6,11 @@ import { tts, getVoices } from "edge-tts";
 export const SUPPORTED_VOICES = {
   thiha: {
     name: "Thiha",
-    shortName: "my-MM-ThihaNeural", // Burmese female voice
+    shortName: "my-MM-ThihaNeural", // Burmese male voice
   },
   nilar: {
     name: "Nilar",
-    shortName: "my-MM-NilarNeural", // Burmese male voice
+    shortName: "my-MM-NilarNeural", // Burmese female voice
   },
 };
 

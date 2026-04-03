@@ -6,7 +6,6 @@ import { z } from "zod";
 import { generateSpeech, generateSRT, SUPPORTED_VOICES } from "./tts";
 import { generateSpeechVPS, checkVPSTTSHealth } from "./vps-tts";
 import { saveTtsConversion } from "./db";
-import { storagePut } from "./storage";
 import { ENV } from "./_core/env";
 
 export const appRouter = router({
@@ -23,7 +22,6 @@ export const appRouter = router({
   }),
 
   tts: router({
-
     generateAudio: publicProcedure
       .input(
         z.object({
@@ -36,35 +34,26 @@ export const appRouter = router({
       )
       .mutation(async ({ input }) => {
         try {
-          // Generate audio using VPS TTS if configured, otherwise use built-in
           let audioBuffer: Buffer;
           let vpsAudioUrl: string | undefined;
+
           if (ENV.vpsTtsApiUrl) {
-            // Use VPS TTS server
-            const pitch = input.tone; // Pass as number
-            const rate = Math.round((input.speed - 1) * 100); // Convert speed to rate percentage
-            const vpsResult = await generateSpeechVPS(input.text, input.voice, rate, pitch);
+            const pitch = input.tone;
+            const rate = Math.round((input.speed - 1) * 100);
+            const vpsResult = await generateSpeechVPS(input.text, input.voice, rate, pitch, input.aspectRatio);
             audioBuffer = vpsResult.audioBuffer;
             vpsAudioUrl = vpsResult.audioUrl;
           } else {
-            // Fallback to built-in Edge TTS
             audioBuffer = await generateSpeech(input.text, input.voice, input.speed, input.tone);
+            vpsAudioUrl = "";
           }
 
-          // Always upload audio to S3 for consistent CORS support and preview playback
-          const audioKey = `tts/public/${Date.now()}-${Math.random().toString(36).substring(7)}-audio.mp3`;
-          const s3Result = await storagePut(audioKey, audioBuffer, "audio/mpeg");
-          const audioUrl = s3Result.url;
+          // Use VPS audio URL directly, skip S3
+          const audioUrl = vpsAudioUrl || "";
 
           // Generate SRT
           const srtContent = generateSRT(input.text, input.speed);
-          const srtBuffer = Buffer.from(srtContent, "utf-8");
-
-          // Upload SRT to S3 (public access, no user tracking)
-          const srtKey = `tts/public/${Date.now()}-${Math.random().toString(36).substring(7)}-subtitles.srt`;
-          const { url: srtUrl } = await storagePut(srtKey, srtBuffer, "text/plain");
-
-          // No database tracking for public access
+          const srtUrl = "";
 
           return {
             success: true,
@@ -88,19 +77,18 @@ export const appRouter = router({
       )
       .mutation(async ({ input }) => {
         try {
-          // Use a short test phrase
           const testText = "မြန်မာ စာသားကို အသံပြောင်းပြီး SRT ဖိုင်ထုတ်ပေးပါသည်။";
           let audioBuffer: Buffer;
+
           if (ENV.vpsTtsApiUrl) {
-            // Use VPS TTS server
-            const pitch = input.tone; // Pass as number
-            const rate = Math.round((input.speed - 1) * 100); // Convert speed to rate percentage
+            const pitch = input.tone;
+            const rate = Math.round((input.speed - 1) * 100);
             const vpsResult = await generateSpeechVPS(testText, input.voice, rate, pitch);
             audioBuffer = vpsResult.audioBuffer;
           } else {
-            // Fallback to built-in Edge TTS
             audioBuffer = await generateSpeech(testText, input.voice, input.speed, input.tone);
           }
+
           return {
             success: true,
             audio: audioBuffer.toString("base64"),
