@@ -1,9 +1,8 @@
 import { useState, useRef } from "react";
 import { trpc } from "@/lib/trpc";
-import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Download, Play, Volume2 } from "lucide-react";
+import { Loader2, Download, Volume2 } from "lucide-react";
 
 export default function TTSGenerator() {
   const [text, setText] = useState("");
@@ -11,47 +10,38 @@ export default function TTSGenerator() {
   const [tone, setTone] = useState(0);
   const [speed, setSpeed] = useState(1.0);
   const [aspectRatio, setAspectRatio] = useState<"9:16" | "16:9">("16:9");
-  const [previewAudio, setPreviewAudio] = useState<string | null>(null);
-  const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
-  const [generatedFiles, setGeneratedFiles] = useState<{ audioUrl: string; srtUrl: string; srtContent?: string } | null>(null);
+  const [generatedFiles, setGeneratedFiles] = useState<{
+    audioObjectUrl: string;
+    srtContent: string;
+    durationMs: number;
+  } | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const generateMutation = trpc.tts.generateAudio.useMutation();
-  const previewMutation = trpc.tts.preview.useMutation();
-  const voicesQuery = trpc.tts.getVoices.useQuery();
-
-  const handlePreview = async () => {
-    try {
-      const result = await previewMutation.mutateAsync({ voice, tone, speed });
-      if (result.success) {
-        const audioData = Buffer.from(result.audio, "base64");
-        const blob = new Blob([audioData], { type: result.mimeType });
-        const url = URL.createObjectURL(blob);
-        setPreviewAudio(url);
-        setIsPreviewPlaying(true);
-        if (audioRef.current) {
-          audioRef.current.src = url;
-          audioRef.current.play();
-        }
-      }
-    } catch (error) {
-      console.error("Preview error:", error);
-    }
-  };
 
   const handleGenerate = async () => {
-    if (!text.trim()) {
-      alert("Please enter some text");
-      return;
-    }
+    if (!text.trim()) { alert("Please enter some text"); return; }
     try {
       const result = await generateMutation.mutateAsync({ text, voice, tone, speed, aspectRatio });
       if (result.success) {
+        const binary = atob(result.audioBase64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        const blob = new Blob([bytes], { type: result.mimeType });
+        const audioObjectUrl = URL.createObjectURL(blob);
+
         setGeneratedFiles({
-          audioUrl: result.audioUrl,
-          srtUrl: result.srtUrl,
+          audioObjectUrl,
           srtContent: result.srtContent,
+          durationMs: result.durationMs,
         });
+
+        setTimeout(() => {
+          if (audioRef.current) {
+            audioRef.current.src = audioObjectUrl;
+            audioRef.current.load();
+          }
+        }, 100);
       }
     } catch (error) {
       console.error("Generation error:", error);
@@ -59,36 +49,29 @@ export default function TTSGenerator() {
     }
   };
 
-  const handleDownloadAudio = async () => {
-    if (!generatedFiles?.audioUrl) return;
-    try {
-      const res = await fetch(generatedFiles.audioUrl);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `Myanmar_TTS_${Date.now()}.mp3`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Download error:", error);
-      window.open(generatedFiles.audioUrl, "_blank");
-    }
+  const handleDownloadAudio = () => {
+    if (!generatedFiles?.audioObjectUrl) return;
+    const a = document.createElement("a");
+    a.href = generatedFiles.audioObjectUrl;
+    a.download = `Myanmar_TTS_${Date.now()}.mp3`;
+    a.click();
   };
 
   const handleDownloadSRT = () => {
     if (!generatedFiles?.srtContent) return;
-    const blob = new Blob([generatedFiles.srtContent], { type: "text/plain" });
+    const blob = new Blob([generatedFiles.srtContent], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `Myanmar_TTS_${Date.now()}.srt`;
-    document.body.appendChild(a);
+    a.download = `Myanmar_TTS_${aspectRatio.replace(":", "x")}_${Date.now()}.srt`;
     a.click();
-    document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const formatDuration = (ms: number) => {
+    const s = Math.floor(ms / 1000);
+    const m = Math.floor(s / 60);
+    return `${m}:${String(s % 60).padStart(2, "0")}`;
   };
 
   return (
@@ -120,26 +103,16 @@ export default function TTSGenerator() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
           <div className="lg:col-span-2 space-y-6">
-            {/* Text Input */}
             <div className="relative border-2 border-[oklch(0.2_0.02_280_/_60%)] p-6 bg-[oklch(0.08_0.01_280_/_50%)] backdrop-blur">
-              <div className="absolute -top-3 left-4 px-2 bg-background text-xs uppercase tracking-widest font-bold" style={{ color: 'oklch(0.6 0.28 280)' }}>
-                Input Text
-              </div>
-              <textarea
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder="Enter your text here... (max 5000 characters)"
-                maxLength={5000}
-                className="w-full h-40 bg-[oklch(0.08_0.01_280)] text-[oklch(0.95_0.01_280)] border border-[oklch(0.2_0.02_280_/_60%)] p-4 focus:outline-none focus:border-[oklch(0.65_0.25_310)] focus:ring-2 focus:ring-[oklch(0.65_0.25_310_/_30%)] resize-none"
-              />
+              <div className="absolute -top-3 left-4 px-2 bg-background text-xs uppercase tracking-widest font-bold" style={{ color: 'oklch(0.6 0.28 280)' }}>Input Text</div>
+              <textarea value={text} onChange={(e) => setText(e.target.value)}
+                placeholder="Enter your text here... (max 5000 characters)" maxLength={5000}
+                className="w-full h-40 bg-[oklch(0.08_0.01_280)] text-[oklch(0.95_0.01_280)] border border-[oklch(0.2_0.02_280_/_60%)] p-4 focus:outline-none focus:border-[oklch(0.65_0.25_310)] focus:ring-2 focus:ring-[oklch(0.65_0.25_310_/_30%)] resize-none" />
               <div className="mt-2 text-xs text-right opacity-60">{text.length} / 5000</div>
             </div>
 
-            {/* Voice Selection */}
             <div className="relative border-2 border-[oklch(0.2_0.02_280_/_60%)] p-6 bg-[oklch(0.08_0.01_280_/_50%)] backdrop-blur">
-              <div className="absolute -top-3 left-4 px-2 bg-background text-xs uppercase tracking-widest font-bold" style={{ color: 'oklch(0.6 0.28 280)' }}>
-                Voice Selection
-              </div>
+              <div className="absolute -top-3 left-4 px-2 bg-background text-xs uppercase tracking-widest font-bold" style={{ color: 'oklch(0.6 0.28 280)' }}>Voice Selection</div>
               <Select value={voice} onValueChange={(v) => setVoice(v as "thiha" | "nilar")}>
                 <SelectTrigger className="w-full bg-[oklch(0.08_0.01_280)] border-[oklch(0.2_0.02_280_/_60%)] text-[oklch(0.95_0.01_280)]">
                   <SelectValue />
@@ -151,11 +124,8 @@ export default function TTSGenerator() {
               </Select>
             </div>
 
-            {/* Tone Control */}
             <div className="relative border-2 border-[oklch(0.2_0.02_280_/_60%)] p-6 bg-[oklch(0.08_0.01_280_/_50%)] backdrop-blur">
-              <div className="absolute -top-3 left-4 px-2 bg-background text-xs uppercase tracking-widest font-bold" style={{ color: 'oklch(0.6 0.28 280)' }}>
-                Tone / Pitch
-              </div>
+              <div className="absolute -top-3 left-4 px-2 bg-background text-xs uppercase tracking-widest font-bold" style={{ color: 'oklch(0.6 0.28 280)' }}>Tone / Pitch</div>
               <div className="space-y-4 mt-2">
                 <Slider value={[tone]} onValueChange={(v) => setTone(v[0])} min={-20} max={20} step={1} className="w-full" />
                 <div className="flex justify-between items-center text-sm">
@@ -166,11 +136,8 @@ export default function TTSGenerator() {
               </div>
             </div>
 
-            {/* Speed Control */}
             <div className="relative border-2 border-[oklch(0.2_0.02_280_/_60%)] p-6 bg-[oklch(0.08_0.01_280_/_50%)] backdrop-blur">
-              <div className="absolute -top-3 left-4 px-2 bg-background text-xs uppercase tracking-widest font-bold" style={{ color: 'oklch(0.6 0.28 280)' }}>
-                Speed / Rate
-              </div>
+              <div className="absolute -top-3 left-4 px-2 bg-background text-xs uppercase tracking-widest font-bold" style={{ color: 'oklch(0.6 0.28 280)' }}>Speed / Rate</div>
               <div className="space-y-4 mt-2">
                 <Slider value={[speed]} onValueChange={(v) => setSpeed(v[0])} min={0.5} max={2.0} step={0.1} className="w-full" />
                 <div className="flex justify-between items-center text-sm">
@@ -181,11 +148,8 @@ export default function TTSGenerator() {
               </div>
             </div>
 
-            {/* Aspect Ratio */}
             <div className="relative border-2 border-[oklch(0.2_0.02_280_/_60%)] p-6 bg-[oklch(0.08_0.01_280_/_50%)] backdrop-blur">
-              <div className="absolute -top-3 left-4 px-2 bg-background text-xs uppercase tracking-widest font-bold" style={{ color: 'oklch(0.6 0.28 280)' }}>
-                SRT Aspect Ratio
-              </div>
+              <div className="absolute -top-3 left-4 px-2 bg-background text-xs uppercase tracking-widest font-bold" style={{ color: 'oklch(0.6 0.28 280)' }}>SRT Aspect Ratio</div>
               <div className="grid grid-cols-2 gap-4 mt-2">
                 {(['9:16', '16:9'] as const).map((ratio) => (
                   <button key={ratio} onClick={() => setAspectRatio(ratio)}
@@ -201,50 +165,36 @@ export default function TTSGenerator() {
             </div>
           </div>
 
-          {/* Right panel */}
           <div className="space-y-6">
             <div className="relative border-2 border-[oklch(0.2_0.02_280_/_60%)] p-6 bg-[oklch(0.08_0.01_280_/_50%)] backdrop-blur">
-              <div className="absolute -top-3 left-4 px-2 bg-background text-xs uppercase tracking-widest font-bold" style={{ color: 'oklch(0.6 0.28 280)' }}>
-                Generate & Download
-              </div>
+              <div className="absolute -top-3 left-4 px-2 bg-background text-xs uppercase tracking-widest font-bold" style={{ color: 'oklch(0.6 0.28 280)' }}>Generate & Download</div>
               <div className="space-y-4 mt-4">
-                <button
-                  onClick={handleGenerate}
-                  disabled={generateMutation.isPending || !text.trim()}
-                  className="w-full btn-cyan flex items-center justify-center gap-2"
-                >
-                  {generateMutation.isPending ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" />Generating...</>
-                  ) : (
-                    <><Volume2 className="w-4 h-4" />Generate</>
-                  )}
+                <button onClick={handleGenerate} disabled={generateMutation.isPending || !text.trim()}
+                  className="w-full btn-cyan flex items-center justify-center gap-2">
+                  {generateMutation.isPending
+                    ? <><Loader2 className="w-4 h-4 animate-spin" />Generating...</>
+                    : <><Volume2 className="w-4 h-4" />Generate</>}
                 </button>
-                <p className="text-xs opacity-60 text-center">Generates both MP3 audio and SRT subtitle files</p>
 
                 {generatedFiles && (
                   <div className="space-y-4 pt-4 border-t border-[oklch(0.2_0.02_280_/_60%)]">
                     <div className="bg-[oklch(0.08_0.01_280)] border border-[oklch(0.2_0.02_280_/_60%)] p-3 rounded">
-                      <p className="text-xs font-bold text-[oklch(0.6_0.28_280)] uppercase tracking-wider mb-2">Preview Audio:</p>
-                      <audio controls src={generatedFiles.audioUrl} crossOrigin="anonymous" className="w-full"
-                        style={{ accentColor: 'oklch(0.65 0.25 310)' }} />
+                      <p className="text-xs font-bold text-[oklch(0.6_0.28_280)] uppercase tracking-wider mb-2">
+                        Preview Audio: {generatedFiles.durationMs > 0 && <span className="opacity-60">({formatDuration(generatedFiles.durationMs)})</span>}
+                      </p>
+                      <audio ref={audioRef} controls className="w-full" style={{ accentColor: 'oklch(0.65 0.25 310)' }} />
                     </div>
 
                     <p className="text-xs font-bold text-[oklch(0.65_0.25_310)] uppercase tracking-wider">Ready to Download:</p>
 
-                    <button
-                      onClick={handleDownloadAudio}
-                      className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-[oklch(0.65_0.25_310_/_20%)] border border-[oklch(0.65_0.25_310)] text-[oklch(0.65_0.25_310)] hover:bg-[oklch(0.65_0.25_310_/_40%)] transition-all duration-200 rounded font-semibold text-sm uppercase tracking-wider"
-                    >
-                      <Download className="w-4 h-4" />
-                      Audio (MP3)
+                    <button onClick={handleDownloadAudio}
+                      className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-[oklch(0.65_0.25_310_/_20%)] border border-[oklch(0.65_0.25_310)] text-[oklch(0.65_0.25_310)] hover:bg-[oklch(0.65_0.25_310_/_40%)] transition-all duration-200 rounded font-semibold text-sm uppercase tracking-wider">
+                      <Download className="w-4 h-4" />Audio (MP3)
                     </button>
 
-                    <button
-                      onClick={handleDownloadSRT}
-                      className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-[oklch(0.6_0.28_280_/_20%)] border border-[oklch(0.6_0.28_280)] text-[oklch(0.6_0.28_280)] hover:bg-[oklch(0.6_0.28_280_/_40%)] transition-all duration-200 rounded font-semibold text-sm uppercase tracking-wider"
-                    >
-                      <Download className="w-4 h-4" />
-                      Subtitles (SRT)
+                    <button onClick={handleDownloadSRT}
+                      className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-[oklch(0.6_0.28_280_/_20%)] border border-[oklch(0.6_0.28_280)] text-[oklch(0.6_0.28_280)] hover:bg-[oklch(0.6_0.28_280_/_40%)] transition-all duration-200 rounded font-semibold text-sm uppercase tracking-wider">
+                      <Download className="w-4 h-4" />SRT ({aspectRatio})
                     </button>
                   </div>
                 )}
@@ -252,29 +202,18 @@ export default function TTSGenerator() {
             </div>
 
             <div className="relative border-2 border-[oklch(0.2_0.02_280_/_60%)] p-6 bg-[oklch(0.08_0.01_280_/_50%)] backdrop-blur">
-              <div className="absolute -top-3 left-4 px-2 bg-background text-xs uppercase tracking-widest font-bold" style={{ color: 'oklch(0.6 0.28 280)' }}>
-                Info
-              </div>
+              <div className="absolute -top-3 left-4 px-2 bg-background text-xs uppercase tracking-widest font-bold" style={{ color: 'oklch(0.6 0.28 280)' }}>Info</div>
               <div className="space-y-3 mt-4 text-xs opacity-70">
-                <div>
-                  <p className="font-bold text-[oklch(0.6_0.28_280)] mb-1">Supported Voices:</p>
-                  <p>Thiha (Male), Nilar (Female)</p>
-                </div>
-                <div>
-                  <p className="font-bold text-[oklch(0.6_0.28_280)] mb-1">Tone Range:</p>
-                  <p>-20 to +20 Hz</p>
-                </div>
-                <div>
-                  <p className="font-bold text-[oklch(0.6_0.28_280)] mb-1">Speed Range:</p>
-                  <p>0.5x to 2.0x</p>
-                </div>
+                <div><p className="font-bold text-[oklch(0.6_0.28_280)] mb-1">Supported Voices:</p><p>Thiha (Male), Nilar (Female)</p></div>
+                <div><p className="font-bold text-[oklch(0.6_0.28_280)] mb-1">Tone Range:</p><p>-20 to +20 Hz</p></div>
+                <div><p className="font-bold text-[oklch(0.6_0.28_280)] mb-1">Speed Range:</p><p>0.5x to 2.0x</p></div>
+                <div><p className="font-bold text-[oklch(0.6_0.28_280)] mb-1">SRT Format:</p><p>9:16 Vertical (20 chars/line)<br/>16:9 Horizontal (42 chars/line)</p></div>
               </div>
             </div>
           </div>
         </div>
       </div>
-
-      <audio ref={audioRef} />
+      <audio ref={audioRef} className="hidden" />
     </div>
   );
 }

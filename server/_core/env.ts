@@ -7,7 +7,7 @@ export const ENV = {
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: (process.env.BUILT_IN_FORGE_API_URL ?? "").trim(),
   forgeApiKey: (process.env.BUILT_IN_FORGE_API_KEY ?? "").trim(),
-  vpsTtsApiUrl: (process.env.VPS_TTS_API_URL ?? "").trim(),
-  vpsTtsAudioBaseUrl: (process.env.VPS_TTS_AUDIO_BASE_URL ?? "").trim(),
-  vpsTtsHealthCheckUrl: (process.env.VPS_TTS_HEALTH_CHECK_URL ?? "").trim(),
+  vpsTtsApiUrl: (process.env.VPS_TTS_API_URL ?? "").trim() || null,
+  vpsTtsAudioBaseUrl: (process.env.VPS_TTS_AUDIO_BASE_URL ?? "").trim() || null,
+  vpsTtsHealthCheckUrl: (process.env.VPS_TTS_HEALTH_CHECK_URL ?? "").trim() || null,
 };

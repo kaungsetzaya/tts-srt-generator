@@ -15,6 +15,13 @@
       "when": 1775127863504,
       "tag": "0001_overconfident_sauron",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1775330459418,
+      "tag": "0002_left_microchip",
+      "breakpoints": true
     }
   ]
 }
