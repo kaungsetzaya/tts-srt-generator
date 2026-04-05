@@ -1,6 +1,6 @@
 import https from "https";
 import { getDb } from "./db";
-import { users } from "../drizzle/schema";
+import { users, subscriptions, settings } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN!;
@@ -70,13 +70,33 @@ export async function handleTelegramUpdate(update: any) {
       );
     } else {
       code = generateCode();
+      const newUserId = Math.random().toString(36).slice(2);
       await db.insert(users).values({
-        id: Math.random().toString(36).slice(2),
+        id: newUserId,
         telegramId,
         telegramUsername: username,
         telegramFirstName: firstName,
         telegramCode: code,
       });
+      // Auto trial — check settings
+      const { nanoid } = await import("nanoid");
+      const autoEnabledRow = await db.select().from(settings).where(eq(settings.keyName, "auto_trial_enabled")).limit(1);
+      const autoEnabled = autoEnabledRow[0]?.value === "true";
+      if (autoEnabled) {
+        const trialDaysRow = await db.select().from(settings).where(eq(settings.keyName, "auto_trial_days")).limit(1);
+        const trialDays = parseInt(trialDaysRow[0]?.value ?? "7");
+        const subId = nanoid(36);
+        const trialExpiry = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000);
+        await db.insert(subscriptions).values({
+          id: subId,
+          userId: newUserId,
+          plan: "trial",
+          startsAt: new Date(),
+          expiresAt: trialExpiry,
+          createdByAdmin: "system",
+          note: "Auto trial " + trialDays + " days",
+        });
+      }
       await sendMessage(chatId,
         `🎉 <b>LUMIX へ ကြိုဆိုပါတယ်, ${firstName}!</b>\n\n` +
         `✅ သင့် account ကို ဖန်တီးပြီးပါပြီ!\n\n` +

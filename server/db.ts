@@ -1,11 +1,10 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, gte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, ttsConversions, InsertTtsConversion } from "../drizzle/schema";
-import { ENV } from './_core/env';
+import { users, subscriptions, ttsConversions } from "../drizzle/schema";
+import { nanoid } from "nanoid";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
-// Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
@@ -18,110 +17,84 @@ export async function getDb() {
   return _db;
 }
 
-export async function upsertUser(user: InsertUser): Promise<void> {
-  if (!user.openId) {
-    throw new Error("User openId is required for upsert");
-  }
-
+// Check if user has active subscription
+export async function getUserSubscription(userId: string) {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
-    return;
-  }
-
-  try {
-    const values: InsertUser = {
-      openId: user.openId,
-    };
-    const updateSet: Record<string, unknown> = {};
-
-    const textFields = ["name", "email", "loginMethod"] as const;
-    type TextField = (typeof textFields)[number];
-
-    const assignNullable = (field: TextField) => {
-      const value = user[field];
-      if (value === undefined) return;
-      const normalized = value ?? null;
-      values[field] = normalized;
-      updateSet[field] = normalized;
-    };
-
-    textFields.forEach(assignNullable);
-
-    if (user.lastSignedIn !== undefined) {
-      values.lastSignedIn = user.lastSignedIn;
-      updateSet.lastSignedIn = user.lastSignedIn;
-    }
-    if (user.role !== undefined) {
-      values.role = user.role;
-      updateSet.role = user.role;
-    } else if (user.openId === ENV.ownerOpenId) {
-      values.role = 'admin';
-      updateSet.role = 'admin';
-    }
-
-    if (!values.lastSignedIn) {
-      values.lastSignedIn = new Date();
-    }
-
-    if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = new Date();
-    }
-
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
-      set: updateSet,
-    });
-  } catch (error) {
-    console.error("[Database] Failed to upsert user:", error);
-    throw error;
-  }
+  if (!db) return null;
+  const now = new Date();
+  const result = await db.select().from(subscriptions)
+    .where(
+      and(
+        eq(subscriptions.userId, userId),
+        gte(subscriptions.expiresAt, now)
+      )
+    )
+    .orderBy(desc(subscriptions.expiresAt))
+    .limit(1);
+  return result[0] ?? null;
 }
 
-export async function getUserByOpenId(openId: string) {
+// Get all users with their subscription status
+export async function getAllUsers() {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
-    return undefined;
-  }
+  if (!db) return [];
+  const allUsers = await db.select().from(users).orderBy(desc(users.createdAt));
+  const now = new Date();
+  const allSubs = await db.select().from(subscriptions);
 
-  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-
-  return result.length > 0 ? result[0] : undefined;
+  return allUsers.map(u => {
+    const activeSub = allSubs
+      .filter(s => s.userId === u.id && s.expiresAt && s.expiresAt > now)
+      .sort((a, b) => (b.expiresAt?.getTime() ?? 0) - (a.expiresAt?.getTime() ?? 0))[0];
+    return { ...u, subscription: activeSub ?? null };
+  });
 }
 
-export async function saveTtsConversion(data: InsertTtsConversion) {
+// Create subscription for user
+export async function createSubscription(data: {
+  userId: string;
+  plan: string;
+  startsAt: Date;
+  expiresAt: Date | null;
+  createdByAdmin: string;
+  note?: string;
+}) {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot save TTS conversion: database not available");
-    return undefined;
-  }
-
-  try {
-    const result = await db.insert(ttsConversions).values(data);
-    return result;
-  } catch (error) {
-    console.error("[Database] Failed to save TTS conversion:", error);
-    throw error;
-  }
+  if (!db) throw new Error("DB not available");
+  const id = nanoid(36);
+  await db.insert(subscriptions).values({
+    id,
+    userId: data.userId,
+    plan: data.plan,
+    startsAt: data.startsAt,
+    expiresAt: data.expiresAt,
+    createdByAdmin: data.createdByAdmin,
+    note: data.note ?? null,
+  });
+  return id;
 }
 
-export async function getUserConversions(userId: number, limit = 20) {
+// Get user by telegram code
+export async function getUserByCode(code: string) {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get conversions: database not available");
-    return [];
-  }
+  if (!db) return null;
+  const result = await db.select().from(users)
+    .where(eq(users.telegramCode, code)).limit(1);
+  return result[0] ?? null;
+}
 
-  try {
-    const result = await db
-      .select()
-      .from(ttsConversions)
-      .where(eq(ttsConversions.userId, userId))
-      .orderBy(desc(ttsConversions.createdAt))
-      .limit(limit);
-    return result;
-  } catch (error) {
-    console.error("[Database] Failed to get conversions:", error);
-    throw error;
-  }
+// Get user by id
+export async function getUserById(id: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(users)
+    .where(eq(users.id, id)).limit(1);
+  return result[0] ?? null;
+}
+
+// Set user role
+export async function setUserRole(userId: string, role: string) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(users).set({ role }).where(eq(users.id, userId));
 }

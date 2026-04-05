@@ -6,7 +6,7 @@ import { COOKIE_NAME } from "@shared/const";
 export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
   res: CreateExpressContextOptions["res"];
-  user: { userId: string; telegramId: string; name: string } | null;
+  user: { userId: string; telegramId: string; name: string; role: string } | null;
 };
 
 const JWT_SECRET = new TextEncoder().encode(
@@ -17,7 +17,6 @@ export async function createContext(
   opts: CreateExpressContextOptions
 ): Promise<TrpcContext> {
   let user: TrpcContext["user"] = null;
-
   try {
     const cookieHeader = opts.req.headers.cookie;
     if (cookieHeader) {
@@ -31,13 +30,13 @@ export async function createContext(
           userId: payload.userId as string,
           telegramId: payload.telegramId as string,
           name: payload.name as string,
+          role: (payload.role as string) ?? "user",
         };
       }
     }
   } catch {
     user = null;
   }
-
   return {
     req: opts.req,
     res: opts.res,

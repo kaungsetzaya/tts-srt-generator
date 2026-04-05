@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import helmet from "helmet";
 import { createServer } from "http";
 import path from "path";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
@@ -11,8 +12,15 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  // Security
+  app.disable("x-powered-by");
+
+  app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  }));
+  app.use(express.json({ limit: "2mb" }));
+  app.use(express.urlencoded({ limit: "2mb", extended: true }));
 
   // Telegram webhook
   app.post("/webhook/telegram", async (req, res) => {
@@ -41,8 +49,6 @@ async function startServer() {
   const port = parseInt(process.env.PORT || "3000");
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
-
-    // Set Telegram webhook
     const webhookUrl = `https://choco.de5.net/webhook/telegram`;
     setWebhook(webhookUrl).catch(console.error);
   });

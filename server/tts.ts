@@ -44,6 +44,7 @@ export async function generateSpeech(
 
   await fs.writeFile(tmpText, text, "utf8");
 
+  await acquireSlot();
   try {
     await execFileAsync("edge-tts", [
       "--voice", voiceConfig.shortName,
@@ -53,7 +54,7 @@ export async function generateSpeech(
       "--write-media", audioPath,
       "--write-subtitles", srtPath,
     ], {
-      env: { ...process.env, PATH: process.env.PATH },
+      env: { ...process.env, PATH: process.env.PATH, HTTPS_PROXY: process.env.EDGE_TTS_PROXY ?? "", HTTP_PROXY: process.env.EDGE_TTS_PROXY ?? "" },
     });
 
     const audioBuffer = await fs.readFile(audioPath);
@@ -71,6 +72,7 @@ export async function generateSpeech(
 
     return { audioBuffer, srtContent, durationMs };
   } finally {
+    releaseSlot();
     await fs.unlink(tmpText).catch(() => {});
     await fs.unlink(audioPath).catch(() => {});
     await fs.unlink(srtPath).catch(() => {});
@@ -99,6 +101,25 @@ function msToSrtTime(ms: number): string {
 
 function pad(n: number, len = 2): string {
   return String(n).padStart(len, "0");
+}
+
+// Concurrency queue — max 3 simultaneous edge-tts calls
+let activeRequests = 0;
+const MAX_CONCURRENT = 3;
+const waitQueue: Array<() => void> = [];
+
+async function acquireSlot(): Promise<void> {
+  if (activeRequests < MAX_CONCURRENT) {
+    activeRequests++;
+    return;
+  }
+  return new Promise(resolve => waitQueue.push(() => { activeRequests++; resolve(); }));
+}
+
+function releaseSlot(): void {
+  activeRequests--;
+  const next = waitQueue.shift();
+  if (next) next();
 }
 
 const segmenter = new Intl.Segmenter("my", { granularity: "grapheme" });

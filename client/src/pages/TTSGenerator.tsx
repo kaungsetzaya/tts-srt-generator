@@ -2,9 +2,12 @@ import { useState, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Download, Volume2 } from "lucide-react";
+import { Loader2, Download, Volume2, LogOut, Crown, AlertCircle } from "lucide-react";
+import { useLocation } from "wouter";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function TTSGenerator() {
+  const { user } = useAuth({ redirectOnUnauthenticated: false });
   const [text, setText] = useState("");
   const [voice, setVoice] = useState<"thiha" | "nilar">("thiha");
   const [tone, setTone] = useState(0);
@@ -16,11 +19,21 @@ export default function TTSGenerator() {
     durationMs: number;
   } | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const [, navigate] = useLocation();
 
+  const { data: me } = trpc.auth.me.useQuery();
+  const { data: subStatus, isLoading: subLoading } = trpc.subscription.myStatus.useQuery();
+  const logoutMutation = trpc.auth.logout.useMutation({
+    onSuccess: () => navigate("/login"),
+  });
   const generateMutation = trpc.tts.generateAudio.useMutation();
 
+  const isAdmin = me?.role === "admin";
+  const hasActiveSub = isAdmin || subStatus?.active;
+  const subReady = isAdmin || !subLoading;
+
   const handleGenerate = async () => {
-    if (!text.trim()) { alert("Please enter some text"); return; }
+    if (!text.trim()) { alert("စာသားထည့်ပါ"); return; }
     try {
       const result = await generateMutation.mutateAsync({ text, voice, tone, speed, aspectRatio });
       if (result.success) {
@@ -29,23 +42,13 @@ export default function TTSGenerator() {
         for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
         const blob = new Blob([bytes], { type: result.mimeType });
         const audioObjectUrl = URL.createObjectURL(blob);
-
-        setGeneratedFiles({
-          audioObjectUrl,
-          srtContent: result.srtContent,
-          durationMs: result.durationMs,
-        });
-
+        setGeneratedFiles({ audioObjectUrl, srtContent: result.srtContent, durationMs: result.durationMs });
         setTimeout(() => {
-          if (audioRef.current) {
-            audioRef.current.src = audioObjectUrl;
-            audioRef.current.load();
-          }
+          if (audioRef.current) { audioRef.current.src = audioObjectUrl; audioRef.current.load(); }
         }, 100);
       }
-    } catch (error) {
-      console.error("Generation error:", error);
-      alert("Failed to generate audio and SRT");
+    } catch (error: any) {
+      alert(error?.message || "ဖန်တီးမရပါ");
     }
   };
 
@@ -74,6 +77,11 @@ export default function TTSGenerator() {
     return `${m}:${String(s % 60).padStart(2, "0")}`;
   };
 
+  const formatExpiry = (d: Date | null | undefined) => {
+    if (!d) return "";
+    return new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground overflow-hidden relative">
       <div className="absolute inset-0 opacity-5">
@@ -81,6 +89,41 @@ export default function TTSGenerator() {
           backgroundImage: 'linear-gradient(0deg, transparent 24%, rgba(102, 204, 255, 0.05) 25%, rgba(102, 204, 255, 0.05) 26%, transparent 27%, transparent 74%, rgba(102, 204, 255, 0.05) 75%, rgba(102, 204, 255, 0.05) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, rgba(102, 204, 255, 0.05) 25%, rgba(102, 204, 255, 0.05) 26%, transparent 27%, transparent 74%, rgba(102, 204, 255, 0.05) 75%, rgba(102, 204, 255, 0.05) 76%, transparent 77%, transparent)',
           backgroundSize: '50px 50px'
         }} />
+      </div>
+
+      {/* Top bar */}
+      <div className="relative z-10 flex items-center justify-between px-6 py-3 border-b border-[oklch(0.2_0.02_280_/_60%)] bg-[oklch(0.05_0.01_280_/_80%)]">
+        <div className="flex items-center gap-3">
+          <span className="font-black uppercase tracking-widest text-sm" style={{ color: 'oklch(0.65 0.25 310)' }}>
+            LUMIX TTS
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          {/* Subscription status */}
+          {!isAdmin && subStatus && (
+            <div className="flex items-center gap-2 text-xs">
+              <Crown className="w-3 h-3" style={{ color: subStatus.active ? 'oklch(0.65 0.25 310)' : '#ef4444' }} />
+              {subStatus.active ? (() => {
+                const daysLeft = subStatus.expiresAt ? Math.max(0, Math.ceil((new Date(subStatus.expiresAt).getTime() - Date.now()) / 86400000)) : null;
+                const color = daysLeft === null ? 'text-green-400' : daysLeft <= 5 ? 'text-red-400' : daysLeft <= 14 ? 'text-yellow-400' : 'text-green-400';
+                return (
+                  <span className={`font-semibold ${color}`}>
+                    {subStatus.plan} · {daysLeft === null ? 'Lifetime' : `${daysLeft} days left`}
+                  </span>
+                );
+              })() : (
+                <span className="text-red-400">Subscription မရှိပါ</span>
+              )}
+            </div>
+          )}
+          <span className="text-xs font-bold text-white">@{me?.username ?? me?.name}</span>
+          <button
+            onClick={() => logoutMutation.mutate()}
+            className="flex items-center gap-1 text-xs px-3 py-1 border border-red-500/50 text-red-400 hover:bg-red-500/20 transition-all uppercase tracking-wider"
+          >
+            <LogOut className="w-3 h-3" /> Logout
+          </button>
+        </div>
       </div>
 
       <div className="relative z-10 container mx-auto px-4 py-12">
@@ -101,19 +144,49 @@ export default function TTSGenerator() {
           </div>
         </div>
 
+        {/* No subscription banner */}
+        {!hasActiveSub && subReady && (
+          <div className="max-w-6xl mx-auto mb-8">
+            <div className="border-2 border-red-500/50 bg-red-500/10 p-6 text-center">
+              <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-3" />
+              <p className="text-red-400 font-bold text-lg mb-2">Subscription မရှိပါ</p>
+              <p className="text-sm opacity-70 mb-4">
+                TTS Generator သုံးဖို့ subscription လိုအပ်ပါတယ်။<br/>
+                Subscription ဝယ်ယူရန် admin ကို ဆက်သွယ်ပါ။
+              </p>
+              
+                href="https://t.me/lumixmmbot"
+                target="_blank"
+              <a
+                href="https://t.me/lumixmmbot"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-6 py-3 font-bold uppercase tracking-wider text-white transition-all"
+                style={{ background: "oklch(0.65 0.25 310)", boxShadow: "0 0 20px oklch(0.65 0.25 310 / 40%)" }}
+              >
+                Admin ကို ဆက်သွယ်ပါ (@lumixmmbot)
+              </a>
+              <p className="text-xs opacity-50 mt-3">
+                Subscription အမျိုးအစားများ - Trial (3 ရက်) - 1 လ - 3 လ - 6 လ - Lifetime
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
           <div className="lg:col-span-2 space-y-6">
             <div className="relative border-2 border-[oklch(0.2_0.02_280_/_60%)] p-6 bg-[oklch(0.08_0.01_280_/_50%)] backdrop-blur">
               <div className="absolute -top-3 left-4 px-2 bg-background text-xs uppercase tracking-widest font-bold" style={{ color: 'oklch(0.6 0.28 280)' }}>Input Text</div>
               <textarea value={text} onChange={(e) => setText(e.target.value)}
-                placeholder="Enter your text here... (max 5000 characters)" maxLength={5000}
-                className="w-full h-40 bg-[oklch(0.08_0.01_280)] text-[oklch(0.95_0.01_280)] border border-[oklch(0.2_0.02_280_/_60%)] p-4 focus:outline-none focus:border-[oklch(0.65_0.25_310)] focus:ring-2 focus:ring-[oklch(0.65_0.25_310_/_30%)] resize-none" />
-              <div className="mt-2 text-xs text-right opacity-60">{text.length} / 5000</div>
+                placeholder="Enter your text here... (max 30000 characters)" maxLength={30000}
+                disabled={!hasActiveSub}
+                className="w-full h-40 bg-[oklch(0.08_0.01_280)] text-[oklch(0.95_0.01_280)] border border-[oklch(0.2_0.02_280_/_60%)] p-4 focus:outline-none focus:border-[oklch(0.65_0.25_310)] focus:ring-2 focus:ring-[oklch(0.65_0.25_310_/_30%)] resize-none disabled:opacity-40 disabled:cursor-not-allowed" />
+              <div className="mt-2 text-xs text-right opacity-60">{text.length} / 30000</div>
             </div>
 
             <div className="relative border-2 border-[oklch(0.2_0.02_280_/_60%)] p-6 bg-[oklch(0.08_0.01_280_/_50%)] backdrop-blur">
               <div className="absolute -top-3 left-4 px-2 bg-background text-xs uppercase tracking-widest font-bold" style={{ color: 'oklch(0.6 0.28 280)' }}>Voice Selection</div>
-              <Select value={voice} onValueChange={(v) => setVoice(v as "thiha" | "nilar")}>
+              <Select value={voice} onValueChange={(v) => setVoice(v as "thiha" | "nilar")} disabled={!hasActiveSub}>
                 <SelectTrigger className="w-full bg-[oklch(0.08_0.01_280)] border-[oklch(0.2_0.02_280_/_60%)] text-[oklch(0.95_0.01_280)]">
                   <SelectValue />
                 </SelectTrigger>
@@ -127,7 +200,7 @@ export default function TTSGenerator() {
             <div className="relative border-2 border-[oklch(0.2_0.02_280_/_60%)] p-6 bg-[oklch(0.08_0.01_280_/_50%)] backdrop-blur">
               <div className="absolute -top-3 left-4 px-2 bg-background text-xs uppercase tracking-widest font-bold" style={{ color: 'oklch(0.6 0.28 280)' }}>Tone / Pitch</div>
               <div className="space-y-4 mt-2">
-                <Slider value={[tone]} onValueChange={(v) => setTone(v[0])} min={-20} max={20} step={1} className="w-full" />
+                <Slider value={[tone]} onValueChange={(v) => setTone(v[0])} min={-20} max={20} step={1} className="w-full" disabled={!hasActiveSub} />
                 <div className="flex justify-between items-center text-sm">
                   <span className="opacity-70">Lower</span>
                   <span className="font-bold text-[oklch(0.65_0.25_310)]">{tone > 0 ? '+' : ''}{tone} Hz</span>
@@ -139,7 +212,7 @@ export default function TTSGenerator() {
             <div className="relative border-2 border-[oklch(0.2_0.02_280_/_60%)] p-6 bg-[oklch(0.08_0.01_280_/_50%)] backdrop-blur">
               <div className="absolute -top-3 left-4 px-2 bg-background text-xs uppercase tracking-widest font-bold" style={{ color: 'oklch(0.6 0.28 280)' }}>Speed / Rate</div>
               <div className="space-y-4 mt-2">
-                <Slider value={[speed]} onValueChange={(v) => setSpeed(v[0])} min={0.5} max={2.0} step={0.1} className="w-full" />
+                <Slider value={[speed]} onValueChange={(v) => setSpeed(v[0])} min={0.5} max={2.0} step={0.1} className="w-full" disabled={!hasActiveSub} />
                 <div className="flex justify-between items-center text-sm">
                   <span className="opacity-70">Slower</span>
                   <span className="font-bold text-[oklch(0.65_0.25_310)]">{speed.toFixed(1)}x</span>
@@ -152,8 +225,8 @@ export default function TTSGenerator() {
               <div className="absolute -top-3 left-4 px-2 bg-background text-xs uppercase tracking-widest font-bold" style={{ color: 'oklch(0.6 0.28 280)' }}>SRT Aspect Ratio</div>
               <div className="grid grid-cols-2 gap-4 mt-2">
                 {(['9:16', '16:9'] as const).map((ratio) => (
-                  <button key={ratio} onClick={() => setAspectRatio(ratio)}
-                    className={`py-3 px-4 border-2 font-bold uppercase tracking-wider transition-all duration-200 ${
+                  <button key={ratio} onClick={() => setAspectRatio(ratio)} disabled={!hasActiveSub}
+                    className={`py-3 px-4 border-2 font-bold uppercase tracking-wider transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed ${
                       aspectRatio === ratio
                         ? 'border-[oklch(0.65_0.25_310)] bg-[oklch(0.65_0.25_310_/_20%)] text-[oklch(0.65_0.25_310)] shadow-[0_0_15px_oklch(0.65_0.25_310_/_50%)]'
                         : 'border-[oklch(0.2_0.02_280_/_60%)] text-[oklch(0.95_0.01_280)] hover:border-[oklch(0.6_0.28_280)]'
@@ -169,12 +242,16 @@ export default function TTSGenerator() {
             <div className="relative border-2 border-[oklch(0.2_0.02_280_/_60%)] p-6 bg-[oklch(0.08_0.01_280_/_50%)] backdrop-blur">
               <div className="absolute -top-3 left-4 px-2 bg-background text-xs uppercase tracking-widest font-bold" style={{ color: 'oklch(0.6 0.28 280)' }}>Generate & Download</div>
               <div className="space-y-4 mt-4">
-                <button onClick={handleGenerate} disabled={generateMutation.isPending || !text.trim()}
-                  className="w-full btn-cyan flex items-center justify-center gap-2">
+                <button onClick={handleGenerate} disabled={generateMutation.isPending || !text.trim() || !hasActiveSub}
+                  className="w-full btn-cyan flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
                   {generateMutation.isPending
                     ? <><Loader2 className="w-4 h-4 animate-spin" />Generating...</>
                     : <><Volume2 className="w-4 h-4" />Generate</>}
                 </button>
+
+                {!hasActiveSub && subReady && (
+                  <p className="text-xs text-red-400 text-center">Subscription မရှိသောကြောင့် Generate မရပါ</p>
+                )}
 
                 {generatedFiles && (
                   <div className="space-y-4 pt-4 border-t border-[oklch(0.2_0.02_280_/_60%)]">
@@ -184,14 +261,11 @@ export default function TTSGenerator() {
                       </p>
                       <audio ref={audioRef} controls className="w-full" style={{ accentColor: 'oklch(0.65 0.25 310)' }} />
                     </div>
-
                     <p className="text-xs font-bold text-[oklch(0.65_0.25_310)] uppercase tracking-wider">Ready to Download:</p>
-
                     <button onClick={handleDownloadAudio}
                       className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-[oklch(0.65_0.25_310_/_20%)] border border-[oklch(0.65_0.25_310)] text-[oklch(0.65_0.25_310)] hover:bg-[oklch(0.65_0.25_310_/_40%)] transition-all duration-200 rounded font-semibold text-sm uppercase tracking-wider">
                       <Download className="w-4 h-4" />Audio (MP3)
                     </button>
-
                     <button onClick={handleDownloadSRT}
                       className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-[oklch(0.6_0.28_280_/_20%)] border border-[oklch(0.6_0.28_280)] text-[oklch(0.6_0.28_280)] hover:bg-[oklch(0.6_0.28_280_/_40%)] transition-all duration-200 rounded font-semibold text-sm uppercase tracking-wider">
                       <Download className="w-4 h-4" />SRT ({aspectRatio})
@@ -201,15 +275,7 @@ export default function TTSGenerator() {
               </div>
             </div>
 
-            <div className="relative border-2 border-[oklch(0.2_0.02_280_/_60%)] p-6 bg-[oklch(0.08_0.01_280_/_50%)] backdrop-blur">
-              <div className="absolute -top-3 left-4 px-2 bg-background text-xs uppercase tracking-widest font-bold" style={{ color: 'oklch(0.6 0.28 280)' }}>Info</div>
-              <div className="space-y-3 mt-4 text-xs opacity-70">
-                <div><p className="font-bold text-[oklch(0.6_0.28_280)] mb-1">Supported Voices:</p><p>Thiha (Male), Nilar (Female)</p></div>
-                <div><p className="font-bold text-[oklch(0.6_0.28_280)] mb-1">Tone Range:</p><p>-20 to +20 Hz</p></div>
-                <div><p className="font-bold text-[oklch(0.6_0.28_280)] mb-1">Speed Range:</p><p>0.5x to 2.0x</p></div>
-                <div><p className="font-bold text-[oklch(0.6_0.28_280)] mb-1">SRT Format:</p><p>9:16 Vertical (20 chars/line)<br/>16:9 Horizontal (42 chars/line)</p></div>
-              </div>
-            </div>
+
           </div>
         </div>
       </div>

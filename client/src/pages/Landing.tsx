@@ -25,7 +25,7 @@ export default function Landing() {
       {/* Hero */}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-[85vh] text-center px-4">
         <div className="mb-4 text-purple-400 text-sm uppercase tracking-[0.3em] font-bold">
-          Powered by Edge TTS
+          Myanmar AI Voice Technology
         </div>
         <h1 className="text-6xl md:text-8xl font-black uppercase mb-4 leading-none"
           style={{ textShadow: "0 0 40px oklch(0.65 0.25 310)", color: "oklch(0.75 0.25 310)" }}>
@@ -101,7 +101,7 @@ export default function Landing() {
 
       {/* Footer */}
       <footer className="relative z-10 text-center py-8 border-t border-purple-900/30 text-gray-600 text-sm">
-        © 2026 LUMIX Generator · Powered by Edge TTS · @lumixmmbot
+        © 2026 LUMIX Generator · Myanmar AI Voice Technology · @lumixmmbot
       </footer>
     </div>
   );

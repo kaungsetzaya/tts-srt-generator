@@ -173,7 +173,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="relative z-10 border-t border-[oklch(0.2_0.02_280_/_60%)] mt-20 py-8 backdrop-blur-sm">
         <div className="container mx-auto px-4 text-center opacity-60 text-sm">
-          <p>© 2026 TTS to SRT Generator. Powered by Edge TTS.</p>
+          <p>© 2026 LUMIX TTS Generator.</p>
         </div>
       </footer>
     </div>

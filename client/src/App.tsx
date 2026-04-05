@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import TTSGenerator from "./pages/TTSGenerator";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
+import AdminDashboard from "./pages/AdminDashboard";
 import AuthGuard from "./components/AuthGuard";
 
 function Router() {
@@ -17,6 +18,11 @@ function Router() {
       <Route path={"/tts"}>
         <AuthGuard>
           <TTSGenerator />
+        </AuthGuard>
+      </Route>
+      <Route path={"/admin"}>
+        <AuthGuard>
+          <AdminDashboard />
         </AuthGuard>
       </Route>
       <Route path={"/404"} component={NotFound} />
