@@ -9,6 +9,16 @@ const OUTPUT_DIR = process.env.EDGE_TTS_OUTPUT_DIR ?? path.join(process.cwd(), "
 
 await fs.mkdir(OUTPUT_DIR, { recursive: true }).catch(() => {});
 
+let currentMurfKeyIndex = 0;
+function getMurfKey(): string | undefined {
+  const keysStr = process.env.MURF_API_KEY || "";
+  const keys = keysStr.split(",").map(k => k.trim()).filter(k => k.length > 0);
+  if (keys.length === 0) return undefined;
+  const key = keys[currentMurfKeyIndex % keys.length];
+  currentMurfKeyIndex++;
+  return key;
+}
+
 export const SUPPORTED_VOICES = {
   thiha: { name: "Thiha", shortName: "my-MM-ThihaNeural" },
   nilar: { name: "Nilar", shortName: "my-MM-NilarNeural" },
@@ -16,10 +26,63 @@ export const SUPPORTED_VOICES = {
 
 export type VoiceKey = keyof typeof SUPPORTED_VOICES;
 
+export const CHARACTER_VOICES = {
+  ryan:      { name: "ရဲရင့်",   gender: "male",   murfId: "en-US-ryan",      base: "thiha" as const },
+  ronnie:    { name: "ရောင်နီ",  gender: "male",   murfId: "en-US-ronnie",    base: "thiha" as const },
+  lucas:     { name: "လင်းခန့်", gender: "male",   murfId: "en-US-lucas",     base: "thiha" as const },
+  daniel:    { name: "ဒေဝ",      gender: "male",   murfId: "en-US-daniel",    base: "thiha" as const },
+  evander:   { name: "အဂ္ဂ",     gender: "male",   murfId: "en-US-evander",   base: "thiha" as const },
+  michelle:  { name: "မေချို",   gender: "female", murfId: "en-US-michelle",  base: "nilar" as const },
+  iris:      { name: "အိန္ဒြာ",  gender: "female", murfId: "en-US-iris",      base: "nilar" as const },
+  charlotte: { name: "သီရိ",     gender: "female", murfId: "en-US-charlotte", base: "nilar" as const },
+  amara:     { name: "အမရာ",     gender: "female", murfId: "en-US-amara",     base: "nilar" as const },
+};
+
+export type CharacterKey = keyof typeof CHARACTER_VOICES;
+
 export interface GenerateResult {
   audioBuffer: Buffer;
   srtContent: string;
   durationMs: number;
+}
+
+export async function generateSpeechWithCharacter(
+  text: string,
+  characterKey: CharacterKey,
+  rate: number = 1.0,
+  aspectRatio: "9:16" | "16:9" = "16:9"
+): Promise<GenerateResult> {
+  const char = CHARACTER_VOICES[characterKey];
+  // Step 1: Generate base TTS with Thiha or Nilar
+  const baseResult = await generateSpeech(text, char.base, rate, 0, aspectRatio);
+  // Step 2: Convert voice with murf.ai
+  const murfApiKey = getMurfKey();
+  if (!murfApiKey) throw new Error("MURF_API_KEY not configured");
+
+  const { FormData, Blob } = await import("formdata-node");
+  const form = new FormData();
+  form.set("voice_id", char.murfId);
+  form.set("format", "MP3");
+  form.set("file", new Blob([baseResult.audioBuffer], { type: "audio/mpeg" }), "audio.mp3");
+
+  const response = await fetch("https://api.murf.ai/v1/voice-changer/convert", {
+    method: "POST",
+    headers: { "api-key": murfApiKey },
+    body: form as any,
+  });
+
+  const result = await response.json() as any;
+  if (result.error_code) throw new Error(result.error_message);
+
+  // Download converted audio
+  const audioResponse = await fetch(result.audio_file);
+  const convertedBuffer = Buffer.from(await audioResponse.arrayBuffer());
+
+  return {
+    audioBuffer: convertedBuffer,
+    srtContent: baseResult.srtContent,
+    durationMs: baseResult.durationMs,
+  };
 }
 
 export async function generateSpeech(

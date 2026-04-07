@@ -1,183 +1,190 @@
 import { useState, useRef } from "react";
 import { trpc } from "@/lib/trpc";
-import { Button } from "@/components/ui/button";
-import { Loader2, Upload, Copy, Check } from "lucide-react";
+import { Loader2, Upload, Download, FileVideo, Languages, ChevronRight } from "lucide-react";
+import { useLocation } from "wouter";
 
 export default function VideoTranslator() {
-  const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [translatedText, setTranslatedText] = useState<string | null>(null);
-  const [originalText, setOriginalText] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [, navigate] = useLocation();
+  const [file, setFile] = useState<File | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [result, setResult] = useState<{ englishText: string; myanmarText: string; srtContent: string } | null>(null);
+  const [tab, setTab] = useState<"myanmar" | "english" | "srt">("myanmar");
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && file.type.startsWith("video/")) {
-      setVideoFile(file);
-      setTranslatedText(null);
-      setOriginalText(null);
-    } else {
-      alert("Please select a valid video file");
-    }
+  const { data: me } = trpc.auth.me.useQuery();
+  const translateMutation = trpc.video.translate.useMutation();
+
+  const handleFile = (f: File) => {
+    if (f.size > 25 * 1024 * 1024) { alert("Max file size is 25MB"); return; }
+    const validTypes = ["video/mp4", "video/webm", "video/quicktime", "video/x-msvideo", "video/mkv"];
+    if (!validTypes.some(t => f.type.startsWith("video/"))) { alert("Please upload a video file"); return; }
+    setFile(f);
+    setResult(null);
   };
 
-  const handleUpload = async () => {
-    if (!videoFile) {
-      alert("Please select a video file");
-      return;
-    }
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const f = e.dataTransfer.files[0];
+    if (f) handleFile(f);
+  };
 
-    setIsProcessing(true);
-    try {
-      const formData = new FormData();
-      formData.append("video", videoFile);
-
-      const response = await fetch("/api/video/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error("Upload failed");
+  const handleTranslate = async () => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = (reader.result as string).split(",")[1];
+      try {
+        const res = await translateMutation.mutateAsync({ videoBase64: base64, filename: file.name });
+        if (res.success) setResult({ englishText: res.englishText, myanmarText: res.myanmarText, srtContent: res.srtContent });
+      } catch (e: any) {
+        alert(e.message ?? "Translation failed");
       }
-
-      const result = await response.json();
-      setOriginalText(result.originalText);
-      setTranslatedText(result.translatedText);
-    } catch (error) {
-      console.error("Upload error:", error);
-      alert("Failed to process video. Please try again.");
-    } finally {
-      setIsProcessing(false);
-    }
+    };
+    reader.readAsDataURL(file);
   };
 
-  const handleCopyTranslation = () => {
-    if (translatedText) {
-      navigator.clipboard.writeText(translatedText);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+  const downloadFile = (content: string, filename: string, type = "text/plain") => {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
   };
+
+  const C = "oklch(0.65 0.25 310)";
+  const isLoading = translateMutation.isPending;
 
   return (
-    <div className="min-h-screen bg-black text-white p-4 md:p-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-12 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-[oklch(0.65_0.25_310)] via-[oklch(0.6_0.28_280)] to-[oklch(0.65_0.25_310)] bg-clip-text text-transparent">
-            VIDEO TRANSLATOR
-          </h1>
-          <p className="text-[oklch(0.6_0.15_280)] text-lg">
-            Upload video → Extract audio → Translate to Myanmar
-          </p>
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-3 border-b border-[oklch(0.2_0.02_280_/_60%)] bg-[oklch(0.05_0.01_280_/_80%)]">
+        <div className="flex items-center gap-2">
+          <Languages className="w-5 h-5" style={{ color: C }} />
+          <span className="font-black uppercase tracking-widest text-sm" style={{ color: C }}>Video Translator</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <a href="/lumix" className="text-xs px-3 py-1 border border-[oklch(0.2_0.02_280_/_60%)] opacity-60 hover:opacity-100 transition-all uppercase tracking-wider">TTS Page</a>
+          {me?.role === "admin" && (
+            <a href="/admin" className="text-xs px-3 py-1 border border-[oklch(0.2_0.02_280_/_60%)] opacity-60 hover:opacity-100 transition-all uppercase tracking-wider">Admin</a>
+          )}
+        </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto p-6 space-y-6">
+        {/* Title */}
+        <div className="text-center py-6">
+          <h1 className="text-3xl font-black uppercase tracking-widest mb-2" style={{ color: C }}>Video → Myanmar</h1>
+          <p className="text-sm opacity-50">Upload video → Whisper transcribe → Gemini translate to Myanmar</p>
+          <div className="flex items-center justify-center gap-4 mt-3 text-xs opacity-40">
+            <span>Max 25MB</span>
+            <span>•</span>
+            <span>Max 3 minutes</span>
+            <span>•</span>
+            <span>Any language → Myanmar</span>
+          </div>
         </div>
 
-        {/* Upload Section */}
+        {/* Upload Area */}
         <div
-          className="bg-[oklch(0.08_0.01_280)] border-2 border-dashed border-[oklch(0.3_0.15_310)] rounded-lg p-8 mb-8 text-center cursor-pointer hover:border-[oklch(0.65_0.25_310)] transition-colors"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="video/*"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
-          <Upload className="w-12 h-12 mx-auto mb-4 text-[oklch(0.65_0.25_310)]" />
-          <p className="text-xl font-semibold mb-2">
-            {videoFile ? videoFile.name : "Click to upload video"}
-          </p>
-          <p className="text-[oklch(0.5_0.1_280)] text-sm">
-            Supported formats: MP4, WebM, MOV, AVI
-          </p>
+          onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={handleDrop}
+          onClick={() => fileRef.current?.click()}
+          className={`border-2 border-dashed p-12 text-center cursor-pointer transition-all ${
+            dragOver ? "border-[oklch(0.65_0.25_310)] bg-[oklch(0.65_0.25_310_/_10%)]" :
+            file ? "border-green-500/50 bg-green-500/5" :
+            "border-[oklch(0.2_0.02_280_/_60%)] hover:border-[oklch(0.65_0.25_310_/_50%)]"
+          }`}>
+          <input ref={fileRef} type="file" accept="video/*" className="hidden" onChange={e => { if (e.target.files?.[0]) handleFile(e.target.files[0]); }} />
+          {file ? (
+            <div>
+              <FileVideo className="w-12 h-12 mx-auto mb-3 text-green-400" />
+              <p className="font-bold text-green-400">{file.name}</p>
+              <p className="text-xs opacity-50 mt-1">{(file.size / 1024 / 1024).toFixed(1)} MB</p>
+              <p className="text-xs opacity-40 mt-2">Click to change file</p>
+            </div>
+          ) : (
+            <div>
+              <Upload className="w-12 h-12 mx-auto mb-3 opacity-30" />
+              <p className="font-bold opacity-60">Drop video here or click to upload</p>
+              <p className="text-xs opacity-40 mt-2">MP4, WebM, MOV, AVI — max 25MB, 3 minutes</p>
+            </div>
+          )}
         </div>
 
-        {/* Process Button */}
-        <div className="mb-8">
-          <Button
-            onClick={handleUpload}
-            disabled={!videoFile || isProcessing}
-            className="w-full bg-gradient-to-r from-[oklch(0.65_0.25_310)] to-[oklch(0.6_0.28_280)] hover:from-[oklch(0.7_0.28_310)] hover:to-[oklch(0.65_0.3_280)] text-black font-bold py-3 rounded-lg transition-all"
-          >
-            {isProcessing ? (
-              <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Processing...
-              </>
+        {/* Translate Button */}
+        {file && (
+          <button onClick={handleTranslate} disabled={isLoading}
+            className="w-full py-4 font-black uppercase tracking-widest text-black flex items-center justify-center gap-3 disabled:opacity-50 transition-all"
+            style={{ background: isLoading ? "oklch(0.4 0.15 310)" : C }}>
+            {isLoading ? (
+              <><Loader2 className="w-5 h-5 animate-spin" /> Processing... (may take 1-3 minutes)</>
             ) : (
-              "PROCESS VIDEO"
+              <><Languages className="w-5 h-5" /> Translate to Myanmar</>
             )}
-          </Button>
-        </div>
+          </button>
+        )}
 
-        {/* Results Section */}
-        {(originalText || translatedText) && (
-          <div className="space-y-6">
-            {/* Original Text */}
-            {originalText && (
-              <div className="bg-[oklch(0.08_0.01_280)] border border-[oklch(0.2_0.02_280_/_60%)] p-6 rounded-lg">
-                <h3 className="text-sm font-bold text-[oklch(0.6_0.28_280)] uppercase tracking-wider mb-3">
-                  Original Text
-                </h3>
-                <p className="text-[oklch(0.85_0.1_280)] leading-relaxed">
-                  {originalText}
-                </p>
-              </div>
-            )}
-
-            {/* Translated Text */}
-            {translatedText && (
-              <div className="bg-[oklch(0.08_0.01_280)] border border-[oklch(0.2_0.02_280_/_60%)] p-6 rounded-lg">
-                <div className="flex justify-between items-start mb-3">
-                  <h3 className="text-sm font-bold text-[oklch(0.65_0.25_310)] uppercase tracking-wider">
-                    Myanmar Translation
-                  </h3>
-                  <Button
-                    onClick={handleCopyTranslation}
-                    size="sm"
-                    variant="outline"
-                    className="border-[oklch(0.65_0.25_310)] text-[oklch(0.65_0.25_310)] hover:bg-[oklch(0.65_0.25_310)] hover:text-black"
-                  >
-                    {copied ? (
-                      <>
-                        <Check className="w-4 h-4 mr-1" />
-                        Copied
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-4 h-4 mr-1" />
-                        Copy
-                      </>
-                    )}
-                  </Button>
+        {/* Progress Steps */}
+        {isLoading && (
+          <div className="border border-[oklch(0.2_0.02_280_/_60%)] bg-[oklch(0.08_0.01_280_/_50%)] p-6">
+            <div className="flex items-center justify-between text-xs opacity-60">
+              {["Extract Audio", "Whisper Transcribe", "Gemini Translate", "Build SRT"].map((step, i) => (
+                <div key={step} className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full border border-current flex items-center justify-center animate-pulse" style={{ color: C }}>{i + 1}</div>
+                  <span>{step}</span>
+                  {i < 3 && <ChevronRight className="w-3 h-3 opacity-30" />}
                 </div>
-                <p className="text-[oklch(0.85_0.1_280)] leading-relaxed text-lg font-semibold">
-                  {translatedText}
-                </p>
-                <p className="text-[oklch(0.5_0.1_280)] text-sm mt-4">
-                  💡 Paste this text into the Text-to-Speech generator to create Myanmar audio
-                </p>
-              </div>
-            )}
+              ))}
+            </div>
           </div>
         )}
 
-        {/* Info Section */}
-        <div className="mt-12 bg-[oklch(0.08_0.01_280)] border border-[oklch(0.2_0.02_280_/_60%)] p-6 rounded-lg">
-          <h3 className="text-sm font-bold text-[oklch(0.6_0.28_280)] uppercase tracking-wider mb-3">
-            How it works
-          </h3>
-          <ol className="space-y-2 text-[oklch(0.7_0.15_280)] text-sm">
-            <li>1. Upload your video file (any language)</li>
-            <li>2. System extracts audio and transcribes it</li>
-            <li>3. Text is automatically translated to Myanmar</li>
-            <li>4. Copy the Myanmar text to use in Text-to-Speech</li>
-            <li>5. Generate Myanmar audio and download</li>
-          </ol>
-        </div>
+        {/* Results */}
+        {result && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-black uppercase tracking-wider" style={{ color: C }}>Translation Result</h2>
+              <div className="flex gap-2">
+                <button onClick={() => downloadFile(result.myanmarText, "myanmar_translation.txt")}
+                  className="flex items-center gap-1 text-xs px-3 py-2 border border-green-500/50 text-green-400 hover:bg-green-500/20 transition-all">
+                  <Download className="w-3 h-3" /> TXT
+                </button>
+                <button onClick={() => downloadFile(result.srtContent, "myanmar_subtitles.srt")}
+                  className="flex items-center gap-1 text-xs px-3 py-2 font-bold text-black transition-all" style={{ background: C }}>
+                  <Download className="w-3 h-3" /> SRT
+                </button>
+              </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex gap-1 border-b border-[oklch(0.2_0.02_280_/_60%)]">
+              {([
+                { id: "myanmar", label: "Myanmar" },
+                { id: "english", label: "English" },
+                { id: "srt", label: "SRT" },
+              ] as const).map(({ id, label }) => (
+                <button key={id} onClick={() => setTab(id)}
+                  className={`px-4 py-2 text-sm font-bold uppercase tracking-wider border-b-2 transition-all -mb-px ${tab === id ? "border-[oklch(0.65_0.25_310)] text-[oklch(0.65_0.25_310)]" : "border-transparent opacity-50 hover:opacity-80"}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div className="border border-[oklch(0.2_0.02_280_/_60%)] bg-[oklch(0.08_0.01_280_/_50%)] p-6 max-h-96 overflow-y-auto">
+              <pre className="text-sm whitespace-pre-wrap leading-relaxed font-sans">
+                {tab === "myanmar" ? result.myanmarText : tab === "english" ? result.englishText : result.srtContent}
+              </pre>
+            </div>
+
+            {/* New Translation */}
+            <button onClick={() => { setFile(null); setResult(null); }}
+              className="w-full py-3 border border-[oklch(0.2_0.02_280_/_60%)] font-bold uppercase text-sm hover:opacity-70 transition-all">
+              Translate Another Video
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -13,7 +13,7 @@ export default function Login() {
       if (data.role === "admin") {
         window.location.href = "/admin";
       } else {
-        window.location.href = "/tts";
+        window.location.href = "/lumix";
       }
     },
     onError: (err) => {

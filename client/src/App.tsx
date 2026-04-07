@@ -8,6 +8,7 @@ import TTSGenerator from "./pages/TTSGenerator";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import AdminDashboard from "./pages/AdminDashboard";
+import VideoTranslator from "./pages/VideoTranslator";
 import AuthGuard from "./components/AuthGuard";
 
 function Router() {
@@ -15,7 +16,7 @@ function Router() {
     <Switch>
       <Route path={"/"} component={Landing} />
       <Route path={"/login"} component={Login} />
-      <Route path={"/tts"}>
+      <Route path={"/lumix"}>
         <AuthGuard>
           <TTSGenerator />
         </AuthGuard>
@@ -24,6 +25,9 @@ function Router() {
         <AuthGuard>
           <AdminDashboard />
         </AuthGuard>
+      </Route>
+      <Route path={"/video"}>
+        {() => { window.location.href = '/lumix'; return null; }}
       </Route>
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />

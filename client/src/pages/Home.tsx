@@ -7,7 +7,7 @@ export default function Home() {
   const { user, isAuthenticated, logout } = useAuth();
 
   const handleGetStarted = () => {
-    window.location.href = "/tts";
+    window.location.href = "/lumix";
   };
 
   return (

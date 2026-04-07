@@ -1,12 +1,14 @@
+import { translateVideo, translateVideoLink } from "./videoTranslator";
+import { getQuotaStatus } from "./geminiTranslator";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
-import { generateSpeech, SUPPORTED_VOICES } from "./tts";
+import { generateSpeech, generateSpeechWithCharacter, SUPPORTED_VOICES, CHARACTER_VOICES, CharacterKey } from "./tts";
 import { getDb } from "./db";
-import { users, subscriptions, settings } from "../drizzle/schema";
-import { eq, desc, and, gte } from "drizzle-orm";
+import { users, subscriptions, settings, ttsConversions } from "../drizzle/schema";
+import { eq, desc, and, gte, sql } from "drizzle-orm";
 import { SignJWT } from "jose";
 import { nanoid } from "nanoid";
 import { checkRateLimit, clearRateLimit } from "./_core/rateLimit";
@@ -69,6 +71,16 @@ export const appRouter = router({
           .setProtectedHeader({ alg: "HS256" })
           .setExpirationTime("30d")
           .sign(JWT_SECRET);
+        // Update last login
+        try {
+          const db = await getDb();
+          if (db) await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
+        } catch {}
+        // Update last login
+        try {
+          const db = await getDb();
+          if (db) await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
+        } catch {}
         ctx.res.cookie(COOKIE_NAME, token, {
           httpOnly: true,
           secure: true,
@@ -98,11 +110,17 @@ export const appRouter = router({
       const now = new Date();
       const allUsers = await db.select().from(users).orderBy(desc(users.createdAt));
       const allSubs = await db.select().from(subscriptions);
+      const genCounts = await db.select({
+        userId: ttsConversions.userId,
+        count: sql<number>`count(*)`,
+        lastAt: sql<Date>`max(created_at)`,
+      }).from(ttsConversions).groupBy(ttsConversions.userId);
+      const genMap = Object.fromEntries(genCounts.map(g => [g.userId, { count: g.count, lastAt: g.lastAt }]));
       return allUsers.map(u => {
         const activeSub = allSubs
           .filter(s => s.userId === u.id && s.expiresAt && s.expiresAt > now)
           .sort((a, b) => (b.expiresAt?.getTime() ?? 0) - (a.expiresAt?.getTime() ?? 0))[0];
-        return { ...u, subscription: activeSub ?? null };
+        return { ...u, subscription: activeSub ?? null, genCount: genMap[u.id]?.count ?? 0, lastActive: genMap[u.id]?.lastAt ?? null };
       });
     }),
 
@@ -150,15 +168,57 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    getUserSubscriptions: publicProcedure
-      .input(z.object({ userId: z.string() }))
-      .query(async ({ input, ctx }) => {
-        if (ctx.user?.role !== "admin") throw new Error("Unauthorized");
+    banUser: publicProcedure
+      .input(z.object({ userId: z.string(), ban: z.boolean() }))
+      .mutation(async ({ input, ctx }) => {
+        if (!ctx.user || ctx.user.role !== "admin") throw new Error("Unauthorized");
         const db = await getDb();
-        if (!db) return [];
-        return db.select().from(subscriptions)
-          .where(eq(subscriptions.userId, input.userId))
-          .orderBy(desc(subscriptions.createdAt));
+        if (!db) throw new Error("DB error");
+        await db.update(users).set({ bannedAt: input.ban ? new Date() : null }).where(eq(users.id, input.userId));
+        return { success: true };
+      }),
+    getServerHealth: publicProcedure
+      .query(async ({ ctx }) => {
+        if (!ctx.user || ctx.user.role !== "admin") throw new Error("Unauthorized");
+        const { execSync } = await import("child_process");
+        const toMB = (b: number) => Math.round(b / 1024 / 1024);
+        const mem = process.memoryUsage();
+        let cpu = "0", disk = "0/0", dbSize = "0";
+        try { cpu = execSync("top -bn1 | grep 'Cpu(s)' | awk '{print $2}'").toString().trim(); } catch {}
+        try { disk = execSync("df -h / | tail -1 | awk '{print $3"/"$2}'").toString().trim(); } catch {}
+        try { disk = execSync("df -h / | tail -1 | awk '{print $3"/"$2}'").toString().trim(); } catch {}
+        return {
+          memory: { used: toMB(mem.rss), heap: toMB(mem.heapUsed), total: toMB(mem.heapTotal) },
+          cpu,
+          disk,
+          uptime: Math.floor(process.uptime()),
+          nodeVersion: process.version,
+        };
+      }),
+    getAnalytics: publicProcedure
+      .query(async ({ ctx }) => {
+        if (!ctx.user || ctx.user.role !== "admin") throw new Error("Unauthorized");
+        const db = await getDb();
+        if (!db) throw new Error("DB error");
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const weekAgo = new Date(today.getTime() - 7 * 86400000);
+        const monthAgo = new Date(today.getTime() - 30 * 86400000);
+        const [totalGen] = await db.select({ count: sql<number>`count(*)` }).from(ttsConversions);
+        const [todayGen] = await db.select({ count: sql<number>`count(*)` }).from(ttsConversions).where(gte(ttsConversions.createdAt, today));
+        const [weekGen] = await db.select({ count: sql<number>`count(*)` }).from(ttsConversions).where(gte(ttsConversions.createdAt, weekAgo));
+        const [monthGen] = await db.select({ count: sql<number>`count(*)` }).from(ttsConversions).where(gte(ttsConversions.createdAt, monthAgo));
+        const [totalChars] = await db.select({ sum: sql<number>`sum(char_count)` }).from(ttsConversions);
+        const [activeToday] = await db.select({ count: sql<number>`count(distinct user_id)` }).from(ttsConversions).where(gte(ttsConversions.createdAt, today));
+        const [activeWeek] = await db.select({ count: sql<number>`count(distinct user_id)` }).from(ttsConversions).where(gte(ttsConversions.createdAt, weekAgo));
+        const planCounts = await db.select({ plan: subscriptions.plan, count: sql<number>`count(*)` })
+          .from(subscriptions).where(gte(subscriptions.expiresAt, now)).groupBy(subscriptions.plan);
+        return {
+          generations: { total: totalGen.count, today: todayGen.count, week: weekGen.count, month: monthGen.count },
+          chars: { total: totalChars.sum ?? 0 },
+          activeUsers: { today: activeToday.count, week: activeWeek.count },
+          planCounts,
+        };
       }),
 
     cancelSubscription: publicProcedure
@@ -174,6 +234,38 @@ export const appRouter = router({
       }),
   }),
 
+  video: router({
+    getQuota: publicProcedure
+      .query(async ({ ctx }) => {
+        if (!ctx.user || ctx.user.role !== "admin") throw new Error("Unauthorized");
+        return getQuotaStatus();
+      }),
+    translateLink: publicProcedure.input(z.object({ url: z.string() })).mutation(async ({ input, ctx }) => { if (!ctx.user) throw new Error("Please login first."); const db = await getDb(); if (ctx.user.role !== "admin" && db) { const now = new Date(); const sub = await db.select().from(subscriptions).where(and(eq(subscriptions.userId, ctx.user.userId), gte(subscriptions.expiresAt, now))).limit(1); if (sub.length === 0) throw new Error("Subscription expired."); } try { const result = await translateVideoLink(input.url); return { success: true, ...result }; } catch (error: any) { throw new Error(error.message ?? "Link translation failed."); } }),
+    translate: publicProcedure
+      .input(z.object({
+        videoBase64: z.string(),
+        filename: z.string().max(255),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (!ctx.user) throw new Error("Please login first.");
+        const db = await getDb();
+        if (ctx.user.role !== "admin" && db) {
+          const now = new Date();
+          const sub = await db.select().from(subscriptions)
+            .where(and(eq(subscriptions.userId, ctx.user.userId), gte(subscriptions.expiresAt, now)))
+            .limit(1);
+          if (sub.length === 0) throw new Error("Subscription expired.");
+        }
+        try {
+          const videoBuffer = Buffer.from(input.videoBase64, "base64");
+          if (videoBuffer.length > 25 * 1024 * 1024) throw new Error("File too large. Max 25MB.");
+          const result = await translateVideo(videoBuffer, input.filename);
+          return { success: true, ...result };
+        } catch (error: any) {
+          throw new Error(error.message ?? "Translation failed.");
+        }
+      }),
+  }),
   subscription: router({
     myStatus: publicProcedure.query(async ({ ctx }) => {
       if (!ctx.user) return { active: false, plan: null, expiresAt: null };
@@ -198,12 +290,18 @@ export const appRouter = router({
         tone: z.number().min(-20).max(20).default(0),
         speed: z.number().min(0.5).max(2.0).default(1.0),
         aspectRatio: z.enum(["9:16", "16:9"]).default("16:9"),
+        character: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user) throw new Error("Please login first.");
+        const db = await getDb();
         if (ctx.user.role !== "admin") {
-          const db = await getDb();
           if (db) {
+            // Check ban
+            const userRecord = await db.select().from(users)
+              .where(eq(users.id, ctx.user.userId)).limit(1);
+            if (userRecord[0]?.bannedAt) throw new Error("Your account has been banned.");
+            // Check subscription
             const now = new Date();
             const sub = await db.select().from(subscriptions)
               .where(and(eq(subscriptions.userId, ctx.user.userId), gte(subscriptions.expiresAt, now)))
@@ -211,10 +309,31 @@ export const appRouter = router({
             if (sub.length === 0) throw new Error("Subscription expired. Please contact admin.");
           }
         }
-        const cleanText = sanitizeText(input.text);
+        const cleanText = sanitizeText(input.text).replace(/[။၊]/g, ' ').replace(/\s+/g, ' ').trim();
         if (!cleanText) throw new Error("Invalid text input.");
         try {
-          const result = await generateSpeech(cleanText, input.voice, input.speed, input.tone, input.aspectRatio);
+          let result;
+          if (input.character && input.character.trim() !== "") {
+            console.log(`[TTS REQUEST] 🔄 Routing to Murf API for Character: ${input.character}`);
+            // Character voice အတွက် `generateSpeechWithCharacter` ကို ခေါ်ပါမယ်
+            result = await generateSpeechWithCharacter(cleanText, input.character as any, input.speed, input.aspectRatio);
+          } else {
+            console.log(`[TTS REQUEST] 🗣️ Routing to Standard TTS for Voice: ${input.voice}`);
+            // Standard voice အတွက် `generateSpeech` ကို ခေါ်ပါမယ်
+            result = await generateSpeech(cleanText, input.voice, input.speed, input.tone, input.aspectRatio);
+          }
+          // Save stats (privacy-friendly - no text content)
+          if (db) {
+            const { nanoid } = await import("nanoid");
+            await db.insert(ttsConversions).values({
+              id: nanoid(10),
+              userId: ctx.user.userId,
+              voice: input.voice,
+              charCount: cleanText.length,
+              durationMs: result.durationMs,
+              aspectRatio: input.aspectRatio,
+            }).catch(() => {});
+          }
           return {
             success: true,
             audioBase64: result.audioBuffer.toString("base64"),
@@ -242,6 +361,14 @@ export const appRouter = router({
           mimeType: "audio/mpeg",
         };
       }),
+
+    getCharacters: publicProcedure.query(() => {
+      return Object.entries(CHARACTER_VOICES).map(([key, value]) => ({
+        id: key,
+        name: value.name,
+        gender: value.gender,
+      }));
+    }),
 
     getVoices: publicProcedure.query(() => {
       return Object.entries(SUPPORTED_VOICES).map(([key, value]) => ({
