@@ -1,17 +1,17 @@
 import { useState, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, Download, Volume2, LogOut, Crown, AlertCircle, Mic, FileVideo, Settings, Sparkles, Upload, Sun, Moon, Copy, Check, Link as LinkIcon } from "lucide-react";
+import { Loader2, Download, Volume2, LogOut, Crown, AlertCircle, Mic, FileVideo, Settings, Sparkles, Upload, Sun, Moon, Copy, Check, Link as LinkIcon, Wand2 } from "lucide-react";
 import { useLocation } from "wouter";
 
-type Tab = "tts" | "video" | "settings";
+type Tab = "tts" | "video" | "dubbing" | "settings";
 type Theme = "dark" | "light";
 type Lang = "mm" | "en";
 
 const T = {
   mm: {
     appName: "LUMIX",
-    tabs: { tts: "စာမှအသံထုတ်ရန်", video: "ဗီဒီယိုဘာသာပြန်", settings: "ဆက်တင်" },
+    tabs: { tts: "စာမှအသံထုတ်ရန်", video: "ဗီဒီယိုဘာသာပြန်", dubbing: "အသံထည့်ရန်", settings: "ဆက်တင်" },
     inputText: "စာသားထည့်ပါ",
     inputPlaceholder: "စာသားရိုက်ထည့်ပါ...",
     voiceSelection: "အသံရွေးချယ်မှု",
@@ -58,7 +58,7 @@ const T = {
   },
   en: {
     appName: "LUMIX",
-    tabs: { tts: "TTS", video: "Video Translation", settings: "Settings" },
+    tabs: { tts: "TTS", video: "Video Translation", dubbing: "Dubbing", settings: "Settings" },
     inputText: "Input Text",
     inputPlaceholder: "Enter your text here...",
     voiceSelection: "Voice Selection",
@@ -301,7 +301,7 @@ export default function TTSGenerator() {
 
       {/* TABS */}
       <div className="relative z-10 flex gap-2 px-6 pt-4 border-b" style={{ borderColor: cardBorder, background: isDark ? 'rgba(15,12,41,0.5)' : 'rgba(255,255,255,0.3)' }}>
-        {([{ id: "tts" as Tab, label: t.tabs.tts, icon: <Mic className="w-4 h-4" /> }, { id: "video" as Tab, label: t.tabs.video, icon: <FileVideo className="w-4 h-4" /> }, { id: "settings" as Tab, label: t.tabs.settings, icon: <Settings className="w-4 h-4" /> }]).map(({ id, label: lbl, icon }) => (
+        {([{ id: "tts" as Tab, label: t.tabs.tts, icon: <Mic className="w-4 h-4" /> }, { id: "video" as Tab, label: t.tabs.video, icon: <FileVideo className="w-4 h-4" /> }, { id: "dubbing" as Tab, label: t.tabs.dubbing, icon: <Wand2 className="w-4 h-4" /> }, { id: "settings" as Tab, label: t.tabs.settings, icon: <Settings className="w-4 h-4" /> }]).map(({ id, label: lbl, icon }) => (
           <button key={id} onClick={() => setTab(id)} className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold uppercase tracking-widest transition-all border-b rounded-t-xl" style={{ borderColor: tab === id ? accent : 'transparent', color: tab === id ? accent : (isDark ? 'rgba(255,255,255,0.6)' : 'rgba(30,27,75,0.5)'), background: tab === id ? cardBg : 'transparent' }}>{icon} {lbl}</button>
         ))}
       </div>
@@ -353,12 +353,88 @@ export default function TTSGenerator() {
           </div>
         )}
 
-        {/* === VIDEO TAB — Wizard Flow === */}
+        {/* === VIDEO TAB — Simple Translation === */}
         {tab === "video" && (
-          <div className="max-w-3xl mx-auto animate-in fade-in zoom-in-95 duration-300 space-y-4">
+          <div className="max-w-2xl mx-auto animate-in fade-in zoom-in-95 duration-300 space-y-4">
             <div className="text-center mb-6">
               <h2 className="text-3xl md:text-4xl font-black uppercase tracking-widest mb-3 leading-normal" style={{ textShadow: isDark ? `0 0 20px ${accent}` : 'none', color: accent }}>{t.videoTitle}</h2>
               <p className="font-bold opacity-80 uppercase tracking-wider text-sm mt-2">{t.videoDesc}</p>
+              <p className="text-xs opacity-60 mt-2">{t.videoLimit}</p>
+            </div>
+
+            {!videoResult && (
+              <>
+                <div className={box} style={{ background: cardBg, borderColor: cardBorder }}>
+                  <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{t.linkInputLabel}</div>
+                  <div className="flex items-center gap-3 mt-1">
+                    <LinkIcon className="w-5 h-5 opacity-50" />
+                    <input type="text" value={videoUrl} onChange={(e) => { setVideoUrl(e.target.value); if (e.target.value) setVideoFile(null); }} placeholder={t.linkPlaceholder} className="flex-1 bg-transparent border-b-2 py-2 focus:outline-none transition-colors text-sm" style={{ borderColor: videoUrl ? accent : cardBorder, color: textColor }} />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-center gap-4 opacity-50 my-2">
+                  <div className="h-px w-20" style={{ background: textColor }}></div><span className="text-xs font-bold uppercase tracking-widest">{t.orLine}</span><div className="h-px w-20" style={{ background: textColor }}></div>
+                </div>
+
+                <div className={box} style={{ background: cardBg, borderColor: cardBorder }}>
+                  <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>Upload</div>
+                  <div onDragOver={e => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)} onDrop={e => { e.preventDefault(); setDragOver(false); if (e.dataTransfer.files[0]) handleVideoFile(e.dataTransfer.files[0]); }} onClick={() => fileRef.current?.click()} className="border-2 border-dashed py-8 px-4 rounded-xl text-center cursor-pointer transition-all mt-1" style={{ borderColor: dragOver ? accent : videoFile ? "#16a34a" : cardBorder, background: dragOver ? (isDark ? 'rgba(167,139,250,0.1)' : '#ffffff') : inputBg, opacity: videoUrl ? 0.4 : 1 }}>
+                    <input ref={fileRef} type="file" accept="video/*" className="hidden" onChange={e => { if (e.target.files?.[0]) handleVideoFile(e.target.files[0]); }} />
+                    {videoFile ? (<><FileVideo className="w-8 h-8 mx-auto mb-2 text-green-600" /><p className="font-bold text-green-600 text-sm">{videoFile.name}</p><p className="text-xs font-semibold opacity-70 mt-1">{(videoFile.size / 1024 / 1024).toFixed(1)} MB</p></>) : (<><Upload className="w-8 h-8 mx-auto mb-2 opacity-50" /><p className="font-bold opacity-80 text-sm">{t.dropVideo}</p><p className="text-xs font-semibold opacity-60 mt-2">MP4, MOV, AVI, MKV</p></>)}
+                  </div>
+                </div>
+
+                {(videoFile || videoUrl) && (
+                  <button onClick={handleTranslate} disabled={translateMutation.isPending || translateLinkMutation.isPending} className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-white font-black uppercase tracking-widest transition-all disabled:opacity-50 hover:scale-[1.02] mt-4 shadow-lg" style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, boxShadow: isDark ? `0 0 20px ${accent}` : `0 8px 20px ${accent}66` }}>
+                    {(translateMutation.isPending || translateLinkMutation.isPending) ? <><Loader2 className="w-5 h-5 animate-spin" />{t.translating}</> : <><Sparkles className="w-5 h-5" />{t.translateBtn}</>}
+                  </button>
+                )}
+
+                {(translateMutation.isPending || translateLinkMutation.isPending) && (
+                  <div className={box} style={{ background: cardBg, borderColor: cardBorder }}>
+                    <div className="flex items-center justify-center gap-4 py-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: accent }} />
+                        <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: accent, animationDelay: "0.3s" }} />
+                        <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: accent, animationDelay: "0.6s" }} />
+                      </div>
+                      <span className="text-sm font-bold opacity-60">{t.translating}</span>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {videoResult && (
+              <div className={box} style={{ background: cardBg, borderColor: cardBorder }}>
+                <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{t.result}</div>
+                <div className="space-y-4 mt-2">
+                  <div className="flex justify-end">
+                    <button onClick={handleVideoCopy}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all hover:scale-105"
+                      style={{ background: videoCopied ? "#4ade80" : accent, color: videoCopied ? "#000" : "#fff" }}>
+                      {videoCopied ? <><Check className="w-4 h-4" /> {t.copied}</> : <><Copy className="w-4 h-4" /> {t.copyText}</>}
+                    </button>
+                  </div>
+                  <textarea
+                    value={editedVideoText}
+                    onChange={e => setEditedVideoText(e.target.value)}
+                    className="w-full min-h-[250px] p-5 rounded-xl border focus:outline-none focus:ring-2 resize-y text-sm font-sans"
+                    style={{ background: inputBg, borderColor: cardBorder, color: textColor, lineHeight: "2.2" }}
+                  />
+                  <button onClick={handleVideoReset} className="w-full py-3 rounded-xl border font-bold text-xs uppercase tracking-wider transition-colors hover:opacity-100 opacity-70" style={{ borderColor: cardBorder }}>{t.translateAnother}</button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* === DUBBING TAB — Wizard Flow === */}
+        {tab === "dubbing" && (
+          <div className="max-w-3xl mx-auto animate-in fade-in zoom-in-95 duration-300 space-y-4">
+            <div className="text-center mb-6">
+              <h2 className="text-3xl md:text-4xl font-black uppercase tracking-widest mb-3 leading-normal" style={{ textShadow: isDark ? `0 0 20px ${accent}` : 'none', color: accent }}>{lang === "mm" ? "ဗီဒီယို အသံထည့်ရန်" : "VIDEO DUBBING"}</h2>
+              <p className="font-bold opacity-80 uppercase tracking-wider text-sm mt-2">{lang === "mm" ? "ဗီဒီယိုကို ကြိုကြည့်ပြီး အသံ နှင့် စာတန်း ထည့်ပါ" : "Preview video, choose voice & add subtitles"}</p>
             </div>
 
             {/* ── STEP: Video Input ── */}
@@ -421,7 +497,6 @@ export default function TTSGenerator() {
                           else setDetectedRatio("16:9");
                         }}
                       />
-                      {/* SRT Preview Overlay */}
                       {srtEnabled && (
                         <div className="absolute bottom-4 left-0 right-0 flex justify-center pointer-events-none" style={{ zIndex: 5 }}>
                           <div style={{
@@ -479,7 +554,6 @@ export default function TTSGenerator() {
                 <div className={box} style={{ background: cardBg, borderColor: cardBorder }}>
                   <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{lang === "mm" ? "စာတန်းထိုး ဆက်တင်" : "Subtitle Settings"}</div>
                   <div className="space-y-4">
-                    {/* SRT On/Off Toggle */}
                     <div className="flex items-center justify-between py-2">
                       <div>
                         <p className="font-bold text-sm">{lang === "mm" ? "စာတန်းထိုး ဗီဒီယိုပေါ်ပြမည်" : "Show Subtitles on Video"}</p>
@@ -492,10 +566,8 @@ export default function TTSGenerator() {
                       </button>
                     </div>
 
-                    {/* SRT Customization — only shown when ON */}
                     {srtEnabled && (
                       <div className="space-y-4 pt-3 border-t" style={{ borderColor: cardBorder }}>
-                        {/* Font Size */}
                         <div>
                           <p className="text-xs font-bold uppercase tracking-wider opacity-70 mb-2">{lang === "mm" ? "စာအရွယ်အစား" : "Text Size"}</p>
                           <div className="flex items-center gap-3">
@@ -504,7 +576,6 @@ export default function TTSGenerator() {
                           </div>
                         </div>
 
-                        {/* Text Color */}
                         <div>
                           <p className="text-xs font-bold uppercase tracking-wider opacity-70 mb-2">{lang === "mm" ? "စာအရောင်" : "Text Color"}</p>
                           <div className="flex gap-2 flex-wrap">
@@ -520,7 +591,6 @@ export default function TTSGenerator() {
                           </div>
                         </div>
 
-                        {/* Drop Shadow */}
                         <div className="flex items-center justify-between py-1">
                           <p className="text-xs font-bold uppercase tracking-wider opacity-70">{lang === "mm" ? "အရိပ်ထည့်မည်" : "Drop Shadow"}</p>
                           <button onClick={() => setSrtDropShadow(!srtDropShadow)}
@@ -530,7 +600,6 @@ export default function TTSGenerator() {
                           </button>
                         </div>
 
-                        {/* Blur Behind Text */}
                         <div className="flex items-center justify-between py-1">
                           <p className="text-xs font-bold uppercase tracking-wider opacity-70">{lang === "mm" ? "နောက်ခံ ဝါးမည်" : "Blur Background"}</p>
                           <button onClick={() => setSrtBlurBg(!srtBlurBg)}
@@ -549,7 +618,6 @@ export default function TTSGenerator() {
                   {(translateMutation.isPending || translateLinkMutation.isPending) ? <><Loader2 className="w-5 h-5 animate-spin" />{t.translating}</> : <><Sparkles className="w-5 h-5" />{t.translateBtn}</>}
                 </button>
 
-                {/* Processing animation */}
                 {(translateMutation.isPending || translateLinkMutation.isPending) && (
                   <div className={box} style={{ background: cardBg, borderColor: cardBorder }}>
                     <div className="flex items-center justify-center gap-4 py-4">
@@ -563,14 +631,13 @@ export default function TTSGenerator() {
                   </div>
                 )}
 
-                {/* Back button */}
                 <button onClick={handleVideoReset} className="w-full py-2.5 rounded-xl border font-bold text-xs uppercase tracking-wider opacity-50 hover:opacity-100 transition-all" style={{ borderColor: cardBorder }}>
                   ← {lang === "mm" ? "ဗီဒီယိုပြောင်းမည်" : "Change Video"}
                 </button>
               </>
             )}
 
-            {/* ── STEP: Result ── */}
+            {/* Dubbing Result */}
             {videoResult && (
               <div className={box} style={{ background: cardBg, borderColor: cardBorder }}>
                 <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{t.result}</div>
