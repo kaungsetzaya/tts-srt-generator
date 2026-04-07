@@ -7,22 +7,66 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { handleTelegramUpdate, setWebhook } from "../telegram-bot";
+import {
+  corsMiddleware,
+  xssProtectionMiddleware,
+  apiRateLimiter,
+  securityHeaders,
+  cleanTempFiles,
+} from "./security";
 
 async function startServer() {
   const app = express();
   const server = createServer(app);
 
-  // Security
-  app.disable("x-powered-by");
+  // ──────────────────────────────────────────
+  // 🔐 SECURITY LAYER 1 — Basic Headers
+  // ──────────────────────────────────────────
+  app.disable("x-powered-by"); // Server info မပြ
+  app.set("trust proxy", 1);   // Nginx/Cloudflare ရှေ့မှာ proxy ထားလို့
 
   app.use(helmet({
-    contentSecurityPolicy: false,
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"], // Vite SPA လိုသည်
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:", "https:"],
+        connectSrc: ["'self'"],
+        frameSrc: ["'none'"],
+        objectSrc: ["'none'"],
+      },
+    },
     crossOriginEmbedderPolicy: false,
   }));
+
+  app.use(securityHeaders);  // X-Frame-Options, X-XSS-Protection etc.
+
+  // ──────────────────────────────────────────
+  // 🔐 SECURITY LAYER 2 — CORS
+  // ──────────────────────────────────────────
+  app.use(corsMiddleware);
+
+  // ──────────────────────────────────────────
+  // 🔐 SECURITY LAYER 3 — Body Parser (size limit)
+  // ──────────────────────────────────────────
   app.use(express.json({ limit: "35mb" }));
   app.use(express.urlencoded({ limit: "35mb", extended: true }));
 
-  // Telegram webhook
+  // ──────────────────────────────────────────
+  // 🔐 SECURITY LAYER 4 — XSS / SQLi Pattern Check
+  // ──────────────────────────────────────────
+  app.use("/api", xssProtectionMiddleware);
+
+  // ──────────────────────────────────────────
+  // 🔐 SECURITY LAYER 5 — API Rate Limiting (60 req/min per IP)
+  // ──────────────────────────────────────────
+  app.use("/api/trpc", apiRateLimiter(60));
+
+  // ──────────────────────────────────────────
+  // Telegram Webhook (Telegram IP range only check optional)
+  // ──────────────────────────────────────────
   app.post("/webhook/telegram", async (req, res) => {
     try {
       await handleTelegramUpdate(req.body);
@@ -33,15 +77,23 @@ async function startServer() {
     }
   });
 
+  // ──────────────────────────────────────────
   // tRPC API
+  // ──────────────────────────────────────────
   app.use("/api/trpc", createExpressMiddleware({
     router: appRouter,
     createContext,
   }));
 
-  // Static files
+  // ──────────────────────────────────────────
+  // Static Files (SPA)
+  // ──────────────────────────────────────────
   const staticPath = path.join(process.cwd(), "dist/public");
-  app.use(express.static(staticPath));
+  app.use(express.static(staticPath, {
+    maxAge: "7d",       // Static assets cache
+    etag: true,
+  }));
+
   app.get("*", async (req, res) => {
     const fs = await import("fs/promises");
     let html = await fs.readFile(path.join(staticPath, "index.html"), "utf8");
@@ -63,11 +115,17 @@ async function startServer() {
     res.send(html);
   });
 
+  // ──────────────────────────────────────────
+  // Startup
+  // ──────────────────────────────────────────
   const port = parseInt(process.env.PORT || "3000");
   server.listen(port, "127.0.0.1", () => {
-    console.log(`Server running on http://localhost:${port}/`);
+    console.log(`[LUMIX] Server running on http://localhost:${port}/`);
+    console.log(`[LUMIX] Environment: ${process.env.NODE_ENV || "development"}`);
     const webhookUrl = `https://choco.de5.net/webhook/telegram`;
     setWebhook(webhookUrl).catch(console.error);
+    // Initial temp file cleanup
+    cleanTempFiles();
   });
 }
 

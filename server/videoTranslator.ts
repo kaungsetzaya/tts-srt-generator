@@ -1,4 +1,5 @@
 import { promises as fs } from 'fs';
+import { existsSync } from 'fs';
 import * as path from 'path';
 import { tmpdir } from 'os';
 import { randomUUID } from 'crypto';
@@ -77,43 +78,54 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
     const tempAudioPath = path.join(tmpdir(), `${randomUUID()}.mp3`);
     
     try {
-        console.log(`[Video Translator] Bypassing YouTube block using Cobalt API for: ${url}`);
+        console.log(`[Video Translator] Attempting to download: ${url}`);
         
         let downloadUrl = "";
+
+        // --- Try Cobalt API v10 (current) ---
         try {
-            // Native fetch API ကို သုံးပြီး Headers အပြည့်အစုံနဲ့ လှမ်းခေါ်ပါမယ်
-            const res = await fetch("https://api.cobalt.tools/api/json", {
+            const cobaltRes = await fetch("https://api.cobalt.tools/", {
                 method: "POST",
                 headers: {
                     "Accept": "application/json",
                     "Content-Type": "application/json",
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                    "Origin": "https://cobalt.tools",
-                    "Referer": "https://cobalt.tools/"
                 },
-                body: JSON.stringify({ url: url })
+                body: JSON.stringify({ url, downloadMode: "auto" })
             });
-            
-            const data = await res.json() as any;
-            if (data && data.url) {
-                downloadUrl = data.url;
-                console.log(`[Video Translator] Cobalt API Success! Download Link generated.`);
+            const cobaltData = await cobaltRes.json() as any;
+            // v10 returns { status: "tunnel"|"redirect"|"picker", url: "..." }
+            if (cobaltData && (cobaltData.status === "tunnel" || cobaltData.status === "redirect") && cobaltData.url) {
+                downloadUrl = cobaltData.url;
+                console.log(`[Video Translator] Cobalt API v10 success. Status: ${cobaltData.status}`);
+            } else if (cobaltData?.picker) {
+                // picker mode: pick first item
+                downloadUrl = cobaltData.picker[0]?.url || "";
+                if (downloadUrl) console.log(`[Video Translator] Cobalt API v10 picker mode, picked first.`);
             }
         } catch (e) {
-            console.error("[Cobalt API Error]", e);
+            console.error("[Cobalt API v10 Error]", e);
         }
 
-        if (!downloadUrl) {
-            console.log("[Video Translator] Cobalt API failed, falling back to yt-dlp...");
-            const cookiePath = path.join(process.cwd(), 'cookies.txt');
-            await execAsync(`yt-dlp --cookies "${cookiePath}" -f "b" -o "${tempVideoPath}" "${url}"`);
+        if (downloadUrl) {
+            console.log(`[Video Translator] Downloading via Cobalt URL...`);
+            await execAsync(`curl -s -L --max-time 120 -o "${tempVideoPath}" "${downloadUrl}"`);
         } else {
-            console.log(`[Video Translator] Downloading raw video file from API...`);
-            await execAsync(`curl -s -L -o "${tempVideoPath}" "${downloadUrl}"`);
+            // --- Fallback to yt-dlp (supports YouTube, Facebook, TikTok, etc.) ---
+            console.log("[Video Translator] Cobalt unavailable, using yt-dlp fallback...");
+            const cookiePath = path.join(process.cwd(), 'cookies.txt');
+            const cookieFlag = existsSync(cookiePath) ? `--cookies "${cookiePath}"` : "";
+            // Best quality video under 50MB, prefer mp4
+            await execAsync(
+                `yt-dlp ${cookieFlag} -f "bestvideo[ext=mp4][filesize<50M]+bestaudio[ext=m4a]/best[ext=mp4][filesize<50M]/best" --merge-output-format mp4 -o "${tempVideoPath}" "${url}"`,
+                { timeout: 300000 }
+            );
         }
 
-        const videoBuffer = await fs.readFile(tempVideoPath);
-        const videoBase64 = videoBuffer.toString('base64');
+        // Verify file exists and has content
+        const stat = await fs.stat(tempVideoPath).catch(() => null);
+        if (!stat || stat.size < 1000) {
+            throw new Error("Downloaded file is empty or too small. The video may be unavailable or restricted.");
+        }
 
         console.log(`[Video Translator] Extracting Audio...`);
         await new Promise((resolve, reject) => {
@@ -128,28 +140,17 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
         console.log(`[Video Translator] Sending to local Whisper...`);
         const { text: englishText, srt: originalSrt } = await transcribeLocalWhisper(tempAudioPath);
 
-        if (!englishText || !(englishText || "").trim()) {
-            throw new Error("Whisper could not detect any speech.");
+        if (!englishText || !englishText.trim()) {
+            throw new Error("Whisper could not detect any speech in this video.");
         }
 
-        console.log(`[Video Translator] Translating...`);
-        const { myanmar: myanmarText, modelUsed } = await geminiTranslate(englishText, userApiKey);
-        
-        let myanmarSRT = originalSrt;
-        try {
-            // @ts-ignore
-            if (typeof buildMyanmarSRT === 'function') {
-                // @ts-ignore
-                myanmarSRT = await buildMyanmarSRT(originalSrt, myanmarText);
-            }
-        } catch (e) {}
+        console.log(`[Video Translator] Translating with Gemini...`);
+        const { myanmar: myanmarText } = await geminiTranslate(englishText, userApiKey);
 
         return { 
             englishText, 
             myanmarText, 
-            srtContent: myanmarSRT,
-            videoBase64: videoBase64,
-            videoFilename: "LUMIX_Video.mp4"
+            srtContent: originalSrt,
         };
     } catch (error: any) {
         console.error("[Video Translator Error]", error);

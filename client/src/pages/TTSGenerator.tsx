@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, Download, Volume2, LogOut, Crown, AlertCircle, Mic, FileVideo, Settings, Sparkles, Upload, ChevronRight, Sun, Moon, Activity, Link as LinkIcon } from "lucide-react";
+import { Loader2, Download, Volume2, LogOut, Crown, AlertCircle, Mic, FileVideo, Settings, Sparkles, Upload, ChevronRight, Sun, Moon, Copy, Check, Link as LinkIcon } from "lucide-react";
 import { useLocation } from "wouter";
 
 type Tab = "tts" | "video" | "settings";
@@ -120,7 +120,8 @@ export default function TTSGenerator() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoUrl, setVideoUrl] = useState<string>("");
   const [dragOver, setDragOver] = useState(false);
-  const [videoResult, setVideoResult] = useState<{ myanmarText: string; srtContent?: string } | null>(null);
+  const [videoResult, setVideoResult] = useState<{ myanmarText: string } | null>(null);
+  const [copied, setCopied] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [geminiKey, setGeminiKey] = useState("");
@@ -193,19 +194,7 @@ export default function TTSGenerator() {
       try {
         const res = await translateLinkMutation.mutateAsync({ url: videoUrl.trim() });
         if (res.success) {
-            setVideoResult({ myanmarText: res.myanmarText, srtContent: res.srtContent });
-            if (res.videoBase64) {
-                const binary = atob(res.videoBase64);
-                const bytes = new Uint8Array(binary.length);
-                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-                const blob = new Blob([bytes], { type: "video/mp4" });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = res.videoFilename || `LUMIX_Video_${Date.now()}.mp4`;
-                a.click();
-                URL.revokeObjectURL(url);
-            }
+            setVideoResult({ myanmarText: res.myanmarText });
         }
       } catch (e: any) { alert(e?.message || "Link Translation failed"); }
       return;
@@ -218,7 +207,7 @@ export default function TTSGenerator() {
       try {
         const res = await translateMutation.mutateAsync({ videoBase64: base64, filename: videoFile.name });
         if (res.success) {
-            setVideoResult({ myanmarText: res.myanmarText, srtContent: res.srtContent });
+            setVideoResult({ myanmarText: res.myanmarText });
         }
       } catch (e: any) { alert(e?.message || "Translation failed"); }
     };
@@ -357,14 +346,24 @@ export default function TTSGenerator() {
               <div className={box} style={{ background: cardBg, borderColor: cardBorder }}>
                 <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{t.result}</div>
                 <div className="space-y-4 mt-2">
-                  <div className="flex gap-3">
-                    <button onClick={() => downloadFile(videoResult.myanmarText, "myanmar_translation.txt")} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border font-bold text-xs uppercase tracking-wider transition-colors" style={{ borderColor: accent, color: accent, background: isDark ? 'rgba(167,139,250,0.1)' : '#ffffff' }}><Download className="w-4 h-4" /> Text</button>
-                    {videoResult.srtContent && (<button onClick={() => downloadFile(videoResult.srtContent, "myanmar_subtitles.srt")} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border font-bold text-xs uppercase tracking-wider transition-colors" style={{ borderColor: accentSecondary, color: accentSecondary, background: isDark ? 'rgba(99,102,241,0.1)' : '#ffffff' }}><Download className="w-4 h-4" /> SRT</button>)}
+                  {/* Copy button only — no SRT export */}
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(videoResult.myanmarText);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                      }}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl border font-bold text-xs uppercase tracking-wider transition-all hover:scale-105"
+                      style={{ borderColor: accent, color: accent, background: isDark ? 'rgba(167,139,250,0.1)' : '#ffffff' }}
+                    >
+                      {copied ? <><Check className="w-4 h-4" /> Copied!</> : <><Copy className="w-4 h-4" /> Copy Text</>}
+                    </button>
                   </div>
-                  <div className="rounded-xl p-4 max-h-60 overflow-y-auto border" style={{ background: inputBg, borderColor: cardBorder }}>
+                  <div className="rounded-xl p-4 max-h-72 overflow-y-auto border" style={{ background: inputBg, borderColor: cardBorder }}>
                     <pre className="text-sm whitespace-pre-wrap leading-relaxed font-sans">{videoResult.myanmarText}</pre>
                   </div>
-                  <button onClick={() => { setVideoFile(null); setVideoUrl(""); setVideoResult(null); }} className="w-full py-3 rounded-xl border font-bold text-xs uppercase tracking-wider transition-colors hover:opacity-100 opacity-70" style={{ borderColor: cardBorder }}>{t.translateAnother}</button>
+                  <button onClick={() => { setVideoFile(null); setVideoUrl(""); setVideoResult(null); setCopied(false); }} className="w-full py-3 rounded-xl border font-bold text-xs uppercase tracking-wider transition-colors hover:opacity-100 opacity-70" style={{ borderColor: cardBorder }}>{t.translateAnother}</button>
                 </div>
               </div>
             )}

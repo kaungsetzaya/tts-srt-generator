@@ -7,13 +7,21 @@ import { publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { generateSpeech, generateSpeechWithCharacter, SUPPORTED_VOICES, CHARACTER_VOICES, CharacterKey } from "./tts";
 import { getDb } from "./db";
-import { users, subscriptions, settings, ttsConversions } from "../drizzle/schema";
+import { users, subscriptions, settings, ttsConversions, errorLogs } from "../drizzle/schema";
 import { eq, desc, and, gte, sql } from "drizzle-orm";
 import { SignJWT } from "jose";
 import { nanoid } from "nanoid";
 import { checkRateLimit, clearRateLimit } from "./_core/rateLimit";
+import { auditLog } from "./_core/security";
 
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "secret");
+// 🔐 JWT Secret — .env မှာ မသတ်မှတ်ရင် production တွင် crash ဖြစ်မည်
+if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
+  console.error("[SECURITY] FATAL: JWT_SECRET is not set in environment variables!");
+  process.exit(1);
+}
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || "dev-only-secret-do-not-use-in-production"
+);
 
 function addMonths(date: Date, months: number): Date {
   const d = new Date(date);
@@ -40,9 +48,11 @@ export const appRouter = router({
     loginWithCode: publicProcedure
       .input(z.object({ code: z.string().length(6).regex(/^\d{6}$/) }))
       .mutation(async ({ input, ctx }) => {
-        const ip = ctx.req.ip || ctx.req.headers["x-forwarded-for"] as string || "unknown";
-        if (!checkRateLimit(ip, 5, 15 * 60 * 1000)) {
-          throw new Error("Too many attempts. Please wait 15 minutes.");
+        // ✅ Rate Limit: 1 မိနစ်အတွင်း ၅ ကြိမ်သာ
+        const ip = (ctx.req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim()
+          || ctx.req.ip || "unknown";
+        if (!checkRateLimit(ip, 5, 60 * 1000)) {
+          throw new Error("Too many login attempts. Please wait 1 minute before trying again.");
         }
         const db = await getDb();
         if (!db) throw new Error("Database not available");
@@ -62,30 +72,31 @@ export const appRouter = router({
             throw new Error("No active subscription. Please contact admin.");
           }
         }
+        // 🔐 One-Device Session: login တိုင်း session_token အသစ်ထုတ်မည်
+        //    အဟောင်း JWT ထဲက session_token သည် DB နှင့် မတူတော့လို့ invalidate ဖြစ်မည်
+        const sessionToken = nanoid(24);
         const token = await new SignJWT({
           userId: user.id,
           telegramId: user.telegramId,
           name: user.telegramFirstName,
           role: user.role,
+          sid: sessionToken,  // session identifier
         })
           .setProtectedHeader({ alg: "HS256" })
           .setExpirationTime("30d")
           .sign(JWT_SECRET);
-        // Update last login
+        // DB ထဲ sessionToken + lastLoginAt update
         try {
-          const db = await getDb();
-          if (db) await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
+          const db2 = await getDb();
+          if (db2) await db2.update(users).set({
+            lastLoginAt: new Date(),
+            sessionToken: sessionToken,
+          }).where(eq(users.id, user.id));
         } catch {}
-        // Update last login
-        try {
-          const db = await getDb();
-          if (db) await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
-        } catch {}
+        const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, token, {
-          httpOnly: true,
-          secure: true,
+          ...cookieOptions,
           maxAge: 30 * 24 * 60 * 60 * 1000,
-          sameSite: "strict",
         });
         return {
           success: true,
@@ -155,6 +166,7 @@ export const appRouter = router({
           createdByAdmin: ctx.user.userId,
           note: input.note ?? null,
         });
+        auditLog("GIVE_SUBSCRIPTION", ctx.user.userId, input.userId, `plan=${input.plan}, expires=${expiresAt.toISOString()}`);
         return { success: true, expiresAt };
       }),
 
@@ -165,6 +177,7 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new Error("DB not available");
         await db.update(users).set({ role: input.role }).where(eq(users.id, input.userId));
+        auditLog("SET_ROLE", ctx.user.userId, input.userId, `role=${input.role}`);
         return { success: true };
       }),
 
@@ -175,6 +188,7 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new Error("DB error");
         await db.update(users).set({ bannedAt: input.ban ? new Date() : null }).where(eq(users.id, input.userId));
+        auditLog(input.ban ? "BAN_USER" : "UNBAN_USER", ctx.user.userId, input.userId);
         return { success: true };
       }),
     getServerHealth: publicProcedure
@@ -186,7 +200,7 @@ export const appRouter = router({
         let cpu = "0", disk = "0/0", dbSize = "0";
         try { cpu = execSync("top -bn1 | grep 'Cpu(s)' | awk '{print $2}'").toString().trim(); } catch {}
         try { disk = execSync("df -h / | tail -1 | awk '{print $3"/"$2}'").toString().trim(); } catch {}
-        try { disk = execSync("df -h / | tail -1 | awk '{print $3"/"$2}'").toString().trim(); } catch {}
+
         return {
           memory: { used: toMB(mem.rss), heap: toMB(mem.heapUsed), total: toMB(mem.heapTotal) },
           cpu,
@@ -313,25 +327,26 @@ export const appRouter = router({
         if (!cleanText) throw new Error("Invalid text input.");
         try {
           let result;
-          if (input.character && input.character.trim() !== "") {
-            console.log(`[TTS REQUEST] 🔄 Routing to Murf API for Character: ${input.character}`);
-            // Character voice အတွက် `generateSpeechWithCharacter` ကို ခေါ်ပါမယ်
+          const isCharacter = !!(input.character && input.character.trim() !== "");
+          if (isCharacter) {
+            console.log(`[TTS REQUEST] 🔄 Character: ${input.character}`);
             result = await generateSpeechWithCharacter(cleanText, input.character as any, input.speed, input.aspectRatio);
           } else {
-            console.log(`[TTS REQUEST] 🗣️ Routing to Standard TTS for Voice: ${input.voice}`);
-            // Standard voice အတွက် `generateSpeech` ကို ခေါ်ပါမယ်
+            console.log(`[TTS REQUEST] 🗣️ Voice: ${input.voice}`);
             result = await generateSpeech(cleanText, input.voice, input.speed, input.tone, input.aspectRatio);
           }
-          // Save stats (privacy-friendly - no text content)
           if (db) {
             const { nanoid } = await import("nanoid");
             await db.insert(ttsConversions).values({
               id: nanoid(10),
               userId: ctx.user.userId,
-              voice: input.voice,
+              feature: "tts",
+              voice: isCharacter ? undefined : input.voice,
+              character: isCharacter ? input.character : undefined,
               charCount: cleanText.length,
               durationMs: result.durationMs,
               aspectRatio: input.aspectRatio,
+              status: "success",
             }).catch(() => {});
           }
           return {
@@ -341,7 +356,15 @@ export const appRouter = router({
             srtContent: result.srtContent,
             durationMs: result.durationMs,
           };
-        } catch (error) {
+        } catch (error: any) {
+          if (db) {
+            const { nanoid } = await import("nanoid");
+            await db.insert(ttsConversions).values({
+              id: nanoid(10), userId: ctx.user.userId, feature: "tts",
+              voice: input.voice, character: input.character, charCount: cleanText.length,
+              status: "fail", errorMsg: (error?.message ?? "unknown").slice(0, 499),
+            }).catch(() => {});
+          }
           throw new Error("Failed to generate audio. Please try again.");
         }
       }),
@@ -375,6 +398,173 @@ export const appRouter = router({
         id: key,
         name: value.name,
       }));
+    }),
+  }),
+
+  // ============ EXTENDED ADMIN ANALYTICS ============
+  adminStats: router({
+
+    // --- Per-user detail: daily gens, feature breakdown, active hours ---
+    getUserDetail: publicProcedure
+      .input(z.object({ userId: z.string() }))
+      .query(async ({ input, ctx }) => {
+        if (!ctx.user || ctx.user.role !== "admin") throw new Error("Unauthorized");
+        const db = await getDb();
+        if (!db) throw new Error("DB error");
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
+        const allGens = await db.select().from(ttsConversions)
+          .where(and(eq(ttsConversions.userId, input.userId), gte(ttsConversions.createdAt, thirtyDaysAgo)))
+          .orderBy(desc(ttsConversions.createdAt));
+        // Group by date for daily chart
+        const dailyMap: Record<string, number> = {};
+        const featureMap: Record<string, number> = {};
+        const hourMap: Record<number, number> = {};
+        const voiceMap: Record<string, number> = {};
+        const statusCount = { success: 0, fail: 0 };
+        for (const g of allGens) {
+          const day = (g.createdAt as Date).toISOString().split("T")[0];
+          dailyMap[day] = (dailyMap[day] ?? 0) + 1;
+          const feat = g.feature ?? "tts";
+          featureMap[feat] = (featureMap[feat] ?? 0) + 1;
+          const hour = (g.createdAt as Date).getHours();
+          hourMap[hour] = (hourMap[hour] ?? 0) + 1;
+          const v = g.character ?? g.voice ?? "unknown";
+          voiceMap[v] = (voiceMap[v] ?? 0) + 1;
+          if (g.status === "fail") statusCount.fail++; else statusCount.success++;
+        }
+        // Last 7 days summary
+        const sevenDaysAgo = new Date(Date.now() - 7 * 86400000);
+        const recent = allGens.filter(g => (g.createdAt as Date) >= sevenDaysAgo);
+        const totalChars = allGens.reduce((s, g) => s + (g.charCount ?? 0), 0);
+        const totalDuration = allGens.reduce((s, g) => s + (g.durationMs ?? 0), 0);
+        return {
+          totalGens: allGens.length, recentGens: recent.length,
+          totalChars, totalDurationMs: totalDuration,
+          daily: Object.entries(dailyMap).map(([date, count]) => ({ date, count })).sort((a,b) => a.date.localeCompare(b.date)),
+          features: Object.entries(featureMap).map(([feature, count]) => ({ feature, count })),
+          activeHours: Object.entries(hourMap).map(([hour, count]) => ({ hour: Number(hour), count })).sort((a,b) => a.hour - b.hour),
+          voices: Object.entries(voiceMap).map(([name, count]) => ({ name, count })).sort((a,b) => b.count - a.count),
+          statusBreakdown: statusCount,
+          recentLogs: allGens.slice(0, 20).map(g => ({
+            id: g.id, feature: g.feature, voice: g.voice, character: g.character,
+            charCount: g.charCount, durationMs: g.durationMs, status: g.status,
+            errorMsg: g.errorMsg, createdAt: g.createdAt,
+          })),
+        };
+      }),
+
+    // --- Voice/Character usage stats with timeframe ---
+    getVoiceStats: publicProcedure
+      .input(z.object({ timeframe: z.enum(["week", "month", "year", "all"]) }))
+      .query(async ({ input, ctx }) => {
+        if (!ctx.user || ctx.user.role !== "admin") throw new Error("Unauthorized");
+        const db = await getDb();
+        if (!db) throw new Error("DB error");
+        const now = new Date();
+        const since = input.timeframe === "week" ? new Date(now.getTime() - 7 * 86400000)
+          : input.timeframe === "month" ? new Date(now.getTime() - 30 * 86400000)
+          : input.timeframe === "year" ? new Date(now.getTime() - 365 * 86400000)
+          : new Date(0);
+        const rows = await db.select().from(ttsConversions).where(gte(ttsConversions.createdAt, since));
+        const voiceMap: Record<string, { count: number; chars: number; durationMs: number }> = {};
+        const featureMap: Record<string, number> = {};
+        const dailyMap: Record<string, number> = {};
+        for (const r of rows) {
+          const key = r.character ? `[Character] ${r.character}` : (r.voice ?? "unknown");
+          if (!voiceMap[key]) voiceMap[key] = { count: 0, chars: 0, durationMs: 0 };
+          voiceMap[key].count++;
+          voiceMap[key].chars += r.charCount ?? 0;
+          voiceMap[key].durationMs += r.durationMs ?? 0;
+          const feat = r.feature ?? "tts";
+          featureMap[feat] = (featureMap[feat] ?? 0) + 1;
+          const day = (r.createdAt as Date).toISOString().split("T")[0];
+          dailyMap[day] = (dailyMap[day] ?? 0) + 1;
+        }
+        return {
+          total: rows.length,
+          voices: Object.entries(voiceMap).map(([name, d]) => ({ name, ...d })).sort((a,b) => b.count - a.count),
+          features: Object.entries(featureMap).map(([feature, count]) => ({ feature, count })),
+          daily: Object.entries(dailyMap).map(([date, count]) => ({ date, count })).sort((a,b) => a.date.localeCompare(b.date)),
+          totalChars: rows.reduce((s, r) => s + (r.charCount ?? 0), 0),
+          totalDurationMs: rows.reduce((s, r) => s + (r.durationMs ?? 0), 0),
+        };
+      }),
+
+    // --- Error logs ---
+    getErrorLogs: publicProcedure
+      .input(z.object({ limit: z.number().default(50), onlyUnresolved: z.boolean().default(false) }))
+      .query(async ({ input, ctx }) => {
+        if (!ctx.user || ctx.user.role !== "admin") throw new Error("Unauthorized");
+        const db = await getDb();
+        if (!db) throw new Error("DB error");
+        // Also fetch failed tts_conversions as error events
+        const failedGens = await db.select().from(ttsConversions)
+          .where(eq(ttsConversions.status, "fail"))
+          .orderBy(desc(ttsConversions.createdAt)).limit(input.limit);
+        const systemLogs = await db.select().from(errorLogs)
+          .orderBy(desc(errorLogs.createdAt)).limit(input.limit);
+        return {
+          failedGenerations: failedGens.map(g => ({
+            id: g.id, userId: g.userId, feature: g.feature,
+            errorMsg: g.errorMsg, createdAt: g.createdAt,
+          })),
+          systemLogs: systemLogs.map(l => ({
+            id: l.id, userId: l.userId, feature: l.feature,
+            errorCode: l.errorCode, errorMessage: l.errorMessage,
+            severity: l.severity, resolved: l.resolved, createdAt: l.createdAt,
+          })),
+        };
+      }),
+
+    resolveError: publicProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        if (!ctx.user || ctx.user.role !== "admin") throw new Error("Unauthorized");
+        const db = await getDb();
+        if (!db) throw new Error("DB error");
+        await db.update(errorLogs).set({ resolved: true }).where(eq(errorLogs.id, input.id));
+        return { success: true };
+      }),
+
+    // --- Churn rate + Active/Inactive user lists ---
+    getChurnStats: publicProcedure.query(async ({ ctx }) => {
+      if (!ctx.user || ctx.user.role !== "admin") throw new Error("Unauthorized");
+      const db = await getDb();
+      if (!db) throw new Error("DB error");
+      const now = new Date();
+      const fourteenDaysAgo = new Date(now.getTime() - 14 * 86400000);
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000);
+      const allUsers = await db.select().from(users).where(eq(users.role, "user"));
+      const allSubs = await db.select().from(subscriptions);
+      const genCounts = await db.select({
+        userId: ttsConversions.userId,
+        lastAt: sql<Date>`max(created_at)`,
+        count: sql<number>`count(*)`,
+      }).from(ttsConversions).groupBy(ttsConversions.userId);
+      const genMap = Object.fromEntries(genCounts.map(g => [g.userId, { lastAt: g.lastAt, count: g.count }]));
+      const activeUsers: any[] = [];
+      const inactiveUsers: any[] = [];
+      for (const u of allUsers) {
+        const activeSub = allSubs.find(s => s.userId === u.id && s.expiresAt && s.expiresAt > now);
+        const lastGen = genMap[u.id]?.lastAt ? new Date(genMap[u.id].lastAt) : null;
+        const isActive = lastGen && lastGen >= fourteenDaysAgo;
+        const data = {
+          id: u.id, name: u.telegramFirstName, username: u.telegramUsername,
+          hasSub: !!activeSub, plan: activeSub?.plan ?? null,
+          totalGens: genMap[u.id]?.count ?? 0, lastActive: lastGen,
+          bannedAt: u.bannedAt,
+        };
+        if (isActive) activeUsers.push(data); else inactiveUsers.push(data);
+      }
+      // Churn: users who had sub 30d ago but no activity in last 14d
+      const churned = inactiveUsers.filter(u => u.hasSub);
+      const churnRate = allUsers.length > 0 ? Math.round((churned.length / allUsers.length) * 100) : 0;
+      return {
+        churnRate, totalUsers: allUsers.length,
+        activeCount: activeUsers.length, inactiveCount: inactiveUsers.length,
+        activeUsers: activeUsers.sort((a, b) => (b.lastActive?.getTime() ?? 0) - (a.lastActive?.getTime() ?? 0)),
+        inactiveUsers: inactiveUsers.sort((a, b) => (b.totalGens) - (a.totalGens)),
+      };
     }),
   }),
 
