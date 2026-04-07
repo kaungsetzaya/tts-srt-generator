@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Upload, Download, FileVideo, Languages, ChevronRight } from "lucide-react";
+import { Loader2, Upload, Copy, Check, FileVideo, Languages } from "lucide-react";
 import { useLocation } from "wouter";
 
 export default function VideoTranslator() {
@@ -8,7 +8,8 @@ export default function VideoTranslator() {
   const [file, setFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [result, setResult] = useState<{ englishText: string; myanmarText: string; srtContent: string } | null>(null);
-  const [tab, setTab] = useState<"myanmar" | "english" | "srt">("myanmar");
+  const [editedText, setEditedText] = useState("");
+  const [copied, setCopied] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const { data: me } = trpc.auth.me.useQuery();
@@ -36,7 +37,10 @@ export default function VideoTranslator() {
       const base64 = (reader.result as string).split(",")[1];
       try {
         const res = await translateMutation.mutateAsync({ videoBase64: base64, filename: file.name });
-        if (res.success) setResult({ englishText: res.englishText, myanmarText: res.myanmarText, srtContent: res.srtContent });
+        if (res.success) {
+          setResult({ englishText: res.englishText, myanmarText: res.myanmarText, srtContent: res.srtContent });
+          setEditedText(res.myanmarText);
+        }
       } catch (e: any) {
         alert(e.message ?? "Translation failed");
       }
@@ -44,12 +48,12 @@ export default function VideoTranslator() {
     reader.readAsDataURL(file);
   };
 
-  const downloadFile = (content: string, filename: string, type = "text/plain") => {
-    const blob = new Blob([content], { type });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = filename; a.click();
-    URL.revokeObjectURL(url);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(editedText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* fallback */ }
   };
 
   const C = "oklch(0.65 0.25 310)";
@@ -75,7 +79,7 @@ export default function VideoTranslator() {
         {/* Title */}
         <div className="text-center py-6">
           <h1 className="text-3xl font-black uppercase tracking-widest mb-2" style={{ color: C }}>Video → Myanmar</h1>
-          <p className="text-sm opacity-50">Upload video → Whisper transcribe → Gemini translate to Myanmar</p>
+          <p className="text-sm opacity-50">Upload video and get Myanmar translation</p>
           <div className="flex items-center justify-center gap-4 mt-3 text-xs opacity-40">
             <span>Max 25MB</span>
             <span>•</span>
@@ -116,71 +120,53 @@ export default function VideoTranslator() {
         {/* Translate Button */}
         {file && (
           <button onClick={handleTranslate} disabled={isLoading}
-            className="w-full py-4 font-black uppercase tracking-widest text-black flex items-center justify-center gap-3 disabled:opacity-50 transition-all"
+            className="w-full py-4 font-black uppercase tracking-widest text-black flex items-center justify-center gap-3 disabled:opacity-50 transition-all rounded-xl"
             style={{ background: isLoading ? "oklch(0.4 0.15 310)" : C }}>
             {isLoading ? (
-              <><Loader2 className="w-5 h-5 animate-spin" /> Processing... (may take 1-3 minutes)</>
+              <><Loader2 className="w-5 h-5 animate-spin" /> Processing... (1-3 minutes)</>
             ) : (
               <><Languages className="w-5 h-5" /> Translate to Myanmar</>
             )}
           </button>
         )}
 
-        {/* Progress Steps */}
+        {/* Processing animation — no tech details */}
         {isLoading && (
-          <div className="border border-[oklch(0.2_0.02_280_/_60%)] bg-[oklch(0.08_0.01_280_/_50%)] p-6">
-            <div className="flex items-center justify-between text-xs opacity-60">
-              {["Extract Audio", "Whisper Transcribe", "Gemini Translate", "Build SRT"].map((step, i) => (
-                <div key={step} className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full border border-current flex items-center justify-center animate-pulse" style={{ color: C }}>{i + 1}</div>
-                  <span>{step}</span>
-                  {i < 3 && <ChevronRight className="w-3 h-3 opacity-30" />}
-                </div>
-              ))}
+          <div className="border border-[oklch(0.2_0.02_280_/_60%)] bg-[oklch(0.08_0.01_280_/_50%)] p-8 rounded-xl text-center">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: C }} />
+              <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: C, animationDelay: "0.3s" }} />
+              <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: C, animationDelay: "0.6s" }} />
             </div>
+            <p className="text-sm font-bold opacity-60">Translating your video...</p>
+            <p className="text-xs opacity-40 mt-2">This may take 1-3 minutes depending on video length</p>
           </div>
         )}
 
-        {/* Results */}
+        {/* Results — editable with copy button */}
         {result && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="font-black uppercase tracking-wider" style={{ color: C }}>Translation Result</h2>
-              <div className="flex gap-2">
-                <button onClick={() => downloadFile(result.myanmarText, "myanmar_translation.txt")}
-                  className="flex items-center gap-1 text-xs px-3 py-2 border border-green-500/50 text-green-400 hover:bg-green-500/20 transition-all">
-                  <Download className="w-3 h-3" /> TXT
-                </button>
-                <button onClick={() => downloadFile(result.srtContent, "myanmar_subtitles.srt")}
-                  className="flex items-center gap-1 text-xs px-3 py-2 font-bold text-black transition-all" style={{ background: C }}>
-                  <Download className="w-3 h-3" /> SRT
-                </button>
-              </div>
+              <button onClick={handleCopy}
+                className="flex items-center gap-2 text-xs px-4 py-2.5 rounded-xl font-bold text-black transition-all hover:scale-105"
+                style={{ background: copied ? "#4ade80" : C }}>
+                {copied ? <><Check className="w-3 h-3" /> Copied!</> : <><Copy className="w-3 h-3" /> Copy Text</>}
+              </button>
             </div>
 
-            {/* Tabs */}
-            <div className="flex gap-1 border-b border-[oklch(0.2_0.02_280_/_60%)]">
-              {([
-                { id: "myanmar", label: "Myanmar" },
-                { id: "english", label: "English" },
-                { id: "srt", label: "SRT" },
-              ] as const).map(({ id, label }) => (
-                <button key={id} onClick={() => setTab(id)}
-                  className={`px-4 py-2 text-sm font-bold uppercase tracking-wider border-b-2 transition-all -mb-px ${tab === id ? "border-[oklch(0.65_0.25_310)] text-[oklch(0.65_0.25_310)]" : "border-transparent opacity-50 hover:opacity-80"}`}>
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            <div className="border border-[oklch(0.2_0.02_280_/_60%)] bg-[oklch(0.08_0.01_280_/_50%)] p-6 max-h-96 overflow-y-auto">
-              <pre className="text-sm whitespace-pre-wrap leading-relaxed font-sans">
-                {tab === "myanmar" ? result.myanmarText : tab === "english" ? result.englishText : result.srtContent}
-              </pre>
+            <div className="border border-[oklch(0.2_0.02_280_/_60%)] bg-[oklch(0.08_0.01_280_/_50%)] rounded-xl overflow-hidden">
+              <textarea
+                value={editedText}
+                onChange={e => setEditedText(e.target.value)}
+                className="w-full min-h-[300px] p-6 text-sm bg-transparent focus:outline-none resize-y font-sans"
+                style={{ lineHeight: "2.2", color: "inherit" }}
+              />
             </div>
 
             {/* New Translation */}
-            <button onClick={() => { setFile(null); setResult(null); }}
-              className="w-full py-3 border border-[oklch(0.2_0.02_280_/_60%)] font-bold uppercase text-sm hover:opacity-70 transition-all">
+            <button onClick={() => { setFile(null); setResult(null); setEditedText(""); }}
+              className="w-full py-3 border border-[oklch(0.2_0.02_280_/_60%)] font-bold uppercase text-sm hover:opacity-70 transition-all rounded-xl">
               Translate Another Video
             </button>
           </div>

@@ -50,11 +50,12 @@ export async function generateSpeechWithCharacter(
   text: string,
   characterKey: CharacterKey,
   rate: number = 1.0,
-  aspectRatio: "9:16" | "16:9" = "16:9"
+  aspectRatio: "9:16" | "16:9" = "16:9",
+  pitch: number = 0
 ): Promise<GenerateResult> {
   const char = CHARACTER_VOICES[characterKey];
-  // Step 1: Generate base TTS with Thiha or Nilar
-  const baseResult = await generateSpeech(text, char.base, rate, 0, aspectRatio);
+  // Step 1: Generate base TTS with Thiha or Nilar (pitch is now configurable)
+  const baseResult = await generateSpeech(text, char.base, rate, pitch, aspectRatio);
   // Step 2: Convert voice with murf.ai
   const murfApiKey = getMurfKey();
   if (!murfApiKey) throw new Error("MURF_API_KEY not configured");

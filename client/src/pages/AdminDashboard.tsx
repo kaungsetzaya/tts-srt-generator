@@ -2,19 +2,23 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import {
   Loader2, Users, Crown, Clock, Plus, Shield, Settings, Search, LogOut, BarChart3, Ban, CheckCircle,
-  Activity, Zap, HardDrive, Server, DollarSign, ChevronRight, ArrowLeft, Mic, FileVideo, AlertTriangle,
-  TrendingDown, UserCheck, UserX, Bug, RefreshCw, X, Circle, Info
+  Activity, Zap, HardDrive, Server, ChevronRight, ChevronLeft, ArrowLeft, Mic, FileVideo, AlertTriangle,
+  TrendingDown, UserCheck, UserX, Bug, RefreshCw, X, Circle, Info, Banknote, CreditCard, Calendar
 } from "lucide-react";
 
 type Plan = "trial" | "1month" | "3month" | "6month" | "lifetime";
 type MainTab = "analytics" | "users" | "reports" | "settings";
 type TimeFrame = "week" | "month" | "year" | "all";
+type PaymentMethod = "kpay" | "wave" | "cbpay" | "ayapay" | "bank" | "cash" | "free";
 
 const PLAN_LABELS: Record<Plan, string> = {
   trial: "Trial", "1month": "1 Month", "3month": "3 Months", "6month": "6 Months", lifetime: "Lifetime",
 };
 const PLAN_PRICE: Record<Plan, number> = {
-  trial: 0, "1month": 5, "3month": 12, "6month": 20, lifetime: 50,
+  trial: 0, "1month": 5000, "3month": 12000, "6month": 20000, lifetime: 50000,
+};
+const PAYMENT_METHODS: Record<PaymentMethod, string> = {
+  kpay: "KBZ Pay", wave: "Wave Pay", cbpay: "CB Pay", ayapay: "AYA Pay", bank: "Bank Transfer", cash: "Cash", free: "Free / Promo",
 };
 const FEATURE_LABELS: Record<string, string> = {
   tts: "TTS Generator", video_upload: "Video Upload", video_link: "Video Link",
@@ -198,12 +202,15 @@ export default function AdminDashboard() {
   const [selectedPlan, setSelectedPlan] = useState<Plan>("1month");
   const [trialDays, setTrialDays] = useState(3);
   const [note, setNote] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("kpay");
+  const [transactionId, setTransactionId] = useState("");
   const [showSubModal, setShowSubModal] = useState(false);
   const [autoTrialEnabled, setAutoTrialEnabled] = useState(true);
   const [autoTrialDays, setAutoTrialDays] = useState(7);
   const [timeframe, setTimeframe] = useState<TimeFrame>("month");
   const [userDrawer, setUserDrawer] = useState<{ id: string; name: string } | null>(null);
   const [churnTab, setChurnTab] = useState<"active" | "inactive">("active");
+  const [revenueMonth, setRevenueMonth] = useState(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; });
 
   const { data: me } = trpc.auth.me.useQuery();
   const { data: users, refetch } = trpc.admin.getUsers.useQuery();
@@ -217,7 +224,7 @@ export default function AdminDashboard() {
   });
 
   const logoutMutation = trpc.auth.logout.useMutation({ onSuccess: () => { window.location.href = "/login"; } });
-  const giveSub = trpc.admin.giveSubscription.useMutation({ onSuccess: () => { refetch(); setShowSubModal(false); setSelectedUser(null); setNote(""); } });
+  const giveSub = trpc.admin.giveSubscription.useMutation({ onSuccess: () => { refetch(); setShowSubModal(false); setSelectedUser(null); setNote(""); setTransactionId(""); setPaymentMethod("kpay"); } });
   const cancelSub = trpc.admin.cancelSubscription.useMutation({ onSuccess: () => refetch() });
   const setRole = trpc.admin.setRole.useMutation({ onSuccess: () => refetch() });
   const banUser = trpc.admin.banUser.useMutation({ onSuccess: () => refetch() });
@@ -245,6 +252,7 @@ export default function AdminDashboard() {
 
   const activeSubs = normalUsers.filter((u: any) => u.subscription).length;
   const totalRevenue = analytics?.planCounts?.reduce((sum: number, p: any) => sum + (PLAN_PRICE[p.plan as Plan] ?? 0) * p.count, 0) ?? 0;
+  const fmtMMK = (v: number) => `${v.toLocaleString()} MMK`;
   const maxVoice = Math.max(...(voiceStats?.voices?.map((v: any) => v.count) ?? [1]));
   const totalErrors = (errorData?.failedGenerations?.length ?? 0);
 
@@ -273,7 +281,7 @@ export default function AdminDashboard() {
           {[
             { label: "Total Users", value: normalUsers.length, color: "#60a5fa", sub: `${activeSubs} active subs` },
             { label: "Generations Today", value: analytics?.generations?.today ?? 0, color: "#fbbf24", sub: `${analytics?.generations?.week ?? 0} this week` },
-            { label: "Est. Revenue", value: `$${totalRevenue}`, color: "#c084fc", sub: `${analytics?.planCounts?.length ?? 0} active plans` },
+            { label: "Est. Revenue", value: fmtMMK(totalRevenue), color: "#c084fc", sub: `${analytics?.planCounts?.length ?? 0} active plans` },
             { label: "Failed Jobs", value: totalErrors, color: totalErrors > 0 ? "#f87171" : "#4ade80", sub: totalErrors > 0 ? "needs attention" : "all clear" },
           ].map(({ label, value, color, sub }) => (
             <div key={label} className="border rounded-xl p-4" style={{ background: cardBg, borderColor: border }}>
@@ -428,18 +436,25 @@ export default function AdminDashboard() {
             {/* Revenue + Server Health */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="border rounded-xl p-6" style={{ background: cardBg, borderColor: border }}>
-                <h3 className="font-bold uppercase tracking-wider mb-4 flex items-center gap-2 text-purple-400">
-                  <DollarSign className="w-4 h-4" /> Revenue (Active Subs)
-                </h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold uppercase tracking-wider flex items-center gap-2 text-purple-400">
+                    <Banknote className="w-4 h-4" /> Revenue (Active Subs)
+                  </h3>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => { const [y,m] = revenueMonth.split('-').map(Number); const d = new Date(y, m-2, 1); setRevenueMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`); }} className="p-1 hover:bg-white/10 rounded transition-all"><ChevronLeft className="w-4 h-4 opacity-50" /></button>
+                    <span className="text-xs font-bold opacity-60 min-w-[80px] text-center">{(() => { const [y,m] = revenueMonth.split('-'); return `${new Date(Number(y), Number(m)-1).toLocaleString('en', { month: 'short' })} ${y}`; })()}</span>
+                    <button onClick={() => { const [y,m] = revenueMonth.split('-').map(Number); const d = new Date(y, m, 1); const now = new Date(); if (d <= now) setRevenueMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`); }} className="p-1 hover:bg-white/10 rounded transition-all"><ChevronRight className="w-4 h-4 opacity-50" /></button>
+                  </div>
+                </div>
                 {analytics?.planCounts?.map((p: any) => (
                   <div key={p.plan} className="flex justify-between items-center border-b py-2" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
                     <div><span className="text-sm font-bold">{PLAN_LABELS[p.plan as Plan] ?? p.plan}</span><span className="text-xs opacity-40 ml-2">× {p.count}</span></div>
-                    <span className="font-bold text-purple-400">${(PLAN_PRICE[p.plan as Plan] ?? 0) * p.count}</span>
+                    <span className="font-bold text-purple-400">{fmtMMK((PLAN_PRICE[p.plan as Plan] ?? 0) * p.count)}</span>
                   </div>
                 ))}
                 <div className="flex justify-between items-center pt-3">
                   <span className="font-bold uppercase text-xs opacity-60">Total Estimated</span>
-                  <span className="font-black text-purple-400 text-lg">${totalRevenue}</span>
+                  <span className="font-black text-purple-400 text-lg">{fmtMMK(totalRevenue)}</span>
                 </div>
               </div>
 
@@ -656,40 +671,172 @@ export default function AdminDashboard() {
 
         {/* ── SETTINGS TAB ──────────────────────────────────── */}
         {tab === "settings" && (
-          <div className="border rounded-xl p-6 space-y-6 max-w-xl" style={{ background: cardBg, borderColor: border }}>
-            <h2 className="font-black uppercase tracking-widest" style={{ color: C }}>Settings</h2>
-            <div className="flex items-center justify-between py-4 border-b" style={{ borderColor: border }}>
-              <div>
-                <p className="font-bold">Auto Trial on Registration</p>
-                <p className="text-xs opacity-50 mt-1">New user register လုပ်တာနဲ့ auto trial ပေးမည်</p>
+          <div className="space-y-5">
+            {/* Auto Trial Settings */}
+            <div className="border rounded-xl p-6 space-y-6 max-w-xl" style={{ background: cardBg, borderColor: border }}>
+              <h2 className="font-black uppercase tracking-widest" style={{ color: C }}>Settings</h2>
+              <div className="flex items-center justify-between py-4 border-b" style={{ borderColor: border }}>
+                <div>
+                  <p className="font-bold">Auto Trial on Registration</p>
+                  <p className="text-xs opacity-50 mt-1">New user register လုပ်တာနဲ့ auto trial ပေးမည်</p>
+                </div>
+                <button onClick={() => setAutoTrialEnabled(!autoTrialEnabled)}
+                  className={`relative w-12 h-6 rounded-full transition-all ${autoTrialEnabled ? "" : "bg-gray-600"}`}
+                  style={{ background: autoTrialEnabled ? C : undefined }}>
+                  <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${autoTrialEnabled ? "left-7" : "left-1"}`} />
+                </button>
               </div>
-              <button onClick={() => setAutoTrialEnabled(!autoTrialEnabled)}
-                className={`relative w-12 h-6 rounded-full transition-all ${autoTrialEnabled ? "" : "bg-gray-600"}`}
-                style={{ background: autoTrialEnabled ? C : undefined }}>
-                <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${autoTrialEnabled ? "left-7" : "left-1"}`} />
+              <div>
+                <p className="font-bold mb-3">Trial Duration</p>
+                <div className="flex items-center gap-3">
+                  <input type="number" min={1} max={365} value={autoTrialDays} onChange={e => setAutoTrialDays(Number(e.target.value))}
+                    className="w-20 border p-2 text-center font-bold focus:outline-none rounded-lg" style={{ background: "rgba(0,0,0,0.3)", borderColor: border, color: C }} />
+                  <span className="text-sm opacity-60">days</span>
+                  <div className="flex gap-2">
+                    {[1, 3, 7, 14, 30].map(d => (
+                      <button key={d} onClick={() => setAutoTrialDays(d)}
+                        className="px-3 py-1 text-xs font-bold border rounded-lg transition-all"
+                        style={{ background: autoTrialDays === d ? C : "transparent", color: autoTrialDays === d ? "#000" : "#fff", borderColor: autoTrialDays === d ? C : border, opacity: autoTrialDays === d ? 1 : 0.5 }}>
+                        {d}d
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <button onClick={() => updateSettings.mutate({ autoTrialEnabled, autoTrialDays })} disabled={updateSettings.isPending}
+                className="px-6 py-2.5 font-bold uppercase text-sm text-black rounded-xl disabled:opacity-50 flex items-center gap-2" style={{ background: C }}>
+                {updateSettings.isPending && <Loader2 className="w-4 h-4 animate-spin" />} Save Settings
               </button>
             </div>
-            <div>
-              <p className="font-bold mb-3">Trial Duration</p>
-              <div className="flex items-center gap-3">
-                <input type="number" min={1} max={365} value={autoTrialDays} onChange={e => setAutoTrialDays(Number(e.target.value))}
-                  className="w-20 border p-2 text-center font-bold focus:outline-none rounded-lg" style={{ background: "rgba(0,0,0,0.3)", borderColor: border, color: C }} />
-                <span className="text-sm opacity-60">days</span>
-                <div className="flex gap-2">
-                  {[1, 3, 7, 14, 30].map(d => (
-                    <button key={d} onClick={() => setAutoTrialDays(d)}
-                      className="px-3 py-1 text-xs font-bold border rounded-lg transition-all"
-                      style={{ background: autoTrialDays === d ? C : "transparent", color: autoTrialDays === d ? "#000" : "#fff", borderColor: autoTrialDays === d ? C : border, opacity: autoTrialDays === d ? 1 : 0.5 }}>
-                      {d}d
+
+            {/* ── Voice & Character Usage Per Generation ─── */}
+            <div className="border rounded-xl p-6" style={{ background: cardBg, borderColor: border }}>
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="font-black uppercase tracking-widest flex items-center gap-2" style={{ color: C }}>
+                  <Mic className="w-5 h-5" /> Voice & Character Usage
+                </h3>
+                <div className="flex gap-1">
+                  {(["week", "month", "year", "all"] as TimeFrame[]).map(tf => (
+                    <button key={tf} onClick={() => setTimeframe(tf)}
+                      className={`px-3 py-1 text-xs font-bold uppercase rounded-lg border transition-all ${timeframe === tf ? "text-black" : "border-transparent opacity-50 hover:opacity-100"}`}
+                      style={{ background: timeframe === tf ? C : "transparent", borderColor: timeframe === tf ? C : border }}>
+                      {tf === "all" ? "All" : tf === "week" ? "1W" : tf === "month" ? "1M" : "1Y"}
                     </button>
                   ))}
                 </div>
               </div>
+
+              {/* Total Usage Summary */}
+              <div className="grid grid-cols-3 gap-3 mb-6">
+                <div className="border rounded-xl p-4 text-center" style={{ borderColor: border }}>
+                  <p className="text-xs opacity-40 mb-1 uppercase tracking-wider">Total Generations</p>
+                  <p className="text-2xl font-black" style={{ color: C }}>{voiceStats?.total ?? 0}</p>
+                </div>
+                <div className="border rounded-xl p-4 text-center" style={{ borderColor: border }}>
+                  <p className="text-xs opacity-40 mb-1 uppercase tracking-wider">Characters Used</p>
+                  <p className="text-2xl font-black text-blue-400">{((voiceStats?.totalChars ?? 0) / 1000).toFixed(1)}K</p>
+                </div>
+                <div className="border rounded-xl p-4 text-center" style={{ borderColor: border }}>
+                  <p className="text-xs opacity-40 mb-1 uppercase tracking-wider">Audio Duration</p>
+                  <p className="text-2xl font-black text-pink-400">{fmtMs(voiceStats?.totalDurationMs ?? 0)}</p>
+                </div>
+              </div>
+
+              {/* Base Voice Usage (Thiha / Nilar) */}
+              <div className="mb-6">
+                <p className="text-xs uppercase tracking-wider opacity-50 mb-3 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full" style={{ background: C }} />
+                  Base Voice Usage — Thiha & Nilar
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {(voiceStats as any)?.baseVoices?.map((v: any) => {
+                    const pct = (voiceStats?.total ?? 0) > 0 ? Math.round((v.count / (voiceStats?.total ?? 1)) * 100) : 0;
+                    const isThiha = v.name === "thiha";
+                    const color = isThiha ? "#60a5fa" : "#f472b6";
+                    return (
+                      <div key={v.name} className="border rounded-xl p-4 relative overflow-hidden" style={{ borderColor: `${color}33` }}>
+                        {/* Background bar */}
+                        <div className="absolute inset-0 opacity-10" style={{ background: `linear-gradient(90deg, ${color} ${pct}%, transparent ${pct}%)` }} />
+                        <div className="relative z-10">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 rounded-full" style={{ background: color }} />
+                              <span className="font-black text-sm" style={{ color }}>{v.displayName}</span>
+                              <span className="text-xs opacity-30 font-mono">({v.name})</span>
+                            </div>
+                            <span className="font-black text-lg" style={{ color }}>{v.count}</span>
+                          </div>
+                          <div className="flex items-center gap-4 text-xs opacity-50">
+                            <span>{v.chars.toLocaleString()} chars</span>
+                            <span>{fmtMs(v.durationMs)} audio</span>
+                            <span className="ml-auto font-bold" style={{ color }}>{pct}%</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {!(voiceStats as any)?.baseVoices?.length && (
+                    <p className="text-xs opacity-30 col-span-2 text-center py-4">No voice data yet</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Character Voice Usage */}
+              <div>
+                <p className="text-xs uppercase tracking-wider opacity-50 mb-3 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-purple-400" />
+                  Voice Change — Character Usage
+                </p>
+                {(voiceStats as any)?.characters?.length > 0 ? (
+                  <div className="space-y-2">
+                    {(voiceStats as any)?.characters?.map((ch: any) => {
+                      const maxChar = Math.max(...((voiceStats as any)?.characters?.map((c: any) => c.count) ?? [1]));
+                      const pct = maxChar > 0 ? Math.round((ch.count / maxChar) * 100) : 0;
+                      const isMale = ch.base === "thiha";
+                      const color = isMale ? "#818cf8" : "#f9a8d4";
+                      return (
+                        <div key={ch.key} className="border rounded-lg p-3 hover:bg-white/5 transition-all" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black" style={{ background: `${color}22`, color }}>
+                              {isMale ? "♂" : "♀"}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-black text-sm" style={{ color }}>{ch.displayName}</span>
+                                <span className="text-xs opacity-30 font-mono">({ch.key})</span>
+                              </div>
+                              <div className="flex items-center gap-1 mt-0.5">
+                                <span className="text-[10px] px-1.5 py-0.5 rounded font-bold uppercase" style={{ background: `${isMale ? "#60a5fa" : "#f472b6"}22`, color: isMale ? "#60a5fa" : "#f472b6" }}>
+                                  Base: {ch.baseDisplayName}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-black text-lg" style={{ color }}>{ch.count}</p>
+                              <p className="text-[10px] opacity-40">generations</p>
+                            </div>
+                          </div>
+                          {/* Usage bar */}
+                          <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+                            <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
+                          </div>
+                          <div className="flex items-center gap-4 mt-2 text-xs opacity-40">
+                            <span>{ch.chars.toLocaleString()} characters</span>
+                            <span>{fmtMs(ch.durationMs)} audio</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 border rounded-xl" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+                    <Mic className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                    <p className="text-xs opacity-30">No character voice changes recorded yet</p>
+                    <p className="text-[10px] opacity-20 mt-1">Character voices use base voices with AI voice conversion</p>
+                  </div>
+                )}
+              </div>
             </div>
-            <button onClick={() => updateSettings.mutate({ autoTrialEnabled, autoTrialDays })} disabled={updateSettings.isPending}
-              className="px-6 py-2.5 font-bold uppercase text-sm text-black rounded-xl disabled:opacity-50 flex items-center gap-2" style={{ background: C }}>
-              {updateSettings.isPending && <Loader2 className="w-4 h-4 animate-spin" />} Save Settings
-            </button>
           </div>
         )}
       </div>
@@ -697,7 +844,7 @@ export default function AdminDashboard() {
       {/* Give Subscription Modal */}
       {showSubModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={() => setShowSubModal(false)}>
-          <div className="border rounded-xl p-6 w-full max-w-md m-4" style={{ background: "oklch(0.08 0.01 280)", borderColor: border }} onClick={e => e.stopPropagation()}>
+          <div className="border rounded-xl p-6 w-full max-w-md m-4 max-h-[90vh] overflow-y-auto" style={{ background: "oklch(0.08 0.01 280)", borderColor: border }} onClick={e => e.stopPropagation()}>
             <h3 className="font-bold uppercase tracking-wider mb-4" style={{ color: C }}>Give Subscription</h3>
             <div className="space-y-4">
               <div>
@@ -707,7 +854,7 @@ export default function AdminDashboard() {
                     <button key={plan} onClick={() => setSelectedPlan(plan)}
                       className="py-2 px-3 border text-sm font-bold uppercase rounded-lg transition-all"
                       style={{ borderColor: selectedPlan === plan ? C : border, background: selectedPlan === plan ? `oklch(0.65 0.25 310 / 20%)` : "transparent", color: selectedPlan === plan ? C : "#fff", opacity: selectedPlan === plan ? 1 : 0.6 }}>
-                      {PLAN_LABELS[plan]}
+                      {PLAN_LABELS[plan]} {PLAN_PRICE[plan] > 0 ? `(${PLAN_PRICE[plan].toLocaleString()} MMK)` : ""}
                     </button>
                   ))}
                 </div>
@@ -720,12 +867,47 @@ export default function AdminDashboard() {
                 </div>
               )}
               <div>
+                <label className="text-xs uppercase tracking-wider opacity-70 block mb-2 flex items-center gap-2">
+                  <CreditCard className="w-3 h-3" /> Payment Method <span className="text-red-400">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(Object.keys(PAYMENT_METHODS) as PaymentMethod[]).map(pm => (
+                    <button key={pm} onClick={() => setPaymentMethod(pm)}
+                      className="py-2 px-3 border text-xs font-bold rounded-lg transition-all text-left"
+                      style={{ borderColor: paymentMethod === pm ? "#4ade80" : border, background: paymentMethod === pm ? "rgba(74,222,128,0.15)" : "transparent", color: paymentMethod === pm ? "#4ade80" : "#fff", opacity: paymentMethod === pm ? 1 : 0.6 }}>
+                      {PAYMENT_METHODS[pm]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {paymentMethod !== "free" && paymentMethod !== "cash" && (
+                <div>
+                  <label className="text-xs uppercase tracking-wider opacity-70 block mb-2 flex items-center gap-2">
+                    <Banknote className="w-3 h-3" /> Transaction ID <span className="text-red-400">*</span>
+                  </label>
+                  <input value={transactionId} onChange={e => setTransactionId(e.target.value)} placeholder="e.g. TXN123456789"
+                    className="w-full border p-2.5 text-sm focus:outline-none rounded-lg font-mono" style={{ background: "rgba(0,0,0,0.4)", borderColor: transactionId ? "#4ade80" : border, color: "#fff" }} />
+                </div>
+              )}
+              <div>
                 <label className="text-xs uppercase tracking-wider opacity-70 block mb-2">Note (optional)</label>
-                <input value={note} onChange={e => setNote(e.target.value)} placeholder="e.g. Paid via KPay"
+                <input value={note} onChange={e => setNote(e.target.value)} placeholder="Additional notes..."
                   className="w-full border p-2 text-sm focus:outline-none rounded-lg" style={{ background: "rgba(0,0,0,0.4)", borderColor: border }} />
               </div>
               <div className="flex gap-3 pt-2">
-                <button onClick={() => { if (!selectedUser) return; giveSub.mutate({ userId: selectedUser, plan: selectedPlan, trialDays, note }); }}
+                <button onClick={() => {
+                  if (!selectedUser) return;
+                  if (paymentMethod !== "free" && paymentMethod !== "cash" && !transactionId.trim()) {
+                    alert("Transaction ID is required for this payment method.");
+                    return;
+                  }
+                  giveSub.mutate({
+                    userId: selectedUser,
+                    plan: selectedPlan,
+                    trialDays,
+                    note: `[${PAYMENT_METHODS[paymentMethod]}]${transactionId ? ` TXN: ${transactionId}` : ""}${note ? ` | ${note}` : ""}`,
+                  });
+                }}
                   disabled={giveSub.isPending} className="flex-1 py-2.5 font-bold uppercase text-sm text-black flex items-center justify-center gap-2 disabled:opacity-50 rounded-xl" style={{ background: C }}>
                   {giveSub.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null} Confirm
                 </button>

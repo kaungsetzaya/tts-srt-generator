@@ -360,7 +360,7 @@ export const appRouter = router({
           const isCharacter = !!(input.character && input.character.trim() !== "");
           if (isCharacter) {
             console.log(`[TTS REQUEST] 🔄 Character: ${input.character}`);
-            result = await generateSpeechWithCharacter(cleanText, input.character as any, input.speed, input.aspectRatio);
+            result = await generateSpeechWithCharacter(cleanText, input.character as any, input.speed, input.aspectRatio, input.tone);
           } else {
             console.log(`[TTS REQUEST] 🗣️ Voice: ${input.voice}`);
             result = await generateSpeech(cleanText, input.voice, input.speed, input.tone, input.aspectRatio);
