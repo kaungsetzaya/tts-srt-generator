@@ -254,7 +254,37 @@ export const appRouter = router({
         if (!ctx.user || ctx.user.role !== "admin") throw new Error("Unauthorized");
         return getQuotaStatus();
       }),
-    translateLink: publicProcedure.input(z.object({ url: z.string() })).mutation(async ({ input, ctx }) => { if (!ctx.user) throw new Error("Please login first."); const db = await getDb(); if (ctx.user.role !== "admin" && db) { const now = new Date(); const sub = await db.select().from(subscriptions).where(and(eq(subscriptions.userId, ctx.user.userId), gte(subscriptions.expiresAt, now))).limit(1); if (sub.length === 0) throw new Error("Subscription expired."); } try { const result = await translateVideoLink(input.url); return { success: true, ...result }; } catch (error: any) { throw new Error(error.message ?? "Link translation failed."); } }),
+    translateLink: publicProcedure.input(z.object({ url: z.string() })).mutation(async ({ input, ctx }) => {
+      if (!ctx.user) throw new Error("Please login first.");
+      const db = await getDb();
+      if (ctx.user.role !== "admin" && db) {
+        const now = new Date();
+        const sub = await db.select().from(subscriptions)
+          .where(and(eq(subscriptions.userId, ctx.user.userId), gte(subscriptions.expiresAt, now))).limit(1);
+        if (sub.length === 0) throw new Error("Subscription expired.");
+      }
+      try {
+        const result = await translateVideoLink(input.url);
+        return { success: true, ...result };
+      } catch (error: any) {
+        // Sanitize: don't expose raw command output / server paths to frontend
+        const rawMsg = error.message ?? "Link translation failed.";
+        let userMsg = rawMsg;
+        if (rawMsg.includes("Command failed:") || rawMsg.includes("/tmp/") || rawMsg.includes("/root/")) {
+          // Extract only the meaningful part
+          if (rawMsg.includes("n challenge solving failed")) {
+            userMsg = "YouTube ဗီဒီယိုကို ဒေါင်းလုတ်မရပါ။ yt-dlp version အဟောင်းကြောင့် ဖြစ်ပါသည်။ Admin ကို ဆက်သွယ်ပါ။";
+          } else if (rawMsg.includes("Requested format is not available")) {
+            userMsg = "ဗီဒီယို format ရနိုင်ခြင်းမရှိပါ။ တခြား link ဖြင့် ထပ်ကြိုးစားပါ။";
+          } else if (rawMsg.includes("ဗီဒီယိုကို ဒေါင်းလုတ်မရပါ")) {
+            userMsg = rawMsg.split("\n")[0]; // First line only
+          } else {
+            userMsg = "ဗီဒီယိုကို ဒေါင်းလုတ်မရပါ။ Link ကို စစ်ပြီး ထပ်ကြိုးစားပါ။";
+          }
+        }
+        throw new Error(userMsg);
+      }
+    }),
     translate: publicProcedure
       .input(z.object({
         videoBase64: z.string(),
@@ -469,12 +499,42 @@ export const appRouter = router({
         const voiceMap: Record<string, { count: number; chars: number; durationMs: number }> = {};
         const featureMap: Record<string, number> = {};
         const dailyMap: Record<string, number> = {};
+        // Separate base voice vs character tracking
+        const baseVoiceMap: Record<string, { count: number; chars: number; durationMs: number }> = {};
+        const characterMap: Record<string, { count: number; chars: number; durationMs: number; displayName: string; base: string }> = {};
         for (const r of rows) {
           const key = r.character ? `[Character] ${r.character}` : (r.voice ?? "unknown");
           if (!voiceMap[key]) voiceMap[key] = { count: 0, chars: 0, durationMs: 0 };
           voiceMap[key].count++;
           voiceMap[key].chars += r.charCount ?? 0;
           voiceMap[key].durationMs += r.durationMs ?? 0;
+          // Track base voices separately
+          if (r.character && r.character.trim() !== "") {
+            const charKey = r.character;
+            const charInfo = CHARACTER_VOICES[charKey as CharacterKey];
+            if (!characterMap[charKey]) {
+              characterMap[charKey] = {
+                count: 0, chars: 0, durationMs: 0,
+                displayName: charInfo?.name ?? charKey,
+                base: charInfo?.base ?? "unknown",
+              };
+            }
+            characterMap[charKey].count++;
+            characterMap[charKey].chars += r.charCount ?? 0;
+            characterMap[charKey].durationMs += r.durationMs ?? 0;
+            // Also count under the base voice
+            const baseKey = charInfo?.base ?? "unknown";
+            if (!baseVoiceMap[baseKey]) baseVoiceMap[baseKey] = { count: 0, chars: 0, durationMs: 0 };
+            baseVoiceMap[baseKey].count++;
+            baseVoiceMap[baseKey].chars += r.charCount ?? 0;
+            baseVoiceMap[baseKey].durationMs += r.durationMs ?? 0;
+          } else {
+            const vKey = r.voice ?? "unknown";
+            if (!baseVoiceMap[vKey]) baseVoiceMap[vKey] = { count: 0, chars: 0, durationMs: 0 };
+            baseVoiceMap[vKey].count++;
+            baseVoiceMap[vKey].chars += r.charCount ?? 0;
+            baseVoiceMap[vKey].durationMs += r.durationMs ?? 0;
+          }
           const feat = r.feature ?? "tts";
           featureMap[feat] = (featureMap[feat] ?? 0) + 1;
           const day = (r.createdAt as Date).toISOString().split("T")[0];
@@ -487,6 +547,21 @@ export const appRouter = router({
           daily: Object.entries(dailyMap).map(([date, count]) => ({ date, count })).sort((a,b) => a.date.localeCompare(b.date)),
           totalChars: rows.reduce((s, r) => s + (r.charCount ?? 0), 0),
           totalDurationMs: rows.reduce((s, r) => s + (r.durationMs ?? 0), 0),
+          // New: breakdown by base voice and character
+          baseVoices: Object.entries(baseVoiceMap).map(([name, d]) => ({
+            name,
+            displayName: SUPPORTED_VOICES[name as keyof typeof SUPPORTED_VOICES]?.name ?? name,
+            ...d,
+          })).sort((a,b) => b.count - a.count),
+          characters: Object.entries(characterMap).map(([key, d]) => ({
+            key,
+            displayName: d.displayName,
+            base: d.base,
+            baseDisplayName: SUPPORTED_VOICES[d.base as keyof typeof SUPPORTED_VOICES]?.name ?? d.base,
+            count: d.count,
+            chars: d.chars,
+            durationMs: d.durationMs,
+          })).sort((a,b) => b.count - a.count),
         };
       }),
 

@@ -27,15 +27,21 @@ async function startServer() {
 
   app.use(helmet({
     contentSecurityPolicy: {
+      useDefaults: false,
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"], // Vite SPA လိုသည်
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        "script-src-elem": ["'self'", "'unsafe-inline'"],
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        "style-src-elem": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
         imgSrc: ["'self'", "data:", "https:"],
+        mediaSrc: ["'self'", "blob:", "data:"],
         connectSrc: ["'self'"],
         frameSrc: ["'none'"],
         objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
       },
     },
     crossOriginEmbedderPolicy: false,
