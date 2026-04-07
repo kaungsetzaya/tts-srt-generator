@@ -1,4 +1,5 @@
 import { translateVideo, translateVideoLink } from "./videoTranslator";
+import { dubVideoFromBuffer, dubVideoFromLink, type DubOptions } from "./videoDubber";
 import { getQuotaStatus } from "./geminiTranslator";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
@@ -307,6 +308,101 @@ export const appRouter = router({
           return { success: true, ...result };
         } catch (error: any) {
           throw new Error(error.message ?? "Translation failed.");
+        }
+      }),
+
+    // ───── DUBBING: File Upload ─────
+    dubFile: publicProcedure
+      .input(z.object({
+        videoBase64: z.string(),
+        filename: z.string().max(255),
+        voice: z.enum(["thiha", "nilar"]).default("thiha"),
+        character: z.string().optional(),
+        speed: z.number().min(0.5).max(2.0).default(1.1),
+        pitch: z.number().min(-20).max(20).default(0),
+        srtEnabled: z.boolean().default(true),
+        srtFontSize: z.number().min(12).max(48).optional(),
+        srtColor: z.string().optional(),
+        srtDropShadow: z.boolean().optional(),
+        srtBlurBg: z.boolean().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (!ctx.user) throw new Error("Please login first.");
+        const db = await getDb();
+        if (ctx.user.role !== "admin" && db) {
+          const now = new Date();
+          const sub = await db.select().from(subscriptions)
+            .where(and(eq(subscriptions.userId, ctx.user.userId), gte(subscriptions.expiresAt, now)))
+            .limit(1);
+          if (sub.length === 0) throw new Error("Subscription expired.");
+        }
+        try {
+          const videoBuffer = Buffer.from(input.videoBase64, "base64");
+          if (videoBuffer.length > 25 * 1024 * 1024) throw new Error("File too large. Max 25MB.");
+          const dubOpts: DubOptions = {
+            voice: input.voice,
+            character: input.character,
+            speed: input.speed,
+            pitch: input.pitch,
+            srtEnabled: input.srtEnabled,
+            srtFontSize: input.srtFontSize,
+            srtColor: input.srtColor,
+            srtDropShadow: input.srtDropShadow,
+            srtBlurBg: input.srtBlurBg,
+          };
+          const result = await dubVideoFromBuffer(videoBuffer, input.filename, dubOpts);
+          return { success: true, ...result };
+        } catch (error: any) {
+          const msg = error.message ?? "Dubbing failed.";
+          throw new Error(msg.includes("/tmp/") || msg.includes("/root/") ? "Dubbing process failed. Please try again." : msg);
+        }
+      }),
+
+    // ───── DUBBING: URL Link ─────
+    dubLink: publicProcedure
+      .input(z.object({
+        url: z.string(),
+        voice: z.enum(["thiha", "nilar"]).default("thiha"),
+        character: z.string().optional(),
+        speed: z.number().min(0.5).max(2.0).default(1.1),
+        pitch: z.number().min(-20).max(20).default(0),
+        srtEnabled: z.boolean().default(true),
+        srtFontSize: z.number().min(12).max(48).optional(),
+        srtColor: z.string().optional(),
+        srtDropShadow: z.boolean().optional(),
+        srtBlurBg: z.boolean().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (!ctx.user) throw new Error("Please login first.");
+        const db = await getDb();
+        if (ctx.user.role !== "admin" && db) {
+          const now = new Date();
+          const sub = await db.select().from(subscriptions)
+            .where(and(eq(subscriptions.userId, ctx.user.userId), gte(subscriptions.expiresAt, now)))
+            .limit(1);
+          if (sub.length === 0) throw new Error("Subscription expired.");
+        }
+        try {
+          const dubOpts: DubOptions = {
+            voice: input.voice,
+            character: input.character,
+            speed: input.speed,
+            pitch: input.pitch,
+            srtEnabled: input.srtEnabled,
+            srtFontSize: input.srtFontSize,
+            srtColor: input.srtColor,
+            srtDropShadow: input.srtDropShadow,
+            srtBlurBg: input.srtBlurBg,
+          };
+          const result = await dubVideoFromLink(input.url, dubOpts);
+          return { success: true, ...result };
+        } catch (error: any) {
+          const rawMsg = error.message ?? "Link dubbing failed.";
+          let userMsg = rawMsg;
+          if (rawMsg.includes("Command failed:") || rawMsg.includes("/tmp/") || rawMsg.includes("/root/")) {
+            userMsg = "ဗီဒီယိုကို ဒေါင်းလုတ်မရပါ။ Link ကို စစ်ပြီး ထပ်ကြိုးစားပါ။";
+          }
+          throw new Error(userMsg);
         }
       }),
   }),
