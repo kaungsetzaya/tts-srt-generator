@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
+import { formatDateForViewer, formatDateTimeForViewer } from "@/lib/dateTime";
 import {
   Loader2, Users, Crown, Clock, Plus, Shield, Settings, Search, LogOut, BarChart3, Ban, CheckCircle,
   Activity, Zap, HardDrive, Server, ChevronRight, ChevronLeft, ArrowLeft, Mic, FileVideo, AlertTriangle,
@@ -65,7 +66,7 @@ function UserDetailDrawer({ userId, userName, onClose }: { userId: string; userN
     const m = Math.floor(s / 60);
     return m > 0 ? `${m}m ${s % 60}s` : `${s}s`;
   };
-  const fmtTime = (d: any) => !d ? "—" : new Date(d).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+  const fmtTime = (d: any) => formatDateTimeForViewer(d, "—");
 
   const maxVoice = Math.max(...(data?.voices?.map(v => v.count) ?? [1]));
   const maxHour = Math.max(...(data?.activeHours?.map(h => h.count) ?? [1]));
@@ -237,8 +238,8 @@ export default function AdminDashboard() {
     </div>
   );
 
-  const fmt = (d: any) => !d ? "—" : new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-  const fmtTime = (d: any) => !d ? "Never" : new Date(d).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+  const fmt = (d: any) => formatDateForViewer(d, "—");
+  const fmtTime = (d: any) => formatDateTimeForViewer(d, "Never");
   const daysLeft = (d: any) => !d ? null : Math.max(0, Math.ceil((new Date(d).getTime() - Date.now()) / 86400000));
   const fmtUptime = (s: number) => { const h = Math.floor(s / 3600); const m = Math.floor((s % 3600) / 60); return `${h}h ${m}m`; };
   const fmtMs = (ms: number) => { const s = Math.floor(ms / 1000); const m = Math.floor(s / 60); const h = Math.floor(m / 60); return h > 0 ? `${h}h ${m % 60}m` : m > 0 ? `${m}m` : `${s}s`; };

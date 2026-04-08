@@ -8,6 +8,12 @@ export default function Login() {
   const [error, setError] = useState("");
   const [, navigate] = useLocation();
 
+  const safeError = (msg: string) => {
+    if (!msg) return "Login မအောင်မြင်ပါ။ ထပ်မံကြိုးစားပါ။";
+    if (msg.includes("/tmp/") || msg.includes("/root/") || msg.includes("Command failed:")) return "Login မအောင်မြင်ပါ။ ထပ်မံကြိုးစားပါ။";
+    return msg;
+  };
+
   const loginMutation = trpc.auth.loginWithCode.useMutation({
     onSuccess: (data) => {
       if (data.role === "admin") {
@@ -17,7 +23,7 @@ export default function Login() {
       }
     },
     onError: (err) => {
-      setError(err.message);
+      setError(safeError(err.message));
     },
   });
 

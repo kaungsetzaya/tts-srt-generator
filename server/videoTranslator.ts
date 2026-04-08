@@ -58,7 +58,7 @@ export async function translateVideo(videoBuffer: Buffer, filename: string, user
 
         const { text: englishText, srt: originalSrt } = await transcribeLocalWhisper(audioPath);
 
-        const { myanmar: myanmarText } = await geminiTranslate(englishText, userApiKey);
+        const { myanmar: myanmarText } = await geminiTranslate(englishText, { userApiKey });
 
         return {
             englishText,
@@ -218,16 +218,21 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
         }
 
         console.log(`[Video Translator] Translating with Gemini...`);
-        const { myanmar: myanmarText } = await geminiTranslate(englishText, userApiKey);
+        const { myanmar: myanmarText } = await geminiTranslate(englishText, { userApiKey });
 
         return { 
             englishText, 
             myanmarText, 
             srtContent: originalSrt,
+            downloadedVideoBase64: (await fs.readFile(tempVideoPath)).toString("base64"),
         };
     } catch (error: any) {
         console.error("[Video Translator Error]", error);
-        throw new Error(`Failed to process link: ${error.message}`);
+        const raw = error?.message || "Video translation failed.";
+        if (raw.includes("Command failed:") || raw.includes("/tmp/") || raw.includes("/root/")) {
+            throw new Error("ဗီဒီယို link ကို လုပ်ဆောင်မရပါ။ Link ကိုစစ်ပြီး ထပ်မံကြိုးစားပါ။");
+        }
+        throw new Error(raw);
     } finally {
         await fs.unlink(tempVideoPath).catch(() => {});
         await fs.unlink(tempAudioPath).catch(() => {});

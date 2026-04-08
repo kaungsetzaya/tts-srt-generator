@@ -307,7 +307,8 @@ export const appRouter = router({
           const result = await translateVideo(videoBuffer, input.filename);
           return { success: true, ...result };
         } catch (error: any) {
-          throw new Error(error.message ?? "Translation failed.");
+          const msg = error?.message ?? "Translation failed.";
+          throw new Error(msg.includes("/tmp/") || msg.includes("/root/") ? "ဗီဒီယိုကို ဘာသာပြန်မရပါ။ ပြန်လည်ကြိုးစားပါ။" : msg);
         }
       }),
 
@@ -318,7 +319,7 @@ export const appRouter = router({
         filename: z.string().max(255),
         voice: z.enum(["thiha", "nilar"]).default("thiha"),
         character: z.string().optional(),
-        speed: z.number().min(0.5).max(2.0).default(1.1),
+        speed: z.number().min(0.5).max(2.0).default(1.0),
         pitch: z.number().min(-20).max(20).default(0),
         srtEnabled: z.boolean().default(true),
         srtFontSize: z.number().min(12).max(48).optional(),
@@ -364,7 +365,7 @@ export const appRouter = router({
         url: z.string(),
         voice: z.enum(["thiha", "nilar"]).default("thiha"),
         character: z.string().optional(),
-        speed: z.number().min(0.5).max(2.0).default(1.1),
+        speed: z.number().min(0.5).max(2.0).default(1.0),
         pitch: z.number().min(-20).max(20).default(0),
         srtEnabled: z.boolean().default(true),
         srtFontSize: z.number().min(12).max(48).optional(),
@@ -400,7 +401,7 @@ export const appRouter = router({
           const rawMsg = error.message ?? "Link dubbing failed.";
           let userMsg = rawMsg;
           if (rawMsg.includes("Command failed:") || rawMsg.includes("/tmp/") || rawMsg.includes("/root/")) {
-            userMsg = "ဗီဒီယိုကို ဒေါင်းလုတ်မရပါ။ Link ကို စစ်ပြီး ထပ်ကြိုးစားပါ။";
+            userMsg = "ဗီဒီယိုကို ဒေါင်းလုတ်/အသံထည့် လုပ်ဆောင်မရပါ။ Link ကို စစ်ပြီး ထပ်ကြိုးစားပါ။";
           }
           throw new Error(userMsg);
         }
