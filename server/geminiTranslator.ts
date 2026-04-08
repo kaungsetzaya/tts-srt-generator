@@ -70,22 +70,34 @@ function getSystemGeminiKey(): string | null {
   return key;
 }
 
-const TRANSLATE_PROMPT = `You are a professional Myanmar YouTube movie recap narrator.
+function buildTranslatePrompt(fontSize?: number): string {
+  // Estimate chars per line based on font size (for 1920px video width)
+  // Bigger font → fewer chars per line → more line breaks needed
+  const charsPerLine = fontSize ? Math.max(12, Math.round(60 - (fontSize - 12) * 1.2)) : 22;
+
+  return `You are a professional Myanmar YouTube movie recap narrator.
 
 Translate the following text (any language) into Myanmar movie recap narration style.
 
 STRICT rules:
 - NO "..." anywhere
 - NO quotation marks
-- Foreign names: Myanmar phonetic ONLY, no English in brackets
+- ABSOLUTELY NO English words — translate everything into pure Myanmar
+  * "Deliver boy" → "ပို့ဆောင်ရေးဝန်ထမ်း"
+  * "Phone" → "ဖုန်း"
+  * "OK" → "ကောင်းပြီ"
+  * Person names: Myanmar phonetic ONLY (e.g. "John" → "ဂျွန်", "Mary" → "မေရီ")
 - Sentence endings: ခဲ့ပါတယ်၊ လိုက်ပါတယ်၊ သွားပါတယ်၊ မှာပဲဖြစ်ပါတယ်၊ ပါတော့တယ်
 - Long flowing sentences connected with တဲ့အခါမှာတော့၊ ရင်းနဲ့၊ ပြီးတော့
 - Cinematic and engaging tone
-- Return ONLY Myanmar narration, nothing else
+- Keep translation concise so it can fit within the original video timing
+- Target approximately ${charsPerLine} Myanmar graphemes per subtitle line
+- Return ONLY Myanmar narration text, nothing else (no labels, no "Translation:", no markdown)
 
 Text:`;
+}
 
-export async function geminiTranslate(text: string, userApiKey?: string): Promise<{ myanmar: string; modelUsed: string }> {
+export async function geminiTranslate(text: string, userApiKey?: string, fontSize?: number): Promise<{ myanmar: string; modelUsed: string }> {
   // ✅ User Key ပါလာရင် User Key သုံးမည်၊ မပါလာရင် System Key (.env) ကို အလှည့်ကျသုံးမည်
   const apiKey = (userApiKey && userApiKey.trim() !== "") ? userApiKey.trim() : getSystemGeminiKey();
   
@@ -97,7 +109,7 @@ export async function geminiTranslate(text: string, userApiKey?: string): Promis
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model.id}:generateContent?key=${apiKey}`;
 
   const body = JSON.stringify({
-    contents: [{ parts: [{ text: `${TRANSLATE_PROMPT}\n${text}` }] }]
+    contents: [{ parts: [{ text: `${buildTranslatePrompt(fontSize)}\n${text}` }] }]
   });
 
   const res = await fetch(url, {
@@ -117,7 +129,7 @@ export async function geminiTranslate(text: string, userApiKey?: string): Promis
     quota[model.id] = { date: today, count: model.rpd };
     await saveQuota(quota);
     // Retry with next model (will still use the correct API key)
-    return geminiTranslate(text, userApiKey);
+    return geminiTranslate(text, userApiKey, fontSize);
   }
 
   await incrementQuota(model.id);

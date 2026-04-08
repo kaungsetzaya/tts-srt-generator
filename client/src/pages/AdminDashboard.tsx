@@ -65,7 +65,9 @@ function UserDetailDrawer({ userId, userName, onClose }: { userId: string; userN
     const m = Math.floor(s / 60);
     return m > 0 ? `${m}m ${s % 60}s` : `${s}s`;
   };
-  const fmtTime = (d: any) => !d ? "—" : new Date(d).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+  // Use user's real timezone (auto-detected)
+  const userTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const fmtTime = (d: any) => !d ? "—" : new Date(d).toLocaleString("en-US", { timeZone: userTZ, day: "2-digit", month: "short", hour: "numeric", minute: "2-digit", hour12: true });
 
   const maxVoice = Math.max(...(data?.voices?.map(v => v.count) ?? [1]));
   const maxHour = Math.max(...(data?.activeHours?.map(h => h.count) ?? [1]));
@@ -211,6 +213,8 @@ export default function AdminDashboard() {
   const [userDrawer, setUserDrawer] = useState<{ id: string; name: string } | null>(null);
   const [churnTab, setChurnTab] = useState<"active" | "inactive">("active");
   const [revenueMonth, setRevenueMonth] = useState(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; });
+  const [paymentSlipBase64, setPaymentSlipBase64] = useState("");
+  const [paymentSlipPreview, setPaymentSlipPreview] = useState("");
 
   const { data: me } = trpc.auth.me.useQuery();
   const { data: users, refetch } = trpc.admin.getUsers.useQuery();
@@ -224,12 +228,14 @@ export default function AdminDashboard() {
   });
 
   const logoutMutation = trpc.auth.logout.useMutation({ onSuccess: () => { window.location.href = "/login"; } });
-  const giveSub = trpc.admin.giveSubscription.useMutation({ onSuccess: () => { refetch(); setShowSubModal(false); setSelectedUser(null); setNote(""); setTransactionId(""); setPaymentMethod("kpay"); } });
+  const giveSub = trpc.admin.giveSubscription.useMutation({ onSuccess: () => { refetch(); setShowSubModal(false); setSelectedUser(null); setNote(""); setTransactionId(""); setPaymentMethod("kpay"); setPaymentSlipBase64(""); setPaymentSlipPreview(""); } });
   const cancelSub = trpc.admin.cancelSubscription.useMutation({ onSuccess: () => refetch() });
   const setRole = trpc.admin.setRole.useMutation({ onSuccess: () => refetch() });
   const banUser = trpc.admin.banUser.useMutation({ onSuccess: () => refetch() });
   const updateSettings = trpc.settings.update.useMutation();
   const resolveError = trpc.adminStats.resolveError.useMutation({ onSuccess: () => refetchErrors() });
+  const dismissFailedGen = trpc.adminStats.dismissFailedGen.useMutation({ onSuccess: () => refetchErrors() });
+  const deleteSystemLog = trpc.adminStats.deleteSystemLog.useMutation({ onSuccess: () => refetchErrors() });
 
   if (me?.role !== "admin") return (
     <div className="min-h-screen bg-background flex items-center justify-center">
@@ -237,8 +243,10 @@ export default function AdminDashboard() {
     </div>
   );
 
-  const fmt = (d: any) => !d ? "—" : new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-  const fmtTime = (d: any) => !d ? "Never" : new Date(d).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+  // Use user's real timezone (auto-detected by browser)
+  const userTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const fmt = (d: any) => !d ? "—" : new Date(d).toLocaleDateString("en-US", { timeZone: userTZ, day: "2-digit", month: "short", year: "numeric" });
+  const fmtTime = (d: any) => !d ? "Never" : new Date(d).toLocaleString("en-US", { timeZone: userTZ, day: "2-digit", month: "short", hour: "numeric", minute: "2-digit", hour12: true });
   const daysLeft = (d: any) => !d ? null : Math.max(0, Math.ceil((new Date(d).getTime() - Date.now()) / 86400000));
   const fmtUptime = (s: number) => { const h = Math.floor(s / 3600); const m = Math.floor((s % 3600) / 60); return `${h}h ${m}m`; };
   const fmtMs = (ms: number) => { const s = Math.floor(ms / 1000); const m = Math.floor(s / 60); const h = Math.floor(m / 60); return h > 0 ? `${h}h ${m % 60}m` : m > 0 ? `${m}m` : `${s}s`; };
@@ -254,7 +262,7 @@ export default function AdminDashboard() {
   const totalRevenue = analytics?.planCounts?.reduce((sum: number, p: any) => sum + (PLAN_PRICE[p.plan as Plan] ?? 0) * p.count, 0) ?? 0;
   const fmtMMK = (v: number) => `${v.toLocaleString()} MMK`;
   const maxVoice = Math.max(...(voiceStats?.voices?.map((v: any) => v.count) ?? [1]));
-  const totalErrors = (errorData?.failedGenerations?.length ?? 0);
+  const totalErrors = (errorData?.failedGenerations?.length ?? 0) + (errorData?.systemLogs?.filter((l: any) => !l.resolved).length ?? 0);
 
   return (
     <div className="min-h-screen text-foreground" style={{ background: "linear-gradient(135deg, #0F0C29 0%, #302B63 50%, #24243E 100%)" }}>
@@ -613,6 +621,7 @@ export default function AdminDashboard() {
                       <th className="text-left p-2">User ID</th>
                       <th className="text-left p-2">Feature</th>
                       <th className="text-left p-2">Error</th>
+                      <th className="text-center p-2">Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -626,10 +635,16 @@ export default function AdminDashboard() {
                           </span>
                         </td>
                         <td className="p-2 text-red-400 max-w-xs truncate">{e.errorMsg ?? "Unknown error"}</td>
+                        <td className="p-2 text-center">
+                          <button onClick={() => { if (confirm("Dismiss this error?")) dismissFailedGen.mutate({ id: e.id }); }}
+                            className="text-xs px-2 py-0.5 border border-red-500/40 text-red-400 hover:bg-red-500/20 rounded transition-all">
+                            <X className="w-3 h-3 inline" />
+                          </button>
+                        </td>
                       </tr>
                     ))}
                     {!errorData?.failedGenerations?.length && (
-                      <tr><td colSpan={4} className="p-6 text-center opacity-30">✓ No failed jobs recorded</td></tr>
+                      <tr><td colSpan={5} className="p-6 text-center opacity-30">✓ No failed jobs recorded</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -649,7 +664,12 @@ export default function AdminDashboard() {
                     <div className="flex items-center gap-2">
                       <span className={`text-xs px-2 py-0.5 rounded font-bold uppercase ${log.severity === "error" ? "bg-red-500/20 text-red-400" : log.severity === "warn" ? "bg-yellow-500/20 text-yellow-400" : "bg-blue-500/20 text-blue-400"}`}>{log.severity}</span>
                       <span className="text-xs font-mono opacity-50">{log.errorCode}</span>
-                      <span className="text-xs opacity-30">{FEATURE_LABELS[log.feature ?? ""] ?? log.feature}</span>
+                      {/* Show source: browser errors vs app errors */}
+                      {log.feature?.startsWith("browser:") ? (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 font-bold uppercase">🌐 Browser</span>
+                      ) : (
+                        <span className="text-xs opacity-30">{FEATURE_LABELS[log.feature ?? ""] ?? log.feature}</span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs opacity-30">{fmtTime(log.createdAt)}</span>
@@ -660,6 +680,11 @@ export default function AdminDashboard() {
                         </button>
                       )}
                       {log.resolved && <span className="text-xs text-green-400 opacity-60">✓ Resolved</span>}
+                      {/* Delete/Dismiss button for system logs */}
+                      <button onClick={() => { if (confirm("Delete this error log?")) deleteSystemLog.mutate({ id: log.id }); }}
+                        className="text-xs px-2 py-0.5 border border-red-500/40 text-red-400 hover:bg-red-500/20 rounded transition-all">
+                        <X className="w-3 h-3 inline" />
+                      </button>
                     </div>
                   </div>
                   <p className="text-xs opacity-70">{log.errorMessage}</p>
@@ -889,6 +914,47 @@ export default function AdminDashboard() {
                     className="w-full border p-2.5 text-sm focus:outline-none rounded-lg font-mono" style={{ background: "rgba(0,0,0,0.4)", borderColor: transactionId ? "#4ade80" : border, color: "#fff" }} />
                 </div>
               )}
+              {/* Payment Slip Upload */}
+              {paymentMethod !== "free" && paymentMethod !== "cash" && (
+                <div>
+                  <label className="text-xs uppercase tracking-wider opacity-70 block mb-2 flex items-center gap-2">
+                    📷 Payment Slip (ပေးချေမှု စလစ်)
+                  </label>
+                  <div className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-white/5 transition-all"
+                    style={{ borderColor: paymentSlipBase64 ? "#4ade80" : border }}
+                    onClick={() => {
+                      const inp = document.createElement('input');
+                      inp.type = 'file'; inp.accept = 'image/*';
+                      inp.onchange = (ev: any) => {
+                        const file = ev.target.files?.[0];
+                        if (!file) return;
+                        if (file.size > 5 * 1024 * 1024) { alert("Slip image max 5MB"); return; }
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          const base64 = (reader.result as string);
+                          setPaymentSlipBase64(base64);
+                          setPaymentSlipPreview(base64);
+                        };
+                        reader.readAsDataURL(file);
+                      };
+                      inp.click();
+                    }}>
+                    {paymentSlipPreview ? (
+                      <div className="space-y-2">
+                        <img src={paymentSlipPreview} alt="Payment Slip" className="max-h-40 mx-auto rounded-lg border" style={{ borderColor: border }} />
+                        <p className="text-xs text-green-400 font-bold">✓ Slip uploaded</p>
+                        <button onClick={(ev) => { ev.stopPropagation(); setPaymentSlipBase64(''); setPaymentSlipPreview(''); }}
+                          className="text-xs text-red-400 hover:underline">Remove</button>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-xs opacity-50 mb-1">Click to upload payment screenshot</p>
+                        <p className="text-[10px] opacity-30">PNG, JPG (max 5MB)</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="text-xs uppercase tracking-wider opacity-70 block mb-2">Note (optional)</label>
                 <input value={note} onChange={e => setNote(e.target.value)} placeholder="Additional notes..."
@@ -905,7 +971,9 @@ export default function AdminDashboard() {
                     userId: selectedUser,
                     plan: selectedPlan,
                     trialDays,
-                    note: `[${PAYMENT_METHODS[paymentMethod]}]${transactionId ? ` TXN: ${transactionId}` : ""}${note ? ` | ${note}` : ""}`,
+                    note: `${transactionId ? `TXN: ${transactionId}` : ""}${note ? ` | ${note}` : ""}`.trim() || undefined,
+                    paymentMethod,
+                    paymentSlip: paymentSlipBase64 || undefined,
                   });
                 }}
                   disabled={giveSub.isPending} className="flex-1 py-2.5 font-bold uppercase text-sm text-black flex items-center justify-center gap-2 disabled:opacity-50 rounded-xl" style={{ background: C }}>

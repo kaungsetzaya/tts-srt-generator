@@ -22,6 +22,8 @@ export const subscriptions = mysqlTable("subscriptions", {
   startsAt: timestamp("starts_at").notNull(),
   expiresAt: timestamp("expires_at"),
   createdByAdmin: varchar("created_by_admin", { length: 36 }),
+  paymentMethod: varchar("payment_method", { length: 30 }),
+  paymentSlip: text("payment_slip"),
   note: text("note"),
   createdAt: timestamp("created_at").defaultNow(),
 });

@@ -43,6 +43,7 @@ export type CharacterKey = keyof typeof CHARACTER_VOICES;
 export interface GenerateResult {
   audioBuffer: Buffer;
   srtContent: string;
+  rawSrt: string;  // Raw edge-tts word-level SRT for precise timing
   durationMs: number;
 }
 
@@ -96,7 +97,10 @@ export async function generateSpeech(
   const voiceConfig = SUPPORTED_VOICES[voice];
   if (!voiceConfig) throw new Error(`Unsupported voice: ${voice}`);
 
-  const ratePercent = Math.round((rate - 1.0) * 100);
+  // Myanmar TTS voices (ThihaNeural/NilarNeural) naturally speak slowly at +0%
+  // Add +25% baseline boost so user's "1.0x" (normal) feels like natural conversation speed
+  const MYANMAR_SPEED_BOOST = 25;
+  const ratePercent = Math.round((rate - 1.0) * 100) + MYANMAR_SPEED_BOOST;
   const rateStr = ratePercent >= 0 ? `+${ratePercent}%` : `${ratePercent}%`;
   const clampedPitch = Math.max(-20, Math.min(20, pitch));
   const pitchStr = clampedPitch >= 0 ? `+${clampedPitch}Hz` : `${clampedPitch}Hz`;

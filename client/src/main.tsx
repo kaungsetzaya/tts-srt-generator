@@ -52,6 +52,42 @@ const trpcClient = trpc.createClient({
   ],
 });
 
+// ────────────────────────────────────────────────────
+// 🌐 BROWSER ERROR CAPTURE — sends real browser errors
+//    (window.onerror, unhandled promise rejections)
+//    to the admin error reports via logBrowserError
+// ────────────────────────────────────────────────────
+function sendBrowserError(errorMessage: string, source: "window.onerror" | "unhandledrejection" | "react_error_boundary", stack?: string) {
+  // Use raw fetch to avoid circular dependency with trpc
+  fetch("/api/trpc/logBrowserError", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({
+      json: {
+        errorMessage: errorMessage.slice(0, 2000),
+        source,
+        stackTrace: stack?.slice(0, 5000) || undefined,
+        url: window.location.href.slice(0, 500),
+      },
+    }),
+  }).catch(() => {}); // silently fail — don't cause more errors
+}
+
+// Capture unhandled JS errors (syntax errors, runtime crashes, etc.)
+window.onerror = (message, _source, _lineno, _colno, error) => {
+  const msg = typeof message === "string" ? message : "Unknown browser error";
+  sendBrowserError(msg, "window.onerror", error?.stack);
+};
+
+// Capture unhandled promise rejections
+window.onunhandledrejection = (event: PromiseRejectionEvent) => {
+  const reason = event.reason;
+  const msg = reason instanceof Error ? reason.message : String(reason ?? "Unhandled promise rejection");
+  const stack = reason instanceof Error ? reason.stack : undefined;
+  sendBrowserError(msg, "unhandledrejection", stack);
+};
+
 createRoot(document.getElementById("root")!).render(
   <trpc.Provider client={trpcClient} queryClient={queryClient}>
     <QueryClientProvider client={queryClient}>

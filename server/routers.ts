@@ -141,7 +141,9 @@ export const appRouter = router({
         userId: z.string(),
         plan: z.enum(["trial", "1month", "3month", "6month", "lifetime"]),
         trialDays: z.number().min(1).max(365).optional(),
-        note: z.string().max(200).optional(),
+        note: z.string().max(500).optional(),
+        paymentMethod: z.string().max(30).optional(),
+        paymentSlip: z.string().optional(),  // base64 image
       }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user?.role !== "admin") throw new Error("Unauthorized");
@@ -165,9 +167,11 @@ export const appRouter = router({
           startsAt: now,
           expiresAt,
           createdByAdmin: ctx.user.userId,
-          note: input.note ?? null,
+          paymentMethod: input.paymentMethod || null,
+          paymentSlip: input.paymentSlip || null,
+          note: input.note || null,
         });
-        auditLog("GIVE_SUBSCRIPTION", ctx.user.userId, input.userId, `plan=${input.plan}, expires=${expiresAt.toISOString()}`);
+        auditLog("GIVE_SUBSCRIPTION", ctx.user.userId, input.userId, `plan=${input.plan}, payment=${input.paymentMethod ?? 'unknown'}, expires=${expiresAt.toISOString()}`);
         return { success: true, expiresAt };
       }),
 
@@ -303,11 +307,18 @@ export const appRouter = router({
         }
         try {
           const videoBuffer = Buffer.from(input.videoBase64, "base64");
-          if (videoBuffer.length > 25 * 1024 * 1024) throw new Error("File too large. Max 25MB.");
+          if (videoBuffer.length > 25 * 1024 * 1024) throw new Error("ဖိုင်အကြီးလွန်ပါသည်။ အများဆုံး 25MB အထိသာ တင်နိုင်ပါသည်။");
           const result = await translateVideo(videoBuffer, input.filename);
           return { success: true, ...result };
         } catch (error: any) {
-          throw new Error(error.message ?? "Translation failed.");
+          const rawMsg = error.message ?? "Translation failed.";
+          let userMsg = rawMsg;
+          if (rawMsg.includes("Command failed") || rawMsg.includes("/tmp/") || rawMsg.includes("/root/")) {
+            userMsg = "ဗီဒီယို ဘာသာပြန်၍ မရပါ။ ထပ်ကြိုးစားပါ။";
+          } else if (rawMsg.includes("Whisper")) {
+            userMsg = "ဗီဒီယိုတွင် စကားပြောသံ ရှာမတွေ့ပါ။ အသံပါသော ဗီဒီယိုကို ထပ်ကြိုးစားပါ။";
+          }
+          throw new Error(userMsg);
         }
       }),
 
@@ -325,6 +336,8 @@ export const appRouter = router({
         srtColor: z.string().optional(),
         srtDropShadow: z.boolean().optional(),
         srtBlurBg: z.boolean().optional(),
+        srtMarginV: z.number().min(0).max(200).optional(),
+        srtBlurSize: z.number().min(0).max(30).optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user) throw new Error("Please login first.");
@@ -338,7 +351,7 @@ export const appRouter = router({
         }
         try {
           const videoBuffer = Buffer.from(input.videoBase64, "base64");
-          if (videoBuffer.length > 25 * 1024 * 1024) throw new Error("File too large. Max 25MB.");
+          if (videoBuffer.length > 25 * 1024 * 1024) throw new Error("ဖိုင်အကြီးလွန်ပါသည်။ အများဆုံး 25MB အထိသာ တင်နိုင်ပါသည်။");
           const dubOpts: DubOptions = {
             voice: input.voice,
             character: input.character,
@@ -349,12 +362,22 @@ export const appRouter = router({
             srtColor: input.srtColor,
             srtDropShadow: input.srtDropShadow,
             srtBlurBg: input.srtBlurBg,
+            srtMarginV: input.srtMarginV,
+            srtBlurSize: input.srtBlurSize,
           };
           const result = await dubVideoFromBuffer(videoBuffer, input.filename, dubOpts);
           return { success: true, ...result };
         } catch (error: any) {
-          const msg = error.message ?? "Dubbing failed.";
-          throw new Error(msg.includes("/tmp/") || msg.includes("/root/") ? "Dubbing process failed. Please try again." : msg);
+          const rawMsg = error.message ?? "Dubbing failed.";
+          let userMsg = rawMsg;
+          if (rawMsg.includes("Command failed") || rawMsg.includes("/tmp/") || rawMsg.includes("/root/")) {
+            userMsg = "ဗီဒီယို ဖန်တီး၍ မရပါ။ ထပ်ကြိုးစားပါ။";
+          } else if (rawMsg.includes("Whisper")) {
+            userMsg = "ဗီဒီယိုတွင် စကားပြောသံ ရှာမတွေ့ပါ။ အသံပါသော ဗီဒီယိုကို ထပ်ကြိုးစားပါ။";
+          } else if (rawMsg.includes("MURF_API_KEY")) {
+            userMsg = "Voice Change စနစ် ပြင်ဆင်ဆဲဖြစ်ပါသည်။ Standard Voice ကို သုံးပါ။";
+          }
+          throw new Error(userMsg);
         }
       }),
 
@@ -371,6 +394,8 @@ export const appRouter = router({
         srtColor: z.string().optional(),
         srtDropShadow: z.boolean().optional(),
         srtBlurBg: z.boolean().optional(),
+        srtMarginV: z.number().min(0).max(200).optional(),
+        srtBlurSize: z.number().min(0).max(30).optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user) throw new Error("Please login first.");
@@ -393,6 +418,8 @@ export const appRouter = router({
             srtColor: input.srtColor,
             srtDropShadow: input.srtDropShadow,
             srtBlurBg: input.srtBlurBg,
+            srtMarginV: input.srtMarginV,
+            srtBlurSize: input.srtBlurSize,
           };
           const result = await dubVideoFromLink(input.url, dubOpts);
           return { success: true, ...result };
@@ -697,6 +724,29 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    // --- Delete a system error log ---
+    deleteSystemLog: publicProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        if (!ctx.user || ctx.user.role !== "admin") throw new Error("Unauthorized");
+        const db = await getDb();
+        if (!db) throw new Error("DB error");
+        await db.delete(errorLogs).where(eq(errorLogs.id, input.id));
+        return { success: true };
+      }),
+
+    // --- Dismiss/Delete a failed generation record ---
+    dismissFailedGen: publicProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        if (!ctx.user || ctx.user.role !== "admin") throw new Error("Unauthorized");
+        const db = await getDb();
+        if (!db) throw new Error("DB error");
+        // Delete the failed generation record from tts_conversions
+        await db.delete(ttsConversions).where(eq(ttsConversions.id, input.id));
+        return { success: true };
+      }),
+
     // --- Churn rate + Active/Inactive user lists ---
     getChurnStats: publicProcedure.query(async ({ ctx }) => {
       if (!ctx.user || ctx.user.role !== "admin") throw new Error("Unauthorized");
@@ -768,6 +818,32 @@ export const appRouter = router({
         return { success: true };
       }),
   }),
+
+  // ============ BROWSER ERROR LOGGING ============
+  logBrowserError: publicProcedure
+    .input(z.object({
+      errorMessage: z.string().max(2000),
+      errorCode: z.string().max(100).optional(),
+      stackTrace: z.string().max(5000).optional(),
+      url: z.string().max(500).optional(),
+      source: z.enum(["window.onerror", "unhandledrejection", "react_error_boundary"]).default("window.onerror"),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) return { success: false };
+      const id = nanoid(36);
+      await db.insert(errorLogs).values({
+        id,
+        userId: ctx.user?.userId || null,
+        feature: `browser:${input.source}`,
+        errorCode: input.errorCode || input.source,
+        errorMessage: `[${input.url || 'unknown'}] ${input.errorMessage}`.slice(0, 2000),
+        stackTrace: input.stackTrace?.slice(0, 5000) || null,
+        severity: "error",
+        resolved: false,
+      });
+      return { success: true };
+    }),
 });
 
 export type AppRouter = typeof appRouter;

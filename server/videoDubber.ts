@@ -23,6 +23,8 @@ export interface DubOptions {
   srtColor?: string;
   srtDropShadow?: boolean;
   srtBlurBg?: boolean;
+  srtMarginV?: number;   // Vertical position (0=bottom, 100=top)
+  srtBlurSize?: number;  // Backdrop blur radius in px
 }
 
 export interface DubResult {
@@ -236,13 +238,16 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
         // Build ASS subtitle style
         const fontSize = options.srtFontSize || 24;
         const fontColor = hexToASS(options.srtColor || "#ffffff");
+        const marginV = options.srtMarginV ?? 30;
         const shadowStr = options.srtDropShadow !== false ? ",Shadow=2,BackColour=&H80000000" : ",Shadow=0";
-        const borderStyle = options.srtBlurBg !== false ? ",BorderStyle=4,BackColour=&H80000000,Outline=0" : ",BorderStyle=1,Outline=2,OutlineColour=&H40000000";
+        // Blur size adjusts the BackColour alpha for more/less visible backdrop
+        const blurAlpha = options.srtBlurBg !== false ? Math.min(255, Math.max(0, Math.round((options.srtBlurSize ?? 8) * 16))).toString(16).toUpperCase().padStart(2, '0') : 'FF';
+        const borderStyle = options.srtBlurBg !== false ? `,BorderStyle=4,BackColour=&H${blurAlpha}000000,Outline=0` : ",BorderStyle=1,Outline=2,OutlineColour=&H40000000";
         
         // Escape path for subtitles filter (Windows paths need special handling)
         const escapedSrtPath = tempSrtPath.replace(/\\/g, '/').replace(/:/g, '\\:');
         
-        filters.push(`${videoLabel}subtitles='${escapedSrtPath}':force_style='FontSize=${fontSize},PrimaryColour=${fontColor},Alignment=2,MarginV=30${shadowStr}${borderStyle}'[vfinal]`);
+        filters.push(`${videoLabel}subtitles='${escapedSrtPath}':force_style='FontSize=${fontSize},PrimaryColour=${fontColor},Alignment=2,MarginV=${marginV}${shadowStr}${borderStyle}'[vfinal]`);
       } else {
         if (needSpeedAdjust) {
           // Just copy the speed-adjusted video
