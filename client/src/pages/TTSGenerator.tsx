@@ -692,8 +692,9 @@ export default function TTSGenerator() {
                         <div className="absolute left-0 right-0 flex justify-center pointer-events-none"
                           style={{
                             zIndex: 10,
-                            bottom: `${Math.round((srtMarginV / 200) * 85 + 5)}%`,
-                            transition: "bottom 0.15s ease-out",
+                            // Map marginV: 5=near bottom (above controls ~75%), 200=near top (~2%)
+                            top: `${Math.max(2, Math.round(78 - (srtMarginV / 200) * 76))}%`,
+                            transition: "top 0.2s ease-out",
                           }}>
                           <div style={{
                             padding: srtFullWidth ? `${srtBoxPadding}px 0` : `${srtBoxPadding}px ${srtBoxPadding + 10}px`,
@@ -706,7 +707,7 @@ export default function TTSGenerator() {
                             textAlign: "center",
                             width: srtFullWidth ? "100%" : "auto",
                             maxWidth: srtFullWidth ? "100%" : "90%",
-                            transition: "all 0.15s ease-out",
+                            transition: "all 0.2s ease-out",
                           }}>
                             {lang === "mm" ? "မြန်မာ စာတန်း နမူနာ" : "Subtitle Preview"}
                           </div>
