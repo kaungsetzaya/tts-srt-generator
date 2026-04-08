@@ -127,29 +127,29 @@ const features = [
 
   {
 
-    icon: "⚡",
+    icon: "🧠",
 
-    title: "Fast Processing",
+    title: "Smart Burmese Translation",
 
-    badge: "No Waiting",
+    badge: "Strict Burmese Output",
 
-    desc: "Cloud-Powered Processing ဖြင့် ဗီဒီယိုကြာချိန်နှင့် မသင်္ဆာဘဲ မြန်ဆန်စွာ ထုတ်ပေးနိုင်သည်။ မိနစ်ပိုင်းအတွင်း ရလဒ်ကို Download ပြုလုပ်နိုင်မည်ဖြစ်သည်။",
+    desc: "Video မှ မည်သည့်ဘာသာစကားကိုမဆို မြန်မာဘာသာသို့ ချောမွေ့စွာ ဘာသာပြန်ပေးပြီး တိကျသော Script ကိုထုတ်ပေးနိုင်သည်။ Subtitle ဖတ်ရလွယ်စေရန် စာကြောင်းအရှည်ကိုလည်း ပြင်ဆင်ပေးသည်။",
 
-    detail: "Cloud processing · Minutes not hours · Instant download",
+    detail: "Any language to Burmese · Clean wording · Script-ready output",
 
   },
 
   {
 
-    icon: "🔒",
+    icon: "🎯",
 
-    title: "Secure & Private",
+    title: "All-in-One One-Click Workflow",
 
-    badge: "Your Files Only",
+    badge: "Analysis → Export",
 
-    desc: "သင်တင်ပေးသော ဖိုင်များသည် သင်၏ Account တွင်သာ ရှိသည်။ Processing ပြီးဆုံးသည်နှင့် Server မှ ဖိုင်များကို ချက်ချင်းဖျက်ပစ်ပြီး ကိုယ်ရေးကိုယ်တာ လုံခြုံမှုကို အာမခံသည်။",
+    desc: "Analysis, Smart Translation, AI Voice Sync, FFmpeg Render နှင့် Export ကို တစ်ဆက်တည်း လုပ်ဆောင်ပေးသည်။ Preview ပြပြီးနောက် MP4 Download ခလုတ်ဖြင့် ချက်ချင်းယူနိုင်သည်။",
 
-    detail: "Encrypted storage · Auto-delete after processing",
+    detail: "Whisper + Gemini + TTS + FFmpeg · Final MP4 + Download",
 
   },
 
@@ -165,13 +165,15 @@ const features = [
 
 const steps = [
 
-  { num: "01", title: "Login", desc: "Account ဖွင့်ပြီး Dashboard သို့ ဝင်ရောက်ပါ။" },
+  { num: "01", title: "Analysis & Extract", desc: "Video ကိုလက်ခံပြီး Audio ခွဲထုတ်ကာ Whisper ဖြင့် စာသားနှင့် Timestamp များကို ထုတ်ယူသည်။" },
 
-  { num: "02", title: "Choose a Tool", desc: "TTS, Subtitle, သို့မဟုတ် Video Translate ကို ရွေးချယ်ပါ။" },
+  { num: "02", title: "Smart Translation", desc: "Gemini AI ဖြင့် Strict Burmese ဘာသာပြန်ပြီး Subtitle ဖတ်ရလွယ်အောင် စာကြောင်းဖော်မတ်လုပ်သည်။" },
 
-  { num: "03", title: "Upload or Type", desc: "စာသားရိုက်ပါ သို့မဟုတ် ဗီဒီယိုဖိုင် တင်ပေးပါ။" },
+  { num: "03", title: "AI Voice & Sync", desc: "ရွေးထားသော Speed ဖြင့် TTS အသံသွင်းပြီး အသံကြာချိန်နှင့်လိုက်ဖက်အောင် Video timing ကိုညှိသည်။" },
 
-  { num: "04", title: "Download Result", desc: "ထုတ်ပေးခဲ့သော အသံ / SRT / Script ကို Download ယူပါ။" },
+  { num: "04", title: "Final Render", desc: "မူရင်းအသံကိုဖယ်ရှားပြီး AI Voice ကိုတင်ကာ SRT ကို Video ပေါ် Burn-in လုပ်သည်။" },
+
+  { num: "05", title: "Export", desc: "Preview ပြသပြီး Download ခလုတ်ဖြင့် အချောသတ် MP4 ကိုချက်ချင်း ရယူနိုင်သည်။" },
 
 ];
 
@@ -501,7 +503,7 @@ export default function Landing() {
 
             onClick={() => navigate("/login")}
 
-            className="relative px-16 md:px-24 py-5 md:py-6 mb-32 text-lg md:text-xl font-black uppercase tracking-widest text-white overflow-hidden rounded-sm group"
+            className="relative px-10 md:px-14 py-4 md:py-5 mb-24 text-base md:text-lg font-black uppercase tracking-wide md:tracking-wider text-white overflow-hidden rounded-sm group"
 
             style={{
 
@@ -531,7 +533,7 @@ export default function Landing() {
 
             />
 
-            <span className="relative z-10">🚀 Ready to Use — Login</span>
+            <span className="relative z-10">🚀 Start Now — Login</span>
 
           </motion.button>
 
@@ -649,7 +651,7 @@ export default function Landing() {
 
               နှင့် Video Translation — တို့ကို ဤနေရာတစ်ခုတည်းတွင် ရရှိနိုင်သည်။
 
-              Backend Technology များကို ဂရုမစိုက်ဘဲ ရလဒ်ကိုသာ ရယူပါ။
+              
 
             </p>
 
@@ -861,7 +863,7 @@ export default function Landing() {
 
             >
 
-              4 Steps. That's It.
+              All-in-One One-Click Workflow
 
             </h2>
 
@@ -869,7 +871,7 @@ export default function Landing() {
 
 
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-0 relative">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-2 relative">
 
             {/* Connector line */}
 
@@ -891,7 +893,7 @@ export default function Landing() {
 
             {steps.map((s, i) => (
 
-              <FadeInSection key={s.num} delay={i * 0.12} className="flex flex-col items-center text-center px-4">
+              <FadeInSection key={s.num} delay={i * 0.12} className="flex flex-col items-center text-center px-3 md:px-2">
 
                 <motion.div
 
@@ -915,13 +917,13 @@ export default function Landing() {
 
                 </motion.div>
 
-                <h5 className="font-black uppercase text-sm mb-2 tracking-wider">
+                <h5 className="font-black uppercase text-sm mb-2 tracking-wider leading-snug min-h-[42px] flex items-center text-center">
 
                   {s.title}
 
                 </h5>
 
-                <p className="text-gray-500 text-xs leading-relaxed">{s.desc}</p>
+                <p className="text-gray-400 text-xs leading-relaxed max-w-[210px] mx-auto">{s.desc}</p>
 
               </FadeInSection>
 
@@ -997,7 +999,7 @@ export default function Landing() {
 
           <p className="text-gray-400 mb-10 max-w-lg mx-auto text-sm leading-relaxed">
 
-            Account တစ်ခုဖန်တီးပြီး ယနေ့ပင် စတင်အသုံးပြုနိုင်ပါသည်။ Credit Card မလိုအပ်ပါ။
+            Account တစ်ခုဖန်တီးပြီး ယနေ့စတင်အသုံးပြုလိုက်ပါ။
 
           </p>
 
@@ -1017,7 +1019,7 @@ export default function Landing() {
 
             onClick={() => navigate("/login")}
 
-            className="inline-block px-20 py-6 text-xl font-black uppercase tracking-widest text-white rounded-sm relative overflow-hidden group"
+            className="inline-block px-10 md:px-14 py-4 md:py-5 text-base md:text-lg font-black uppercase tracking-wide md:tracking-wider text-white rounded-sm relative overflow-hidden group"
 
             style={{
 
@@ -1045,7 +1047,7 @@ export default function Landing() {
 
             />
 
-            <span className="relative z-10">🚀 Ready to Use — Login</span>
+            <span className="relative z-10">🚀 Start Now — Login</span>
 
           </motion.button>
 
@@ -1080,4 +1082,3 @@ export default function Landing() {
   );
 
 }
-

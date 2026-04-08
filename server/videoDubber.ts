@@ -181,7 +181,7 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
 
     // Step 4: Gemini translate to Myanmar
     console.log(`[Dubber] Translating to Myanmar...`);
-    const { myanmar: myanmarText } = await geminiTranslate(englishText);
+    const { myanmar: myanmarText } = await geminiTranslate(englishText, { fontSize: options.srtFontSize });
 
     // Step 5: Generate TTS audio
     console.log(`[Dubber] Generating TTS (voice=${options.character || options.voice}, speed=${options.speed}, pitch=${options.pitch})...`);
@@ -206,7 +206,10 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
     // Step 8: Build SRT file if enabled
     let srtContent = "";
     if (options.srtEnabled) {
-      srtContent = buildMyanmarSRT(myanmarText, ttsResult.durationMs, 20);
+      const adaptiveCharsPerLine = options.srtFontSize
+        ? Math.max(12, Math.min(28, Math.round(560 / options.srtFontSize)))
+        : 20;
+      srtContent = buildMyanmarSRT(myanmarText, ttsResult.durationMs, adaptiveCharsPerLine);
       await fs.writeFile(tempSrtPath, srtContent, 'utf-8');
     }
 

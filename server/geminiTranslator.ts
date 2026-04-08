@@ -70,22 +70,35 @@ function getSystemGeminiKey(): string | null {
   return key;
 }
 
-const TRANSLATE_PROMPT = `You are a professional Myanmar YouTube movie recap narrator.
+interface GeminiTranslateOptions {
+  userApiKey?: string;
+  fontSize?: number;
+}
 
-Translate the following text (any language) into Myanmar movie recap narration style.
+function buildTranslatePrompt(fontSize?: number): string {
+  const normalizedFont = typeof fontSize === "number" ? Math.max(12, Math.min(48, Math.round(fontSize))) : 24;
+
+  return `You are a professional Myanmar localization writer for video dubbing and subtitle workflows.
+
+Translate the following text (any language) into clear, natural, strict Burmese.
 
 STRICT rules:
-- NO "..." anywhere
-- NO quotation marks
-- Foreign names: Myanmar phonetic ONLY, no English in brackets
-- Sentence endings: ခဲ့ပါတယ်၊ လိုက်ပါတယ်၊ သွားပါတယ်၊ မှာပဲဖြစ်ပါတယ်၊ ပါတော့တယ်
-- Long flowing sentences connected with တဲ့အခါမှာတော့၊ ရင်းနဲ့၊ ပြီးတော့
-- Cinematic and engaging tone
-- Return ONLY Myanmar narration, nothing else
+- Output must be Burmese only. Do not include any English letters.
+- Keep meaning accurate and natural for spoken narration.
+- Replace English role words with proper Burmese wording (example: "deliver boy" -> "ပို့ဆောင်ရေးဝန်ထမ်း").
+- No code blocks, no extra notes, no quotation wrappers.
+- Keep punctuation readable for subtitle use.
+- Keep sentence lengths suitable for subtitle rendering.
+- Target subtitle font-size profile: ${normalizedFont}px.
+- When text is long, split by natural phrasing so subtitle lines stay balanced and readable.
+- Avoid single-word hanging lines.
+- Keep timing-friendly phrasing (concise but complete) so text can fit within source timing.
 
-Text:`;
+Return only final Burmese translated text.`;
+}
 
-export async function geminiTranslate(text: string, userApiKey?: string): Promise<{ myanmar: string; modelUsed: string }> {
+export async function geminiTranslate(text: string, options: GeminiTranslateOptions = {}): Promise<{ myanmar: string; modelUsed: string }> {
+  const { userApiKey, fontSize } = options;
   // ✅ User Key ပါလာရင် User Key သုံးမည်၊ မပါလာရင် System Key (.env) ကို အလှည့်ကျသုံးမည်
   const apiKey = (userApiKey && userApiKey.trim() !== "") ? userApiKey.trim() : getSystemGeminiKey();
   
@@ -97,7 +110,7 @@ export async function geminiTranslate(text: string, userApiKey?: string): Promis
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model.id}:generateContent?key=${apiKey}`;
 
   const body = JSON.stringify({
-    contents: [{ parts: [{ text: `${TRANSLATE_PROMPT}\n${text}` }] }]
+    contents: [{ parts: [{ text: `${buildTranslatePrompt(fontSize)}\n\nText:\n${text}` }] }]
   });
 
   const res = await fetch(url, {
@@ -117,7 +130,7 @@ export async function geminiTranslate(text: string, userApiKey?: string): Promis
     quota[model.id] = { date: today, count: model.rpd };
     await saveQuota(quota);
     // Retry with next model (will still use the correct API key)
-    return geminiTranslate(text, userApiKey);
+    return geminiTranslate(text, options);
   }
 
   await incrementQuota(model.id);
