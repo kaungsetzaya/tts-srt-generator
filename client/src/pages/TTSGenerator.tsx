@@ -7,6 +7,10 @@ import { useLocation } from "wouter";
 type Tab = "tts" | "video" | "dubbing" | "settings";
 type Theme = "dark" | "light";
 type Lang = "mm" | "en";
+const ACCENT_DARK = "oklch(0.65 0.25 310)";
+const ACCENT_SECONDARY_DARK = "oklch(0.6 0.28 280)";
+const ACCENT_LIGHT = "#6d28d9";
+const ACCENT_SECONDARY_LIGHT = "#4c1d95";
 
 const T = {
   mm: {
@@ -182,8 +186,8 @@ export default function TTSGenerator() {
   const isDark = theme === "dark";
   
   // Vibrant Purples for Accents
-  const accent = isDark ? "oklch(0.65 0.25 310)" : "#6d28d9";
-  const accentSecondary = isDark ? "oklch(0.6 0.28 280)" : "#4c1d95";
+  const accent = isDark ? ACCENT_DARK : ACCENT_LIGHT;
+  const accentSecondary = isDark ? ACCENT_SECONDARY_DARK : ACCENT_SECONDARY_LIGHT;
   const subColor = isAdmin ? accent : daysLeft === null ? accent : daysLeft > 14 ? "#16a34a" : daysLeft > 4 ? "#ea580c" : "#dc2626";
 
   // Beautiful Pink/Purple gradient for Light, Cyberpunk for Dark
@@ -208,6 +212,10 @@ export default function TTSGenerator() {
   // Perfect padding and margins to prevent any overlapping
   const box = "relative border p-4 md:p-5 pt-8 backdrop-blur-xl transition-all duration-300 rounded-2xl mt-6 shadow-[0_8px_32px_rgba(0,0,0,0.05)]";
   const labelStyle = "absolute -top-3.5 left-4 px-3 py-1 text-xs uppercase tracking-widest font-black rounded-lg z-10 shadow-sm border-t border-l border-r";
+  const ttsControls = [
+    { label: t.tone, value: tone, setValue: setTone, min: -20, max: 20, step: 1, display: `${tone > 0 ? "+" : ""}${tone} Hz`, leftLabel: t.lower, rightLabel: t.higher, disabled: false },
+    { label: t.speed, value: speed, setValue: setSpeed, min: 0.5, max: 2.0, step: 0.1, display: `${speed.toFixed(1)}x${speed === 1 ? " (Normal)" : ""}`, leftLabel: t.slower, rightLabel: t.faster, disabled: false },
+  ] as const;
 
   const handleGenerate = async () => {
     if (!text.trim()) return;
@@ -450,7 +458,7 @@ export default function TTSGenerator() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {[{ label: t.tone, value: tone, setValue: setTone, min: -20, max: 20, step: 1, display: `${tone > 0 ? "+" : ""}${tone} Hz`, leftLabel: t.lower, rightLabel: t.higher, disabled: false }, { label: t.speed, value: speed, setValue: setSpeed, min: 0.5, max: 2.0, step: 0.1, display: `${speed.toFixed(1)}x${speed === 1 ? " (Normal)" : ""}`, leftLabel: t.slower, rightLabel: t.faster, disabled: false }].map(({ label: lbl, value, setValue, min, max, step, display, leftLabel, rightLabel, disabled }) => (
+                  {ttsControls.map(({ label: lbl, value, setValue, min, max, step, display, leftLabel, rightLabel, disabled }) => (
                     <div key={lbl} className={box} style={{ background: cardBg, borderColor: cardBorder }}><div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{lbl}</div><div className="mt-2"><Slider value={[value]} onValueChange={v => setValue(v[0])} min={min} max={max} step={step} disabled={!hasActiveSub || disabled} className="w-full" /><div className="flex justify-between items-center text-xs font-bold mt-4"><span className="opacity-60">{leftLabel}</span><span style={{ color: accent }}>{display}</span><span className="opacity-60">{rightLabel}</span></div></div></div>
                   ))}
                 </div>

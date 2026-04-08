@@ -917,7 +917,7 @@ export default function Landing() {
 
                 </motion.div>
 
-                <h5 className="font-black uppercase text-sm mb-2 tracking-wider leading-snug min-h-[42px] flex items-center text-center">
+                <h5 className="font-black uppercase text-sm mb-2 tracking-wider leading-snug min-h-10 flex items-center text-center">
 
                   {s.title}
 

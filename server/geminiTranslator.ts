@@ -75,8 +75,12 @@ interface GeminiTranslateOptions {
   fontSize?: number;
 }
 
+const DEFAULT_SUBTITLE_FONT_SIZE = 24;
+
 function buildTranslatePrompt(fontSize?: number): string {
-  const normalizedFont = typeof fontSize === "number" ? Math.max(12, Math.min(48, Math.round(fontSize))) : 24;
+  const normalizedFont = typeof fontSize === "number"
+    ? Math.max(12, Math.min(48, Math.round(fontSize)))
+    : DEFAULT_SUBTITLE_FONT_SIZE;
 
   return `You are a professional Myanmar localization writer for video dubbing and subtitle workflows.
 
