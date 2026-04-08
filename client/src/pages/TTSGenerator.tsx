@@ -191,9 +191,10 @@ export default function TTSGenerator() {
   const [srtBlurBg, setSrtBlurBg] = useState(true);
   const [srtMarginV, setSrtMarginV] = useState(30);
   const [srtBlurSize, setSrtBlurSize] = useState(8);
-  const [srtBlurColor, setSrtBlurColor] = useState<"black" | "white">("black");  // Blur box color
-  const [srtFullWidth, setSrtFullWidth] = useState(false);    // Edge-to-edge blur bar
-  const [srtBorderRadius, setSrtBorderRadius] = useState<"rounded" | "square">("rounded"); // Corner style
+  const [srtBlurColor, setSrtBlurColor] = useState<"black" | "white">("black");
+  const [srtFullWidth, setSrtFullWidth] = useState(false);
+  const [srtBorderRadius, setSrtBorderRadius] = useState<"rounded" | "square">("rounded");
+  const [srtBoxPadding, setSrtBoxPadding] = useState(8); // Blur box height/padding in px
 
   const [geminiKey, setGeminiKey] = useState("");
   const [savedKey, setSavedKey] = useState(() => localStorage.getItem("gemini_key") || "");
@@ -688,11 +689,16 @@ export default function TTSGenerator() {
                         }}
                       />
                       {srtEnabled && (
-                        <div className="absolute left-0 right-0 flex justify-center pointer-events-none" style={{ zIndex: 5, bottom: `${Math.min(srtMarginV * 0.5, 60)}px` }}>
+                        <div className="absolute left-0 right-0 flex justify-center pointer-events-none"
+                          style={{
+                            zIndex: 10,
+                            bottom: `${Math.round((srtMarginV / 200) * 85 + 5)}%`,
+                            transition: "bottom 0.15s ease-out",
+                          }}>
                           <div style={{
-                            padding: srtFullWidth ? "8px 0" : "6px 16px",
+                            padding: srtFullWidth ? `${srtBoxPadding}px 0` : `${srtBoxPadding}px ${srtBoxPadding + 10}px`,
                             borderRadius: srtFullWidth ? "0" : (srtBorderRadius === "rounded" ? "12px" : "4px"),
-                            fontSize: `${srtFontSize}px`,
+                            fontSize: `${Math.max(10, Math.min(srtFontSize, 22))}px`,
                             color: srtColor,
                             textShadow: srtDropShadow ? "2px 2px 4px rgba(0,0,0,0.8)" : "none",
                             background: srtBlurBg ? (srtBlurColor === "black" ? `rgba(0,0,0,${Math.min(0.85, srtBlurSize * 0.06)})` : `rgba(255,255,255,${Math.min(0.85, srtBlurSize * 0.06)})`) : "transparent",
@@ -700,8 +706,9 @@ export default function TTSGenerator() {
                             textAlign: "center",
                             width: srtFullWidth ? "100%" : "auto",
                             maxWidth: srtFullWidth ? "100%" : "90%",
+                            transition: "all 0.15s ease-out",
                           }}>
-                            {lang === "mm" ? "မြန်မာ စာတန်း နမူနာ" : "Subtitle Preview Text"}
+                            {lang === "mm" ? "မြန်မာ စာတန်း နမူနာ" : "Subtitle Preview"}
                           </div>
                         </div>
                       )}
@@ -825,6 +832,15 @@ export default function TTSGenerator() {
                               <div className="flex items-center gap-3">
                                 <Slider value={[srtBlurSize]} onValueChange={v => setSrtBlurSize(v[0])} min={1} max={20} step={1} className="flex-1" />
                                 <span className="text-sm font-black min-w-[40px] text-right" style={{ color: accent }}>{srtBlurSize}px</span>
+                              </div>
+                            </div>
+
+                            {/* Box height/padding */}
+                            <div>
+                              <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: subtextColor }}>{lang === "mm" ? "ဘောက်စ် အမြင့်" : "Box Height"}</p>
+                              <div className="flex items-center gap-3">
+                                <Slider value={[srtBoxPadding]} onValueChange={v => setSrtBoxPadding(v[0])} min={2} max={30} step={1} className="flex-1" />
+                                <span className="text-sm font-black min-w-[40px] text-right" style={{ color: accent }}>{srtBoxPadding}px</span>
                               </div>
                             </div>
 
