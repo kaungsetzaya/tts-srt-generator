@@ -651,7 +651,6 @@ export default function Landing() {
 
               နှင့် Video Translation — တို့ကို ဤနေရာတစ်ခုတည်းတွင် ရရှိနိုင်သည်။
 
-              
 
             </p>
 
