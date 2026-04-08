@@ -189,8 +189,11 @@ export default function TTSGenerator() {
   const [srtColor, setSrtColor] = useState("#ffffff");
   const [srtDropShadow, setSrtDropShadow] = useState(true);
   const [srtBlurBg, setSrtBlurBg] = useState(true);
-  const [srtMarginV, setSrtMarginV] = useState(30); // Subtitle vertical position (0=bottom, 100=top)
-  const [srtBlurSize, setSrtBlurSize] = useState(8); // Backdrop blur radius in px
+  const [srtMarginV, setSrtMarginV] = useState(30);
+  const [srtBlurSize, setSrtBlurSize] = useState(8);
+  const [srtBlurColor, setSrtBlurColor] = useState<"black" | "white">("black");  // Blur box color
+  const [srtFullWidth, setSrtFullWidth] = useState(false);    // Edge-to-edge blur bar
+  const [srtBorderRadius, setSrtBorderRadius] = useState<"rounded" | "square">("rounded"); // Corner style
 
   const [geminiKey, setGeminiKey] = useState("");
   const [savedKey, setSavedKey] = useState(() => localStorage.getItem("gemini_key") || "");
@@ -339,6 +342,9 @@ export default function TTSGenerator() {
       srtBlurBg,
       srtMarginV,
       srtBlurSize,
+      srtBlurColor,
+      srtFullWidth,
+      srtBorderRadius,
     };
 
     if (dubVideoUrl.trim()) {
@@ -684,15 +690,16 @@ export default function TTSGenerator() {
                       {srtEnabled && (
                         <div className="absolute left-0 right-0 flex justify-center pointer-events-none" style={{ zIndex: 5, bottom: `${Math.min(srtMarginV * 0.5, 60)}px` }}>
                           <div style={{
-                            padding: "6px 16px",
-                            borderRadius: "8px",
+                            padding: srtFullWidth ? "8px 0" : "6px 16px",
+                            borderRadius: srtFullWidth ? "0" : (srtBorderRadius === "rounded" ? "12px" : "4px"),
                             fontSize: `${srtFontSize}px`,
                             color: srtColor,
                             textShadow: srtDropShadow ? "2px 2px 4px rgba(0,0,0,0.8)" : "none",
-                            background: srtBlurBg ? `rgba(0,0,0,${Math.min(0.8, srtBlurSize * 0.06)})` : "transparent",
+                            background: srtBlurBg ? (srtBlurColor === "black" ? `rgba(0,0,0,${Math.min(0.85, srtBlurSize * 0.06)})` : `rgba(255,255,255,${Math.min(0.85, srtBlurSize * 0.06)})`) : "transparent",
                             backdropFilter: srtBlurBg ? `blur(${srtBlurSize}px)` : "none",
                             textAlign: "center",
-                            maxWidth: "90%",
+                            width: srtFullWidth ? "100%" : "auto",
+                            maxWidth: srtFullWidth ? "100%" : "90%",
                           }}>
                             {lang === "mm" ? "မြန်မာ စာတန်း နမူနာ" : "Subtitle Preview Text"}
                           </div>
@@ -785,7 +792,7 @@ export default function TTSGenerator() {
                         </div>
 
                         <div className="flex items-center justify-between py-1">
-                          <p className="text-xs font-bold uppercase tracking-wider" style={{ color: subtextColor }}>{lang === "mm" ? "နောက်ခံ ဝါးမည်" : "Blur Background"}</p>
+                          <p className="text-xs font-bold uppercase tracking-wider" style={{ color: subtextColor }}>{lang === "mm" ? "နောက်ခံ ဘောက်စ်" : "Background Box"}</p>
                           <button onClick={() => setSrtBlurBg(!srtBlurBg)}
                             className="relative w-11 h-6 rounded-full transition-all"
                             style={{ background: srtBlurBg ? accent : (isDark ? "rgba(255,255,255,0.15)" : "#d1d5db") }}>
@@ -793,26 +800,77 @@ export default function TTSGenerator() {
                           </button>
                         </div>
 
-                        {/* Blur Size slider — only show when blur bg is enabled */}
                         {srtBlurBg && (
-                          <div>
-                            <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: subtextColor }}>{lang === "mm" ? "ဝါးအဆင့်" : "Blur Intensity"}</p>
-                            <div className="flex items-center gap-3">
-                              <Slider value={[srtBlurSize]} onValueChange={v => setSrtBlurSize(v[0])} min={1} max={20} step={1} className="flex-1" />
-                              <span className="text-sm font-black min-w-[40px] text-right" style={{ color: accent }}>{srtBlurSize}px</span>
+                          <div className="space-y-4 pl-2 border-l-2" style={{ borderColor: `${accent}40` }}>
+                            {/* Blur box color: black or white */}
+                            <div>
+                              <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: subtextColor }}>{lang === "mm" ? "ဘောက်စ် အရောင်" : "Box Color"}</p>
+                              <div className="flex gap-2">
+                                <button onClick={() => setSrtBlurColor("black")}
+                                  className="flex-1 py-2 px-3 rounded-xl border-2 text-xs font-bold transition-all"
+                                  style={{ borderColor: srtBlurColor === "black" ? accent : cardBorder, background: srtBlurColor === "black" ? (isDark ? "rgba(167,139,250,0.15)" : "rgba(109,40,217,0.08)") : "transparent", color: textColor }}>
+                                  ⬛ {lang === "mm" ? "အမဲ" : "Black"}
+                                </button>
+                                <button onClick={() => setSrtBlurColor("white")}
+                                  className="flex-1 py-2 px-3 rounded-xl border-2 text-xs font-bold transition-all"
+                                  style={{ borderColor: srtBlurColor === "white" ? accent : cardBorder, background: srtBlurColor === "white" ? (isDark ? "rgba(167,139,250,0.15)" : "rgba(109,40,217,0.08)") : "transparent", color: textColor }}>
+                                  ⬜ {lang === "mm" ? "အဖြူ" : "White"}
+                                </button>
+                              </div>
                             </div>
+
+                            {/* Blur intensity */}
+                            <div>
+                              <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: subtextColor }}>{lang === "mm" ? "ဝါးအဆင့်" : "Blur Intensity"}</p>
+                              <div className="flex items-center gap-3">
+                                <Slider value={[srtBlurSize]} onValueChange={v => setSrtBlurSize(v[0])} min={1} max={20} step={1} className="flex-1" />
+                                <span className="text-sm font-black min-w-[40px] text-right" style={{ color: accent }}>{srtBlurSize}px</span>
+                              </div>
+                            </div>
+
+                            {/* Full width toggle */}
+                            <div className="flex items-center justify-between py-1">
+                              <div>
+                                <p className="text-xs font-bold uppercase tracking-wider" style={{ color: subtextColor }}>{lang === "mm" ? "ဘေးဘောင်အပြည့်" : "Full Width Bar"}</p>
+                                <p className="text-[10px] mt-0.5" style={{ color: subtextColor }}>{lang === "mm" ? "ဘေးတိုက် အစွန်ထိ ပြည့်အောင်" : "Edge to edge"}</p>
+                              </div>
+                              <button onClick={() => setSrtFullWidth(!srtFullWidth)}
+                                className="relative w-11 h-6 rounded-full transition-all"
+                                style={{ background: srtFullWidth ? accent : (isDark ? "rgba(255,255,255,0.15)" : "#d1d5db") }}>
+                                <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all shadow ${srtFullWidth ? "left-5" : "left-0.5"}`} />
+                              </button>
+                            </div>
+
+                            {/* Corner radius: rounded or square */}
+                            {!srtFullWidth && (
+                              <div>
+                                <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: subtextColor }}>{lang === "mm" ? "ထောင့် ပုံစံ" : "Corner Style"}</p>
+                                <div className="flex gap-2">
+                                  <button onClick={() => setSrtBorderRadius("rounded")}
+                                    className="flex-1 py-2 px-3 rounded-xl border-2 text-xs font-bold transition-all"
+                                    style={{ borderColor: srtBorderRadius === "rounded" ? accent : cardBorder, background: srtBorderRadius === "rounded" ? (isDark ? "rgba(167,139,250,0.15)" : "rgba(109,40,217,0.08)") : "transparent", color: textColor }}>
+                                    ◉ {lang === "mm" ? "အဝိုင်း" : "Rounded"}
+                                  </button>
+                                  <button onClick={() => setSrtBorderRadius("square")}
+                                    className="flex-1 py-2 px-3 rounded-xl border-2 text-xs font-bold transition-all"
+                                    style={{ borderColor: srtBorderRadius === "square" ? accent : cardBorder, background: srtBorderRadius === "square" ? (isDark ? "rgba(167,139,250,0.15)" : "rgba(109,40,217,0.08)") : "transparent", color: textColor }}>
+                                    ◻ {lang === "mm" ? "လေးထောင့်" : "Square"}
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
 
-                        {/* Subtitle Vertical Position (drag-like slider) */}
+                        {/* Subtitle Vertical Position */}
                         <div>
                           <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: subtextColor }}>{lang === "mm" ? "စာတန်း အနေအထား" : "Subtitle Position"}</p>
                           <div className="flex items-center gap-3">
                             <span className="text-[10px] opacity-50">{lang === "mm" ? "အောက်" : "Bottom"}</span>
-                            <Slider value={[srtMarginV]} onValueChange={v => setSrtMarginV(v[0])} min={5} max={150} step={5} className="flex-1" />
+                            <Slider value={[srtMarginV]} onValueChange={v => setSrtMarginV(v[0])} min={5} max={200} step={5} className="flex-1" />
                             <span className="text-[10px] opacity-50">{lang === "mm" ? "အထက်" : "Top"}</span>
                           </div>
-                          <p className="text-xs text-center mt-1 font-bold" style={{ color: accent }}>MarginV: {srtMarginV}</p>
+                          <p className="text-xs text-center mt-1 font-bold" style={{ color: accent }}>{lang === "mm" ? "အမြင့်" : "Position"}: {srtMarginV}</p>
                         </div>
                       </div>
                     )}

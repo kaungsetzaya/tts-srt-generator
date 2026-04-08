@@ -23,8 +23,11 @@ export interface DubOptions {
   srtColor?: string;
   srtDropShadow?: boolean;
   srtBlurBg?: boolean;
-  srtMarginV?: number;   // Vertical position (0=bottom, 100=top)
-  srtBlurSize?: number;  // Backdrop blur radius in px
+  srtMarginV?: number;
+  srtBlurSize?: number;
+  srtBlurColor?: "black" | "white";
+  srtFullWidth?: boolean;
+  srtBorderRadius?: "rounded" | "square";
 }
 
 export interface DubResult {
@@ -240,14 +243,19 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
         const fontColor = hexToASS(options.srtColor || "#ffffff");
         const marginV = options.srtMarginV ?? 30;
         const shadowStr = options.srtDropShadow !== false ? ",Shadow=2,BackColour=&H80000000" : ",Shadow=0";
-        // Blur size adjusts the BackColour alpha for more/less visible backdrop
+        
+        // Blur background color and intensity
+        const blurColor = options.srtBlurColor === "white" ? "FFFFFF" : "000000";
         const blurAlpha = options.srtBlurBg !== false ? Math.min(255, Math.max(0, Math.round((options.srtBlurSize ?? 8) * 16))).toString(16).toUpperCase().padStart(2, '0') : 'FF';
-        const borderStyle = options.srtBlurBg !== false ? `,BorderStyle=4,BackColour=&H${blurAlpha}000000,Outline=0` : ",BorderStyle=1,Outline=2,OutlineColour=&H40000000";
+        const borderStyle = options.srtBlurBg !== false ? `,BorderStyle=4,BackColour=&H${blurAlpha}${blurColor},Outline=0` : ",BorderStyle=1,Outline=2,OutlineColour=&H40000000";
+        
+        // Full width: use MarginL=0,MarginR=0 to extend edge-to-edge
+        const marginLR = options.srtFullWidth ? ",MarginL=0,MarginR=0" : "";
         
         // Escape path for subtitles filter (Windows paths need special handling)
         const escapedSrtPath = tempSrtPath.replace(/\\/g, '/').replace(/:/g, '\\:');
         
-        filters.push(`${videoLabel}subtitles='${escapedSrtPath}':force_style='FontSize=${fontSize},PrimaryColour=${fontColor},Alignment=2,MarginV=${marginV}${shadowStr}${borderStyle}'[vfinal]`);
+        filters.push(`${videoLabel}subtitles='${escapedSrtPath}':force_style='FontSize=${fontSize},PrimaryColour=${fontColor},Alignment=2,MarginV=${marginV}${marginLR}${shadowStr}${borderStyle}'[vfinal]`);
       } else {
         if (needSpeedAdjust) {
           // Just copy the speed-adjusted video

@@ -71,28 +71,44 @@ function getSystemGeminiKey(): string | null {
 }
 
 function buildTranslatePrompt(fontSize?: number): string {
-  // Estimate chars per line based on font size (for 1920px video width)
-  // Bigger font → fewer chars per line → more line breaks needed
   const charsPerLine = fontSize ? Math.max(12, Math.round(60 - (fontSize - 12) * 1.2)) : 22;
 
   return `You are a professional Myanmar YouTube movie recap narrator.
 
 Translate the following text (any language) into Myanmar movie recap narration style.
 
-STRICT rules:
-- NO "..." anywhere
-- NO quotation marks
-- ABSOLUTELY NO English words — translate everything into pure Myanmar
-  * "Deliver boy" → "ပို့ဆောင်ရေးဝန်ထမ်း"
-  * "Phone" → "ဖုန်း"
-  * "OK" → "ကောင်းပြီ"
-  * Person names: Myanmar phonetic ONLY (e.g. "John" → "ဂျွန်", "Mary" → "မေရီ")
-- Sentence endings: ခဲ့ပါတယ်၊ လိုက်ပါတယ်၊ သွားပါတယ်၊ မှာပဲဖြစ်ပါတယ်၊ ပါတော့တယ်
-- Long flowing sentences connected with တဲ့အခါမှာတော့၊ ရင်းနဲ့၊ ပြီးတော့
-- Cinematic and engaging tone
-- Keep translation concise so it can fit within the original video timing
-- Target approximately ${charsPerLine} Myanmar graphemes per subtitle line
-- Return ONLY Myanmar narration text, nothing else (no labels, no "Translation:", no markdown)
+ABSOLUTE STRICT RULES — VIOLATION IS UNACCEPTABLE:
+1. ZERO English words allowed. Not a single English letter (a-z) in the output.
+2. ALL person names MUST be phonetically transliterated into Myanmar script:
+   * "John" → "ဂျွန်"
+   * "Mary" → "မေရီ"
+   * "Michael" → "မိုက်ကယ်"
+   * "David" → "ဒေးဗစ်"
+   * "Sarah" → "ဆာရာ"
+   * "James" → "ဂျိမ်းစ်"
+   * "Robert" → "ရောဘတ်"
+   * "Lisa" → "လီဆာ"
+   * "Tom" → "တွမ်"
+   * "Jack" → "ဂျက်"
+   * "Emma" → "အဲမ်မာ"
+3. ALL technical/English terms MUST be Myanmar:
+   * "Phone" → "ဖုန်း"
+   * "OK" → "ကောင်းပြီ"  
+   * "Sorry" → "စိတ်မကောင်းပါဘူး"
+   * "Email" → "အီးမေးလ်"
+   * "Computer" → "ကွန်ပျူတာ"
+   * "Delivery boy" → "ပို့ဆောင်ရေးဝန်ထမ်း"
+   * "Police" → "ရဲ"
+   * "Hospital" → "ဆေးရုံ"
+   * "Doctor" → "ဆရာဝန်"
+4. NO "..." anywhere in the text
+5. NO quotation marks
+6. Sentence endings: ခဲ့ပါတယ်၊ လိုက်ပါတယ်၊ သွားပါတယ်၊ မှာပဲဖြစ်ပါတယ်၊ ပါတော့တယ်
+7. Use connectors: တဲ့အခါမှာတော့၊ ရင်းနဲ့၊ ပြီးတော့
+8. Cinematic, engaging narration tone
+9. Keep translation concise for video timing
+10. Target ~${charsPerLine} Myanmar graphemes per subtitle line
+11. Return ONLY pure Myanmar narration text — no labels, no "Translation:", no markdown
 
 Text:`;
 }

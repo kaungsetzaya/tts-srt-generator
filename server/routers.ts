@@ -338,6 +338,9 @@ export const appRouter = router({
         srtBlurBg: z.boolean().optional(),
         srtMarginV: z.number().min(0).max(200).optional(),
         srtBlurSize: z.number().min(0).max(30).optional(),
+        srtBlurColor: z.enum(["black", "white"]).optional(),
+        srtFullWidth: z.boolean().optional(),
+        srtBorderRadius: z.enum(["rounded", "square"]).optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user) throw new Error("Please login first.");
@@ -364,6 +367,9 @@ export const appRouter = router({
             srtBlurBg: input.srtBlurBg,
             srtMarginV: input.srtMarginV,
             srtBlurSize: input.srtBlurSize,
+            srtBlurColor: input.srtBlurColor,
+            srtFullWidth: input.srtFullWidth,
+            srtBorderRadius: input.srtBorderRadius,
           };
           const result = await dubVideoFromBuffer(videoBuffer, input.filename, dubOpts);
           return { success: true, ...result };
@@ -396,6 +402,9 @@ export const appRouter = router({
         srtBlurBg: z.boolean().optional(),
         srtMarginV: z.number().min(0).max(200).optional(),
         srtBlurSize: z.number().min(0).max(30).optional(),
+        srtBlurColor: z.enum(["black", "white"]).optional(),
+        srtFullWidth: z.boolean().optional(),
+        srtBorderRadius: z.enum(["rounded", "square"]).optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user) throw new Error("Please login first.");
@@ -420,6 +429,9 @@ export const appRouter = router({
             srtBlurBg: input.srtBlurBg,
             srtMarginV: input.srtMarginV,
             srtBlurSize: input.srtBlurSize,
+            srtBlurColor: input.srtBlurColor,
+            srtFullWidth: input.srtFullWidth,
+            srtBorderRadius: input.srtBorderRadius,
           };
           const result = await dubVideoFromLink(input.url, dubOpts);
           return { success: true, ...result };
