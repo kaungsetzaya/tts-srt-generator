@@ -200,6 +200,7 @@ export default function TTSGenerator() {
   const [savedKey, setSavedKey] = useState(() => localStorage.getItem("gemini_key") || "");
 
   const [, navigate] = useLocation();
+  const utils = trpc.useUtils();
   const { data: me } = trpc.auth.me.useQuery();
   const { data: subStatus, isLoading: subLoading } = trpc.subscription.myStatus.useQuery();
   const logoutMutation = trpc.auth.logout.useMutation({ onSuccess: () => { window.location.href = "/login"; } });
@@ -212,6 +213,13 @@ export default function TTSGenerator() {
 
   const isAdmin = me?.role === "admin";
   const hasActiveSub = isAdmin || subStatus?.active;
+  const hasPlan = isAdmin || !!subStatus?.plan; // user has trial or subscription
+  const planLimits = subStatus?.limits;
+  const planUsage = subStatus?.usage;
+  const currentPlan = subStatus?.plan;
+
+  // Compute character limit for current voice mode
+  const currentCharLimit = isAdmin ? 99999 : (voiceMode === "character" ? (planLimits?.charLimitCharacter ?? 0) : (planLimits?.charLimitStandard ?? 0));
 
   const daysLeft = subStatus?.expiresAt
     ? Math.max(0, Math.ceil((new Date(subStatus.expiresAt).getTime() - Date.now()) / 86400000))
@@ -255,6 +263,8 @@ export default function TTSGenerator() {
         const audioObjectUrl = URL.createObjectURL(blob);
         setGeneratedFiles({ audioObjectUrl, srtContent: result.srtContent, durationMs: result.durationMs });
         setTimeout(() => { if (audioRef.current) { audioRef.current.src = audioObjectUrl; audioRef.current.load(); } }, 100);
+        // Refresh usage counters
+        utils.subscription.myStatus.invalidate();
       }
     } catch (e: any) { showError(e?.message || "Failed"); }
   };
@@ -273,6 +283,7 @@ export default function TTSGenerator() {
         if (res.success) {
             setVideoResult({ myanmarText: res.myanmarText, srtContent: res.srtContent });
             setEditedVideoText(res.myanmarText);
+            utils.subscription.myStatus.invalidate();
         }
       } catch (e: any) { showError(e?.message || "Link Translation failed"); }
       return;
@@ -287,6 +298,7 @@ export default function TTSGenerator() {
         if (res.success) {
             setVideoResult({ myanmarText: res.myanmarText, srtContent: res.srtContent });
             setEditedVideoText(res.myanmarText);
+            utils.subscription.myStatus.invalidate();
         }
       } catch (e: any) { showError(e?.message || "Translation failed"); }
     };
@@ -354,6 +366,7 @@ export default function TTSGenerator() {
         if (res.success) {
           setDubResult({ videoBase64: res.videoBase64, myanmarText: res.myanmarText, srtContent: res.srtContent, durationMs: res.durationMs });
           setDubEditedText(res.myanmarText);
+          utils.subscription.myStatus.invalidate();
         }
       } catch (e: any) { showError(e?.message || "Dubbing failed"); }
       return;
@@ -368,6 +381,7 @@ export default function TTSGenerator() {
         if (res.success) {
           setDubResult({ videoBase64: res.videoBase64, myanmarText: res.myanmarText, srtContent: res.srtContent, durationMs: res.durationMs });
           setDubEditedText(res.myanmarText);
+          utils.subscription.myStatus.invalidate();
         }
       } catch (e: any) { showError(e?.message || "Dubbing failed"); }
     };
@@ -469,7 +483,7 @@ export default function TTSGenerator() {
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="hidden md:flex items-center gap-1 text-xs font-bold" style={{ color: subColor }}>
             {hasActiveSub ? <Crown className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-            <span>{isAdmin ? t.admin : subStatus?.active && daysLeft !== null ? `${subStatus.plan} · ${daysLeft} ${t.daysLeft}` : subStatus?.active ? subStatus.plan : t.noSub}</span>
+            <span>{isAdmin ? t.admin : subStatus?.active && daysLeft !== null ? `${subStatus.plan === 'trial' ? (lang === 'mm' ? 'အစမ်းသုံး' : 'Trial') : subStatus.plan} · ${daysLeft} ${t.daysLeft}` : subStatus?.active ? subStatus.plan : (me ? (lang === 'mm' ? 'Subscription မရှိ' : t.noSub) : t.noSub)}</span>
           </div>
           <span className="hidden md:inline text-xs font-bold" style={{ color: subtextColor }}>@{(me as any)?.username || me?.name}</span>
           <div className="flex items-center gap-1 sm:gap-2 border-l pl-2 sm:pl-3 ml-1" style={{ borderColor: cardBorder }}>
@@ -495,27 +509,54 @@ export default function TTSGenerator() {
             <div className="mb-4 sm:mb-6 relative text-center py-2">
               <h1 className="text-2xl sm:text-3xl md:text-5xl font-black uppercase tracking-wider sm:tracking-widest mb-2" style={{ textShadow: isDark ? `0 0 20px ${accent}, 0 0 40px ${accent}` : 'none', color: accent }}>TTS Generator</h1>
               <p className="text-xs sm:text-sm font-bold uppercase tracking-wider opacity-80 mt-1" style={{ color: subtextColor }}>Convert Text to Speech</p>
+              {/* Plan Usage Banner */}
+              {!isAdmin && hasPlan && planLimits && planUsage && (
+                <div className="mt-3 mx-auto max-w-lg flex flex-wrap items-center justify-center gap-2 sm:gap-3 px-3 py-2 rounded-xl text-xs font-bold" style={{ background: isDark ? 'rgba(167,139,250,0.1)' : 'rgba(109,40,217,0.06)', border: `1px solid ${cardBorder}` }}>
+                  <span className="px-2 py-0.5 rounded-lg" style={{ background: currentPlan === 'trial' ? '#f59e0b' : '#16a34a', color: '#fff' }}>{currentPlan === 'trial' ? (lang === 'mm' ? 'အစမ်းသုံး' : 'TRIAL') : (currentPlan?.toUpperCase() ?? 'SUB')}</span>
+                  <span style={{ color: subtextColor }}>TTS: <b style={{ color: planUsage.tts >= planLimits.dailyTtsSrt ? '#dc2626' : accent }}>{planUsage.tts}/{planLimits.dailyTtsSrt}</b></span>
+                  <span style={{ color: subtextColor }}>VC: <b style={{ color: planUsage.characterUse >= planLimits.dailyCharacterUse ? '#dc2626' : accent }}>{planUsage.characterUse}/{planLimits.dailyCharacterUse}</b></span>
+                  <span style={{ color: subtextColor }}>{lang === 'mm' ? 'စာလုံး' : 'Chars'}: <b style={{ color: accent }}>{(planLimits.charLimitStandard).toLocaleString()}</b>/<b style={{ color: accent }}>{(planLimits.charLimitCharacter).toLocaleString()}</b></span>
+                </div>
+              )}
+              {/* No Plan Banner */}
+              {!isAdmin && !hasPlan && me && (
+                <div className="mt-3 mx-auto max-w-lg flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold" style={{ background: isDark ? 'rgba(220,38,38,0.15)' : '#fef2f2', border: '1px solid rgba(220,38,38,0.3)', color: '#dc2626' }}>
+                  <AlertCircle className="w-4 h-4" />
+                  {lang === 'mm' ? 'Subscription မရှိသေးပါ။ Admin ကို ဆက်သွယ်ပါ။' : 'No active subscription. Contact Admin.'}
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 max-w-6xl mx-auto">
               <div className="lg:col-span-2 space-y-2">
                 <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
                   <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{t.inputText}</div>
-                  <textarea value={text} onChange={e => setText(e.target.value)} placeholder={t.inputPlaceholder} disabled={!hasActiveSub} className="w-full h-28 sm:h-32 md:h-40 p-3 sm:p-4 border rounded-xl focus:outline-none focus:ring-2 resize-none disabled:opacity-50 transition-colors text-sm leading-relaxed" style={{ background: inputBg, borderColor: inputBorder, color: textColor }} />
-                  <div className="mt-2 text-xs text-right font-semibold" style={{ color: subtextColor }}>{text.length}</div>
+                  <textarea value={text} onChange={e => { if (!isAdmin && e.target.value.length > currentCharLimit) return; setText(e.target.value); }} placeholder={t.inputPlaceholder} disabled={!hasPlan} className="w-full h-28 sm:h-32 md:h-40 p-3 sm:p-4 border rounded-xl focus:outline-none focus:ring-2 resize-none disabled:opacity-50 transition-colors text-sm leading-relaxed" style={{ background: inputBg, borderColor: inputBorder, color: textColor }} />
+                  <div className="mt-2 flex items-center justify-between text-xs font-semibold" style={{ color: subtextColor }}>
+                    <span>
+                      {!isAdmin && hasPlan && planUsage && planLimits && (
+                        <span style={{ color: voiceMode === "character" ? (planUsage.characterUse >= planLimits.dailyCharacterUse ? "#dc2626" : subtextColor) : (planUsage.tts >= planLimits.dailyTtsSrt ? "#dc2626" : subtextColor) }}>
+                          {lang === "mm" ? "ယနေ့" : "Today"}: {voiceMode === "character" ? `${planUsage.characterUse}/${planLimits.dailyCharacterUse}` : `${planUsage.tts}/${planLimits.dailyTtsSrt}`} {lang === "mm" ? "ကြိမ်" : "uses"}
+                        </span>
+                      )}
+                    </span>
+                    <span style={{ color: !isAdmin && text.length > currentCharLimit * 0.9 ? "#dc2626" : subtextColor }}>
+                      {text.length}{!isAdmin && hasPlan ? ` / ${currentCharLimit.toLocaleString()}` : ""}
+                    </span>
+                  </div>
                 </div>
                 
                 <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
                   <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{t.voiceSelection}</div>
                   <div className="space-y-4 sm:space-y-5">
                     {[{ label: t.male, voices: [{ id: "thiha", name: "သီဟ", isStd: true }, { id: "ryan", name: "ရဲရင့်", isStd: false }, { id: "ronnie", name: "ရောင်နီ", isStd: false }, { id: "lucas", name: "လင်းခန့်", isStd: false }, { id: "daniel", name: "ဒေဝ", isStd: false }, { id: "evander", name: "အဂ္ဂ", isStd: false }]}, { label: t.female, voices: [{ id: "nilar", name: "နီလာ", isStd: true }, { id: "michelle", name: "မေချို", isStd: false }, { id: "iris", name: "အိန္ဒြာ", isStd: false }, { id: "charlotte", name: "သီရိ", isStd: false }, { id: "amara", name: "အမရာ", isStd: false }]}].map(({ label: grpLabel, voices }) => (
-                      <div key={grpLabel}><p className="text-xs font-bold uppercase tracking-wider mb-2 sm:mb-3" style={{ color: subtextColor }}>{grpLabel}</p><div className="grid grid-cols-3 sm:grid-cols-3 gap-2 sm:gap-3">{voices.map(v => { const isSelected = v.isStd ? voiceMode === "standard" && voice === (v.id === "thiha" ? "thiha" : "nilar") : voiceMode === "character" && character === v.id; return (<button key={v.id} disabled={!hasActiveSub} onClick={() => { if (v.isStd) { setVoiceMode("standard"); setVoice(v.id as any); setCharacter(""); } else { setVoiceMode("character"); setCharacter(v.id); } }} className="py-2 sm:py-2.5 px-2 sm:px-3 border rounded-xl text-xs sm:text-sm font-bold transition-all disabled:opacity-40" style={{ borderColor: isSelected ? accent : cardBorder, background: isSelected ? (isDark ? 'rgba(167,139,250,0.2)' : 'rgba(109,40,217,0.08)') : 'transparent', color: isSelected ? accent : textColor, boxShadow: isSelected && isDark ? `0 0 15px rgba(167,139,250,0.3)` : (isSelected && !isDark ? '0 4px 12px rgba(109,40,217,0.15)' : 'none') }}>{v.name}</button>); })}</div></div>
+                      <div key={grpLabel}><p className="text-xs font-bold uppercase tracking-wider mb-2 sm:mb-3" style={{ color: subtextColor }}>{grpLabel}</p><div className="grid grid-cols-3 sm:grid-cols-3 gap-2 sm:gap-3">{voices.map(v => { const isSelected = v.isStd ? voiceMode === "standard" && voice === (v.id === "thiha" ? "thiha" : "nilar") : voiceMode === "character" && character === v.id; return (<button key={v.id} disabled={!hasPlan} onClick={() => { if (v.isStd) { setVoiceMode("standard"); setVoice(v.id as any); setCharacter(""); } else { setVoiceMode("character"); setCharacter(v.id); } }} className="py-2 sm:py-2.5 px-2 sm:px-3 border rounded-xl text-xs sm:text-sm font-bold transition-all disabled:opacity-40" style={{ borderColor: isSelected ? accent : cardBorder, background: isSelected ? (isDark ? 'rgba(167,139,250,0.2)' : 'rgba(109,40,217,0.08)') : 'transparent', color: isSelected ? accent : textColor, boxShadow: isSelected && isDark ? `0 0 15px rgba(167,139,250,0.3)` : (isSelected && !isDark ? '0 4px 12px rgba(109,40,217,0.15)' : 'none') }}>{v.name}</button>); })}</div></div>
                     ))}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   {[{ label: t.tone, value: tone, setValue: setTone, min: -20, max: 20, step: 1, display: `${tone > 0 ? "+" : ""}${tone} Hz`, leftLabel: t.lower, rightLabel: t.higher }, { label: t.speed, value: speed, setValue: setSpeed, min: 0.5, max: 2.0, step: 0.1, display: `${speed.toFixed(1)}x`, leftLabel: t.slower, rightLabel: t.faster }].map(({ label: lbl, value, setValue, min, max, step, display, leftLabel, rightLabel }) => (
-                    <div key={lbl} className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}><div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{lbl}</div><div className="mt-2"><Slider value={[value]} onValueChange={v => setValue(v[0])} min={min} max={max} step={step} disabled={!hasActiveSub} className="w-full" /><div className="flex justify-between items-center text-xs font-bold mt-3 sm:mt-4"><span style={{ color: subtextColor }}>{leftLabel}</span><span style={{ color: accent }}>{display}</span><span style={{ color: subtextColor }}>{rightLabel}</span></div></div></div>
+                    <div key={lbl} className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}><div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{lbl}</div><div className="mt-2"><Slider value={[value]} onValueChange={v => setValue(v[0])} min={min} max={max} step={step} disabled={!hasPlan} className="w-full" /><div className="flex justify-between items-center text-xs font-bold mt-3 sm:mt-4"><span style={{ color: subtextColor }}>{leftLabel}</span><span style={{ color: accent }}>{display}</span><span style={{ color: subtextColor }}>{rightLabel}</span></div></div></div>
                   ))}
                 </div>
               </div>
@@ -523,9 +564,9 @@ export default function TTSGenerator() {
               <div className="space-y-4 sm:space-y-6">
                 <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow, position: "sticky", top: "20px" }}>
                   <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{t.aspectRatio}</div>
-                  <div className="grid grid-cols-2 gap-3 mb-5 sm:mb-6 mt-1">{(['9:16', '16:9'] as const).map(ratio => (<button key={ratio} onClick={() => setAspectRatio(ratio)} disabled={!hasActiveSub} className="py-2.5 sm:py-3 border rounded-xl font-black uppercase transition-all disabled:opacity-40" style={{ borderColor: aspectRatio === ratio ? accent : cardBorder, background: aspectRatio === ratio ? (isDark ? 'rgba(167,139,250,0.15)' : 'rgba(109,40,217,0.06)') : 'transparent', color: aspectRatio === ratio ? accent : textColor, boxShadow: aspectRatio === ratio && !isDark ? '0 4px 12px rgba(109,40,217,0.15)' : 'none' }}>{ratio}</button>))}</div>
+                  <div className="grid grid-cols-2 gap-3 mb-5 sm:mb-6 mt-1">{(['9:16', '16:9'] as const).map(ratio => (<button key={ratio} onClick={() => setAspectRatio(ratio)} disabled={!hasPlan} className="py-2.5 sm:py-3 border rounded-xl font-black uppercase transition-all disabled:opacity-40" style={{ borderColor: aspectRatio === ratio ? accent : cardBorder, background: aspectRatio === ratio ? (isDark ? 'rgba(167,139,250,0.15)' : 'rgba(109,40,217,0.06)') : 'transparent', color: aspectRatio === ratio ? accent : textColor, boxShadow: aspectRatio === ratio && !isDark ? '0 4px 12px rgba(109,40,217,0.15)' : 'none' }}>{ratio}</button>))}</div>
                   
-                  <button onClick={handleGenerate} disabled={generateMutation.isPending || !text.trim() || !hasActiveSub} className="w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 rounded-2xl text-white font-black uppercase tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] shadow-lg text-sm sm:text-base" style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, boxShadow: isDark ? `0 0 20px ${accent}` : `0 8px 20px rgba(109,40,217,0.25)` }}>{generateMutation.isPending ? <><Loader2 className="w-5 h-5 animate-spin" />{t.generating}</> : <><Volume2 className="w-5 h-5" />{t.generate}</>}</button>
+                  <button onClick={handleGenerate} disabled={generateMutation.isPending || !text.trim() || !hasPlan || (!isAdmin && text.length > currentCharLimit)} className="w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 rounded-2xl text-white font-black uppercase tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] shadow-lg text-sm sm:text-base" style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, boxShadow: isDark ? `0 0 20px ${accent}` : `0 8px 20px rgba(109,40,217,0.25)` }}>{generateMutation.isPending ? <><Loader2 className="w-5 h-5 animate-spin" />{t.generating}</> : <><Volume2 className="w-5 h-5" />{t.generate}</>}</button>
                   
                   {generatedFiles && (<div className="mt-5 sm:mt-6 pt-5 sm:pt-6 border-t" style={{ borderColor: cardBorder }}><p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: subtextColor }}>{t.preview} {generatedFiles.durationMs > 0 && `(${Math.floor(generatedFiles.durationMs / 1000 / 60)}:${String(Math.floor(generatedFiles.durationMs / 1000) % 60).padStart(2, "0")})`}</p><audio ref={audioRef} controls className="w-full mb-4 rounded-xl" style={{ accentColor: accent }} /><div className="space-y-3"><button onClick={() => { const a = document.createElement("a"); a.href = generatedFiles.audioObjectUrl; a.download = `Myanmar_TTS_${Date.now()}.mp3`; a.click(); }} className="w-full flex items-center justify-center gap-2 py-2.5 sm:py-3 rounded-xl border font-bold text-sm transition-colors" style={{ borderColor: accent, color: accent, background: isDark ? 'rgba(167,139,250,0.1)' : 'rgba(109,40,217,0.05)' }}><Download className="w-4 h-4" /> MP3 Audio</button><button onClick={() => downloadFile(generatedFiles.srtContent, `Myanmar_TTS_${aspectRatio.replace(":", "x")}_${Date.now()}.srt`)} className="w-full flex items-center justify-center gap-2 py-2.5 sm:py-3 rounded-xl border font-bold text-sm transition-colors" style={{ borderColor: accentSecondary, color: accentSecondary, background: isDark ? 'rgba(99,102,241,0.1)' : 'rgba(76,29,149,0.05)' }}><Download className="w-4 h-4" /> SRT ({aspectRatio})</button></div></div>)}
                 </div>
@@ -541,6 +582,19 @@ export default function TTSGenerator() {
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-black uppercase tracking-wider sm:tracking-widest mb-2 leading-normal" style={{ textShadow: isDark ? `0 0 20px ${accent}` : 'none', color: accent }}>{t.videoTitle}</h2>
               <p className="font-bold tracking-wider text-xs sm:text-sm mt-1" style={{ color: subtextColor }}>{t.videoDesc}</p>
               <p className="text-xs mt-1" style={{ color: subtextColor }}>{t.videoLimit}</p>
+              {/* Video Translation Usage Banner */}
+              {!isAdmin && hasPlan && planLimits && planUsage && (
+                <div className="mt-3 mx-auto max-w-md flex items-center justify-center gap-3 px-3 py-2 rounded-xl text-xs font-bold" style={{ background: isDark ? 'rgba(167,139,250,0.1)' : 'rgba(109,40,217,0.06)', border: `1px solid ${cardBorder}` }}>
+                  <span className="px-2 py-0.5 rounded-lg" style={{ background: currentPlan === 'trial' ? '#f59e0b' : '#16a34a', color: '#fff' }}>{currentPlan === 'trial' ? (lang === 'mm' ? 'အစမ်းသုံး' : 'TRIAL') : (currentPlan?.toUpperCase() ?? 'SUB')}</span>
+                  <span style={{ color: planUsage.videoTranslate >= planLimits.dailyVideoTranslate ? '#dc2626' : subtextColor }}>{lang === 'mm' ? 'ယနေ့' : 'Today'}: <b style={{ color: planUsage.videoTranslate >= planLimits.dailyVideoTranslate ? '#dc2626' : accent }}>{planUsage.videoTranslate}/{planLimits.dailyVideoTranslate}</b> {lang === 'mm' ? 'ကြိမ်' : 'uses'}</span>
+                </div>
+              )}
+              {!isAdmin && !hasPlan && me && (
+                <div className="mt-3 mx-auto max-w-md flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold" style={{ background: isDark ? 'rgba(220,38,38,0.15)' : '#fef2f2', border: '1px solid rgba(220,38,38,0.3)', color: '#dc2626' }}>
+                  <AlertCircle className="w-4 h-4" />
+                  {lang === 'mm' ? 'Subscription မရှိသေးပါ။ Admin ကို ဆက်သွယ်ပါ။' : 'No subscription. Contact Admin.'}
+                </div>
+              )}
             </div>
 
             {!videoResult && (
@@ -626,6 +680,19 @@ export default function TTSGenerator() {
               <p className="font-bold tracking-wider text-xs sm:text-sm mt-1" style={{ color: subtextColor }}>
                 {lang === "mm" ? "AI ဖြင့် Video ဖန်တီးခြင်း" : "Create dubbed videos with AI"}
               </p>
+              {/* AI Video Usage Banner */}
+              {!isAdmin && hasPlan && planLimits && planUsage && (
+                <div className="mt-3 mx-auto max-w-md flex items-center justify-center gap-3 px-3 py-2 rounded-xl text-xs font-bold" style={{ background: isDark ? 'rgba(167,139,250,0.1)' : 'rgba(109,40,217,0.06)', border: `1px solid ${cardBorder}` }}>
+                  <span className="px-2 py-0.5 rounded-lg" style={{ background: currentPlan === 'trial' ? '#f59e0b' : '#16a34a', color: '#fff' }}>{currentPlan === 'trial' ? (lang === 'mm' ? 'အစမ်းသုံး' : 'TRIAL') : (currentPlan?.toUpperCase() ?? 'SUB')}</span>
+                  <span style={{ color: planUsage.aiVideo >= planLimits.dailyAiVideo ? '#dc2626' : subtextColor }}>{lang === 'mm' ? 'ယနေ့' : 'Today'}: <b style={{ color: planUsage.aiVideo >= planLimits.dailyAiVideo ? '#dc2626' : accent }}>{planUsage.aiVideo}/{planLimits.dailyAiVideo}</b> {lang === 'mm' ? 'ကြိမ်' : 'uses'}</span>
+                </div>
+              )}
+              {!isAdmin && !hasPlan && me && (
+                <div className="mt-3 mx-auto max-w-md flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold" style={{ background: isDark ? 'rgba(220,38,38,0.15)' : '#fef2f2', border: '1px solid rgba(220,38,38,0.3)', color: '#dc2626' }}>
+                  <AlertCircle className="w-4 h-4" />
+                  {lang === 'mm' ? 'Subscription မရှိသေးပါ။ Admin ကို ဆက်သွယ်ပါ။' : 'No subscription. Contact Admin.'}
+                </div>
+              )}
             </div>
 
             {/* ── STEP: Video Input ── */}

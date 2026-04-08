@@ -61,6 +61,41 @@ export async function handleTelegramUpdate(update: any) {
 
     if (existing.length > 0) {
       code = existing[0].telegramCode!;
+      // Auto trial for existing users who don't have any subscription
+      const existingUserId = existing[0].id;
+      const now = new Date();
+      const { nanoid } = await import("nanoid");
+      const existingSubs = await db.select().from(subscriptions)
+        .where(eq(subscriptions.userId, existingUserId)).limit(1);
+      if (existingSubs.length === 0) {
+        // No subscription at all — check if auto trial is enabled
+        const autoEnabledRow = await db.select().from(settings).where(eq(settings.keyName, "auto_trial_enabled")).limit(1);
+        const autoEnabled = autoEnabledRow[0]?.value === "true";
+        if (autoEnabled) {
+          const trialDaysRow = await db.select().from(settings).where(eq(settings.keyName, "auto_trial_days")).limit(1);
+          const trialDays = parseInt(trialDaysRow[0]?.value ?? "7");
+          const subId = nanoid(36);
+          const trialExpiry = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000);
+          await db.insert(subscriptions).values({
+            id: subId,
+            userId: existingUserId,
+            plan: "trial",
+            startsAt: now,
+            expiresAt: trialExpiry,
+            createdByAdmin: "system",
+            note: "Auto trial " + trialDays + " days (existing user)",
+          });
+          await sendMessage(chatId,
+            `👋 <b>မင်္ဂလာပါ, ${firstName}!</b>\n\n` +
+            `🎁 <b>Trial ${trialDays} ရက် ရရှိပါပြီ!</b>\n\n` +
+            `🔑 သင့် login code:\n\n` +
+            `<code>${code}</code>\n\n` +
+            `ဒီ code ကို https://choco.de5.net မှာ login ဝင်ဖို့ သုံးပါ။\n\n` +
+            `⚠️ Code ကို လျှို့ဝှက်ထားပါ!`
+          );
+          return;
+        }
+      }
       await sendMessage(chatId,
         `👋 <b>မင်္ဂလာပါ, ${firstName}!</b>\n\n` +
         `🔑 သင့် login code:\n\n` +

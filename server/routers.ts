@@ -40,6 +40,54 @@ function sanitizeText(text: string): string {
   return text.replace(/\0/g, "").replace(/[<>]/g, "").trim();
 }
 
+// ─── PLAN-BASED USAGE LIMITS ───────────────────────────
+type PlanLimits = {
+  charLimitStandard: number;   // Thiha/Nilar character limit
+  charLimitCharacter: number;  // Murf VC characters limit
+  dailyTtsSrt: number;         // Daily TTS+SRT generations
+  dailyCharacterUse: number;   // Daily character voice uses
+  dailyAiVideo: number;        // Daily AI Video (dubbing) uses
+  dailyVideoTranslate: number; // Daily video translation uses
+};
+
+function getPlanLimits(plan: string | null): PlanLimits {
+  if (!plan) {
+    // No plan at all — cannot use anything
+    return { charLimitStandard: 0, charLimitCharacter: 0, dailyTtsSrt: 0, dailyCharacterUse: 0, dailyAiVideo: 0, dailyVideoTranslate: 0 };
+  }
+  if (plan === "trial") {
+    return { charLimitStandard: 5000, charLimitCharacter: 1600, dailyTtsSrt: 3, dailyCharacterUse: 2, dailyAiVideo: 1, dailyVideoTranslate: 2 };
+  }
+  // All paid plans (1month, 3month, 6month, lifetime)
+  return { charLimitStandard: 10000, charLimitCharacter: 2000, dailyTtsSrt: 999, dailyCharacterUse: 999, dailyAiVideo: 999, dailyVideoTranslate: 999 };
+}
+
+async function getDailyUsage(userId: string) {
+  const db = await getDb();
+  if (!db) return { tts: 0, characterUse: 0, aiVideo: 0, videoTranslate: 0 };
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayGens = await db.select().from(ttsConversions)
+    .where(and(eq(ttsConversions.userId, userId), gte(ttsConversions.createdAt, todayStart)));
+  let tts = 0, characterUse = 0, aiVideo = 0, videoTranslate = 0;
+  for (const g of todayGens) {
+    if (g.status === "fail") continue;
+    const feat = g.feature ?? "tts";
+    if (feat === "tts") {
+      if (g.character && g.character.trim() !== "") {
+        characterUse++;
+      } else {
+        tts++;
+      }
+    } else if (feat === "dub_file" || feat === "dub_link") {
+      aiVideo++;
+    } else if (feat === "translate_file" || feat === "translate_link") {
+      videoTranslate++;
+    }
+  }
+  return { tts, characterUse, aiVideo, videoTranslate };
+}
+
 export const appRouter = router({
   system: systemRouter,
 
@@ -64,15 +112,8 @@ export const appRouter = router({
         }
         const user = result[0];
         clearRateLimit(ip);
-        if (user.role !== "admin") {
-          const now = new Date();
-          const subResult = await db.select().from(subscriptions)
-            .where(and(eq(subscriptions.userId, user.id), gte(subscriptions.expiresAt, now)))
-            .limit(1);
-          if (subResult.length === 0) {
-            throw new Error("No active subscription. Please contact admin.");
-          }
-        }
+        // Allow all users to login regardless of subscription status
+        // Usage limits are enforced at the feature level, not at login
         // 🔐 One-Device Session: login တိုင်း session_token အသစ်ထုတ်မည်
         //    အဟောင်း JWT ထဲက session_token သည် DB နှင့် မတူတော့လို့ invalidate ဖြစ်မည်
         const sessionToken = nanoid(24);
@@ -266,10 +307,19 @@ export const appRouter = router({
         const now = new Date();
         const sub = await db.select().from(subscriptions)
           .where(and(eq(subscriptions.userId, ctx.user.userId), gte(subscriptions.expiresAt, now))).limit(1);
-        if (sub.length === 0) throw new Error("Subscription expired.");
+        const plan = sub.length > 0 ? sub[0].plan : null;
+        if (!plan) throw new Error("Subscription မရှိပါ။ Admin ကို ဆက်သွယ်ပါ။");
+        const limits = getPlanLimits(plan);
+        const usage = await getDailyUsage(ctx.user.userId);
+        if (usage.videoTranslate >= limits.dailyVideoTranslate) throw new Error(`ယနေ့ Video Translation ကန့်သတ်ချက် (${limits.dailyVideoTranslate} ကြိမ်) ပြည့်သွားပါပြီ။`);
       }
       try {
         const result = await translateVideoLink(input.url);
+        // Track usage
+        if (db && ctx.user) {
+          const { nanoid: nid } = await import("nanoid");
+          await db.insert(ttsConversions).values({ id: nid(10), userId: ctx.user.userId, feature: "translate_link", status: "success" }).catch(() => {});
+        }
         return { success: true, ...result };
       } catch (error: any) {
         // Sanitize: don't expose raw command output / server paths to frontend
@@ -303,12 +353,21 @@ export const appRouter = router({
           const sub = await db.select().from(subscriptions)
             .where(and(eq(subscriptions.userId, ctx.user.userId), gte(subscriptions.expiresAt, now)))
             .limit(1);
-          if (sub.length === 0) throw new Error("Subscription expired.");
+          const plan = sub.length > 0 ? sub[0].plan : null;
+          if (!plan) throw new Error("Subscription မရှိပါ။ Admin ကို ဆက်သွယ်ပါ။");
+          const limits = getPlanLimits(plan);
+          const usage = await getDailyUsage(ctx.user.userId);
+          if (usage.videoTranslate >= limits.dailyVideoTranslate) throw new Error(`ယနေ့ Video Translation ကန့်သတ်ချက် (${limits.dailyVideoTranslate} ကြိမ်) ပြည့်သွားပါပြီ။`);
         }
         try {
           const videoBuffer = Buffer.from(input.videoBase64, "base64");
           if (videoBuffer.length > 25 * 1024 * 1024) throw new Error("ဖိုင်အကြီးလွန်ပါသည်။ အများဆုံး 25MB အထိသာ တင်နိုင်ပါသည်။");
           const result = await translateVideo(videoBuffer, input.filename);
+          // Track usage
+          if (db && ctx.user) {
+            const { nanoid: nid } = await import("nanoid");
+            await db.insert(ttsConversions).values({ id: nid(10), userId: ctx.user.userId, feature: "translate_file", status: "success" }).catch(() => {});
+          }
           return { success: true, ...result };
         } catch (error: any) {
           const rawMsg = error.message ?? "Translation failed.";
@@ -350,7 +409,11 @@ export const appRouter = router({
           const sub = await db.select().from(subscriptions)
             .where(and(eq(subscriptions.userId, ctx.user.userId), gte(subscriptions.expiresAt, now)))
             .limit(1);
-          if (sub.length === 0) throw new Error("Subscription expired.");
+          const plan = sub.length > 0 ? sub[0].plan : null;
+          if (!plan) throw new Error("Subscription မရှိပါ။ Admin ကို ဆက်သွယ်ပါ။");
+          const limits = getPlanLimits(plan);
+          const usage = await getDailyUsage(ctx.user.userId);
+          if (usage.aiVideo >= limits.dailyAiVideo) throw new Error(`ယနေ့ AI Video ကန့်သတ်ချက် (${limits.dailyAiVideo} ကြိမ်) ပြည့်သွားပါပြီ။`);
         }
         try {
           const videoBuffer = Buffer.from(input.videoBase64, "base64");
@@ -372,6 +435,11 @@ export const appRouter = router({
             srtBorderRadius: input.srtBorderRadius,
           };
           const result = await dubVideoFromBuffer(videoBuffer, input.filename, dubOpts);
+          // Track usage
+          if (db && ctx.user) {
+            const { nanoid: nid } = await import("nanoid");
+            await db.insert(ttsConversions).values({ id: nid(10), userId: ctx.user.userId, feature: "dub_file", status: "success" }).catch(() => {});
+          }
           return { success: true, ...result };
         } catch (error: any) {
           const rawMsg = error.message ?? "Dubbing failed.";
@@ -414,7 +482,11 @@ export const appRouter = router({
           const sub = await db.select().from(subscriptions)
             .where(and(eq(subscriptions.userId, ctx.user.userId), gte(subscriptions.expiresAt, now)))
             .limit(1);
-          if (sub.length === 0) throw new Error("Subscription expired.");
+          const plan = sub.length > 0 ? sub[0].plan : null;
+          if (!plan) throw new Error("Subscription မရှိပါ။ Admin ကို ဆက်သွယ်ပါ။");
+          const limits = getPlanLimits(plan);
+          const usage = await getDailyUsage(ctx.user.userId);
+          if (usage.aiVideo >= limits.dailyAiVideo) throw new Error(`ယနေ့ AI Video ကန့်သတ်ချက် (${limits.dailyAiVideo} ကြိမ်) ပြည့်သွားပါပြီ။`);
         }
         try {
           const dubOpts: DubOptions = {
@@ -434,6 +506,11 @@ export const appRouter = router({
             srtBorderRadius: input.srtBorderRadius,
           };
           const result = await dubVideoFromLink(input.url, dubOpts);
+          // Track usage
+          if (db && ctx.user) {
+            const { nanoid: nid } = await import("nanoid");
+            await db.insert(ttsConversions).values({ id: nid(10), userId: ctx.user.userId, feature: "dub_link", status: "success" }).catch(() => {});
+          }
           return { success: true, ...result };
         } catch (error: any) {
           const rawMsg = error.message ?? "Link dubbing failed.";
@@ -447,17 +524,20 @@ export const appRouter = router({
   }),
   subscription: router({
     myStatus: publicProcedure.query(async ({ ctx }) => {
-      if (!ctx.user) return { active: false, plan: null, expiresAt: null };
-      if (ctx.user.role === "admin") return { active: true, plan: "admin", expiresAt: null };
+      if (!ctx.user) return { active: false, plan: null, expiresAt: null, limits: getPlanLimits(null), usage: { tts: 0, characterUse: 0, aiVideo: 0, videoTranslate: 0 } };
+      if (ctx.user.role === "admin") return { active: true, plan: "admin", expiresAt: null, limits: getPlanLimits("lifetime"), usage: { tts: 0, characterUse: 0, aiVideo: 0, videoTranslate: 0 } };
       const db = await getDb();
-      if (!db) return { active: false, plan: null, expiresAt: null };
+      if (!db) return { active: false, plan: null, expiresAt: null, limits: getPlanLimits(null), usage: { tts: 0, characterUse: 0, aiVideo: 0, videoTranslate: 0 } };
       const now = new Date();
       const result = await db.select().from(subscriptions)
         .where(and(eq(subscriptions.userId, ctx.user.userId), gte(subscriptions.expiresAt, now)))
         .orderBy(desc(subscriptions.expiresAt))
         .limit(1);
-      if (result.length === 0) return { active: false, plan: null, expiresAt: null };
-      return { active: true, plan: result[0].plan, expiresAt: result[0].expiresAt };
+      const plan = result.length > 0 ? result[0].plan : null;
+      const limits = getPlanLimits(plan);
+      const usage = await getDailyUsage(ctx.user.userId);
+      if (result.length === 0) return { active: false, plan: null, expiresAt: null, limits, usage };
+      return { active: true, plan: result[0].plan, expiresAt: result[0].expiresAt, limits, usage };
     }),
   }),
 
@@ -480,12 +560,24 @@ export const appRouter = router({
             const userRecord = await db.select().from(users)
               .where(eq(users.id, ctx.user.userId)).limit(1);
             if (userRecord[0]?.bannedAt) throw new Error("Your account has been banned.");
-            // Check subscription
+            // Check subscription + usage limits
             const now = new Date();
             const sub = await db.select().from(subscriptions)
               .where(and(eq(subscriptions.userId, ctx.user.userId), gte(subscriptions.expiresAt, now)))
               .limit(1);
-            if (sub.length === 0) throw new Error("Subscription expired. Please contact admin.");
+            const plan = sub.length > 0 ? sub[0].plan : null;
+            if (!plan) throw new Error("Subscription မရှိပါ။ Admin ကို ဆက်သွယ်ပါ။");
+            const limits = getPlanLimits(plan);
+            const usage = await getDailyUsage(ctx.user.userId);
+            const isCharacter = !!(input.character && input.character.trim() !== "");
+            // Check daily usage limits
+            if (isCharacter) {
+              if (usage.characterUse >= limits.dailyCharacterUse) throw new Error(`ယနေ့ Character Voice အသုံးပြုမှု ကန့်သတ်ချက် (${limits.dailyCharacterUse} ကြိမ်) ပြည့်သွားပါပြီ။ နက်ဖြန် ထပ်ကြိုးစားပါ။`);
+              if (input.text.length > limits.charLimitCharacter) throw new Error(`Character Voice စာလုံးရေ ကန့်သတ်ချက် ${limits.charLimitCharacter} ကျော်လွန်ပါသည်။`);
+            } else {
+              if (usage.tts >= limits.dailyTtsSrt) throw new Error(`ယနေ့ TTS/SRT အသုံးပြုမှု ကန့်သတ်ချက် (${limits.dailyTtsSrt} ကြိမ်) ပြည့်သွားပါပြီ။ နက်ဖြန် ထပ်ကြိုးစားပါ။`);
+              if (input.text.length > limits.charLimitStandard) throw new Error(`စာလုံးရေ ကန့်သတ်ချက် ${limits.charLimitStandard} ကျော်လွန်ပါသည်။`);
+            }
           }
         }
         const cleanText = sanitizeText(input.text).replace(/[။၊]/g, ' ').replace(/\s+/g, ' ').trim();
