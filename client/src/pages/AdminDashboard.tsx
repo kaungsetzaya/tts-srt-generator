@@ -3,7 +3,7 @@ import { trpc } from "@/lib/trpc";
 import {
   Loader2, Users, Crown, Clock, Plus, Shield, Settings, Search, LogOut, BarChart3, Ban, CheckCircle,
   Activity, Zap, HardDrive, Server, ChevronRight, ChevronLeft, ArrowLeft, Mic, FileVideo, AlertTriangle,
-  TrendingDown, UserCheck, UserX, Bug, RefreshCw, X, Circle, Info, Banknote, CreditCard, Calendar
+  TrendingDown, UserCheck, UserX, Bug, RefreshCw, X, Circle, Info, Banknote, CreditCard, Calendar, Trash2
 } from "lucide-react";
 
 type Plan = "trial" | "1month" | "3month" | "6month" | "lifetime";
@@ -236,6 +236,7 @@ export default function AdminDashboard() {
   const resolveError = trpc.adminStats.resolveError.useMutation({ onSuccess: () => refetchErrors() });
   const dismissFailedGen = trpc.adminStats.dismissFailedGen.useMutation({ onSuccess: () => refetchErrors() });
   const deleteSystemLog = trpc.adminStats.deleteSystemLog.useMutation({ onSuccess: () => refetchErrors() });
+  const deleteUser = trpc.admin.deleteUser.useMutation({ onSuccess: () => refetch() });
 
   if (me?.role !== "admin") return (
     <div className="min-h-screen bg-background flex items-center justify-center">
@@ -554,6 +555,10 @@ export default function AdminDashboard() {
                             <button onClick={() => { if (confirm(isBanned ? "Unban user?" : "Ban user?")) banUser.mutate({ userId: user.id, ban: !isBanned }); }}
                               className={`flex items-center gap-1 text-xs px-2 py-1 border rounded-lg transition-all ${isBanned ? "border-green-500/50 text-green-400 hover:bg-green-500/20" : "border-orange-500/50 text-orange-400 hover:bg-orange-500/20"}`}>
                               {isBanned ? <><CheckCircle className="w-3 h-3" />Unban</> : <><Ban className="w-3 h-3" />Ban</>}
+                            </button>
+                            <button onClick={() => { if (confirm(`Delete user "${displayName}" (@${username})? This will permanently remove their account, subscriptions, and all generation history. They can rejoin via /start with a new code.`)) deleteUser.mutate({ userId: user.id }); }}
+                              className="flex items-center gap-1 text-xs px-2 py-1 border border-red-600/50 text-red-500 hover:bg-red-600/20 rounded-lg transition-all">
+                              <Trash2 className="w-3 h-3" />Delete
                             </button>
                           </div>
                         </td>

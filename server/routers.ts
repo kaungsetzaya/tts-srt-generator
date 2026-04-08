@@ -227,7 +227,7 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    banUser: publicProcedure
+     banUser: publicProcedure
       .input(z.object({ userId: z.string(), ban: z.boolean() }))
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user || ctx.user.role !== "admin") throw new Error("Unauthorized");
@@ -235,6 +235,22 @@ export const appRouter = router({
         if (!db) throw new Error("DB error");
         await db.update(users).set({ bannedAt: input.ban ? new Date() : null }).where(eq(users.id, input.userId));
         auditLog(input.ban ? "BAN_USER" : "UNBAN_USER", ctx.user.userId, input.userId);
+        return { success: true };
+      }),
+
+    deleteUser: publicProcedure
+      .input(z.object({ userId: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        if (!ctx.user || ctx.user.role !== "admin") throw new Error("Unauthorized");
+        const db = await getDb();
+        if (!db) throw new Error("DB error");
+        // Don't allow deleting yourself
+        if (input.userId === ctx.user.userId) throw new Error("Cannot delete your own account.");
+        // Delete related data first, then the user
+        await db.delete(ttsConversions).where(eq(ttsConversions.userId, input.userId));
+        await db.delete(subscriptions).where(eq(subscriptions.userId, input.userId));
+        await db.delete(users).where(eq(users.id, input.userId));
+        auditLog("DELETE_USER", ctx.user.userId, input.userId);
         return { success: true };
       }),
     getServerHealth: publicProcedure
