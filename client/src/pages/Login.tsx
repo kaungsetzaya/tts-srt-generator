@@ -45,7 +45,7 @@ export default function Login() {
           <div className="mb-6 p-4 border border-purple-900/30 bg-purple-900/10 rounded text-sm text-gray-400 leading-relaxed">
             <p className="font-bold text-purple-400 mb-2">📱 Get your code:</p>
             <p>1. Open Telegram</p>
-            <p>2. Message <span className="text-purple-400 font-bold">@lumixmmbot</span></p>
+            <p>2. Message <a href="https://t.me/lumixmmbot" target="_blank" rel="noopener noreferrer" className="text-purple-400 font-bold underline hover:text-purple-300 transition-colors">@lumixmmbot</a></p>
             <p>3. Send <span className="text-purple-400 font-mono">/start</span></p>
             <p>4. Copy your 6-digit code</p>
           </div>

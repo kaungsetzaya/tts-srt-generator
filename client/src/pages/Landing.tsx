@@ -20,7 +20,7 @@ function FadeInSection({
   zoom?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-60px" });
+  const isInView = useInView(ref, { once: false, margin: "-60px" });
 
   const offsets = { up: { y: 60 }, down: { y: -60 }, left: { x: 80 }, right: { x: -80 } };
   const initial = { opacity: 0, ...offsets[direction], ...(zoom ? { scale: 0.9 } : {}) };
@@ -239,7 +239,7 @@ export default function Landing() {
             }}
             whileTap={{ scale: 0.95 }}
             onClick={() => navigate("/login")}
-            className="relative px-10 sm:px-16 md:px-24 py-4 md:py-6 mb-32 text-base sm:text-lg md:text-xl font-black uppercase tracking-widest text-white overflow-hidden rounded-sm group"
+            className="relative px-10 sm:px-16 md:px-24 py-4 md:py-6 mb-32 text-base sm:text-lg md:text-xl font-black uppercase tracking-widest text-white overflow-hidden rounded-full group"
             style={{
               background:
                 "linear-gradient(135deg, oklch(0.65 0.28 310), oklch(0.55 0.28 270))",
@@ -254,7 +254,7 @@ export default function Landing() {
                   "linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)",
               }}
             />
-            <span className="relative z-10">🚀 စတင်အသုံးပြုရန် Login</span>
+            <span className="relative z-10">Get Started →</span>
           </motion.button>
         </motion.div>
 
@@ -498,7 +498,7 @@ export default function Landing() {
             }}
             whileTap={{ scale: 0.95 }}
             onClick={() => navigate("/login")}
-            className="inline-block px-12 sm:px-20 py-5 md:py-6 text-base sm:text-xl font-black uppercase tracking-widest text-white rounded-sm relative overflow-hidden group"
+            className="inline-block px-12 sm:px-20 py-5 md:py-6 text-base sm:text-xl font-black uppercase tracking-widest text-white rounded-full relative overflow-hidden group"
             style={{
               background:
                 "linear-gradient(135deg, oklch(0.65 0.28 310), oklch(0.55 0.28 270))",
@@ -512,7 +512,7 @@ export default function Landing() {
                   "linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)",
               }}
             />
-            <span className="relative z-10">🚀 စတင်အသုံးပြုရန် Login</span>
+            <span className="relative z-10">Get Started →</span>
           </motion.button>
         </section>
       </FadeInSection>
