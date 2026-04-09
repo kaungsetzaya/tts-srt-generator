@@ -1,7 +1,7 @@
 
 import { useLocation } from "wouter";
-import { motion, useScroll, useTransform, useInView } from "framer-motion";
-import { useRef, useEffect } from "react";
+import { motion, useScroll, useTransform, useInView, AnimatePresence } from "framer-motion";
+import { useRef, useEffect, useState } from "react";
 
 /* ─────────────────────────────────────────────
    Reusable animated section wrapper
@@ -82,19 +82,19 @@ const steps = [
 export default function Landing() {
   const [, navigate] = useLocation();
   const heroRef = useRef<HTMLDivElement>(null);
+  const featuresRef = useRef<HTMLElement>(null);
+  const [transitioning, setTransitioning] = useState(false);
 
   // Parallax for hero glow
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
   const glowY = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
   const heroOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
 
-  // Scroll snap on document
+  // Smooth scroll behavior
   useEffect(() => {
     const html = document.documentElement;
-    html.style.scrollSnapType = "y proximity";
     html.style.scrollBehavior = "smooth";
     return () => {
-      html.style.scrollSnapType = "";
       html.style.scrollBehavior = "";
     };
   }, []);
@@ -135,6 +135,19 @@ export default function Landing() {
         className="relative z-10 flex flex-col items-center justify-center min-h-screen text-center px-4"
         style={{ scrollSnapAlign: "start" }}
       >
+        {/* Blur transition overlay */}
+        <AnimatePresence>
+          {transitioning && (
+            <motion.div
+              initial={{ opacity: 0, scale: 1 }}
+              animate={{ opacity: 1, scale: 1.2, filter: "blur(20px)" }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.6, ease: "easeInOut" }}
+              className="fixed inset-0 z-[200]"
+              style={{ background: "oklch(0.08 0.04 290)" }}
+            />
+          )}
+        </AnimatePresence>
         {/* BIG glow blob */}
         <motion.div
           style={{ y: glowY }}
@@ -177,7 +190,7 @@ export default function Landing() {
             transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
             className="font-black uppercase leading-[0.85] mb-3"
             style={{
-              fontSize: "clamp(56px, 14vw, 170px)",
+              fontSize: "clamp(64px, 16vw, 200px)",
               color: "oklch(0.72 0.22 310)",
               textShadow:
                 "0 0 60px oklch(0.65 0.25 310 / 70%), 0 0 120px oklch(0.55 0.28 310 / 30%)",
@@ -193,7 +206,7 @@ export default function Landing() {
             transition={{ duration: 0.8, delay: 0.18, ease: [0.16, 1, 0.3, 1] }}
             className="font-black uppercase leading-[0.85] mb-8"
             style={{
-              fontSize: "clamp(56px, 14vw, 170px)",
+              fontSize: "clamp(64px, 16vw, 200px)",
               color: "oklch(0.72 0.22 310)",
               textShadow:
                 "0 0 60px oklch(0.65 0.25 310 / 70%), 0 0 120px oklch(0.55 0.28 310 / 30%)",
@@ -238,7 +251,7 @@ export default function Landing() {
               boxShadow: "0 0 80px oklch(0.65 0.25 310 / 80%)",
             }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => navigate("/login")}
+            onClick={() => featuresRef.current?.scrollIntoView({ behavior: 'smooth' })}
             className="relative px-10 sm:px-16 md:px-24 py-4 md:py-6 mb-32 text-base sm:text-lg md:text-xl font-black uppercase tracking-widest text-white overflow-hidden rounded-full group"
             style={{
               background:
@@ -254,7 +267,7 @@ export default function Landing() {
                   "linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)",
               }}
             />
-            <span className="relative z-10">Get Started →</span>
+            <span className="relative z-10">Ready to Use ↓</span>
           </motion.button>
         </motion.div>
 
@@ -293,7 +306,7 @@ export default function Landing() {
       {/* ═══════════════════════════════════════════
           WHAT IS THIS PLATFORM? (Intro)
       ═══════════════════════════════════════════ */}
-      <section className="relative z-10 px-6 md:px-12 py-28" style={{ scrollSnapAlign: "start" }}>
+      <section ref={featuresRef} className="relative z-10 px-6 md:px-12 py-28">
         <div className="max-w-4xl mx-auto text-center">
           <FadeInSection>
             <p
@@ -497,7 +510,10 @@ export default function Landing() {
               boxShadow: "0 0 80px oklch(0.65 0.25 310 / 80%)",
             }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => navigate("/login")}
+            onClick={() => {
+              setTransitioning(true);
+              setTimeout(() => navigate("/login"), 600);
+            }}
             className="inline-block px-12 sm:px-20 py-5 md:py-6 text-base sm:text-xl font-black uppercase tracking-widest text-white rounded-full relative overflow-hidden group"
             style={{
               background:
@@ -512,7 +528,7 @@ export default function Landing() {
                   "linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)",
               }}
             />
-            <span className="relative z-10">Get Started →</span>
+            <span className="relative z-10">Login →</span>
           </motion.button>
         </section>
       </FadeInSection>

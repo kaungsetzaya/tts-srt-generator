@@ -1026,7 +1026,7 @@ export default function TTSGenerator() {
                       controls
                       className="w-full rounded-xl"
                       style={{ maxHeight: "480px", background: "#000" }}
-                      src={`data:video/mp4;base64,${dubResult.videoBase64}`}
+                      src={(() => { try { const b = atob(dubResult.videoBase64); const arr = new Uint8Array(b.length); for(let i=0;i<b.length;i++) arr[i]=b.charCodeAt(i); return URL.createObjectURL(new Blob([arr], {type:'video/mp4'})); } catch { return `data:video/mp4;base64,${dubResult.videoBase64}`; } })()}
                     />
                   </div>
                   <div className="flex items-center justify-center gap-3 mt-4">
@@ -1129,70 +1129,90 @@ export default function TTSGenerator() {
         {/* === PLAN TAB === */}
         {tab === "plan" && (
           <div className="max-w-3xl mx-auto py-4 sm:py-8 animate-in fade-in zoom-in-95 duration-300">
-            <div className="text-center mb-6">
-              <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-widest mb-2" style={{ color: accent }}>{lang === "mm" ? "လက်ရှိ Plan" : "Current Plan"}</h2>
+            {/* Header */}
+            <div className="text-center mb-8">
+              <div className="inline-block mb-4">
+                <span className="text-5xl sm:text-6xl font-black uppercase tracking-tighter" style={{ color: accent, textShadow: `0 0 40px ${accent}60` }}>LUMIX</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black uppercase tracking-widest mb-1" style={{ color: textColor }}>{lang === "mm" ? "သင့် Plan" : "Your Plan"}</h2>
             </div>
 
-            {/* Current Plan Status */}
-            <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
-              <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{lang === "mm" ? "သင့် Plan အခြေအနေ" : "Your Plan Status"}</div>
-              <div className="space-y-3 mt-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold" style={{ color: textColor }}>{lang === "mm" ? "Plan အမျိုးအစား" : "Plan Type"}</span>
-                  <span className="px-3 py-1 rounded-lg text-xs font-black uppercase" style={{ background: currentPlan === 'trial' ? '#f59e0b' : '#16a34a', color: '#fff' }}>{currentPlan || (lang === "mm" ? "မရှိ" : "None")}</span>
+            {/* Current Plan Card */}
+            <div className="rounded-2xl border-2 p-6 sm:p-8 mb-6" style={{ background: `linear-gradient(135deg, ${isDark ? 'rgba(139,92,246,0.08)' : 'rgba(139,92,246,0.05)'}, ${cardBg})`, borderColor: accent + '40', boxShadow: `0 0 30px ${accent}15` }}>
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-3">
+                  <Crown className="w-6 h-6" style={{ color: currentPlan === 'trial' ? '#f59e0b' : accent }} />
+                  <span className="text-lg sm:text-xl font-black uppercase tracking-wider" style={{ color: textColor }}>{currentPlan === 'trial' ? (lang === 'mm' ? 'အစမ်းသုံး Plan' : 'Trial Plan') : currentPlan?.toUpperCase() || (lang === 'mm' ? 'Plan မရှိ' : 'No Plan')}</span>
                 </div>
                 {daysLeft !== null && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold" style={{ color: textColor }}>{lang === "mm" ? "ကျန်ရက်" : "Days Left"}</span>
-                    <span className="text-sm font-black" style={{ color: accent }}>{daysLeft} {lang === "mm" ? "ရက်" : "days"}</span>
-                  </div>
-                )}
-                {planUsage && planLimits && (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-bold" style={{ color: textColor }}>TTS {lang === "mm" ? "သုံးပြီး" : "Used"}</span>
-                      <span className="text-sm font-black" style={{ color: planUsage.tts >= planLimits.dailyTtsSrt ? '#dc2626' : accent }}>{planUsage.tts} / {planLimits.dailyTtsSrt}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-bold" style={{ color: textColor }}>Voice Change {lang === "mm" ? "သုံးပြီး" : "Used"}</span>
-                      <span className="text-sm font-black" style={{ color: planUsage.characterUse >= planLimits.dailyCharacterUse ? '#dc2626' : accent }}>{planUsage.characterUse} / {planLimits.dailyCharacterUse}</span>
-                    </div>
-                  </>
+                  <span className="px-3 py-1.5 rounded-full text-xs font-black" style={{ background: daysLeft > 4 ? '#16a34a20' : '#dc262620', color: daysLeft > 4 ? '#16a34a' : '#dc2626' }}>{daysLeft} {lang === "mm" ? "ရက်ကျန်" : "days left"}</span>
                 )}
               </div>
+
+              {/* Usage Progress Bars */}
+              {(() => {
+                const tu = (subStatus as any)?.trialUsage;
+                const tl = (subStatus as any)?.trialLimits;
+                const usage = currentPlan === 'trial' && tu && tl ? [
+                  { label: lang === 'mm' ? 'အသံဖန်တီးမှု (Standard)' : 'Voice Generation (Standard)', used: tu.ttsUsed || 0, total: tl.ttsLimit || 0, color: accent },
+                  { label: lang === 'mm' ? 'အသံပြောင်းမှု (Premium)' : 'Voice Change (Premium)', used: tu.characterUsed || 0, total: tl.characterLimit || 0, color: '#f59e0b' },
+                  { label: lang === 'mm' ? 'ဗီဒီယိုဘာသာပြန်' : 'Video Translation', used: tu.videoUsed || 0, total: tl.videoLimit || 0, color: '#60a5fa' },
+                  { label: lang === 'mm' ? 'ဗီဒီယိုဖန်တီးမှု' : 'Video Creation', used: tu.aiVideoUsed || 0, total: tl.aiVideoLimit || 0, color: '#4ade80' },
+                ] : planUsage && planLimits ? [
+                  { label: lang === 'mm' ? 'အသံဖန်တီးမှု' : 'Voice Generation', used: planUsage.tts, total: planLimits.dailyTtsSrt, color: accent },
+                  { label: lang === 'mm' ? 'အသံပြောင်းမှု' : 'Voice Change', used: planUsage.characterUse, total: planLimits.dailyCharacterUse, color: '#f59e0b' },
+                  { label: lang === 'mm' ? 'ဗီဒီယိုဘာသာပြန်' : 'Video Translation', used: planUsage.videoTranslate, total: planLimits.dailyVideoTranslate, color: '#60a5fa' },
+                  { label: lang === 'mm' ? 'ဗီဒီယိုဖန်တီးမှု' : 'Video Creation', used: planUsage.aiVideo, total: planLimits.dailyAiVideo, color: '#4ade80' },
+                ] : [];
+                return (
+                  <div className="space-y-4">
+                    {usage.map((u, i) => (
+                      <div key={i}>
+                        <div className="flex justify-between mb-1.5">
+                          <span className="text-xs sm:text-sm font-bold" style={{ color: subtextColor }}>{u.label}</span>
+                          <span className="text-xs sm:text-sm font-black" style={{ color: u.used >= u.total ? '#dc2626' : u.color }}>{u.used} / {u.total}</span>
+                        </div>
+                        <div className="h-2 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}>
+                          <div className="h-full rounded-full transition-all duration-500" style={{ width: u.total > 0 ? `${Math.min((u.used / u.total) * 100, 100)}%` : '0%', background: u.used >= u.total ? '#dc2626' : u.color }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
 
-            {/* Available Plans */}
-            <div className="mt-6">
-              <h3 className="text-lg font-black uppercase tracking-wider mb-4 text-center" style={{ color: accent }}>{lang === "mm" ? "Plan များ ဝယ်ယူရန်" : "Available Plans"}</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Subscription Plans */}
+            <div className="mt-8">
+              <h3 className="text-lg font-black uppercase tracking-wider mb-6 text-center" style={{ color: accent }}>{lang === "mm" ? "Plan များ" : "Plans"}</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 {[
-                  { name: "Starter", price: "5,000 Ks", period: lang === "mm" ? "/ လ" : "/ month", features: [lang === "mm" ? "TTS ၁၅ ကြိမ်/ရက်" : "15 TTS/day", lang === "mm" ? "စာလုံး ၂၀,၀၀၀" : "20,000 chars", lang === "mm" ? "ဗီဒီယို ၃ ကြိမ်/ရက်" : "3 videos/day"], color: "#60a5fa", popular: false },
-                  { name: "Pro", price: "15,000 Ks", period: lang === "mm" ? "/ လ" : "/ month", features: [lang === "mm" ? "TTS ၅၀ ကြိမ်/ရက်" : "50 TTS/day", lang === "mm" ? "စာလုံး ၅၀,၀၀၀" : "50,000 chars", lang === "mm" ? "ဗီဒီယို ၁၀ ကြိမ်/ရက်" : "10 videos/day", lang === "mm" ? "Character Voices အကုန်" : "All character voices"], color: accent, popular: true },
-                  { name: "Business", price: "30,000 Ks", period: lang === "mm" ? "/ လ" : "/ month", features: [lang === "mm" ? "TTS အကန့်အသတ်မဲ့" : "Unlimited TTS", lang === "mm" ? "စာလုံး ၁၀၀,၀၀၀" : "100,000 chars", lang === "mm" ? "ဗီဒီယို ၂၀ ကြိမ်/ရက်" : "20 videos/day", lang === "mm" ? "Priority Support" : "Priority Support"], color: "#f59e0b", popular: false },
-                  { name: "Enterprise", price: lang === "mm" ? "ညှိနှိုင်း" : "Custom", period: "", features: [lang === "mm" ? "အကုန်အကန့်အသတ်မဲ့" : "Everything unlimited", lang === "mm" ? "API Access" : "API Access", lang === "mm" ? "၂၄/၇ Support" : "24/7 Support", lang === "mm" ? "Custom integration" : "Custom integration"], color: "#c084fc", popular: false },
+                  { name: "Starter", price: "5,000 Ks", period: lang === "mm" ? "/ လ" : "/ mo", features: [lang === "mm" ? "အသံဖန်တီးမှု ၁၅/ရက်" : "15 generations/day", lang === "mm" ? "စာလုံး ၂၀,၀၀၀" : "20,000 chars", lang === "mm" ? "ဗီဒီယို ၃/ရက်" : "3 videos/day"], color: "#60a5fa", popular: false },
+                  { name: "Pro", price: "15,000 Ks", period: lang === "mm" ? "/ လ" : "/ mo", features: [lang === "mm" ? "အသံဖန်တီးမှု ၅၀/ရက်" : "50 generations/day", lang === "mm" ? "စာလုံး ၅၀,၀၀၀" : "50,000 chars", lang === "mm" ? "ဗီဒီယို ၁၀/ရက်" : "10 videos/day", lang === "mm" ? "Premium Voices အကုန်" : "All premium voices"], color: accent, popular: true },
+                  { name: "Business", price: "30,000 Ks", period: lang === "mm" ? "/ လ" : "/ mo", features: [lang === "mm" ? "အကန့်အသတ်မဲ့" : "Unlimited", lang === "mm" ? "စာလုံး ၁၀၀,၀၀၀" : "100,000 chars", lang === "mm" ? "ဗီဒီယို ၂၀/ရက်" : "20 videos/day", "Priority Support"], color: "#f59e0b", popular: false },
+                  { name: "Enterprise", price: lang === "mm" ? "ညှိနှိုင်း" : "Custom", period: "", features: [lang === "mm" ? "အကုန်အကန့်အသတ်မဲ့" : "Everything unlimited", "API Access", "24/7 Support", lang === "mm" ? "စနစ်ချိတ်ဆက်မှု" : "Custom integration"], color: "#c084fc", popular: false },
                 ].map(plan => (
-                  <div key={plan.name} className={box} style={{ background: cardBg, borderColor: plan.popular ? accent : cardBorder, boxShadow: plan.popular ? `0 0 20px ${accent}40` : boxShadow, position: "relative" }}>
-                    {plan.popular && <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[10px] font-black uppercase" style={{ background: accent, color: "#fff" }}>{lang === "mm" ? "လူကြိုက်အများဆုံး" : "Most Popular"}</div>}
+                  <div key={plan.name} className="rounded-2xl border p-5 sm:p-6 relative transition-all hover:scale-[1.02]" style={{ background: `linear-gradient(145deg, ${cardBg}, ${isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)'})`, borderColor: plan.popular ? accent : cardBorder, boxShadow: plan.popular ? `0 0 25px ${accent}30` : boxShadow }}>
+                    {plan.popular && <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-wider" style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, color: "#fff" }}>{lang === "mm" ? "လူကြိုက်များ" : "Popular"}</div>}
                     <h4 className="text-lg font-black uppercase mt-1" style={{ color: plan.color }}>{plan.name}</h4>
                     <div className="flex items-baseline gap-1 mt-2 mb-4">
-                      <span className="text-2xl font-black" style={{ color: textColor }}>{plan.price}</span>
-                      <span className="text-xs" style={{ color: subtextColor }}>{plan.period}</span>
+                      <span className="text-2xl sm:text-3xl font-black" style={{ color: textColor }}>{plan.price}</span>
+                      <span className="text-xs font-semibold" style={{ color: subtextColor }}>{plan.period}</span>
                     </div>
-                    <div className="space-y-2 mb-5">
+                    <div className="space-y-2.5 mb-6">
                       {plan.features.map((f, i) => (
-                        <div key={i} className="flex items-center gap-2 text-xs sm:text-sm" style={{ color: subtextColor }}>
-                          <span style={{ color: plan.color }}>✓</span> {f}
+                        <div key={i} className="flex items-center gap-2.5 text-xs sm:text-sm" style={{ color: subtextColor }}>
+                          <span className="w-4 h-4 rounded-full flex items-center justify-center text-[10px]" style={{ background: plan.color + '20', color: plan.color }}>✓</span> {f}
                         </div>
                       ))}
                     </div>
-                    <button className="w-full py-2.5 rounded-xl font-bold text-sm uppercase tracking-wider transition-all hover:scale-[1.02]" style={{ background: plan.popular ? accent : 'transparent', color: plan.popular ? '#fff' : accent, border: plan.popular ? 'none' : `2px solid ${accent}` }}>
+                    <button className="w-full py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all hover:brightness-110" style={{ background: plan.popular ? `linear-gradient(135deg, ${accent}, ${accentSecondary})` : 'transparent', color: plan.popular ? '#fff' : accent, border: plan.popular ? 'none' : `2px solid ${accent}40` }}>
                       {lang === "mm" ? "ဝယ်ယူရန်" : "Subscribe"}
                     </button>
                   </div>
                 ))}
               </div>
-              <p className="text-center text-xs mt-4" style={{ color: subtextColor }}>{lang === "mm" ? "ဝယ်ယူရန် Admin ကို Telegram မှ ဆက်သွယ်ပါ" : "Contact Admin via Telegram to subscribe"}</p>
+              <p className="text-center text-xs sm:text-sm mt-6 font-semibold" style={{ color: subtextColor }}>💬 {lang === "mm" ? "ဝယ်ယူရန် Admin ကို Telegram မှ ဆက်သွယ်ပါ" : "Contact Admin via Telegram to subscribe"}</p>
             </div>
           </div>
         )}
@@ -1200,31 +1220,38 @@ export default function TTSGenerator() {
         {/* === GUIDE TAB === */}
         {tab === "guide" && (
           <div className="max-w-3xl mx-auto py-4 sm:py-8 animate-in fade-in zoom-in-95 duration-300">
-            <div className="text-center mb-6">
-              <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-widest mb-2" style={{ color: accent }}>{lang === "mm" ? "အသုံးပြုနည်း လမ်းညွှန်" : "Usage Guide"}</h2>
-              <p className="text-xs sm:text-sm" style={{ color: subtextColor }}>{lang === "mm" ? "Feature တစ်ခုချင်းစီကို အသေးစိတ် ရှင်းပြထားပါသည်" : "Detailed step-by-step guide for every feature"}</p>
+            {/* Header */}
+            <div className="text-center mb-8">
+              <div className="inline-block mb-4">
+                <span className="text-5xl sm:text-6xl font-black uppercase tracking-tighter" style={{ color: accent, textShadow: `0 0 40px ${accent}60` }}>LUMIX</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black uppercase tracking-widest mb-1" style={{ color: textColor }}>{lang === "mm" ? "အသုံးပြုနည်း" : "How to Use"}</h2>
+              <p className="text-xs sm:text-sm" style={{ color: subtextColor }}>{lang === "mm" ? "Feature တစ်ခုချင်းစီ၏ အသေးစိတ် လမ်းညွှန်ချက်" : "Step-by-step guide for every feature"}</p>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-5">
               {/* TTS Guide */}
-              <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
-                <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>🎙️ {lang === "mm" ? "စာမှအသံ (TTS) — အသုံးပြုနည်း" : "Text-to-Speech (TTS) — How to Use"}</div>
-                <div className="space-y-3 mt-3">
+              <div className="rounded-2xl border p-5 sm:p-7" style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="w-10 h-10 rounded-xl flex items-center justify-center text-lg" style={{ background: accent + '15' }}>🎙️</span>
+                  <h3 className="text-base sm:text-lg font-black uppercase tracking-wider" style={{ color: accent }}>{lang === "mm" ? "စာမှအသံ (TTS)" : "Text-to-Speech (TTS)"}</h3>
+                </div>
+                <div className="space-y-2.5 pl-1">
                   {(lang === "mm" ? [
                     "① \"စာမှအသံ\" tab ကို နှိပ်ပါ",
-                    "② စာသားထည့်ပါ (မြန်မာစာ)",
-                    "③ အသံရွေးပါ — သီဟ/နီလာ (Standard) သို့ Character Voice",
-                    "④ Speed နှင့် Pitch ချိန်ညှိပါ (ရွေးချယ်စရာ)",
-                    "⑤ SRT Subtitle လိုရင် Aspect Ratio ရွေးပါ (16:9 / 9:16)",
-                    "⑥ \"ဖန်တီးမည်\" ခလုတ်နှိပ်ပါ",
-                    "⑦ ပြီးလျှင် MP3 နှင့် SRT ကို Download ယူပါ",
+                    "② မြန်မာစာသား ထည့်ပါ",
+                    "③ အသံ ရွေးပါ — Standard သို့ Premium Voice",
+                    "④ Speed နှင့် Pitch လိုအပ်ရင် ချိန်ညှိပါ",
+                    "⑤ SRT Subtitle ရလိုရင် Aspect Ratio ရွေးပါ",
+                    "⑥ \"ဖန်တီးမည်\" နှိပ်ပါ",
+                    "⑦ MP3 နှင့် SRT ကို Download ယူပါ",
                   ] : [
                     "① Click the \"TTS\" tab",
-                    "② Enter your text (Myanmar)",
-                    "③ Select a voice — Thiha/Nilar (Standard) or Character Voice",
-                    "④ Adjust Speed and Pitch (optional)",
-                    "⑤ Choose SRT Aspect Ratio if needed (16:9 / 9:16)",
+                    "② Enter your Myanmar text",
+                    "③ Select a voice — Standard or Premium",
+                    "④ Adjust Speed and Pitch if needed",
+                    "⑤ Choose SRT Aspect Ratio if you want subtitles",
                     "⑥ Click \"Generate\"",
-                    "⑦ Preview and Download MP3/SRT files",
+                    "⑦ Download your MP3 and SRT files",
                   ]).map((step, i) => (
                     <p key={i} className="text-xs sm:text-sm leading-relaxed" style={{ color: textColor }}>{step}</p>
                   ))}
@@ -1232,21 +1259,24 @@ export default function TTSGenerator() {
               </div>
 
               {/* Video Translate Guide */}
-              <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
-                <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>📹 {lang === "mm" ? "ဗီဒီယိုဘာသာပြန် — အသုံးပြုနည်း" : "Video Translation — How to Use"}</div>
-                <div className="space-y-3 mt-3">
+              <div className="rounded-2xl border p-5 sm:p-7" style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="w-10 h-10 rounded-xl flex items-center justify-center text-lg" style={{ background: '#60a5fa15' }}>📹</span>
+                  <h3 className="text-base sm:text-lg font-black uppercase tracking-wider" style={{ color: accent }}>{lang === "mm" ? "ဗီဒီယိုဘာသာပြန်" : "Video Translation"}</h3>
+                </div>
+                <div className="space-y-2.5 pl-1">
                   {(lang === "mm" ? [
                     "① \"ဗီဒီယိုဘာသာပြန်\" tab ကို နှိပ်ပါ",
-                    "② ဗီဒီယိုဖိုင် တင်ပါ (25MB အောက်) သို့ YouTube/TikTok/Facebook Link ထည့်ပါ",
-                    "③ \"မြန်မာဘာသာပြန်မည်\" ခလုတ်နှိပ်ပါ",
-                    "④ ၁-၃ မိနစ် စောင့်ပါ (ဗီဒီယိုအရှည်ပေါ်မူတည်)",
-                    "⑤ ဘာသာပြန်ရလဒ် (မြန်မာစာ) ကို ကြည့်ပါ/ကော်ပီကူးပါ",
+                    "② ဗီဒီယိုဖိုင် တင်ပါ (25MB အောက်) သို့ Link ထည့်ပါ",
+                    "③ \"မြန်မာဘာသာပြန်မည်\" နှိပ်ပါ",
+                    "④ ၁-၃ မိနစ် စောင့်ပါ",
+                    "⑤ ရလဒ်ကို ကြည့်ပါ / ကော်ပီကူးပါ",
                   ] : [
                     "① Click the \"Translate\" tab",
-                    "② Upload a video file (under 25MB) or paste YouTube/TikTok/Facebook link",
+                    "② Upload a video (under 25MB) or paste a link",
                     "③ Click \"Translate to Myanmar\"",
-                    "④ Wait 1-3 minutes (depends on video length)",
-                    "⑤ View/copy the Myanmar translation result",
+                    "④ Wait 1-3 minutes",
+                    "⑤ View or copy the translation result",
                   ]).map((step, i) => (
                     <p key={i} className="text-xs sm:text-sm leading-relaxed" style={{ color: textColor }}>{step}</p>
                   ))}
@@ -1254,27 +1284,30 @@ export default function TTSGenerator() {
               </div>
 
               {/* AI Video Guide */}
-              <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
-                <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>🎬 {lang === "mm" ? "All-in-One Video Maker — အသုံးပြုနည်း" : "All-in-One Video Maker — How to Use"}</div>
-                <div className="space-y-3 mt-3">
+              <div className="rounded-2xl border p-5 sm:p-7" style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="w-10 h-10 rounded-xl flex items-center justify-center text-lg" style={{ background: '#4ade8015' }}>🎬</span>
+                  <h3 className="text-base sm:text-lg font-black uppercase tracking-wider" style={{ color: accent }}>{lang === "mm" ? "All-in-One Video Maker" : "All-in-One Video Maker"}</h3>
+                </div>
+                <div className="space-y-2.5 pl-1">
                   {(lang === "mm" ? [
                     "① \"AI Video\" tab ကို နှိပ်ပါ",
                     "② ဗီဒီယိုဖိုင် တင်ပါ (25MB အောက်) သို့ Link ထည့်ပါ",
-                    "③ ဗီဒီယိုကို Preview ကြည့်ပြီး \"ဆက်လုပ်မည်\" နှိပ်ပါ",
-                    "④ အသံရွေးပါ — Standard (သီဟ/နီလာ) သို့ Character Voice",
-                    "⑤ Speed / Pitch ချိန်ညှိပါ (ရွေးချယ်စရာ)",
-                    "⑥ စာတန်းထိုး ဆက်တင် — အရွယ်အစား, အရောင်, နောက်ခံ, အနေအထား ရွေးပါ",
-                    "⑦ \"AI ဖြင့် ဖန်တီးမည်\" နှိပ်ပါ (၃-၅ မိနစ် ကြာနိုင်)",
-                    "⑧ ပြီးဆုံးသော ဗီဒီယိုကို ကြည့်ပြီး MP4 Download ယူပါ",
+                    "③ ဗီဒီယို Preview ကြည့်ပြီး \"ဆက်လုပ်မည်\" နှိပ်ပါ",
+                    "④ အသံ ရွေးပါ — Standard သို့ Premium Voice",
+                    "⑤ Speed / Pitch ချိန်ညှိပါ",
+                    "⑥ စာတန်းထိုး ဆက်တင် ရွေးပါ",
+                    "⑦ \"ဖန်တီးမည်\" နှိပ်ပါ (၃-၅ မိနစ် ကြာနိုင်)",
+                    "⑧ ရလဒ်ဗီဒီယိုကို Download ယူပါ",
                   ] : [
                     "① Click the \"AI Video\" tab",
-                    "② Upload a video file (under 25MB) or paste a link",
-                    "③ Preview the video and click \"Continue\"",
-                    "④ Select a voice — Standard (Thiha/Nilar) or Character Voice",
-                    "⑤ Adjust Speed / Pitch (optional)",
-                    "⑥ Configure subtitle settings — size, color, background, position",
-                    "⑦ Click \"Generate with AI\" (may take 3-5 minutes)",
-                    "⑧ Watch the result and Download MP4",
+                    "② Upload a video (under 25MB) or paste a link",
+                    "③ Preview and click \"Continue\"",
+                    "④ Select a voice — Standard or Premium",
+                    "⑤ Adjust Speed / Pitch",
+                    "⑥ Configure subtitle settings",
+                    "⑦ Click \"Generate\" (may take 3-5 minutes)",
+                    "⑧ Download the final video",
                   ]).map((step, i) => (
                     <p key={i} className="text-xs sm:text-sm leading-relaxed" style={{ color: textColor }}>{step}</p>
                   ))}
@@ -1282,22 +1315,23 @@ export default function TTSGenerator() {
               </div>
 
               {/* Tips */}
-              <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
-                <div className={labelStyle} style={{ background: labelBg, color: '#f59e0b', borderColor: cardBorder }}>💡 {lang === "mm" ? "အသုံးဝင်သော Tips" : "Useful Tips"}</div>
-                <div className="space-y-3 mt-3">
+              <div className="rounded-2xl border p-5 sm:p-7" style={{ background: `linear-gradient(135deg, ${isDark ? 'rgba(245,158,11,0.05)' : 'rgba(245,158,11,0.03)'}, ${cardBg})`, borderColor: '#f59e0b30', boxShadow }}>
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="w-10 h-10 rounded-xl flex items-center justify-center text-lg" style={{ background: '#f59e0b15' }}>💡</span>
+                  <h3 className="text-base sm:text-lg font-black uppercase tracking-wider" style={{ color: '#f59e0b' }}>{lang === "mm" ? "Tips" : "Tips"}</h3>
+                </div>
+                <div className="space-y-2.5 pl-1">
                   {(lang === "mm" ? [
-                    "• Standard Voice (သီဟ/နီလာ) — စာလုံး ၂၀,၀၀၀ အထိ ရိုက်နိုင်ပါသည်",
-                    "• Character Voice — စာလုံး ၁,၆၀၀ အထိ ရိုက်နိုင်ပါသည်",
-                    "• ဗီဒီယို အများဆုံး 25MB အထိ တင်နိုင်ပါသည်",
-                    "• YouTube, TikTok, Facebook Link များ အသုံးပြုနိုင်ပါသည်",
-                    "• Trial Plan — ရက် ၇ ရက် အစမ်းသုံးနိုင်ပါသည်",
+                    "• Standard Voice — စာလုံး ၂၀,၀၀၀ အထိ ရိုက်နိုင်",
+                    "• Premium Voice — စာလုံး ၁,၆၀၀ အထိ ရိုက်နိုင်",
+                    "• ဗီဒီယို အများဆုံး 25MB အထိ တင်နိုင်",
+                    "• YouTube, TikTok, Facebook Link များ သုံးနိုင်",
                     "• ပြဿနာ ရှိပါက Admin ကို Telegram မှ ဆက်သွယ်ပါ",
                   ] : [
-                    "• Standard Voice (Thiha/Nilar) — up to 20,000 characters",
-                    "• Character Voice — up to 1,600 characters",
-                    "• Maximum video upload size: 25MB",
-                    "• Supported links: YouTube, TikTok, Facebook",
-                    "• Trial Plan — 7 days free trial",
+                    "• Standard Voice — up to 20,000 characters",
+                    "• Premium Voice — up to 1,600 characters",
+                    "• Max video upload: 25MB",
+                    "• Supported: YouTube, TikTok, Facebook links",
                     "• Contact Admin via Telegram for support",
                   ]).map((tip, i) => (
                     <p key={i} className="text-xs sm:text-sm leading-relaxed" style={{ color: subtextColor }}>{tip}</p>
