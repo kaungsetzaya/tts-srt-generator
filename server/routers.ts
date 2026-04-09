@@ -13,7 +13,7 @@ import { eq, desc, and, gte, sql } from "drizzle-orm";
 import { SignJWT } from "jose";
 import { nanoid } from "nanoid";
 import { checkRateLimit, clearRateLimit } from "./_core/rateLimit";
-import { auditLog } from "./_core/security";
+import { auditLog, isAllowedVideoUrl, isValidVideoBuffer, isValidCharacterId, isValidVoiceId, validateBase64VideoPrefix, sanitizeForAI } from "./_core/security";
 
 // 🔐 JWT Secret — .env မှာ မသတ်မှတ်ရင် production တွင် crash ဖြစ်မည်
 if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
@@ -40,26 +40,87 @@ function sanitizeText(text: string): string {
   return text.replace(/\0/g, "").replace(/[<>]/g, "").trim();
 }
 
+// ─── TRIAL-BASED USAGE LIMITS (total, not daily) ───────────────────────────
+type TrialLimits = {
+  charLimitStandard: number;   // Thiha/Nilar char limit per generation
+  charLimitCharacter: number;  // Other characters char limit per generation
+  totalTtsSrt: number;         // Total TTS+SRT generations (trial period)
+  totalCharacterUse: number;   // Total character voice uses
+  totalAiVideo: number;        // Total AI Video uses (thiha/nilar)
+  totalAiVideoChar: number;    // Total AI Video uses (character)
+  totalVideoTranslate: number; // Total video translation uses
+  maxVideoSizeMB: number;
+  maxVideoDurationSec: number; // Max video duration for translate
+  maxAiVideoDurationSecStd: number; // Max duration for AI video standard voice
+  maxAiVideoDurationSecChar: number; // Max duration for AI video character voice
+};
+
 // ─── PLAN-BASED USAGE LIMITS ───────────────────────────
 type PlanLimits = {
-  charLimitStandard: number;   // Thiha/Nilar character limit
-  charLimitCharacter: number;  // Murf VC characters limit
-  dailyTtsSrt: number;         // Daily TTS+SRT generations
-  dailyCharacterUse: number;   // Daily character voice uses
-  dailyAiVideo: number;        // Daily AI Video (dubbing) uses
-  dailyVideoTranslate: number; // Daily video translation uses
+  charLimitStandard: number;
+  charLimitCharacter: number;
+  dailyTtsSrt: number;
+  dailyCharacterUse: number;
+  dailyAiVideo: number;
+  dailyVideoTranslate: number;
 };
+
+function getTrialLimits(): TrialLimits {
+  return {
+    charLimitStandard: 20000,    // Thiha/Nilar: 20,000 chars
+    charLimitCharacter: 1600,    // Other characters: 1,600 chars
+    totalTtsSrt: 7,              // 7 total TTS uses
+    totalCharacterUse: 2,        // 2 total character uses
+    totalAiVideo: 2,             // AI Video: 2 uses (thiha/nilar) or 1 + 1 char
+    totalAiVideoChar: 1,         // AI Video character: 1 use  
+    totalVideoTranslate: 2,      // Video translate: 2 total
+    maxVideoSizeMB: 25,
+    maxVideoDurationSec: 150,    // 2min 30sec
+    maxAiVideoDurationSecStd: 180, // 3min for thiha/nilar
+    maxAiVideoDurationSecChar: 90, // 1min 30sec for character
+  };
+}
 
 function getPlanLimits(plan: string | null): PlanLimits {
   if (!plan) {
-    // No plan at all — cannot use anything
     return { charLimitStandard: 0, charLimitCharacter: 0, dailyTtsSrt: 0, dailyCharacterUse: 0, dailyAiVideo: 0, dailyVideoTranslate: 0 };
   }
   if (plan === "trial") {
-    return { charLimitStandard: 5000, charLimitCharacter: 1600, dailyTtsSrt: 3, dailyCharacterUse: 2, dailyAiVideo: 1, dailyVideoTranslate: 2 };
+    // Trial uses TOTAL limits (not daily) — handled separately
+    // These daily values are high enough to not block within the total limits
+    return { charLimitStandard: 20000, charLimitCharacter: 1600, dailyTtsSrt: 999, dailyCharacterUse: 999, dailyAiVideo: 999, dailyVideoTranslate: 999 };
   }
   // All paid plans (1month, 3month, 6month, lifetime)
   return { charLimitStandard: 10000, charLimitCharacter: 2000, dailyTtsSrt: 999, dailyCharacterUse: 999, dailyAiVideo: 999, dailyVideoTranslate: 999 };
+}
+
+// Get TOTAL usage for trial users (entire trial period)
+async function getTrialTotalUsage(userId: string) {
+  const db = await getDb();
+  if (!db) return { tts: 0, characterUse: 0, aiVideo: 0, aiVideoChar: 0, videoTranslate: 0 };
+  const allGens = await db.select().from(ttsConversions)
+    .where(eq(ttsConversions.userId, userId));
+  let tts = 0, characterUse = 0, aiVideo = 0, aiVideoChar = 0, videoTranslate = 0;
+  for (const g of allGens) {
+    if (g.status === "fail") continue;
+    const feat = g.feature ?? "tts";
+    if (feat === "tts") {
+      if (g.character && g.character.trim() !== "") {
+        characterUse++;
+      } else {
+        tts++;
+      }
+    } else if (feat === "dub_file" || feat === "dub_link") {
+      if (g.character && g.character.trim() !== "") {
+        aiVideoChar++;
+      } else {
+        aiVideo++;
+      }
+    } else if (feat === "translate_file" || feat === "translate_link") {
+      videoTranslate++;
+    }
+  }
+  return { tts, characterUse, aiVideo, aiVideoChar, videoTranslate };
 }
 
 async function getDailyUsage(userId: string) {
@@ -97,11 +158,11 @@ export const appRouter = router({
     loginWithCode: publicProcedure
       .input(z.object({ code: z.string().length(6).regex(/^\d{6}$/) }))
       .mutation(async ({ input, ctx }) => {
-        // ✅ Rate Limit: 1 မိနစ်အတွင်း ၅ ကြိမ်သာ
+        // ✅ Rate Limit: 15 minutes window, 5 attempts
         const ip = (ctx.req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim()
           || ctx.req.ip || "unknown";
-        if (!checkRateLimit(ip, 5, 60 * 1000)) {
-          throw new Error("Too many login attempts. Please wait 1 minute before trying again.");
+        if (!checkRateLimit(ip, 5, 15 * 60 * 1000)) {
+          throw new Error("Too many login attempts. Please wait 15 minutes before trying again.");
         }
         const db = await getDb();
         if (!db) throw new Error("Database not available");
@@ -111,28 +172,38 @@ export const appRouter = router({
           throw new Error("Invalid code. Get your code from Telegram bot.");
         }
         const user = result[0];
+
+        // 🔐 Dynamic OTP: Check code expiry (10 minutes)
+        if (user.telegramCodeExpiresAt) {
+          const expiresAt = new Date(user.telegramCodeExpiresAt);
+          if (Date.now() > expiresAt.getTime()) {
+            throw new Error("Code expired. Please get a new code from Telegram bot.");
+          }
+        }
+
         clearRateLimit(ip);
-        // Allow all users to login regardless of subscription status
-        // Usage limits are enforced at the feature level, not at login
-        // 🔐 One-Device Session: login တိုင်း session_token အသစ်ထုတ်မည်
-        //    အဟောင်း JWT ထဲက session_token သည် DB နှင့် မတူတော့လို့ invalidate ဖြစ်မည်
+
+        // 🔐 Invalidate the code after use (one-time use)
         const sessionToken = nanoid(24);
         const token = await new SignJWT({
           userId: user.id,
           telegramId: user.telegramId,
           name: user.telegramFirstName,
           role: user.role,
-          sid: sessionToken,  // session identifier
+          sid: sessionToken,
         })
           .setProtectedHeader({ alg: "HS256" })
           .setExpirationTime("30d")
           .sign(JWT_SECRET);
-        // DB ထဲ sessionToken + lastLoginAt update
+
+        // DB: update sessionToken + lastLoginAt + clear the code
         try {
           const db2 = await getDb();
           if (db2) await db2.update(users).set({
             lastLoginAt: new Date(),
             sessionToken: sessionToken,
+            telegramCode: null,  // 🔐 One-time use: clear code after login
+            telegramCodeExpiresAt: null,
           }).where(eq(users.id, user.id));
         } catch {}
         const cookieOptions = getSessionCookieOptions(ctx.req);
@@ -184,7 +255,7 @@ export const appRouter = router({
         trialDays: z.number().min(1).max(365).optional(),
         note: z.string().max(500).optional(),
         paymentMethod: z.string().max(30).optional(),
-        paymentSlip: z.string().optional(),  // base64 image
+        paymentSlip: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user?.role !== "admin") throw new Error("Unauthorized");
@@ -193,7 +264,7 @@ export const appRouter = router({
         const now = new Date();
         let expiresAt: Date;
         switch (input.plan) {
-          case "trial": expiresAt = addDays(now, input.trialDays ?? 3); break;
+          case "trial": expiresAt = addDays(now, input.trialDays ?? 7); break;
           case "1month": expiresAt = addMonths(now, 1); break;
           case "3month": expiresAt = addMonths(now, 3); break;
           case "6month": expiresAt = addMonths(now, 6); break;
@@ -244,9 +315,7 @@ export const appRouter = router({
         if (!ctx.user || ctx.user.role !== "admin") throw new Error("Unauthorized");
         const db = await getDb();
         if (!db) throw new Error("DB error");
-        // Don't allow deleting yourself
         if (input.userId === ctx.user.userId) throw new Error("Cannot delete your own account.");
-        // Delete related data first, then the user
         await db.delete(ttsConversions).where(eq(ttsConversions.userId, input.userId));
         await db.delete(subscriptions).where(eq(subscriptions.userId, input.userId));
         await db.delete(users).where(eq(users.id, input.userId));
@@ -256,17 +325,21 @@ export const appRouter = router({
     getServerHealth: publicProcedure
       .query(async ({ ctx }) => {
         if (!ctx.user || ctx.user.role !== "admin") throw new Error("Unauthorized");
-        const { execSync } = await import("child_process");
+        const os = await import("os");
         const toMB = (b: number) => Math.round(b / 1024 / 1024);
         const mem = process.memoryUsage();
-        let cpu = "0", disk = "0/0", dbSize = "0";
-        try { cpu = execSync("top -bn1 | grep 'Cpu(s)' | awk '{print $2}'").toString().trim(); } catch {}
-        try { disk = execSync("df -h / | tail -1 | awk '{print $3"/"$2}'").toString().trim(); } catch {}
+        const totalMem = os.totalmem();
+        const freeMem = os.freemem();
+        const cpus = os.cpus();
+        const cpuUsage = cpus.length > 0 ? Math.round(cpus.reduce((sum, cpu) => {
+          const total = Object.values(cpu.times).reduce((a, b) => a + b, 0);
+          return sum + ((total - cpu.times.idle) / total) * 100;
+        }, 0) / cpus.length) : 0;
 
         return {
-          memory: { used: toMB(mem.rss), heap: toMB(mem.heapUsed), total: toMB(mem.heapTotal) },
-          cpu,
-          disk,
+          memory: { used: toMB(mem.rss), heap: toMB(mem.heapUsed), total: toMB(totalMem), free: toMB(freeMem), usagePercent: Math.round(((totalMem - freeMem) / totalMem) * 100) },
+          cpu: String(cpuUsage),
+          disk: "N/A",
           uptime: Math.floor(process.uptime()),
           nodeVersion: process.version,
         };
@@ -318,6 +391,10 @@ export const appRouter = router({
       }),
     translateLink: publicProcedure.input(z.object({ url: z.string() })).mutation(async ({ input, ctx }) => {
       if (!ctx.user) throw new Error("Please login first.");
+      // 🔐 yt-dlp Domain Whitelist
+      if (!isAllowedVideoUrl(input.url)) {
+        throw new Error("ခွင့်ပြုထားသော Link များသာ သုံးနိုင်ပါသည်။ YouTube, TikTok, Facebook Link သာ ထည့်ပါ။");
+      }
       const db = await getDb();
       if (ctx.user.role !== "admin" && db) {
         const now = new Date();
@@ -325,30 +402,32 @@ export const appRouter = router({
           .where(and(eq(subscriptions.userId, ctx.user.userId), gte(subscriptions.expiresAt, now))).limit(1);
         const plan = sub.length > 0 ? sub[0].plan : null;
         if (!plan) throw new Error("Subscription မရှိပါ။ Admin ကို ဆက်သွယ်ပါ။");
-        const limits = getPlanLimits(plan);
-        const usage = await getDailyUsage(ctx.user.userId);
-        if (usage.videoTranslate >= limits.dailyVideoTranslate) throw new Error(`ယနေ့ Video Translation ကန့်သတ်ချက် (${limits.dailyVideoTranslate} ကြိမ်) ပြည့်သွားပါပြီ။`);
+        if (plan === "trial") {
+          const trialUsage = await getTrialTotalUsage(ctx.user.userId);
+          const trialLimits = getTrialLimits();
+          if (trialUsage.videoTranslate >= trialLimits.totalVideoTranslate) throw new Error("Trial ကာလအတွင်း Video Translation အကြိမ်အရေအတွက် ပြည့်သွားပါပြီ။");
+        }
       }
       try {
         const result = await translateVideoLink(input.url);
-        // Track usage
         if (db && ctx.user) {
           const { nanoid: nid } = await import("nanoid");
           await db.insert(ttsConversions).values({ id: nid(10), userId: ctx.user.userId, feature: "translate_link", status: "success" }).catch(() => {});
         }
         return { success: true, ...result };
       } catch (error: any) {
-        // Sanitize: don't expose raw command output / server paths to frontend
+        // Track failed attempt for trial refund
+        if (db && ctx.user) {
+          const { nanoid: nid } = await import("nanoid");
+          await db.insert(ttsConversions).values({ id: nid(10), userId: ctx.user.userId, feature: "translate_link", status: "fail", errorMsg: (error?.message ?? "unknown").slice(0, 499) }).catch(() => {});
+        }
         const rawMsg = error.message ?? "Link translation failed.";
         let userMsg = rawMsg;
         if (rawMsg.includes("Command failed:") || rawMsg.includes("/tmp/") || rawMsg.includes("/root/")) {
-          // Extract only the meaningful part
           if (rawMsg.includes("n challenge solving failed")) {
-            userMsg = "YouTube ဗီဒီယိုကို ဒေါင်းလုတ်မရပါ။ yt-dlp version အဟောင်းကြောင့် ဖြစ်ပါသည်။ Admin ကို ဆက်သွယ်ပါ။";
+            userMsg = "YouTube ဗီဒီယိုကို ဒေါင်းလုတ်မရပါ။ Admin ကို ဆက်သွယ်ပါ။";
           } else if (rawMsg.includes("Requested format is not available")) {
             userMsg = "ဗီဒီယို format ရနိုင်ခြင်းမရှိပါ။ တခြား link ဖြင့် ထပ်ကြိုးစားပါ။";
-          } else if (rawMsg.includes("ဗီဒီယိုကို ဒေါင်းလုတ်မရပါ")) {
-            userMsg = rawMsg.split("\n")[0]; // First line only
           } else {
             userMsg = "ဗီဒီယိုကို ဒေါင်းလုတ်မရပါ။ Link ကို စစ်ပြီး ထပ်ကြိုးစားပါ။";
           }
@@ -363,6 +442,10 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user) throw new Error("Please login first.");
+        // 🔐 Base64 prefix validation
+        if (!validateBase64VideoPrefix(input.videoBase64)) {
+          throw new Error("Invalid video format.");
+        }
         const db = await getDb();
         if (ctx.user.role !== "admin" && db) {
           const now = new Date();
@@ -371,21 +454,29 @@ export const appRouter = router({
             .limit(1);
           const plan = sub.length > 0 ? sub[0].plan : null;
           if (!plan) throw new Error("Subscription မရှိပါ။ Admin ကို ဆက်သွယ်ပါ။");
-          const limits = getPlanLimits(plan);
-          const usage = await getDailyUsage(ctx.user.userId);
-          if (usage.videoTranslate >= limits.dailyVideoTranslate) throw new Error(`ယနေ့ Video Translation ကန့်သတ်ချက် (${limits.dailyVideoTranslate} ကြိမ်) ပြည့်သွားပါပြီ။`);
+          if (plan === "trial") {
+            const trialUsage = await getTrialTotalUsage(ctx.user.userId);
+            const trialLimits = getTrialLimits();
+            if (trialUsage.videoTranslate >= trialLimits.totalVideoTranslate) throw new Error("Trial ကာလအတွင်း Video Translation အကြိမ်အရေအတွက် ပြည့်သွားပါပြီ။");
+          }
         }
         try {
-          const videoBuffer = Buffer.from(input.videoBase64, "base64");
+          const rawBase64 = input.videoBase64.includes(",") ? input.videoBase64.split(",")[1] : input.videoBase64;
+          const videoBuffer = Buffer.from(rawBase64, "base64");
           if (videoBuffer.length > 25 * 1024 * 1024) throw new Error("ဖိုင်အကြီးလွန်ပါသည်။ အများဆုံး 25MB အထိသာ တင်နိုင်ပါသည်။");
+          // 🔐 Magic bytes validation
+          if (!isValidVideoBuffer(videoBuffer)) throw new Error("ဗီဒီယို ဖိုင် format မမှန်ပါ။ MP4, MOV, AVI, MKV, WebM ဖိုင်များသာ တင်နိုင်ပါသည်။");
           const result = await translateVideo(videoBuffer, input.filename);
-          // Track usage
           if (db && ctx.user) {
             const { nanoid: nid } = await import("nanoid");
             await db.insert(ttsConversions).values({ id: nid(10), userId: ctx.user.userId, feature: "translate_file", status: "success" }).catch(() => {});
           }
           return { success: true, ...result };
         } catch (error: any) {
+          if (db && ctx.user) {
+            const { nanoid: nid } = await import("nanoid");
+            await db.insert(ttsConversions).values({ id: nid(10), userId: ctx.user.userId, feature: "translate_file", status: "fail", errorMsg: (error?.message ?? "unknown").slice(0, 499) }).catch(() => {});
+          }
           const rawMsg = error.message ?? "Translation failed.";
           let userMsg = rawMsg;
           if (rawMsg.includes("Command failed") || rawMsg.includes("/tmp/") || rawMsg.includes("/root/")) {
@@ -419,7 +510,11 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user) throw new Error("Please login first.");
+        // 🔐 Voice ID whitelist
+        if (input.character && !isValidCharacterId(input.character)) throw new Error("Invalid character voice.");
+        if (!validateBase64VideoPrefix(input.videoBase64)) throw new Error("Invalid video format.");
         const db = await getDb();
+        const isCharVoice = !!(input.character && input.character.trim() !== "");
         if (ctx.user.role !== "admin" && db) {
           const now = new Date();
           const sub = await db.select().from(subscriptions)
@@ -427,43 +522,46 @@ export const appRouter = router({
             .limit(1);
           const plan = sub.length > 0 ? sub[0].plan : null;
           if (!plan) throw new Error("Subscription မရှိပါ။ Admin ကို ဆက်သွယ်ပါ။");
-          const limits = getPlanLimits(plan);
-          const usage = await getDailyUsage(ctx.user.userId);
-          if (usage.aiVideo >= limits.dailyAiVideo) throw new Error(`ယနေ့ AI Video ကန့်သတ်ချက် (${limits.dailyAiVideo} ကြိမ်) ပြည့်သွားပါပြီ။`);
+          if (plan === "trial") {
+            const trialUsage = await getTrialTotalUsage(ctx.user.userId);
+            const trialLimits = getTrialLimits();
+            if (isCharVoice) {
+              if (trialUsage.aiVideoChar >= trialLimits.totalAiVideoChar) throw new Error("Trial ကာလအတွင်း AI Video (Character Voice) အကြိမ်အရေအတွက် ပြည့်သွားပါပြီ။");
+            } else {
+              if (trialUsage.aiVideo >= trialLimits.totalAiVideo) throw new Error("Trial ကာလအတွင်း AI Video အကြိမ်အရေအတွက် ပြည့်သွားပါပြီ။");
+            }
+          }
         }
         try {
-          const videoBuffer = Buffer.from(input.videoBase64, "base64");
+          const rawBase64 = input.videoBase64.includes(",") ? input.videoBase64.split(",")[1] : input.videoBase64;
+          const videoBuffer = Buffer.from(rawBase64, "base64");
           if (videoBuffer.length > 25 * 1024 * 1024) throw new Error("ဖိုင်အကြီးလွန်ပါသည်။ အများဆုံး 25MB အထိသာ တင်နိုင်ပါသည်။");
+          if (!isValidVideoBuffer(videoBuffer)) throw new Error("ဗီဒီယို ဖိုင် format မမှန်ပါ။");
           const dubOpts: DubOptions = {
-            voice: input.voice,
-            character: input.character,
-            speed: input.speed,
-            pitch: input.pitch,
-            srtEnabled: input.srtEnabled,
-            srtFontSize: input.srtFontSize,
-            srtColor: input.srtColor,
-            srtDropShadow: input.srtDropShadow,
-            srtBlurBg: input.srtBlurBg,
-            srtMarginV: input.srtMarginV,
-            srtBlurSize: input.srtBlurSize,
-            srtBlurColor: input.srtBlurColor,
-            srtFullWidth: input.srtFullWidth,
+            voice: input.voice, character: input.character, speed: input.speed, pitch: input.pitch,
+            srtEnabled: input.srtEnabled, srtFontSize: input.srtFontSize, srtColor: input.srtColor,
+            srtDropShadow: input.srtDropShadow, srtBlurBg: input.srtBlurBg, srtMarginV: input.srtMarginV,
+            srtBlurSize: input.srtBlurSize, srtBlurColor: input.srtBlurColor, srtFullWidth: input.srtFullWidth,
             srtBorderRadius: input.srtBorderRadius,
           };
           const result = await dubVideoFromBuffer(videoBuffer, input.filename, dubOpts);
-          // Track usage
           if (db && ctx.user) {
             const { nanoid: nid } = await import("nanoid");
-            await db.insert(ttsConversions).values({ id: nid(10), userId: ctx.user.userId, feature: "dub_file", status: "success" }).catch(() => {});
+            await db.insert(ttsConversions).values({ id: nid(10), userId: ctx.user.userId, feature: "dub_file", character: input.character || undefined, status: "success" }).catch(() => {});
           }
           return { success: true, ...result };
         } catch (error: any) {
+          // Track failure for trial refund
+          if (db && ctx.user) {
+            const { nanoid: nid } = await import("nanoid");
+            await db.insert(ttsConversions).values({ id: nid(10), userId: ctx.user.userId, feature: "dub_file", character: input.character || undefined, status: "fail", errorMsg: (error?.message ?? "unknown").slice(0, 499) }).catch(() => {});
+          }
           const rawMsg = error.message ?? "Dubbing failed.";
           let userMsg = rawMsg;
           if (rawMsg.includes("Command failed") || rawMsg.includes("/tmp/") || rawMsg.includes("/root/")) {
             userMsg = "ဗီဒီယို ဖန်တီး၍ မရပါ။ ထပ်ကြိုးစားပါ။";
           } else if (rawMsg.includes("Whisper")) {
-            userMsg = "ဗီဒီယိုတွင် စကားပြောသံ ရှာမတွေ့ပါ။ အသံပါသော ဗီဒီယိုကို ထပ်ကြိုးစားပါ။";
+            userMsg = "ဗီဒီယိုတွင် စကားပြောသံ ရှာမတွေ့ပါ။";
           } else if (rawMsg.includes("MURF_API_KEY")) {
             userMsg = "Voice Change စနစ် ပြင်ဆင်ဆဲဖြစ်ပါသည်။ Standard Voice ကို သုံးပါ။";
           }
@@ -492,7 +590,10 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user) throw new Error("Please login first.");
+        if (!isAllowedVideoUrl(input.url)) throw new Error("ခွင့်ပြုထားသော Link များသာ သုံးနိုင်ပါသည်။ YouTube, TikTok, Facebook Link သာ ထည့်ပါ။");
+        if (input.character && !isValidCharacterId(input.character)) throw new Error("Invalid character voice.");
         const db = await getDb();
+        const isCharVoice = !!(input.character && input.character.trim() !== "");
         if (ctx.user.role !== "admin" && db) {
           const now = new Date();
           const sub = await db.select().from(subscriptions)
@@ -500,35 +601,35 @@ export const appRouter = router({
             .limit(1);
           const plan = sub.length > 0 ? sub[0].plan : null;
           if (!plan) throw new Error("Subscription မရှိပါ။ Admin ကို ဆက်သွယ်ပါ။");
-          const limits = getPlanLimits(plan);
-          const usage = await getDailyUsage(ctx.user.userId);
-          if (usage.aiVideo >= limits.dailyAiVideo) throw new Error(`ယနေ့ AI Video ကန့်သတ်ချက် (${limits.dailyAiVideo} ကြိမ်) ပြည့်သွားပါပြီ။`);
+          if (plan === "trial") {
+            const trialUsage = await getTrialTotalUsage(ctx.user.userId);
+            const trialLimits = getTrialLimits();
+            if (isCharVoice) {
+              if (trialUsage.aiVideoChar >= trialLimits.totalAiVideoChar) throw new Error("Trial ကာလအတွင်း AI Video (Character Voice) အကြိမ်အရေအတွက် ပြည့်သွားပါပြီ။");
+            } else {
+              if (trialUsage.aiVideo >= trialLimits.totalAiVideo) throw new Error("Trial ကာလအတွင်း AI Video အကြိမ်အရေအတွက် ပြည့်သွားပါပြီ။");
+            }
+          }
         }
         try {
           const dubOpts: DubOptions = {
-            voice: input.voice,
-            character: input.character,
-            speed: input.speed,
-            pitch: input.pitch,
-            srtEnabled: input.srtEnabled,
-            srtFontSize: input.srtFontSize,
-            srtColor: input.srtColor,
-            srtDropShadow: input.srtDropShadow,
-            srtBlurBg: input.srtBlurBg,
-            srtMarginV: input.srtMarginV,
-            srtBlurSize: input.srtBlurSize,
-            srtBlurColor: input.srtBlurColor,
-            srtFullWidth: input.srtFullWidth,
+            voice: input.voice, character: input.character, speed: input.speed, pitch: input.pitch,
+            srtEnabled: input.srtEnabled, srtFontSize: input.srtFontSize, srtColor: input.srtColor,
+            srtDropShadow: input.srtDropShadow, srtBlurBg: input.srtBlurBg, srtMarginV: input.srtMarginV,
+            srtBlurSize: input.srtBlurSize, srtBlurColor: input.srtBlurColor, srtFullWidth: input.srtFullWidth,
             srtBorderRadius: input.srtBorderRadius,
           };
           const result = await dubVideoFromLink(input.url, dubOpts);
-          // Track usage
           if (db && ctx.user) {
             const { nanoid: nid } = await import("nanoid");
-            await db.insert(ttsConversions).values({ id: nid(10), userId: ctx.user.userId, feature: "dub_link", status: "success" }).catch(() => {});
+            await db.insert(ttsConversions).values({ id: nid(10), userId: ctx.user.userId, feature: "dub_link", character: input.character || undefined, status: "success" }).catch(() => {});
           }
           return { success: true, ...result };
         } catch (error: any) {
+          if (db && ctx.user) {
+            const { nanoid: nid } = await import("nanoid");
+            await db.insert(ttsConversions).values({ id: nid(10), userId: ctx.user.userId, feature: "dub_link", character: input.character || undefined, status: "fail", errorMsg: (error?.message ?? "unknown").slice(0, 499) }).catch(() => {});
+          }
           const rawMsg = error.message ?? "Link dubbing failed.";
           let userMsg = rawMsg;
           if (rawMsg.includes("Command failed:") || rawMsg.includes("/tmp/") || rawMsg.includes("/root/")) {
@@ -538,12 +639,13 @@ export const appRouter = router({
         }
       }),
   }),
+
   subscription: router({
     myStatus: publicProcedure.query(async ({ ctx }) => {
-      if (!ctx.user) return { active: false, plan: null, expiresAt: null, limits: getPlanLimits(null), usage: { tts: 0, characterUse: 0, aiVideo: 0, videoTranslate: 0 } };
-      if (ctx.user.role === "admin") return { active: true, plan: "admin", expiresAt: null, limits: getPlanLimits("lifetime"), usage: { tts: 0, characterUse: 0, aiVideo: 0, videoTranslate: 0 } };
+      if (!ctx.user) return { active: false, plan: null, expiresAt: null, limits: getPlanLimits(null), usage: { tts: 0, characterUse: 0, aiVideo: 0, videoTranslate: 0 }, trialUsage: null, trialLimits: null };
+      if (ctx.user.role === "admin") return { active: true, plan: "admin", expiresAt: null, limits: getPlanLimits("lifetime"), usage: { tts: 0, characterUse: 0, aiVideo: 0, videoTranslate: 0 }, trialUsage: null, trialLimits: null };
       const db = await getDb();
-      if (!db) return { active: false, plan: null, expiresAt: null, limits: getPlanLimits(null), usage: { tts: 0, characterUse: 0, aiVideo: 0, videoTranslate: 0 } };
+      if (!db) return { active: false, plan: null, expiresAt: null, limits: getPlanLimits(null), usage: { tts: 0, characterUse: 0, aiVideo: 0, videoTranslate: 0 }, trialUsage: null, trialLimits: null };
       const now = new Date();
       const result = await db.select().from(subscriptions)
         .where(and(eq(subscriptions.userId, ctx.user.userId), gte(subscriptions.expiresAt, now)))
@@ -552,9 +654,43 @@ export const appRouter = router({
       const plan = result.length > 0 ? result[0].plan : null;
       const limits = getPlanLimits(plan);
       const usage = await getDailyUsage(ctx.user.userId);
-      if (result.length === 0) return { active: false, plan: null, expiresAt: null, limits, usage };
-      return { active: true, plan: result[0].plan, expiresAt: result[0].expiresAt, limits, usage };
+      
+      // For trial users, also return total usage
+      let trialUsage = null;
+      let trialLimitsData = null;
+      if (plan === "trial") {
+        trialUsage = await getTrialTotalUsage(ctx.user.userId);
+        trialLimitsData = getTrialLimits();
+      }
+      
+      if (result.length === 0) return { active: false, plan: null, expiresAt: null, limits, usage, trialUsage: null, trialLimits: null };
+      return { active: true, plan: result[0].plan, expiresAt: result[0].expiresAt, limits, usage, trialUsage, trialLimits: trialLimitsData };
     }),
+  }),
+
+  // ============ USER HISTORY ============
+  history: router({
+    getMyHistory: publicProcedure
+      .input(z.object({ limit: z.number().min(1).max(200).default(50) }))
+      .query(async ({ input, ctx }) => {
+        if (!ctx.user) throw new Error("Please login first.");
+        const db = await getDb();
+        if (!db) return [];
+        const history = await db.select().from(ttsConversions)
+          .where(eq(ttsConversions.userId, ctx.user.userId))
+          .orderBy(desc(ttsConversions.createdAt))
+          .limit(input.limit);
+        return history.map(h => ({
+          id: h.id,
+          feature: h.feature,
+          voice: h.voice,
+          character: h.character,
+          charCount: h.charCount,
+          durationMs: h.durationMs,
+          status: h.status,
+          createdAt: h.createdAt,
+        }));
+      }),
   }),
 
   tts: router({
@@ -569,14 +705,14 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user) throw new Error("Please login first.");
+        // 🔐 Voice ID whitelist
+        if (input.character && !isValidCharacterId(input.character)) throw new Error("Invalid character voice.");
         const db = await getDb();
         if (ctx.user.role !== "admin") {
           if (db) {
-            // Check ban
             const userRecord = await db.select().from(users)
               .where(eq(users.id, ctx.user.userId)).limit(1);
             if (userRecord[0]?.bannedAt) throw new Error("Your account has been banned.");
-            // Check subscription + usage limits
             const now = new Date();
             const sub = await db.select().from(subscriptions)
               .where(and(eq(subscriptions.userId, ctx.user.userId), gte(subscriptions.expiresAt, now)))
@@ -584,18 +720,33 @@ export const appRouter = router({
             const plan = sub.length > 0 ? sub[0].plan : null;
             if (!plan) throw new Error("Subscription မရှိပါ။ Admin ကို ဆက်သွယ်ပါ။");
             const limits = getPlanLimits(plan);
-            const usage = await getDailyUsage(ctx.user.userId);
             const isCharacter = !!(input.character && input.character.trim() !== "");
-            // Check daily usage limits
-            if (isCharacter) {
-              if (usage.characterUse >= limits.dailyCharacterUse) throw new Error(`ယနေ့ Character Voice အသုံးပြုမှု ကန့်သတ်ချက် (${limits.dailyCharacterUse} ကြိမ်) ပြည့်သွားပါပြီ။ နက်ဖြန် ထပ်ကြိုးစားပါ။`);
-              if (input.text.length > limits.charLimitCharacter) throw new Error(`Character Voice စာလုံးရေ ကန့်သတ်ချက် ${limits.charLimitCharacter} ကျော်လွန်ပါသည်။`);
+
+            if (plan === "trial") {
+              // Trial: TOTAL limits
+              const trialUsage = await getTrialTotalUsage(ctx.user.userId);
+              const trialLimits = getTrialLimits();
+              if (isCharacter) {
+                if (trialUsage.characterUse >= trialLimits.totalCharacterUse) throw new Error("Trial ကာလအတွင်း Character Voice အကြိမ်အရေအတွက် ပြည့်သွားပါပြီ။");
+                if (input.text.length > trialLimits.charLimitCharacter) throw new Error(`Character Voice စာလုံးရေ ကန့်သတ်ချက် ${trialLimits.charLimitCharacter} ကျော်လွန်ပါသည်။`);
+              } else {
+                if (trialUsage.tts >= trialLimits.totalTtsSrt) throw new Error("Trial ကာလအတွင်း TTS/SRT အကြိမ်အရေအတွက် ပြည့်သွားပါပြီ။");
+                if (input.text.length > trialLimits.charLimitStandard) throw new Error(`စာလုံးရေ ကန့်သတ်ချက် ${trialLimits.charLimitStandard} ကျော်လွန်ပါသည်။`);
+              }
             } else {
-              if (usage.tts >= limits.dailyTtsSrt) throw new Error(`ယနေ့ TTS/SRT အသုံးပြုမှု ကန့်သတ်ချက် (${limits.dailyTtsSrt} ကြိမ်) ပြည့်သွားပါပြီ။ နက်ဖြန် ထပ်ကြိုးစားပါ။`);
-              if (input.text.length > limits.charLimitStandard) throw new Error(`စာလုံးရေ ကန့်သတ်ချက် ${limits.charLimitStandard} ကျော်လွန်ပါသည်။`);
+              // Paid plans: daily limits
+              const usage = await getDailyUsage(ctx.user.userId);
+              if (isCharacter) {
+                if (usage.characterUse >= limits.dailyCharacterUse) throw new Error(`ယနေ့ Character Voice အသုံးပြုမှု ကန့်သတ်ချက် ပြည့်သွားပါပြီ။`);
+                if (input.text.length > limits.charLimitCharacter) throw new Error(`Character Voice စာလုံးရေ ကန့်သတ်ချက် ${limits.charLimitCharacter} ကျော်လွန်ပါသည်။`);
+              } else {
+                if (usage.tts >= limits.dailyTtsSrt) throw new Error(`ယနေ့ TTS/SRT အသုံးပြုမှု ကန့်သတ်ချက် ပြည့်သွားပါပြီ။`);
+                if (input.text.length > limits.charLimitStandard) throw new Error(`စာလုံးရေ ကန့်သတ်ချက် ${limits.charLimitStandard} ကျော်လွန်ပါသည်။`);
+              }
             }
           }
         }
+        // 🔐 Content sanitization
         const cleanText = sanitizeText(input.text).replace(/[။၊]/g, ' ').replace(/\s+/g, ' ').trim();
         if (!cleanText) throw new Error("Invalid text input.");
         try {
@@ -611,15 +762,11 @@ export const appRouter = router({
           if (db) {
             const { nanoid } = await import("nanoid");
             await db.insert(ttsConversions).values({
-              id: nanoid(10),
-              userId: ctx.user.userId,
-              feature: "tts",
+              id: nanoid(10), userId: ctx.user.userId, feature: "tts",
               voice: isCharacter ? undefined : input.voice,
               character: isCharacter ? input.character : undefined,
-              charCount: cleanText.length,
-              durationMs: result.durationMs,
-              aspectRatio: input.aspectRatio,
-              status: "success",
+              charCount: cleanText.length, durationMs: result.durationMs,
+              aspectRatio: input.aspectRatio, status: "success",
             }).catch(() => {});
           }
           return {
@@ -676,8 +823,6 @@ export const appRouter = router({
 
   // ============ EXTENDED ADMIN ANALYTICS ============
   adminStats: router({
-
-    // --- Per-user detail: daily gens, feature breakdown, active hours ---
     getUserDetail: publicProcedure
       .input(z.object({ userId: z.string() }))
       .query(async ({ input, ctx }) => {
@@ -688,7 +833,6 @@ export const appRouter = router({
         const allGens = await db.select().from(ttsConversions)
           .where(and(eq(ttsConversions.userId, input.userId), gte(ttsConversions.createdAt, thirtyDaysAgo)))
           .orderBy(desc(ttsConversions.createdAt));
-        // Group by date for daily chart
         const dailyMap: Record<string, number> = {};
         const featureMap: Record<string, number> = {};
         const hourMap: Record<number, number> = {};
@@ -705,7 +849,6 @@ export const appRouter = router({
           voiceMap[v] = (voiceMap[v] ?? 0) + 1;
           if (g.status === "fail") statusCount.fail++; else statusCount.success++;
         }
-        // Last 7 days summary
         const sevenDaysAgo = new Date(Date.now() - 7 * 86400000);
         const recent = allGens.filter(g => (g.createdAt as Date) >= sevenDaysAgo);
         const totalChars = allGens.reduce((s, g) => s + (g.charCount ?? 0), 0);
@@ -726,7 +869,6 @@ export const appRouter = router({
         };
       }),
 
-    // --- Voice/Character usage stats with timeframe ---
     getVoiceStats: publicProcedure
       .input(z.object({ timeframe: z.enum(["week", "month", "year", "all"]) }))
       .query(async ({ input, ctx }) => {
@@ -742,41 +884,26 @@ export const appRouter = router({
         const voiceMap: Record<string, { count: number; chars: number; durationMs: number }> = {};
         const featureMap: Record<string, number> = {};
         const dailyMap: Record<string, number> = {};
-        // Separate base voice vs character tracking
         const baseVoiceMap: Record<string, { count: number; chars: number; durationMs: number }> = {};
         const characterMap: Record<string, { count: number; chars: number; durationMs: number; displayName: string; base: string }> = {};
         for (const r of rows) {
           const key = r.character ? `[Character] ${r.character}` : (r.voice ?? "unknown");
           if (!voiceMap[key]) voiceMap[key] = { count: 0, chars: 0, durationMs: 0 };
-          voiceMap[key].count++;
-          voiceMap[key].chars += r.charCount ?? 0;
-          voiceMap[key].durationMs += r.durationMs ?? 0;
-          // Track base voices separately
+          voiceMap[key].count++; voiceMap[key].chars += r.charCount ?? 0; voiceMap[key].durationMs += r.durationMs ?? 0;
           if (r.character && r.character.trim() !== "") {
             const charKey = r.character;
             const charInfo = CHARACTER_VOICES[charKey as CharacterKey];
             if (!characterMap[charKey]) {
-              characterMap[charKey] = {
-                count: 0, chars: 0, durationMs: 0,
-                displayName: charInfo?.name ?? charKey,
-                base: charInfo?.base ?? "unknown",
-              };
+              characterMap[charKey] = { count: 0, chars: 0, durationMs: 0, displayName: charInfo?.name ?? charKey, base: charInfo?.base ?? "unknown" };
             }
-            characterMap[charKey].count++;
-            characterMap[charKey].chars += r.charCount ?? 0;
-            characterMap[charKey].durationMs += r.durationMs ?? 0;
-            // Also count under the base voice
+            characterMap[charKey].count++; characterMap[charKey].chars += r.charCount ?? 0; characterMap[charKey].durationMs += r.durationMs ?? 0;
             const baseKey = charInfo?.base ?? "unknown";
             if (!baseVoiceMap[baseKey]) baseVoiceMap[baseKey] = { count: 0, chars: 0, durationMs: 0 };
-            baseVoiceMap[baseKey].count++;
-            baseVoiceMap[baseKey].chars += r.charCount ?? 0;
-            baseVoiceMap[baseKey].durationMs += r.durationMs ?? 0;
+            baseVoiceMap[baseKey].count++; baseVoiceMap[baseKey].chars += r.charCount ?? 0; baseVoiceMap[baseKey].durationMs += r.durationMs ?? 0;
           } else {
             const vKey = r.voice ?? "unknown";
             if (!baseVoiceMap[vKey]) baseVoiceMap[vKey] = { count: 0, chars: 0, durationMs: 0 };
-            baseVoiceMap[vKey].count++;
-            baseVoiceMap[vKey].chars += r.charCount ?? 0;
-            baseVoiceMap[vKey].durationMs += r.durationMs ?? 0;
+            baseVoiceMap[vKey].count++; baseVoiceMap[vKey].chars += r.charCount ?? 0; baseVoiceMap[vKey].durationMs += r.durationMs ?? 0;
           }
           const feat = r.feature ?? "tts";
           featureMap[feat] = (featureMap[feat] ?? 0) + 1;
@@ -790,32 +917,23 @@ export const appRouter = router({
           daily: Object.entries(dailyMap).map(([date, count]) => ({ date, count })).sort((a,b) => a.date.localeCompare(b.date)),
           totalChars: rows.reduce((s, r) => s + (r.charCount ?? 0), 0),
           totalDurationMs: rows.reduce((s, r) => s + (r.durationMs ?? 0), 0),
-          // New: breakdown by base voice and character
           baseVoices: Object.entries(baseVoiceMap).map(([name, d]) => ({
-            name,
-            displayName: SUPPORTED_VOICES[name as keyof typeof SUPPORTED_VOICES]?.name ?? name,
-            ...d,
+            name, displayName: SUPPORTED_VOICES[name as keyof typeof SUPPORTED_VOICES]?.name ?? name, ...d,
           })).sort((a,b) => b.count - a.count),
           characters: Object.entries(characterMap).map(([key, d]) => ({
-            key,
-            displayName: d.displayName,
-            base: d.base,
+            key, displayName: d.displayName, base: d.base,
             baseDisplayName: SUPPORTED_VOICES[d.base as keyof typeof SUPPORTED_VOICES]?.name ?? d.base,
-            count: d.count,
-            chars: d.chars,
-            durationMs: d.durationMs,
+            count: d.count, chars: d.chars, durationMs: d.durationMs,
           })).sort((a,b) => b.count - a.count),
         };
       }),
 
-    // --- Error logs ---
     getErrorLogs: publicProcedure
       .input(z.object({ limit: z.number().default(50), onlyUnresolved: z.boolean().default(false) }))
       .query(async ({ input, ctx }) => {
         if (!ctx.user || ctx.user.role !== "admin") throw new Error("Unauthorized");
         const db = await getDb();
         if (!db) throw new Error("DB error");
-        // Also fetch failed tts_conversions as error events
         const failedGens = await db.select().from(ttsConversions)
           .where(eq(ttsConversions.status, "fail"))
           .orderBy(desc(ttsConversions.createdAt)).limit(input.limit);
@@ -844,7 +962,6 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    // --- Delete a system error log ---
     deleteSystemLog: publicProcedure
       .input(z.object({ id: z.string() }))
       .mutation(async ({ input, ctx }) => {
@@ -855,26 +972,22 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    // --- Dismiss/Delete a failed generation record ---
     dismissFailedGen: publicProcedure
       .input(z.object({ id: z.string() }))
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user || ctx.user.role !== "admin") throw new Error("Unauthorized");
         const db = await getDb();
         if (!db) throw new Error("DB error");
-        // Delete the failed generation record from tts_conversions
         await db.delete(ttsConversions).where(eq(ttsConversions.id, input.id));
         return { success: true };
       }),
 
-    // --- Churn rate + Active/Inactive user lists ---
     getChurnStats: publicProcedure.query(async ({ ctx }) => {
       if (!ctx.user || ctx.user.role !== "admin") throw new Error("Unauthorized");
       const db = await getDb();
       if (!db) throw new Error("DB error");
       const now = new Date();
       const fourteenDaysAgo = new Date(now.getTime() - 14 * 86400000);
-      const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000);
       const allUsers = await db.select().from(users).where(eq(users.role, "user"));
       const allSubs = await db.select().from(subscriptions);
       const genCounts = await db.select({
@@ -897,7 +1010,6 @@ export const appRouter = router({
         };
         if (isActive) activeUsers.push(data); else inactiveUsers.push(data);
       }
-      // Churn: users who had sub 30d ago but no activity in last 14d
       const churned = inactiveUsers.filter(u => u.hasSub);
       const churnRate = allUsers.length > 0 ? Math.round((churned.length / allUsers.length) * 100) : 0;
       return {

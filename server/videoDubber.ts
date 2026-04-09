@@ -5,12 +5,13 @@ import { tmpdir } from 'os';
 import { randomUUID } from 'crypto';
 // @ts-ignore - fluent-ffmpeg doesn't have types
 import ffmpeg from 'fluent-ffmpeg';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { geminiTranslate } from "./geminiTranslator";
 import { generateSpeech, generateSpeechWithCharacter, type VoiceKey, type CharacterKey, CHARACTER_VOICES } from "./tts";
+import { isAllowedVideoUrl, isPathWithinDir, sanitizeForAI } from "./_core/security";
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 // ───── Types ─────
 export interface DubOptions {
@@ -57,18 +58,32 @@ function getAudioDuration(filePath: string): Promise<number> {
   });
 }
 
-// ───── Whisper transcription ─────
+// ───── Whisper transcription — uses execFile with argument array ─────
 async function transcribeLocalWhisper(audioPath: string): Promise<{ text: string; srt: string }> {
   const outputDir = path.dirname(audioPath);
   const baseName = path.parse(audioPath).name;
 
-  await execAsync(`whisper "${audioPath}" --model base --output_dir "${outputDir}" --output_format all`);
+  // 🔐 FFmpeg Command Guard: execFile with argument array prevents command injection
+  await execFileAsync("whisper", [
+    audioPath,
+    "--model", "base",
+    "--output_dir", outputDir,
+    "--output_format", "all"
+  ]);
 
-  const text = await fs.readFile(path.join(outputDir, `${baseName}.txt`), 'utf-8');
-  const srt = await fs.readFile(path.join(outputDir, `${baseName}.srt`), 'utf-8');
+  const textPath = path.join(outputDir, `${baseName}.txt`);
+  const srtPath = path.join(outputDir, `${baseName}.srt`);
 
-  await fs.unlink(path.join(outputDir, `${baseName}.txt`)).catch(() => {});
-  await fs.unlink(path.join(outputDir, `${baseName}.srt`)).catch(() => {});
+  // 🔐 Path traversal check
+  if (!isPathWithinDir(textPath, outputDir) || !isPathWithinDir(srtPath, outputDir)) {
+    throw new Error("Invalid file path detected.");
+  }
+
+  const text = await fs.readFile(textPath, 'utf-8');
+  const srt = await fs.readFile(srtPath, 'utf-8');
+
+  await fs.unlink(textPath).catch(() => {});
+  await fs.unlink(srtPath).catch(() => {});
 
   return { text, srt };
 }
@@ -153,15 +168,21 @@ function hexToASS(hex: string): string {
 
 // ───── MAIN: Dub video from buffer ─────
 export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, options: DubOptions): Promise<DubResult> {
+  // 🔐 UUID Filenames: never use original filename
   const id = randomUUID();
   const tempDir = path.join(tmpdir(), `dub_${id}`);
   await fs.mkdir(tempDir, { recursive: true });
 
-  const tempVideoPath = path.join(tempDir, `input.mp4`);
-  const tempAudioExtract = path.join(tempDir, `extracted.mp3`);
-  const tempTTSAudio = path.join(tempDir, `tts.mp3`);
-  const tempSrtPath = path.join(tempDir, `subtitle.srt`);
-  const tempOutputPath = path.join(tempDir, `output.mp4`);
+  // 🔐 Path traversal check
+  if (!isPathWithinDir(tempDir, tmpdir())) {
+    throw new Error("Invalid temp directory.");
+  }
+
+  const tempVideoPath = path.join(tempDir, `input_${id}.mp4`);
+  const tempAudioExtract = path.join(tempDir, `extracted_${id}.mp3`);
+  const tempTTSAudio = path.join(tempDir, `tts_${id}.mp3`);
+  const tempSrtPath = path.join(tempDir, `subtitle_${id}.srt`);
+  const tempOutputPath = path.join(tempDir, `output_${id}.mp4`);
 
   try {
     // Step 1: Write video to disk
@@ -184,9 +205,10 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
     const { text: englishText } = await transcribeLocalWhisper(tempAudioExtract);
     if (!englishText?.trim()) throw new Error("Whisper could not detect any speech.");
 
-    // Step 4: Gemini translate to Myanmar
+    // Step 4: Gemini translate to Myanmar (with prompt injection guard)
     console.log(`[Dubber] Translating to Myanmar...`);
-    const { myanmar: myanmarText } = await geminiTranslate(englishText);
+    const sanitizedText = sanitizeForAI(englishText);
+    const { myanmar: myanmarText } = await geminiTranslate(sanitizedText);
 
     // Step 5: Generate TTS audio
     console.log(`[Dubber] Generating TTS (voice=${options.character || options.voice}, speed=${options.speed}, pitch=${options.pitch})...`);
@@ -204,15 +226,16 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
     console.log(`[Dubber] Video duration: ${videoDuration.toFixed(1)}s, TTS duration: ${audioDuration.toFixed(1)}s`);
 
     // Step 7: Calculate speed adjustment
-    // If durations differ, adjust video speed to match TTS audio
     const speedRatio = videoDuration / audioDuration;
-    const needSpeedAdjust = Math.abs(speedRatio - 1.0) > 0.05; // only adjust if > 5% difference
+    const needSpeedAdjust = Math.abs(speedRatio - 1.0) > 0.05;
 
     // Step 8: Build SRT file if enabled
     let srtContent = "";
     if (options.srtEnabled) {
       srtContent = buildMyanmarSRT(myanmarText, ttsResult.durationMs, 20);
-      await fs.writeFile(tempSrtPath, srtContent, 'utf-8');
+      // 🔤 Write SRT with UTF-8 BOM for Myanmar character encoding
+      const BOM = '\uFEFF';
+      await fs.writeFile(tempSrtPath, BOM + srtContent, 'utf-8');
     }
 
     // Step 9: Combine everything with FFmpeg
@@ -229,8 +252,6 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
       
       // Video: adjust speed if needed
       if (needSpeedAdjust) {
-        // setpts=PTS/speedRatio — speed up/slow down video to match audio
-        // Clamp speed ratio to reasonable bounds (0.5x - 2.0x)
         const clampedRatio = Math.max(0.5, Math.min(2.0, speedRatio));
         filters.push(`[0:v]setpts=PTS/${clampedRatio}[vspeed]`);
       }
@@ -238,53 +259,51 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
       const videoLabel = needSpeedAdjust ? "[vspeed]" : "[0:v]";
 
       if (options.srtEnabled && existsSync(tempSrtPath)) {
-        // Build ASS subtitle style
         const fontSize = options.srtFontSize || 24;
         const fontColor = hexToASS(options.srtColor || "#ffffff");
         const marginV = options.srtMarginV ?? 30;
         const shadowStr = options.srtDropShadow !== false ? ",Shadow=2,BackColour=&H80000000" : ",Shadow=0";
         
-        // Blur background color and intensity
         const blurColor = options.srtBlurColor === "white" ? "FFFFFF" : "000000";
         const blurAlpha = options.srtBlurBg !== false ? Math.min(255, Math.max(0, Math.round((options.srtBlurSize ?? 8) * 16))).toString(16).toUpperCase().padStart(2, '0') : 'FF';
         const borderStyle = options.srtBlurBg !== false ? `,BorderStyle=4,BackColour=&H${blurAlpha}${blurColor},Outline=0` : ",BorderStyle=1,Outline=2,OutlineColour=&H40000000";
         
-        // Full width: use MarginL=0,MarginR=0 to extend edge-to-edge
         const marginLR = options.srtFullWidth ? ",MarginL=0,MarginR=0" : "";
         
-        // Escape path for subtitles filter (Windows paths need special handling)
         const escapedSrtPath = tempSrtPath.replace(/\\/g, '/').replace(/:/g, '\\:');
         
-        filters.push(`${videoLabel}subtitles='${escapedSrtPath}':force_style='FontSize=${fontSize},PrimaryColour=${fontColor},Alignment=2,MarginV=${marginV}${marginLR}${shadowStr}${borderStyle}'[vfinal]`);
+        // 🔤 Myanmar Font Fix: specify fonts that support Myanmar Unicode
+        // Priority: Noto Sans Myanmar → Padauk → Myanmar Text → Pyidaungsu → fallback
+        const myanmarFont = "Fontname=Noto Sans Myanmar";
+        const encoding = ",Encoding=1"; // UTF-8 encoding for ASS
+        
+        filters.push(`${videoLabel}subtitles='${escapedSrtPath}':force_style='${myanmarFont},FontSize=${fontSize},PrimaryColour=${fontColor},Alignment=2,MarginV=${marginV}${marginLR}${shadowStr}${borderStyle}${encoding}'[vfinal]`);
       } else {
         if (needSpeedAdjust) {
-          // Just copy the speed-adjusted video
           filters.push(`${videoLabel}copy[vfinal]`);
         }
       }
 
       if (filters.length > 0) {
-        // Use complex filter
         cmd = cmd
           .complexFilter(filters.join(';'))
           .outputOptions([
             '-map', filters.some(f => f.includes('[vfinal]')) ? '[vfinal]' : '0:v',
-            '-map', '1:a',  // use TTS audio
+            '-map', '1:a',
             '-c:v', 'libx264',
             '-preset', 'fast',
             '-crf', '23',
             '-c:a', 'aac',
             '-b:a', '128k',
             '-movflags', '+faststart',
-            '-shortest',  // end when shortest stream ends
+            '-shortest',
           ]);
       } else {
-        // Simple case: just mute video and add TTS audio
         cmd = cmd
           .outputOptions([
             '-map', '0:v',
             '-map', '1:a',
-            '-c:v', 'copy',  // no re-encode needed
+            '-c:v', 'copy',
             '-c:a', 'aac',
             '-b:a', '128k',
             '-movflags', '+faststart',
@@ -318,8 +337,18 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
 
 // ───── MAIN: Dub video from URL ─────
 export async function dubVideoFromLink(url: string, options: DubOptions): Promise<DubResult> {
+  // 🔐 yt-dlp Domain Whitelist
+  if (!isAllowedVideoUrl(url)) {
+    throw new Error("ခွင့်ပြုထားသော Link များသာ သုံးနိုင်ပါသည်။ YouTube, TikTok, Facebook Link သာ ထည့်ပါ။");
+  }
+
   const id = randomUUID();
   const tempVideoPath = path.join(tmpdir(), `dub_dl_${id}.mp4`);
+
+  // 🔐 Path traversal check
+  if (!isPathWithinDir(tempVideoPath, tmpdir())) {
+    throw new Error("Invalid temp directory.");
+  }
 
   try {
     console.log(`[Dubber] Downloading video from: ${url}`);
@@ -349,26 +378,26 @@ export async function dubVideoFromLink(url: string, options: DubOptions): Promis
     }
 
     if (downloadUrl) {
-      await execAsync(`curl -s -L --max-time 120 -o "${tempVideoPath}" "${downloadUrl}"`, { timeout: 130000 });
+      // 🔐 FFmpeg Command Guard: use execFile with argument array
+      await execFileAsync("curl", ["-s", "-L", "--max-time", "120", "-o", tempVideoPath, downloadUrl], { timeout: 130000 });
     } else {
-      // yt-dlp fallback
+      // yt-dlp fallback — 🔐 uses execFile with argument array
       console.log("[Dubber] Using yt-dlp fallback...");
       const cookiePath = path.join(process.cwd(), 'cookies.txt');
       const hasCookies = existsSync(cookiePath);
-      const cookieFlag = hasCookies ? `--cookies "${cookiePath}"` : "";
-      const jsRuntime = `--js-runtimes node`;
-      const commonFlags = `${jsRuntime} --no-check-certificates --no-playlist --no-warnings --geo-bypass --max-filesize 50M`;
 
-      const strategies = [
+      const baseArgs = ["--js-runtimes", "node", "--no-check-certificates", "--no-playlist", "--no-warnings", "--geo-bypass", "--max-filesize", "50M"];
+
+      const strategies: string[][] = [
         ...(hasCookies ? [
-          `${cookieFlag} ${commonFlags} -f "bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b" --merge-output-format mp4`,
-          `${cookieFlag} ${commonFlags} --extractor-args "youtube:player_client=web_creator" -f "bv*+ba/b" --merge-output-format mp4`,
-          `${cookieFlag} ${commonFlags} -f "b" --recode-video mp4`,
+          [...baseArgs, "--cookies", cookiePath, "-f", "bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b", "--merge-output-format", "mp4"],
+          [...baseArgs, "--cookies", cookiePath, "--extractor-args", "youtube:player_client=web_creator", "-f", "bv*+ba/b", "--merge-output-format", "mp4"],
+          [...baseArgs, "--cookies", cookiePath, "-f", "b", "--recode-video", "mp4"],
         ] : []),
-        `${commonFlags} --extractor-args "youtube:player_client=web_creator" -f "b[ext=mp4]/bv*+ba/b" --merge-output-format mp4`,
-        `${commonFlags} --extractor-args "youtube:player_client=android" -f "b[ext=mp4]/b" --merge-output-format mp4`,
-        `${commonFlags} -f "bv*+ba/b" --merge-output-format mp4`,
-        `${commonFlags} -f "worst[ext=mp4]/worst" --recode-video mp4`,
+        [...baseArgs, "--extractor-args", "youtube:player_client=web_creator", "-f", "b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4"],
+        [...baseArgs, "--extractor-args", "youtube:player_client=android", "-f", "b[ext=mp4]/b", "--merge-output-format", "mp4"],
+        [...baseArgs, "-f", "bv*+ba/b", "--merge-output-format", "mp4"],
+        [...baseArgs, "-f", "worst[ext=mp4]/worst", "--recode-video", "mp4"],
       ];
 
       let dlSuccess = false;
@@ -376,7 +405,8 @@ export async function dubVideoFromLink(url: string, options: DubOptions): Promis
         await fs.unlink(tempVideoPath).catch(() => {});
         try {
           console.log(`[Dubber] yt-dlp strategy ${i + 1}/${strategies.length}...`);
-          await execAsync(`yt-dlp ${strategies[i]} -o "${tempVideoPath}" "${url}"`, { timeout: 300000 });
+          // 🔐 FFmpeg Command Guard: execFile prevents injection
+          await execFileAsync("yt-dlp", [...strategies[i], "-o", tempVideoPath, url], { timeout: 300000 });
           const stat = await fs.stat(tempVideoPath).catch(() => null);
           if (stat && stat.size > 10000) { dlSuccess = true; break; }
         } catch (e: any) {
@@ -398,7 +428,7 @@ export async function dubVideoFromLink(url: string, options: DubOptions): Promis
 
     // Read video buffer and pass to dubVideoFromBuffer
     const videoBuffer = await fs.readFile(tempVideoPath);
-    return await dubVideoFromBuffer(videoBuffer, 'downloaded.mp4', options);
+    return await dubVideoFromBuffer(videoBuffer, `downloaded_${id}.mp4`, options);
 
   } finally {
     await fs.unlink(tempVideoPath).catch(() => {});

@@ -13,6 +13,8 @@ import {
   apiRateLimiter,
   securityHeaders,
   cleanTempFiles,
+  requestIdMiddleware,
+  memoryGuardMiddleware,
 } from "./security";
 
 async function startServer() {
@@ -50,25 +52,35 @@ async function startServer() {
   app.use(securityHeaders);  // X-Frame-Options, X-XSS-Protection etc.
 
   // ──────────────────────────────────────────
-  // 🔐 SECURITY LAYER 2 — CORS
+  // 🔐 SECURITY LAYER 2 — Request ID Tracking
+  // ──────────────────────────────────────────
+  app.use(requestIdMiddleware);
+
+  // ──────────────────────────────────────────
+  // 🔐 SECURITY LAYER 3 — CORS
   // ──────────────────────────────────────────
   app.use(corsMiddleware);
 
   // ──────────────────────────────────────────
-  // 🔐 SECURITY LAYER 3 — Body Parser (size limit)
+  // 🔐 SECURITY LAYER 4 — Body Parser (size limit)
   // ──────────────────────────────────────────
   app.use(express.json({ limit: "35mb" }));
   app.use(express.urlencoded({ limit: "35mb", extended: true }));
 
   // ──────────────────────────────────────────
-  // 🔐 SECURITY LAYER 4 — XSS / SQLi Pattern Check
+  // 🔐 SECURITY LAYER 5 — XSS / SQLi Pattern Check
   // ──────────────────────────────────────────
   app.use("/api", xssProtectionMiddleware);
 
   // ──────────────────────────────────────────
-  // 🔐 SECURITY LAYER 5 — API Rate Limiting (60 req/min per IP)
+  // 🔐 SECURITY LAYER 6 — API Rate Limiting (60 req/min per IP)
   // ──────────────────────────────────────────
   app.use("/api/trpc", apiRateLimiter(60));
+
+  // ──────────────────────────────────────────
+  // 🔐 SECURITY LAYER 7 — Memory Guard (reject if RAM > 90%)
+  // ──────────────────────────────────────────
+  app.use("/api/trpc", memoryGuardMiddleware);
 
   // ──────────────────────────────────────────
   // Telegram Webhook (Telegram IP range only check optional)

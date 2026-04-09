@@ -1,29 +1,40 @@
-import { execSync } from "child_process";
+import { execFile } from "child_process";
+import { promisify } from "util";
 import * as fs from "fs";
 import * as path from "path";
+import { randomUUID } from "crypto";
+import { tmpdir } from "os";
 import axios from "axios";
+import { isPathWithinDir } from "./_core/security";
+
+const execFileAsync = promisify(execFile);
 
 /**
  * Extract audio from video file using FFmpeg
+ * 🔐 Uses execFile with argument array to prevent command injection
  */
 export async function extractAudioFromVideo(videoPath: string): Promise<Buffer> {
-  const audioPath = path.join("/tmp", `audio-${Date.now()}.wav`);
+  // 🔐 UUID filename
+  const id = randomUUID();
+  const audioPath = path.join(tmpdir(), `vp_audio_${id}.wav`);
+  
+  // 🔐 Path traversal check
+  if (!isPathWithinDir(audioPath, tmpdir())) {
+    throw new Error("Invalid temp directory.");
+  }
 
   try {
-    // Extract audio using FFmpeg
-    execSync(`ffmpeg -i "${videoPath}" -q:a 9 -n "${audioPath}" 2>/dev/null`, {
-      stdio: "pipe",
-    });
+    // 🔐 FFmpeg Command Guard: execFile with argument array
+    await execFileAsync("ffmpeg", [
+      "-i", videoPath,
+      "-q:a", "9",
+      "-n", audioPath
+    ], { timeout: 120000 });
 
-    // Read the audio file
     const audioBuffer = fs.readFileSync(audioPath);
-
-    // Clean up
     fs.unlinkSync(audioPath);
-
     return audioBuffer;
   } catch (error) {
-    // Clean up on error
     if (fs.existsSync(audioPath)) {
       fs.unlinkSync(audioPath);
     }
@@ -39,10 +50,8 @@ export async function transcribeAndTranslateVPS(
   vpsApiUrl: string
 ): Promise<{ originalText: string; translatedText: string }> {
   try {
-    // Convert audio buffer to base64
     const audioBase64 = audioBuffer.toString("base64");
 
-    // Call VPS API for transcription and translation
     const response = await axios.post(
       `${vpsApiUrl}/transcribe-translate`,
       {
@@ -80,12 +89,8 @@ export async function processVideoFile(
   vpsApiUrl: string
 ): Promise<{ originalText: string; translatedText: string }> {
   try {
-    // Extract audio from video
     const audioBuffer = await extractAudioFromVideo(videoPath);
-
-    // Transcribe and translate using VPS
     const result = await transcribeAndTranslateVPS(audioBuffer, vpsApiUrl);
-
     return result;
   } catch (error) {
     throw new Error(`Video processing failed: ${error instanceof Error ? error.message : "Unknown error"}`);

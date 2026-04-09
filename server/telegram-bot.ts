@@ -6,8 +6,13 @@ import { eq } from "drizzle-orm";
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN!;
 const API_BASE = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
+// 🔐 Dynamic OTP: Generate new 6-digit code every time with 10-minute expiry
 function generateCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+function getCodeExpiry(): Date {
+  return new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 }
 
 async function telegramPost(method: string, body: object): Promise<any> {
@@ -57,12 +62,22 @@ export async function handleTelegramUpdate(update: any) {
     const existing = await db.select().from(users)
       .where(eq(users.telegramId, telegramId)).limit(1);
 
-    let code: string;
+    // 🔐 Always generate a NEW code with 10-minute expiry
+    const code = generateCode();
+    const codeExpiresAt = getCodeExpiry();
 
     if (existing.length > 0) {
-      code = existing[0].telegramCode!;
-      // Auto trial for existing users who don't have any subscription
       const existingUserId = existing[0].id;
+
+      // Update with new code + expiry
+      await db.update(users).set({
+        telegramCode: code,
+        telegramCodeExpiresAt: codeExpiresAt,
+        telegramUsername: username,
+        telegramFirstName: firstName,
+      }).where(eq(users.id, existingUserId));
+
+      // Auto trial for existing users who don't have any subscription
       const now = new Date();
       const { nanoid } = await import("nanoid");
       const existingSubs = await db.select().from(subscriptions)
@@ -90,8 +105,9 @@ export async function handleTelegramUpdate(update: any) {
             `🎁 <b>Trial ${trialDays} ရက် ရရှိပါပြီ!</b>\n\n` +
             `🔑 သင့် login code:\n\n` +
             `<code>${code}</code>\n\n` +
+            `⏰ Code သက်တမ်း: <b>၁၀ မိနစ်</b>\n` +
             `ဒီ code ကို https://choco.de5.net မှာ login ဝင်ဖို့ သုံးပါ။\n\n` +
-            `⚠️ Code ကို လျှို့ဝှက်ထားပါ!`
+            `⚠️ Code သက်တမ်းကုန်ရင် /code ကို ထပ်နှိပ်ပါ!`
           );
           return;
         }
@@ -100,11 +116,11 @@ export async function handleTelegramUpdate(update: any) {
         `👋 <b>မင်္ဂလာပါ, ${firstName}!</b>\n\n` +
         `🔑 သင့် login code:\n\n` +
         `<code>${code}</code>\n\n` +
+        `⏰ Code သက်တမ်း: <b>၁၀ မိနစ်</b>\n` +
         `ဒီ code ကို https://choco.de5.net မှာ login ဝင်ဖို့ သုံးပါ။\n\n` +
-        `⚠️ Code ကို လျှို့ဝှက်ထားပါ!`
+        `⚠️ Code သက်တမ်းကုန်ရင် /code ကို ထပ်နှိပ်ပါ!`
       );
     } else {
-      code = generateCode();
       const newUserId = Math.random().toString(36).slice(2);
       await db.insert(users).values({
         id: newUserId,
@@ -112,6 +128,7 @@ export async function handleTelegramUpdate(update: any) {
         telegramUsername: username,
         telegramFirstName: firstName,
         telegramCode: code,
+        telegramCodeExpiresAt: codeExpiresAt,
       });
       // Auto trial — check settings
       const { nanoid } = await import("nanoid");
@@ -137,16 +154,18 @@ export async function handleTelegramUpdate(update: any) {
         `✅ သင့် account ကို ဖန်တီးပြီးပါပြီ!\n\n` +
         `🔑 သင့် login code:\n\n` +
         `<code>${code}</code>\n\n` +
+        `⏰ Code သက်တမ်း: <b>၁၀ မိနစ်</b>\n` +
         `ဒီ code ကို https://choco.de5.net မှာ login ဝင်ဖို့ သုံးပါ။\n\n` +
-        `⚠️ Code ဟာ အမြဲတမ်း တူညီနေမည် — လျှို့ဝှက်ထားပါ!`
+        `⚠️ Code သက်တမ်းကုန်ရင် /code ကို ထပ်နှိပ်ပါ!`
       );
     }
   } else if (text === "/help") {
     await sendMessage(chatId,
       `<b>🤖 LUMIX Bot အကူအညီ</b>\n\n` +
       `/start - Login code ရယူပါ\n` +
-      `/code - Code ကို ထပ်ကြည့်ပါ\n` +
+      `/code - Code အသစ်ရယူပါ\n` +
       `/help - အကူအညီ\n\n` +
+      `⏰ Code သက်တမ်း: ၁၀ မိနစ်\n` +
       `🌐 Website: https://choco.de5.net`
     );
   } else {

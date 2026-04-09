@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, Download, Volume2, LogOut, Crown, AlertCircle, Mic, FileVideo, Settings, Sparkles, Upload, Sun, Moon, Copy, Check, Link as LinkIcon, Wand2 } from "lucide-react";
+import { Loader2, Download, Volume2, LogOut, Crown, AlertCircle, Mic, FileVideo, Settings, Sparkles, Upload, Sun, Moon, Copy, Check, Link as LinkIcon, Wand2, Clock, Info, ChevronDown } from "lucide-react";
 import { useLocation } from "wouter";
 
 type Tab = "tts" | "video" | "dubbing" | "settings";
@@ -195,6 +195,11 @@ export default function TTSGenerator() {
   const [srtFullWidth, setSrtFullWidth] = useState(false);
   const [srtBorderRadius, setSrtBorderRadius] = useState<"rounded" | "square">("rounded");
   const [srtBoxPadding, setSrtBoxPadding] = useState(8); // Blur box height/padding in px
+
+  // Accordion state for mobile-friendly collapsible sections
+  const [voiceAccordionOpen, setVoiceAccordionOpen] = useState(true);
+  const [speedAccordionOpen, setSpeedAccordionOpen] = useState(false);
+  const [srtAccordionOpen, setSrtAccordionOpen] = useState(false);
 
   const [geminiKey, setGeminiKey] = useState("");
   const [savedKey, setSavedKey] = useState(() => localStorage.getItem("gemini_key") || "");
@@ -478,13 +483,22 @@ export default function TTSGenerator() {
       <div className="relative z-10 flex items-center justify-between px-3 sm:px-6 py-3 border-b backdrop-blur-xl" style={{ borderColor: cardBorder, background: isDark ? 'rgba(15,12,41,0.8)' : 'rgba(255,255,255,0.85)' }}>
         <div className="flex items-center gap-2">
           <span className="font-black uppercase tracking-widest text-base sm:text-lg" style={{ color: accent, textShadow: isDark ? `0 0 10px ${accent}` : 'none' }}>{t.appName}</span>
-          <span className="hidden sm:inline text-[10px] opacity-40 font-mono">{thaiTime()}</span>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="hidden md:flex items-center gap-1 text-xs font-bold" style={{ color: subColor }}>
             {hasActiveSub ? <Crown className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
             <span>{isAdmin ? t.admin : subStatus?.active && daysLeft !== null ? `${subStatus.plan === 'trial' ? (lang === 'mm' ? 'အစမ်းသုံး' : 'Trial') : subStatus.plan} · ${daysLeft} ${t.daysLeft}` : subStatus?.active ? subStatus.plan : (me ? (lang === 'mm' ? 'Subscription မရှိ' : t.noSub) : t.noSub)}</span>
           </div>
+          {/* Trial Info link */}
+          {subStatus?.plan === 'trial' && (
+            <button onClick={() => navigate('/trial-info')} className="hidden sm:flex items-center gap-1 px-2 py-1 text-xs font-bold rounded border transition-colors" style={{ borderColor: '#fbbf24', color: '#fbbf24', background: 'rgba(251,191,36,0.1)' }}>
+              <Info className="w-3 h-3" /> {lang === 'mm' ? 'Trial' : 'Trial'}
+            </button>
+          )}
+          {/* History link */}
+          <button onClick={() => navigate('/history')} className="hidden sm:flex items-center gap-1 px-2 py-1 text-xs font-bold rounded border transition-colors" style={{ borderColor: cardBorder, color: subtextColor, background: cardBg }} title={lang === 'mm' ? 'မှတ်တမ်း' : 'History'}>
+            <Clock className="w-3 h-3" />
+          </button>
           <span className="hidden md:inline text-xs font-bold" style={{ color: subtextColor }}>@{(me as any)?.username || me?.name}</span>
           <div className="flex items-center gap-1 sm:gap-2 border-l pl-2 sm:pl-3 ml-1" style={{ borderColor: cardBorder }}>
             <button onClick={() => setLang(lang === "mm" ? "en" : "mm")} className="px-2 py-1 text-xs font-bold rounded border transition-colors uppercase" style={{ borderColor: cardBorder, background: cardBg, color: textColor }}>{lang === "mm" ? "EN" : "MM"}</button>
@@ -513,9 +527,19 @@ export default function TTSGenerator() {
               {!isAdmin && hasPlan && planLimits && planUsage && (
                 <div className="mt-3 mx-auto max-w-lg flex flex-wrap items-center justify-center gap-2 sm:gap-3 px-3 py-2 rounded-xl text-xs font-bold" style={{ background: isDark ? 'rgba(167,139,250,0.1)' : 'rgba(109,40,217,0.06)', border: `1px solid ${cardBorder}` }}>
                   <span className="px-2 py-0.5 rounded-lg" style={{ background: currentPlan === 'trial' ? '#f59e0b' : '#16a34a', color: '#fff' }}>{currentPlan === 'trial' ? (lang === 'mm' ? 'အစမ်းသုံး' : 'TRIAL') : (currentPlan?.toUpperCase() ?? 'SUB')}</span>
-                  <span style={{ color: subtextColor }}>TTS: <b style={{ color: planUsage.tts >= planLimits.dailyTtsSrt ? '#dc2626' : accent }}>{planUsage.tts}/{planLimits.dailyTtsSrt}</b></span>
-                  <span style={{ color: subtextColor }}>VC: <b style={{ color: planUsage.characterUse >= planLimits.dailyCharacterUse ? '#dc2626' : accent }}>{planUsage.characterUse}/{planLimits.dailyCharacterUse}</b></span>
-                  <span style={{ color: subtextColor }}>{lang === 'mm' ? 'စာလုံး' : 'Chars'}: <b style={{ color: accent }}>{(planLimits.charLimitStandard).toLocaleString()}</b>/<b style={{ color: accent }}>{(planLimits.charLimitCharacter).toLocaleString()}</b></span>
+                  {currentPlan === 'trial' && (subStatus as any)?.trialUsage && (subStatus as any)?.trialLimits ? (
+                    <>
+                      <span style={{ color: subtextColor }}>TTS: <b style={{ color: (subStatus as any).trialUsage.tts >= (subStatus as any).trialLimits.totalTtsSrt ? '#dc2626' : accent }}>{(subStatus as any).trialUsage.tts}/{(subStatus as any).trialLimits.totalTtsSrt}</b></span>
+                      <span style={{ color: subtextColor }}>VC: <b style={{ color: (subStatus as any).trialUsage.characterUse >= (subStatus as any).trialLimits.totalCharacterUse ? '#dc2626' : accent }}>{(subStatus as any).trialUsage.characterUse}/{(subStatus as any).trialLimits.totalCharacterUse}</b></span>
+                      <span style={{ color: subtextColor }}>{lang === 'mm' ? 'စာလုံး' : 'Chars'}: <b style={{ color: accent }}>{voiceMode === 'character' ? (subStatus as any).trialLimits.charLimitCharacter.toLocaleString() : (subStatus as any).trialLimits.charLimitStandard.toLocaleString()}</b></span>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ color: subtextColor }}>TTS: <b style={{ color: planUsage.tts >= planLimits.dailyTtsSrt ? '#dc2626' : accent }}>{planUsage.tts}/{planLimits.dailyTtsSrt}</b></span>
+                      <span style={{ color: subtextColor }}>VC: <b style={{ color: planUsage.characterUse >= planLimits.dailyCharacterUse ? '#dc2626' : accent }}>{planUsage.characterUse}/{planLimits.dailyCharacterUse}</b></span>
+                      <span style={{ color: subtextColor }}>{lang === 'mm' ? 'စာလုံး' : 'Chars'}: <b style={{ color: accent }}>{currentCharLimit.toLocaleString()}</b></span>
+                    </>
+                  )}
                 </div>
               )}
               {/* No Plan Banner */}
@@ -729,13 +753,13 @@ export default function TTSGenerator() {
             {/* ── STEP: Video Preview + Settings ── */}
             {dubPreviewUrl && !dubResult && (
               <>
-                {/* Video Preview */}
-                <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
+                {/* Video Preview — STICKY on scroll */}
+                <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow, position: "sticky", top: "8px", zIndex: 20 }}>
                   <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{lang === "mm" ? "ဗီဒီယိုကြိုကြည့်" : "Video Preview"}</div>
                   <div className="flex justify-center mt-2">
                     <div style={{
-                      width: dubDetectedRatio === "9:16" ? "240px" : "100%",
-                      maxWidth: dubDetectedRatio === "9:16" ? "240px" : "100%",
+                      width: dubDetectedRatio === "9:16" ? "200px" : "100%",
+                      maxWidth: dubDetectedRatio === "9:16" ? "200px" : "100%",
                       aspectRatio: dubDetectedRatio === "9:16" ? "9/16" : "16/9",
                       position: "relative",
                       overflow: "hidden",
@@ -759,7 +783,6 @@ export default function TTSGenerator() {
                         <div className="absolute left-0 right-0 flex justify-center pointer-events-none"
                           style={{
                             zIndex: 10,
-                            // Map marginV: 5=near bottom (above controls ~75%), 200=near top (~2%)
                             top: `${Math.max(2, Math.round(78 - (srtMarginV / 200) * 76))}%`,
                             transition: "top 0.2s ease-out",
                           }}>
@@ -788,38 +811,51 @@ export default function TTSGenerator() {
                   </div>
                 </div>
 
-                {/* Voice & Pitch Settings */}
+                {/* ── ACCORDION: Voice Selection ── */}
                 <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
-                  <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{t.voiceSelection}</div>
-                  <div className="space-y-4">
-                    {[{ label: t.male, voices: [{ id: "thiha", name: "သီဟ", isStd: true }, { id: "ryan", name: "ရဲရင့်", isStd: false }, { id: "ronnie", name: "ရောင်နီ", isStd: false }, { id: "lucas", name: "လင်းခန့်", isStd: false }, { id: "daniel", name: "ဒေဝ", isStd: false }, { id: "evander", name: "အဂ္ဂ", isStd: false }]}, { label: t.female, voices: [{ id: "nilar", name: "နီလာ", isStd: true }, { id: "michelle", name: "မေချို", isStd: false }, { id: "iris", name: "အိန္ဒြာ", isStd: false }, { id: "charlotte", name: "သီရိ", isStd: false }, { id: "amara", name: "အမရာ", isStd: false }]}].map(({ label: grpLabel, voices }) => (
-                      <div key={grpLabel}><p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: subtextColor }}>{grpLabel}</p><div className="grid grid-cols-3 gap-2">{voices.map(v => { const isSelected = v.isStd ? dubVoiceMode === "standard" && dubVoice === (v.id === "thiha" ? "thiha" : "nilar") : dubVoiceMode === "character" && dubCharacter === v.id; return (<button key={v.id} onClick={() => { if (v.isStd) { setDubVoiceMode("standard"); setDubVoice(v.id as any); setDubCharacter(""); } else { setDubVoiceMode("character"); setDubCharacter(v.id); } }} className="py-2 px-2 border rounded-xl text-xs font-bold transition-all" style={{ borderColor: isSelected ? accent : cardBorder, background: isSelected ? (isDark ? 'rgba(167,139,250,0.2)' : 'rgba(109,40,217,0.08)') : 'transparent', color: isSelected ? accent : textColor, boxShadow: isSelected && isDark ? `0 0 12px rgba(167,139,250,0.3)` : 'none' }}>{v.name}</button>); })}</div></div>
-                    ))}
-                  </div>
+                  <button onClick={() => setVoiceAccordionOpen(!voiceAccordionOpen)} className="w-full flex items-center justify-between" style={{ marginTop: "-4px" }}>
+                    <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{t.voiceSelection}</div>
+                    <ChevronDown className={`w-5 h-5 transition-transform duration-200 ${voiceAccordionOpen ? "rotate-180" : ""}`} style={{ color: accent }} />
+                  </button>
+                  {voiceAccordionOpen && (
+                    <div className="space-y-4 mt-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                      {[{ label: t.male, voices: [{ id: "thiha", name: "သီဟ", isStd: true }, { id: "ryan", name: "ရဲရင့်", isStd: false }, { id: "ronnie", name: "ရောင်နီ", isStd: false }, { id: "lucas", name: "လင်းခန့်", isStd: false }, { id: "daniel", name: "ဒေဝ", isStd: false }, { id: "evander", name: "အဂ္ဂ", isStd: false }]}, { label: t.female, voices: [{ id: "nilar", name: "နီလာ", isStd: true }, { id: "michelle", name: "မေချို", isStd: false }, { id: "iris", name: "အိန္ဒြာ", isStd: false }, { id: "charlotte", name: "သီရိ", isStd: false }, { id: "amara", name: "အမရာ", isStd: false }]}].map(({ label: grpLabel, voices }) => (
+                        <div key={grpLabel}><p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: subtextColor }}>{grpLabel}</p><div className="grid grid-cols-3 gap-2">{voices.map(v => { const isSelected = v.isStd ? dubVoiceMode === "standard" && dubVoice === (v.id === "thiha" ? "thiha" : "nilar") : dubVoiceMode === "character" && dubCharacter === v.id; return (<button key={v.id} onClick={() => { if (v.isStd) { setDubVoiceMode("standard"); setDubVoice(v.id as any); setDubCharacter(""); } else { setDubVoiceMode("character"); setDubCharacter(v.id); } }} className="py-2 px-2 border rounded-xl text-xs font-bold transition-all" style={{ borderColor: isSelected ? accent : cardBorder, background: isSelected ? (isDark ? 'rgba(167,139,250,0.2)' : 'rgba(109,40,217,0.08)') : 'transparent', color: isSelected ? accent : textColor, boxShadow: isSelected && isDark ? `0 0 12px rgba(167,139,250,0.3)` : 'none' }}>{v.name}</button>); })}</div></div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
-                {/* Speed & Pitch */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
-                    <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{t.speed}</div>
-                    <div className="mt-2">
-                      <Slider value={[dubSpeed]} onValueChange={v => setDubSpeed(v[0])} min={0.5} max={2.0} step={0.1} className="w-full" />
-                      <div className="flex justify-between items-center text-xs font-bold mt-3"><span style={{ color: subtextColor }}>{t.slower}</span><span style={{ color: accent }}>{dubSpeed.toFixed(1)}x</span><span style={{ color: subtextColor }}>{t.faster}</span></div>
+                {/* ── ACCORDION: Speed & Pitch ── */}
+                <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
+                  <button onClick={() => setSpeedAccordionOpen(!speedAccordionOpen)} className="w-full flex items-center justify-between" style={{ marginTop: "-4px" }}>
+                    <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{lang === "mm" ? "အမြန်နှုန်း / အသံနိမ့်မြင့်" : "Speed / Pitch"}</div>
+                    <ChevronDown className={`w-5 h-5 transition-transform duration-200 ${speedAccordionOpen ? "rotate-180" : ""}`} style={{ color: accent }} />
+                  </button>
+                  {speedAccordionOpen && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: subtextColor }}>{t.speed}</p>
+                        <Slider value={[dubSpeed]} onValueChange={v => setDubSpeed(v[0])} min={0.5} max={2.0} step={0.1} className="w-full" />
+                        <div className="flex justify-between items-center text-xs font-bold mt-3"><span style={{ color: subtextColor }}>{t.slower}</span><span style={{ color: accent }}>{dubSpeed.toFixed(1)}x</span><span style={{ color: subtextColor }}>{t.faster}</span></div>
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: subtextColor }}>{t.tone}</p>
+                        <Slider value={[dubPitch]} onValueChange={v => setDubPitch(v[0])} min={-20} max={20} step={1} className="w-full" />
+                        <div className="flex justify-between items-center text-xs font-bold mt-3"><span style={{ color: subtextColor }}>{t.lower}</span><span style={{ color: accent }}>{dubPitch > 0 ? "+" : ""}{dubPitch} Hz</span><span style={{ color: subtextColor }}>{t.higher}</span></div>
+                      </div>
                     </div>
-                  </div>
-                  <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
-                    <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{t.tone}</div>
-                    <div className="mt-2">
-                      <Slider value={[dubPitch]} onValueChange={v => setDubPitch(v[0])} min={-20} max={20} step={1} className="w-full" />
-                      <div className="flex justify-between items-center text-xs font-bold mt-3"><span style={{ color: subtextColor }}>{t.lower}</span><span style={{ color: accent }}>{dubPitch > 0 ? "+" : ""}{dubPitch} Hz</span><span style={{ color: subtextColor }}>{t.higher}</span></div>
-                    </div>
-                  </div>
+                  )}
                 </div>
 
-                {/* SRT Settings */}
+                {/* ── ACCORDION: SRT Settings ── */}
                 <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
-                  <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{lang === "mm" ? "စာတန်းထိုး ဆက်တင်" : "Subtitle Settings"}</div>
-                  <div className="space-y-4">
+                  <button onClick={() => setSrtAccordionOpen(!srtAccordionOpen)} className="w-full flex items-center justify-between" style={{ marginTop: "-4px" }}>
+                    <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{lang === "mm" ? "စာတန်းထိုး ဆက်တင်" : "Subtitle Settings"}</div>
+                    <ChevronDown className={`w-5 h-5 transition-transform duration-200 ${srtAccordionOpen ? "rotate-180" : ""}`} style={{ color: accent }} />
+                  </button>
+                  {srtAccordionOpen && (
+                  <div className="space-y-4 mt-2 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="flex items-center justify-between py-2">
                       <div>
                         <p className="font-bold text-sm">{lang === "mm" ? "စာတန်းထိုး ပြမည်" : "Show Subtitles"}</p>
@@ -877,7 +913,6 @@ export default function TTSGenerator() {
 
                         {srtBlurBg && (
                           <div className="space-y-4 pl-2 border-l-2" style={{ borderColor: `${accent}40` }}>
-                            {/* Blur box color: black or white */}
                             <div>
                               <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: subtextColor }}>{lang === "mm" ? "ဘောက်စ် အရောင်" : "Box Color"}</p>
                               <div className="flex gap-2">
@@ -894,7 +929,6 @@ export default function TTSGenerator() {
                               </div>
                             </div>
 
-                            {/* Blur intensity */}
                             <div>
                               <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: subtextColor }}>{lang === "mm" ? "ဝါးအဆင့်" : "Blur Intensity"}</p>
                               <div className="flex items-center gap-3">
@@ -903,7 +937,6 @@ export default function TTSGenerator() {
                               </div>
                             </div>
 
-                            {/* Box height/padding */}
                             <div>
                               <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: subtextColor }}>{lang === "mm" ? "ဘောက်စ် အမြင့်" : "Box Height"}</p>
                               <div className="flex items-center gap-3">
@@ -912,7 +945,6 @@ export default function TTSGenerator() {
                               </div>
                             </div>
 
-                            {/* Full width toggle */}
                             <div className="flex items-center justify-between py-1">
                               <div>
                                 <p className="text-xs font-bold uppercase tracking-wider" style={{ color: subtextColor }}>{lang === "mm" ? "ဘေးဘောင်အပြည့်" : "Full Width Bar"}</p>
@@ -925,7 +957,6 @@ export default function TTSGenerator() {
                               </button>
                             </div>
 
-                            {/* Corner radius: rounded or square */}
                             {!srtFullWidth && (
                               <div>
                                 <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: subtextColor }}>{lang === "mm" ? "ထောင့် ပုံစံ" : "Corner Style"}</p>
@@ -946,7 +977,6 @@ export default function TTSGenerator() {
                           </div>
                         )}
 
-                        {/* Subtitle Vertical Position */}
                         <div>
                           <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: subtextColor }}>{lang === "mm" ? "စာတန်း အနေအထား" : "Subtitle Position"}</p>
                           <div className="flex items-center gap-3">
@@ -959,6 +989,7 @@ export default function TTSGenerator() {
                       </div>
                     )}
                   </div>
+                  )}
                 </div>
 
                 {/* Generate Dubbing Button */}

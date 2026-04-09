@@ -4,16 +4,24 @@ import * as path from 'path';
 import { tmpdir } from 'os';
 import { randomUUID } from 'crypto';
 import ffmpeg from 'fluent-ffmpeg';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { geminiTranslate } from "./geminiTranslator";
+import { isAllowedVideoUrl, isPathWithinDir, sanitizeForAI } from "./_core/security";
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 // ------------------ Extract Audio ------------------
 async function extractAudio(videoBuffer: Buffer): Promise<string> {
-    const tempVideoPath = path.join(tmpdir(), `${randomUUID()}.mp4`);
-    const tempAudioPath = path.join(tmpdir(), `${randomUUID()}.mp3`);
+    // 🔐 UUID filenames
+    const id = randomUUID();
+    const tempVideoPath = path.join(tmpdir(), `vt_in_${id}.mp4`);
+    const tempAudioPath = path.join(tmpdir(), `vt_aud_${id}.mp3`);
+
+    // 🔐 Path traversal check
+    if (!isPathWithinDir(tempVideoPath, tmpdir()) || !isPathWithinDir(tempAudioPath, tmpdir())) {
+        throw new Error("Invalid temp directory.");
+    }
 
     await fs.writeFile(tempVideoPath, videoBuffer);
 
@@ -33,23 +41,37 @@ async function extractAudio(videoBuffer: Buffer): Promise<string> {
     });
 }
 
-// ------------------ Whisper ------------------
+// ------------------ Whisper — execFile with argument array ------------------
 async function transcribeLocalWhisper(audioPath: string): Promise<{ text: string, srt: string }> {
     const outputDir = path.dirname(audioPath);
     const baseName = path.parse(audioPath).name;
 
-    await execAsync(`whisper "${audioPath}" --model base --output_dir "${outputDir}" --output_format all`);
+    // 🔐 FFmpeg Command Guard: execFile with argument array
+    await execFileAsync("whisper", [
+        audioPath,
+        "--model", "base",
+        "--output_dir", outputDir,
+        "--output_format", "all"
+    ]);
 
-    const text = await fs.readFile(path.join(outputDir, `${baseName}.txt`), 'utf-8');
-    const srt = await fs.readFile(path.join(outputDir, `${baseName}.srt`), 'utf-8');
+    const textPath = path.join(outputDir, `${baseName}.txt`);
+    const srtPath = path.join(outputDir, `${baseName}.srt`);
 
-    await fs.unlink(path.join(outputDir, `${baseName}.txt`)).catch(() => {});
-    await fs.unlink(path.join(outputDir, `${baseName}.srt`)).catch(() => {});
+    // 🔐 Path traversal check
+    if (!isPathWithinDir(textPath, outputDir) || !isPathWithinDir(srtPath, outputDir)) {
+        throw new Error("Invalid file path detected.");
+    }
+
+    const text = await fs.readFile(textPath, 'utf-8');
+    const srt = await fs.readFile(srtPath, 'utf-8');
+
+    await fs.unlink(textPath).catch(() => {});
+    await fs.unlink(srtPath).catch(() => {});
 
     return { text, srt };
 }
 
-// ------------------ FILE UPLOAD (FIXED EXPORT) ------------------
+// ------------------ FILE UPLOAD ------------------
 export async function translateVideo(videoBuffer: Buffer, filename: string, userApiKey?: string) {
     let audioPath: string | null = null;
 
@@ -58,7 +80,9 @@ export async function translateVideo(videoBuffer: Buffer, filename: string, user
 
         const { text: englishText, srt: originalSrt } = await transcribeLocalWhisper(audioPath);
 
-        const { myanmar: myanmarText } = await geminiTranslate(englishText, userApiKey);
+        // 🔐 Prompt Injection Guard
+        const sanitizedText = sanitizeForAI(englishText);
+        const { myanmar: myanmarText } = await geminiTranslate(sanitizedText, userApiKey);
 
         return {
             englishText,
@@ -70,19 +94,30 @@ export async function translateVideo(videoBuffer: Buffer, filename: string, user
     }
 }
 
-// ------------------ LINK VERSION (FIXED) ------------------
+// ------------------ LINK VERSION ------------------
 
 export async function translateVideoLink(url: string, userApiKey?: string) {
-    const videoFilename = `${randomUUID()}.mp4`;
-    const tempVideoPath = path.join(tmpdir(), videoFilename);
-    const tempAudioPath = path.join(tmpdir(), `${randomUUID()}.mp3`);
+    // 🔐 yt-dlp Domain Whitelist
+    if (!isAllowedVideoUrl(url)) {
+        throw new Error("ခွင့်ပြုထားသော Link များသာ သုံးနိုင်ပါသည်။ YouTube, TikTok, Facebook Link သာ ထည့်ပါ။");
+    }
+
+    // 🔐 UUID filenames
+    const id = randomUUID();
+    const tempVideoPath = path.join(tmpdir(), `vt_dl_${id}.mp4`);
+    const tempAudioPath = path.join(tmpdir(), `vt_dlaud_${id}.mp3`);
     
+    // 🔐 Path traversal check
+    if (!isPathWithinDir(tempVideoPath, tmpdir()) || !isPathWithinDir(tempAudioPath, tmpdir())) {
+        throw new Error("Invalid temp directory.");
+    }
+
     try {
         console.log(`[Video Translator] Attempting to download: ${url}`);
         
         let downloadUrl = "";
 
-        // --- Try Cobalt API v10 first (most reliable for YouTube) ---
+        // --- Try Cobalt API v10 first ---
         try {
             const controller = new AbortController();
             const cobaltTimeout = setTimeout(() => controller.abort(), 15000);
@@ -112,63 +147,48 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
 
         if (downloadUrl) {
             console.log(`[Video Translator] Downloading via Cobalt URL...`);
-            await execAsync(`curl -s -L --max-time 120 -o "${tempVideoPath}" "${downloadUrl}"`, { timeout: 130000 });
+            // 🔐 FFmpeg Command Guard: execFile with argument array
+            await execFileAsync("curl", ["-s", "-L", "--max-time", "120", "-o", tempVideoPath, downloadUrl], { timeout: 130000 });
         } else {
             // --- Fallback to yt-dlp ---
             console.log("[Video Translator] Cobalt unavailable, using yt-dlp fallback...");
             const cookiePath = path.join(process.cwd(), 'cookies.txt');
             const hasCookies = existsSync(cookiePath);
-            const cookieFlag = hasCookies ? `--cookies "${cookiePath}"` : "";
             
             // ── STEP 1: Ensure yt-dlp is up-to-date ──
             try {
-                await execAsync("pip3 install --upgrade --pre yt-dlp 2>/dev/null", { timeout: 90000 });
+                await execFileAsync("pip3", ["install", "--upgrade", "--pre", "yt-dlp"], { timeout: 90000 });
                 console.log("[Video Translator] yt-dlp updated");
             } catch {
-                try { await execAsync("yt-dlp -U 2>/dev/null", { timeout: 30000 }); } catch {}
+                try { await execFileAsync("yt-dlp", ["-U"], { timeout: 30000 }); } catch {}
             }
 
-            // ── STEP 2: Smart download strategies ──
-            // CRITICAL: yt-dlp nightly requires --js-runtimes nodejs for n-challenge solving
-            //   (deno is default but typically not installed on VPS)
-            // CRITICAL: Android/iOS clients DON'T support cookies (yt-dlp skips them)
-            //   Web client NEEDS cookies to avoid "bot" detection on datacenter IPs
-            const jsRuntime = `--js-runtimes node`;
-            const commonFlags = `${jsRuntime} --no-check-certificates --no-playlist --no-warnings --geo-bypass --max-filesize 50M`;
+            // ── STEP 2: Smart download strategies — all using execFile ──
+            const baseArgs = ["--js-runtimes", "node", "--no-check-certificates", "--no-playlist", "--no-warnings", "--geo-bypass", "--max-filesize", "50M"];
             
-            const formatStrategies = [
-                // ─── GROUP A: Web clients WITH cookies + JS runtime (best for datacenter IPs) ───
+            const formatStrategies: string[][] = [
                 ...(hasCookies ? [
-                    // Strategy 1: Web with cookies + nodejs (solves both n-challenge + bot detection)
-                    `${cookieFlag} ${commonFlags} -f "bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b" --merge-output-format mp4`,
-                    // Strategy 2: web_creator with cookies
-                    `${cookieFlag} ${commonFlags} --extractor-args "youtube:player_client=web_creator" -f "bv*+ba/b" --merge-output-format mp4`,
-                    // Strategy 3: Web with cookies, any format
-                    `${cookieFlag} ${commonFlags} -f "b" --recode-video mp4`,
+                    [...baseArgs, "--cookies", cookiePath, "-f", "bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b", "--merge-output-format", "mp4"],
+                    [...baseArgs, "--cookies", cookiePath, "--extractor-args", "youtube:player_client=web_creator", "-f", "bv*+ba/b", "--merge-output-format", "mp4"],
+                    [...baseArgs, "--cookies", cookiePath, "-f", "b", "--recode-video", "mp4"],
                 ] : []),
-
-                // ─── GROUP B: Mobile clients WITHOUT cookies (may work if IP not flagged) ───
-                // Strategy 4: web_creator without cookies
-                `${commonFlags} --extractor-args "youtube:player_client=web_creator" -f "b[ext=mp4]/bv*+ba/b" --merge-output-format mp4`,
-                // Strategy 5: Android client — no cookies, no n-challenge needed
-                `${commonFlags} --extractor-args "youtube:player_client=android" -f "b[ext=mp4]/b" --merge-output-format mp4`,
-                // Strategy 6: Default (web) without cookies
-                `${commonFlags} -f "bv*+ba/b" --merge-output-format mp4`,
-
-                // ─── GROUP C: Last resort ───
-                `${commonFlags} -f "worst[ext=mp4]/worst" --recode-video mp4`,
+                [...baseArgs, "--extractor-args", "youtube:player_client=web_creator", "-f", "b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4"],
+                [...baseArgs, "--extractor-args", "youtube:player_client=android", "-f", "b[ext=mp4]/b", "--merge-output-format", "mp4"],
+                [...baseArgs, "-f", "bv*+ba/b", "--merge-output-format", "mp4"],
+                [...baseArgs, "-f", "worst[ext=mp4]/worst", "--recode-video", "mp4"],
             ];
             
             let dlSuccess = false;
             for (let i = 0; i < formatStrategies.length; i++) {
-                const fmtStr = formatStrategies[i];
                 await fs.unlink(tempVideoPath).catch(() => {});
                 try {
-                    const isCookie = fmtStr.includes("--cookies");
+                    const isCookie = formatStrategies[i].includes("--cookies");
                     const groupLabel = isCookie ? "Web+Cookies" : "NoCookies";
-                    console.log(`[Video Translator] Strategy ${i + 1}/${formatStrategies.length} [${groupLabel}]: yt-dlp ${fmtStr.slice(0, 140)}...`);
-                    await execAsync(
-                        `yt-dlp ${fmtStr} -o "${tempVideoPath}" "${url}"`,
+                    console.log(`[Video Translator] Strategy ${i + 1}/${formatStrategies.length} [${groupLabel}]...`);
+                    // 🔐 FFmpeg Command Guard: execFile prevents command injection
+                    await execFileAsync(
+                        "yt-dlp",
+                        [...formatStrategies[i], "-o", tempVideoPath, url],
                         { timeout: 300000 }
                     );
                     const checkStat = await fs.stat(tempVideoPath).catch(() => null);
@@ -218,7 +238,9 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
         }
 
         console.log(`[Video Translator] Translating with Gemini...`);
-        const { myanmar: myanmarText } = await geminiTranslate(englishText, userApiKey);
+        // 🔐 Prompt Injection Guard
+        const sanitizedText = sanitizeForAI(englishText);
+        const { myanmar: myanmarText } = await geminiTranslate(sanitizedText, userApiKey);
 
         return { 
             englishText, 

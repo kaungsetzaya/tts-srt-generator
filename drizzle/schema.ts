@@ -6,6 +6,8 @@ export const users = mysqlTable("users", {
   telegramUsername: varchar("telegram_username", { length: 100 }),
   telegramFirstName: varchar("telegram_first_name", { length: 100 }),
   telegramCode: varchar("telegram_code", { length: 6 }),
+  // 🔐 Dynamic OTP — code expiry (10 minutes)
+  telegramCodeExpiresAt: timestamp("telegram_code_expires_at"),
   role: varchar("role", { length: 20 }).default("user"),
   bannedAt: timestamp("banned_at"),
   // 🔐 One-Device Session — login တိုင်း token အသစ်ထုတ်ပြီး JWT ထဲ ထည့်သည်

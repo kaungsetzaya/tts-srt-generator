@@ -6,6 +6,7 @@
  */
 
 import type { Request, Response, NextFunction } from "express";
+import { nanoid } from "nanoid";
 
 // ────────────────────────────────────────────────────
 // ✅ 1. CORS — ကိုယ့် Domain မှ လာသော Request သာ ခွင့်ပြုသည်
@@ -39,7 +40,7 @@ export function corsMiddleware(req: Request, res: Response, next: NextFunction) 
 }
 
 // ────────────────────────────────────────────────────
-// ✅ 2. Admin IP Whitelist — Admin route ကို IP filter
+// ✅ 2. Admin IP Whitelist — REQUIRED in production
 // ────────────────────────────────────────────────────
 const ADMIN_IPS = (process.env.ADMIN_WHITELIST_IPS || "")
   .split(",")
@@ -47,7 +48,14 @@ const ADMIN_IPS = (process.env.ADMIN_WHITELIST_IPS || "")
   .filter(Boolean);
 
 export function adminIpWhitelist(req: Request, res: Response, next: NextFunction) {
-  // IP whitelist မသတ်မှတ်ထားရင် ဒါကို skip (dev mode)
+  // 🔐 Production mode: IP whitelist ရှိရမည်
+  if (process.env.NODE_ENV === "production" && ADMIN_IPS.length === 0) {
+    console.error("[SECURITY] FATAL: ADMIN_WHITELIST_IPS is not set in production! Admin access blocked.");
+    res.status(403).json({ error: "Access denied." });
+    return;
+  }
+
+  // Dev mode: no whitelist = allow all
   if (ADMIN_IPS.length === 0) return next();
 
   const clientIp = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim()
@@ -79,6 +87,8 @@ const DANGEROUS_PATTERNS = [
 
 function containsDangerousPattern(value: unknown): boolean {
   if (typeof value === "string") {
+    // Skip base64 video data (too large and not dangerous)
+    if (value.length > 10000) return false;
     return DANGEROUS_PATTERNS.some(p => p.test(value));
   }
   if (Array.isArray(value)) return value.some(containsDangerousPattern);
@@ -165,7 +175,7 @@ export async function cleanTempFiles() {
     const ONE_HOUR = 60 * 60 * 1000;
     let cleaned = 0;
     for (const file of files) {
-      if (!file.match(/\.(mp4|mp3|wav|webm)$/i)) continue;
+      if (!file.match(/\.(mp4|mp3|wav|webm|srt|txt|json)$/i)) continue;
       try {
         const filePath = join(tmp, file);
         const s = await stat(filePath);
@@ -181,3 +191,146 @@ export async function cleanTempFiles() {
 
 // Auto cleanup every 30 minutes
 setInterval(cleanTempFiles, 30 * 60 * 1000);
+
+// ────────────────────────────────────────────────────
+// ✅ 8. Request ID Tracking — Every request gets a unique ID
+// ────────────────────────────────────────────────────
+export function requestIdMiddleware(req: Request, res: Response, next: NextFunction) {
+  const requestId = nanoid(12);
+  (req as any).requestId = requestId;
+  res.setHeader("X-Request-ID", requestId);
+  next();
+}
+
+// ────────────────────────────────────────────────────
+// ✅ 9. Global Memory Threshold — Pause new tasks if RAM > 90%
+// ────────────────────────────────────────────────────
+export function memoryGuardMiddleware(req: Request, res: Response, next: NextFunction) {
+  try {
+    const mem = process.memoryUsage();
+    const totalSystem = require("os").totalmem();
+    const usedPercent = (mem.rss / totalSystem) * 100;
+    if (usedPercent > 90) {
+      console.warn(`[MEMORY] Server RAM usage at ${usedPercent.toFixed(1)}% — rejecting request`);
+      res.status(503).json({ error: "Server is currently overloaded. Please try again later." });
+      return;
+    }
+  } catch {}
+  next();
+}
+
+// ────────────────────────────────────────────────────
+// ✅ 10. yt-dlp Domain Whitelist — YouTube, TikTok, Facebook only
+// ────────────────────────────────────────────────────
+const ALLOWED_VIDEO_DOMAINS = [
+  "youtube.com", "www.youtube.com", "m.youtube.com",
+  "youtu.be",
+  "tiktok.com", "www.tiktok.com", "vm.tiktok.com",
+  "facebook.com", "www.facebook.com", "m.facebook.com",
+  "fb.watch",
+];
+
+export function isAllowedVideoUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.toLowerCase();
+    return ALLOWED_VIDEO_DOMAINS.some(d => hostname === d || hostname.endsWith("." + d));
+  } catch {
+    return false;
+  }
+}
+
+// ────────────────────────────────────────────────────
+// ✅ 11. Magic Bytes Validation — verify file headers
+// ────────────────────────────────────────────────────
+const VIDEO_MAGIC_BYTES: Array<{ ext: string; bytes: number[] }> = [
+  { ext: "mp4",  bytes: [0x00, 0x00, 0x00] },  // ftyp box (offset 4)
+  { ext: "webm", bytes: [0x1A, 0x45, 0xDF, 0xA3] },
+  { ext: "avi",  bytes: [0x52, 0x49, 0x46, 0x46] }, // RIFF
+  { ext: "mkv",  bytes: [0x1A, 0x45, 0xDF, 0xA3] },
+  { ext: "mov",  bytes: [0x00, 0x00, 0x00] },  // same as mp4
+];
+
+export function isValidVideoBuffer(buffer: Buffer): boolean {
+  if (buffer.length < 12) return false;
+  // Check for ftyp box (MP4/MOV) — 'ftyp' at offset 4
+  if (buffer[4] === 0x66 && buffer[5] === 0x74 && buffer[6] === 0x79 && buffer[7] === 0x70) return true;
+  // Check for RIFF (AVI)
+  if (buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46) return true;
+  // Check for WebM/MKV (EBML)
+  if (buffer[0] === 0x1A && buffer[1] === 0x45 && buffer[2] === 0xDF && buffer[3] === 0xA3) return true;
+  return false;
+}
+
+// ────────────────────────────────────────────────────
+// ✅ 12. Path Traversal Guard
+// ────────────────────────────────────────────────────
+import path from "path";
+
+export function isPathWithinDir(filePath: string, allowedDir: string): boolean {
+  const resolved = path.resolve(filePath);
+  const resolvedDir = path.resolve(allowedDir);
+  return resolved.startsWith(resolvedDir + path.sep) || resolved === resolvedDir;
+}
+
+// ────────────────────────────────────────────────────
+// ✅ 13. Prompt Injection Guard — sanitize text before AI
+// ────────────────────────────────────────────────────
+const PROMPT_INJECTION_PATTERNS = [
+  /ignore\s+(all\s+)?previous\s+instructions/i,
+  /ignore\s+the\s+above/i,
+  /disregard\s+(all\s+)?prior/i,
+  /system\s*:\s*/i,
+  /\[INST\]/i,
+  /\[\/INST\]/i,
+  /<\|system\|>/i,
+  /<\|user\|>/i,
+  /<\|assistant\|>/i,
+  /you\s+are\s+now\s+/i,
+  /pretend\s+you\s+are/i,
+  /act\s+as\s+if\s+you/i,
+  /forget\s+everything/i,
+  /new\s+instructions:/i,
+  /override\s+instructions/i,
+];
+
+export function sanitizeForAI(text: string): string {
+  let clean = text;
+  for (const pattern of PROMPT_INJECTION_PATTERNS) {
+    clean = clean.replace(pattern, "");
+  }
+  return clean.trim();
+}
+
+// ────────────────────────────────────────────────────
+// ✅ 14. Base64 Video Prefix Validation
+// ────────────────────────────────────────────────────
+export function validateBase64VideoPrefix(base64: string): boolean {
+  // Accept raw base64 (no prefix) or valid data URI prefixes
+  if (!base64.includes(",")) return true; // raw base64, no prefix
+  const prefix = base64.split(",")[0].toLowerCase();
+  const validPrefixes = [
+    "data:video/mp4;base64",
+    "data:video/webm;base64",
+    "data:video/quicktime;base64",
+    "data:video/x-msvideo;base64",
+    "data:video/x-matroska;base64",
+    "data:video/avi;base64",
+    "data:application/octet-stream;base64",
+  ];
+  return validPrefixes.some(vp => prefix.startsWith(vp));
+}
+
+// ────────────────────────────────────────────────────
+// ✅ 15. Voice ID Server-side Whitelist
+// ────────────────────────────────────────────────────
+const ALLOWED_VOICE_IDS = ["thiha", "nilar"];
+const ALLOWED_CHARACTER_IDS = ["ryan", "ronnie", "lucas", "daniel", "evander", "michelle", "iris", "charlotte", "amara"];
+
+export function isValidVoiceId(voice: string): boolean {
+  return ALLOWED_VOICE_IDS.includes(voice);
+}
+
+export function isValidCharacterId(character: string): boolean {
+  return ALLOWED_CHARACTER_IDS.includes(character);
+}

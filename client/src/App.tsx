@@ -9,6 +9,8 @@ import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import AdminDashboard from "./pages/AdminDashboard";
 import VideoTranslator from "./pages/VideoTranslator";
+import History from "./pages/History";
+import TrialInfo from "./pages/TrialInfo";
 import AuthGuard from "./components/AuthGuard";
 
 function Router() {
@@ -24,6 +26,16 @@ function Router() {
       <Route path={"/admin"}>
         <AuthGuard>
           <AdminDashboard />
+        </AuthGuard>
+      </Route>
+      <Route path={"/history"}>
+        <AuthGuard>
+          <History />
+        </AuthGuard>
+      </Route>
+      <Route path={"/trial-info"}>
+        <AuthGuard>
+          <TrialInfo />
         </AuthGuard>
       </Route>
       <Route path={"/video"}>
