@@ -499,6 +499,84 @@ export default function TTSGenerator() {
         </div>
       </div>
 
+      {/* 🎯 TRIAL LIMIT DISPLAY */}
+      {me && !isAdmin && hasPlan && currentPlan === 'trial' && (subStatus as any)?.trialUsage && (subStatus as any)?.trialLimits && (
+        <div className="mx-3 sm:mx-4 mb-3 sm:mb-4 animate-in fade-in zoom-in-95 duration-300" style={{
+          background: "oklch(0.65 0.25 310 / 8%)",
+          border: "1px solid oklch(0.65 0.25 310 / 25%)",
+          borderRadius: "12px",
+          padding: "12px 16px",
+          boxShadow: isDark ? "0 4px 20px oklch(0.65 0.25 310 / 15%)" : "0 2px 10px oklch(0.65 0.25 310 / 10%)"
+        }}>
+          <div className="flex items-center gap-2 mb-3">
+            <Clock className="w-4 h-4" style={{ color: "oklch(0.65 0.25 310)" }} />
+            <span className="font-bold text-sm" style={{ color: "oklch(0.65 0.25 310)" }}>Trial အသုံးပြုမှု:</span>
+            {(subStatus as any).expiresAt && (
+              <span className="ml-auto text-xs" style={{ color: "oklch(0.65 0.25 310 / 60%)" }}>
+                သက်တမ်း: {new Date((subStatus as any).expiresAt).toLocaleDateString('my-MM')}
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 text-xs">
+            {/* TTS */}
+            <div className="bg-black/20 rounded-lg p-2 border" style={{ borderColor: "oklch(0.65 0.25 310 / 20%)" }}>
+              <div className="opacity-70 mb-1" style={{ fontSize: "10px" }}>စာမှအသံ</div>
+              <div className="font-bold text-sm">
+                {(subStatus as any).trialUsage.tts}/{(subStatus as any).trialLimits.totalTtsSrt}
+              </div>
+              <div className={((subStatus as any).trialLimits.totalTtsSrt - (subStatus as any).trialUsage.tts) <= 2 ? "text-red-400" : "text-green-400"} style={{ fontSize: "10px" }}>
+                {(subStatus as any).trialLimits.totalTtsSrt - (subStatus as any).trialUsage.tts} ကျန်
+              </div>
+            </div>
+
+            {/* AI Video */}
+            <div className="bg-black/20 rounded-lg p-2 border" style={{ borderColor: "oklch(0.65 0.25 310 / 20%)" }}>
+              <div className="opacity-70 mb-1" style={{ fontSize: "10px" }}>AI Video</div>
+              <div className="font-bold text-sm">
+                {(subStatus as any).trialUsage.aiVideo}/{(subStatus as any).trialLimits.totalAiVideo}
+              </div>
+              <div className={((subStatus as any).trialLimits.totalAiVideo - (subStatus as any).trialUsage.aiVideo) <= 1 ? "text-red-400" : "text-green-400"} style={{ fontSize: "10px" }}>
+                {(subStatus as any).trialLimits.totalAiVideo - (subStatus as any).trialUsage.aiVideo} ကျန်
+              </div>
+            </div>
+
+            {/* Character Voice */}
+            <div className="bg-black/20 rounded-lg p-2 border" style={{ borderColor: "oklch(0.65 0.25 310 / 20%)" }}>
+              <div className="opacity-70 mb-1" style={{ fontSize: "10px" }}>Character Voice</div>
+              <div className="font-bold text-sm">
+                {(subStatus as any).trialUsage.characterUse}/{(subStatus as any).trialLimits.totalCharacterUse}
+              </div>
+              <div className={((subStatus as any).trialLimits.totalCharacterUse - (subStatus as any).trialUsage.characterUse) <= 1 ? "text-red-400" : "text-green-400"} style={{ fontSize: "10px" }}>
+                {(subStatus as any).trialLimits.totalCharacterUse - (subStatus as any).trialUsage.characterUse} ကျန်
+              </div>
+            </div>
+
+            {/* Video Translate */}
+            <div className="bg-black/20 rounded-lg p-2 border" style={{ borderColor: "oklch(0.65 0.25 310 / 20%)" }}>
+              <div className="opacity-70 mb-1" style={{ fontSize: "10px" }}>ဗီဒီယိုဘာသာပြန်</div>
+              <div className="font-bold text-sm">
+                {(subStatus as any).trialUsage.videoTranslate}/{(subStatus as any).trialLimits.totalVideoTranslate}
+              </div>
+              <div className={((subStatus as any).trialLimits.totalVideoTranslate - (subStatus as any).trialUsage.videoTranslate) <= 1 ? "text-red-400" : "text-green-400"} style={{ fontSize: "10px" }}>
+                {(subStatus as any).trialLimits.totalVideoTranslate - (subStatus as any).trialUsage.videoTranslate} ကျန်
+              </div>
+            </div>
+          </div>
+
+          {/* Progress bar */}
+          <div className="mt-2 h-1.5 rounded-full bg-white/5 overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${Math.min(((subStatus as any).trialUsage.tts + (subStatus as any).trialUsage.aiVideo) / ((subStatus as any).trialLimits.totalTtsSrt + (subStatus as any).trialLimits.totalAiVideo) * 100, 100)}%`,
+                background: `linear-gradient(90deg, oklch(0.65 0.25 310), oklch(0.72 0.25 310))`
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* TABS */}
       <div className="relative z-10 flex gap-1 px-2 sm:px-4 pt-2 sm:pt-3 border-b overflow-x-auto scrollbar-hide" style={{ borderColor: cardBorder, background: isDark ? 'rgba(15,12,41,0.5)' : 'rgba(255,255,255,0.5)' }}>
         {([{ id: "tts" as Tab, label: t.tabs.tts, icon: <Mic className="w-3.5 h-3.5" /> }, { id: "video" as Tab, label: t.tabs.video, icon: <FileVideo className="w-3.5 h-3.5" /> }, { id: "dubbing" as Tab, label: t.tabs.dubbing, icon: <Wand2 className="w-3.5 h-3.5" /> }, { id: "history" as Tab, label: t.tabs.history, icon: <Clock className="w-3.5 h-3.5" /> }, { id: "plan" as Tab, label: t.tabs.plan, icon: <Crown className="w-3.5 h-3.5" /> }, { id: "guide" as Tab, label: t.tabs.guide, icon: <Info className="w-3.5 h-3.5" /> }, { id: "settings" as Tab, label: t.tabs.settings, icon: <Settings className="w-3.5 h-3.5" /> }]).map(({ id, label: lbl, icon }) => (
@@ -524,13 +602,13 @@ export default function TTSGenerator() {
                       <span style={{ color: subtextColor }}>VC: <b style={{ color: (subStatus as any).trialUsage.characterUse >= (subStatus as any).trialLimits.totalCharacterUse ? '#dc2626' : accent }}>{(subStatus as any).trialUsage.characterUse}/{(subStatus as any).trialLimits.totalCharacterUse}</b></span>
                       <span style={{ color: subtextColor }}>{lang === 'mm' ? 'စာလုံး' : 'Chars'}: <b style={{ color: accent }}>{voiceMode === 'character' ? (subStatus as any).trialLimits.charLimitCharacter.toLocaleString() : (subStatus as any).trialLimits.charLimitStandard.toLocaleString()}</b></span>
                     </>
-                  ) : (
+                  ) : currentPlan !== 'trial' && planUsage ? (
                     <>
                       <span style={{ color: subtextColor }}>TTS: <b style={{ color: planUsage.tts >= planLimits.dailyTtsSrt ? '#dc2626' : accent }}>{planUsage.tts}/{planLimits.dailyTtsSrt}</b></span>
                       <span style={{ color: subtextColor }}>VC: <b style={{ color: planUsage.characterUse >= planLimits.dailyCharacterUse ? '#dc2626' : accent }}>{planUsage.characterUse}/{planLimits.dailyCharacterUse}</b></span>
                       <span style={{ color: subtextColor }}>{lang === 'mm' ? 'စာလုံး' : 'Chars'}: <b style={{ color: accent }}>{currentCharLimit.toLocaleString()}</b></span>
                     </>
-                  )}
+                  ) : null}
                 </div>
               )}
               {/* No Plan Banner */}
@@ -548,7 +626,7 @@ export default function TTSGenerator() {
                   <textarea value={text} onChange={e => { if (!isAdmin && e.target.value.length > currentCharLimit) return; setText(e.target.value); }} placeholder={t.inputPlaceholder} disabled={!hasPlan} className="w-full h-28 sm:h-32 md:h-40 p-3 sm:p-4 border rounded-xl focus:outline-none focus:ring-2 resize-none disabled:opacity-50 transition-colors text-sm leading-relaxed" style={{ background: inputBg, borderColor: inputBorder, color: textColor }} />
                   <div className="mt-2 flex items-center justify-between text-xs font-semibold" style={{ color: subtextColor }}>
                     <span>
-                      {!isAdmin && hasPlan && planUsage && planLimits && (
+                      {!isAdmin && hasPlan && currentPlan !== 'trial' && planUsage && planLimits && (
                         <span style={{ color: voiceMode === "character" ? (planUsage.characterUse >= planLimits.dailyCharacterUse ? "#dc2626" : subtextColor) : (planUsage.tts >= planLimits.dailyTtsSrt ? "#dc2626" : subtextColor) }}>
                           {lang === "mm" ? "ယနေ့" : "Today"}: {voiceMode === "character" ? `${planUsage.characterUse}/${planLimits.dailyCharacterUse}` : `${planUsage.tts}/${planLimits.dailyTtsSrt}`} {lang === "mm" ? "ကြိမ်" : "uses"}
                         </span>
@@ -598,7 +676,7 @@ export default function TTSGenerator() {
               <p className="font-bold tracking-wider text-xs sm:text-sm mt-1" style={{ color: subtextColor }}>{t.videoDesc}</p>
               <p className="text-xs mt-1" style={{ color: subtextColor }}>{t.videoLimit}</p>
               {/* Video Translation Usage Banner */}
-              {!isAdmin && hasPlan && planLimits && planUsage && (
+              {!isAdmin && hasPlan && currentPlan !== 'trial' && planLimits && planUsage && (
                 <div className="mt-3 mx-auto max-w-md flex items-center justify-center gap-3 px-3 py-2 rounded-xl text-xs font-bold" style={{ background: isDark ? 'rgba(167,139,250,0.1)' : 'rgba(109,40,217,0.06)', border: `1px solid ${cardBorder}` }}>
                   <span className="px-2 py-0.5 rounded-lg" style={{ background: currentPlan === 'trial' ? '#f59e0b' : '#16a34a', color: '#fff' }}>{currentPlan === 'trial' ? (lang === 'mm' ? 'အစမ်းသုံး' : 'TRIAL') : (currentPlan?.toUpperCase() ?? 'SUB')}</span>
                   <span style={{ color: planUsage.videoTranslate >= planLimits.dailyVideoTranslate ? '#dc2626' : subtextColor }}>{lang === 'mm' ? 'ယနေ့' : 'Today'}: <b style={{ color: planUsage.videoTranslate >= planLimits.dailyVideoTranslate ? '#dc2626' : accent }}>{planUsage.videoTranslate}/{planLimits.dailyVideoTranslate}</b> {lang === 'mm' ? 'ကြိမ်' : 'uses'}</span>
@@ -696,7 +774,7 @@ export default function TTSGenerator() {
                 {lang === "mm" ? "AI ဖြင့် Video ဖန်တီးခြင်း" : "Create dubbed videos with AI"}
               </p>
               {/* AI Video Usage Banner */}
-              {!isAdmin && hasPlan && planLimits && planUsage && (
+              {!isAdmin && hasPlan && currentPlan !== 'trial' && planLimits && planUsage && (
                 <div className="mt-3 mx-auto max-w-md flex items-center justify-center gap-3 px-3 py-2 rounded-xl text-xs font-bold" style={{ background: isDark ? 'rgba(167,139,250,0.1)' : 'rgba(109,40,217,0.06)', border: `1px solid ${cardBorder}` }}>
                   <span className="px-2 py-0.5 rounded-lg" style={{ background: currentPlan === 'trial' ? '#f59e0b' : '#16a34a', color: '#fff' }}>{currentPlan === 'trial' ? (lang === 'mm' ? 'အစမ်းသုံး' : 'TRIAL') : (currentPlan?.toUpperCase() ?? 'SUB')}</span>
                   <span style={{ color: planUsage.aiVideo >= planLimits.dailyAiVideo ? '#dc2626' : subtextColor }}>{lang === 'mm' ? 'ယနေ့' : 'Today'}: <b style={{ color: planUsage.aiVideo >= planLimits.dailyAiVideo ? '#dc2626' : accent }}>{planUsage.aiVideo}/{planLimits.dailyAiVideo}</b> {lang === 'mm' ? 'ကြိမ်' : 'uses'}</span>
@@ -1154,11 +1232,11 @@ export default function TTSGenerator() {
                 const tu = (subStatus as any)?.trialUsage;
                 const tl = (subStatus as any)?.trialLimits;
                 const usage = currentPlan === 'trial' && tu && tl ? [
-                  { label: lang === 'mm' ? 'အသံဖန်တီးမှု (Standard)' : 'Voice Generation (Standard)', used: tu.ttsUsed || 0, total: tl.ttsLimit || 0, color: accent },
-                  { label: lang === 'mm' ? 'အသံပြောင်းမှု (Premium)' : 'Voice Change (Premium)', used: tu.characterUsed || 0, total: tl.characterLimit || 0, color: '#f59e0b' },
-                  { label: lang === 'mm' ? 'ဗီဒီယိုဘာသာပြန်' : 'Video Translation', used: tu.videoUsed || 0, total: tl.videoLimit || 0, color: '#60a5fa' },
-                  { label: lang === 'mm' ? 'ဗီဒီယိုဖန်တီးမှု' : 'Video Creation', used: tu.aiVideoUsed || 0, total: tl.aiVideoLimit || 0, color: '#4ade80' },
-                ] : planUsage && planLimits ? [
+                  { label: lang === 'mm' ? 'အသံဖန်တီးမှု (Standard)' : 'Voice Generation (Standard)', used: tu.tts || 0, total: tl.totalTtsSrt || 0, color: accent },
+                  { label: lang === 'mm' ? 'အသံပြောင်းမှု (Premium)' : 'Voice Change (Premium)', used: tu.characterUse || 0, total: tl.totalCharacterUse || 0, color: '#f59e0b' },
+                  { label: lang === 'mm' ? 'ဗီဒီယိုဘာသာပြန်' : 'Video Translation', used: tu.videoTranslate || 0, total: tl.totalVideoTranslate || 0, color: '#60a5fa' },
+                  { label: lang === 'mm' ? 'ဗီဒီယိုဖန်တီးမှု' : 'Video Creation', used: tu.aiVideo || 0, total: tl.totalAiVideo || 0, color: '#4ade80' },
+                ] : currentPlan !== 'trial' && planUsage && planLimits ? [
                   { label: lang === 'mm' ? 'အသံဖန်တီးမှု' : 'Voice Generation', used: planUsage.tts, total: planLimits.dailyTtsSrt, color: accent },
                   { label: lang === 'mm' ? 'အသံပြောင်းမှု' : 'Voice Change', used: planUsage.characterUse, total: planLimits.dailyCharacterUse, color: '#f59e0b' },
                   { label: lang === 'mm' ? 'ဗီဒီယိုဘာသာပြန်' : 'Video Translation', used: planUsage.videoTranslate, total: planLimits.dailyVideoTranslate, color: '#60a5fa' },

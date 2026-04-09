@@ -223,8 +223,18 @@ export default function AdminDashboard() {
   const { data: voiceStats, refetch: refetchVoice } = trpc.adminStats.getVoiceStats.useQuery({ timeframe });
   const { data: errorData, refetch: refetchErrors } = trpc.adminStats.getErrorLogs.useQuery({ limit: 50, onlyUnresolved: false });
   const { data: churnData } = trpc.adminStats.getChurnStats.useQuery();
+  const { data: onlineStats } = trpc.adminStats.onlineUsers.useQuery(undefined, { refetchInterval: 60000 });
+  const [trialStartDate, setTrialStartDate] = useState("");
+  const [trialEndDate, setTrialEndDate] = useState("");
+  const [trialEnabled, setTrialEnabled] = useState(false);
   trpc.settings.get.useQuery(undefined, {
-    onSuccess: (d: any) => { setAutoTrialEnabled(d.autoTrialEnabled); setAutoTrialDays(d.autoTrialDays); },
+    onSuccess: (d: any) => {
+      setAutoTrialEnabled(d.autoTrialEnabled);
+      setAutoTrialDays(d.autoTrialDays);
+      setTrialStartDate(d.trialStartDate || "");
+      setTrialEndDate(d.trialEndDate || "");
+      setTrialEnabled(d.trialEnabled || false);
+    },
   });
 
   const logoutMutation = trpc.auth.logout.useMutation({ onSuccess: () => { window.location.href = "/login"; } });
@@ -288,10 +298,10 @@ export default function AdminDashboard() {
         {/* Top KPI Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {[
-            { label: "Total Users", value: normalUsers.length, color: "#60a5fa", sub: `${activeSubs} active subs` },
-            { label: "Generations Today", value: analytics?.generations?.today ?? 0, color: "#fbbf24", sub: `${analytics?.generations?.week ?? 0} this week` },
-            { label: "Est. Revenue", value: fmtMMK(totalRevenue), color: "#c084fc", sub: `${analytics?.planCounts?.length ?? 0} active plans` },
-            { label: "Failed Jobs", value: totalErrors, color: totalErrors > 0 ? "#f87171" : "#4ade80", sub: totalErrors > 0 ? "needs attention" : "all clear" },
+            { label: "🟢 Online Now", value: onlineStats?.onlineCount ?? 0, color: "#4ade80", sub: "Active in 15min" },
+            { label: "🎙️ TTS (Month)", value: analytics?.featureBreakdown?.tts ?? 0, color: C, sub: `${analytics?.generations?.today ?? 0} today` },
+            { label: "🎬 Video (Month)", value: (analytics?.featureBreakdown?.videoUpload ?? 0) + (analytics?.featureBreakdown?.videoLink ?? 0), color: "#60a5fa", sub: `${analytics?.featureBreakdown?.translation ?? 0} translated` },
+            { label: "Total Users", value: normalUsers.length, color: "#c084fc", sub: `${activeSubs} active subs` },
           ].map(({ label, value, color, sub }) => (
             <div key={label} className="border rounded-xl p-4" style={{ background: cardBg, borderColor: border }}>
               <p className="text-xs uppercase tracking-wider opacity-50 mb-1">{label}</p>
@@ -733,7 +743,32 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               </div>
-              <button onClick={() => updateSettings.mutate({ autoTrialEnabled, autoTrialDays })} disabled={updateSettings.isPending}
+              <div className="pt-4 border-t" style={{ borderColor: border }}>
+                <p className="font-bold mb-3">Trial ကာလ သတ်မှတ်ချက် (Trial Period)</p>
+                <div className="flex items-center gap-2 mb-3">
+                  <input type="checkbox" id="trialEnabled" checked={trialEnabled} onChange={e => setTrialEnabled(e.target.checked)}
+                    className="w-4 h-4 rounded" />
+                  <label htmlFor="trialEnabled" className="text-sm">Trial ကာလ ဖွင့်ထားမည် (Enable trial period)</label>
+                </div>
+                {trialEnabled && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1">
+                        <label className="text-xs opacity-60 mb-1 block">စတင် ရက် (Start Date)</label>
+                        <input type="date" value={trialStartDate} onChange={e => setTrialStartDate(e.target.value)}
+                          className="w-full border p-2 text-sm font-bold rounded-lg" style={{ background: "rgba(0,0,0,0.3)", borderColor: border, color: C }} />
+                      </div>
+                      <div className="flex-1">
+                        <label className="text-xs opacity-60 mb-1 block">အဆုံး ရက် (End Date)</label>
+                        <input type="date" value={trialEndDate} onChange={e => setTrialEndDate(e.target.value)}
+                          className="w-full border p-2 text-sm font-bold rounded-lg" style={{ background: "rgba(0,0,0,0.3)", borderColor: border, color: C }} />
+                      </div>
+                    </div>
+                    <p className="text-xs opacity-50">💡 ဒီကာလအတွင်း ဝင်သော user တိုင်း auto trial ရမည် (All users joining in this period get auto trial)</p>
+                  </div>
+                )}
+              </div>
+              <button onClick={() => updateSettings.mutate({ autoTrialEnabled, autoTrialDays, trialStartDate, trialEndDate, trialEnabled })} disabled={updateSettings.isPending}
                 className="px-6 py-2.5 font-bold uppercase text-sm text-black rounded-xl disabled:opacity-50 flex items-center gap-2" style={{ background: C }}>
                 {updateSettings.isPending && <Loader2 className="w-4 h-4 animate-spin" />} Save Settings
               </button>

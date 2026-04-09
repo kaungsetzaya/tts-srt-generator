@@ -87,6 +87,44 @@ export async function handleTelegramUpdate(update: any) {
         const autoEnabledRow = await db.select().from(settings).where(eq(settings.keyName, "auto_trial_enabled")).limit(1);
         const autoEnabled = autoEnabledRow[0]?.value === "true";
         if (autoEnabled) {
+          // 🆕 Check trial date range
+          const trialEnabledRow = await db.select().from(settings).where(eq(settings.keyName, "trial_enabled")).limit(1);
+          const trialEnabled = trialEnabledRow[0]?.value === "true";
+          if (trialEnabled) {
+            const startDateRow = await db.select().from(settings).where(eq(settings.keyName, "trial_start_date")).limit(1);
+            const endDateRow = await db.select().from(settings).where(eq(settings.keyName, "trial_end_date")).limit(1);
+            const startDate = startDateRow[0]?.value;
+            const endDate = endDateRow[0]?.value;
+            const today = new Date().toISOString().split('T')[0];
+
+            // Only give trial if today is within the trial period
+            if (startDate && endDate && today >= startDate && today <= endDate) {
+              const trialDays = parseInt(trialDaysRow[0]?.value ?? "7");
+              const subId = nanoid(36);
+              const trialExpiry = new Date(endDate); // Trial ends on period end date
+              await db.insert(subscriptions).values({
+                id: subId,
+                userId: existingUserId,
+                plan: "trial",
+                startsAt: now,
+                expiresAt: trialExpiry,
+                createdByAdmin: "system",
+                note: "Auto trial " + trialDays + " days (existing user, trial period)",
+              });
+              await sendMessage(chatId,
+                `👋 <b>မင်္ဂလာပါ, ${firstName}!</b>\n\n` +
+                `🎁 <b>Trial ${trialDays} ရက် ရရှိပါပြီ!</b> (${startDate} မှ ${endDate} ထိ)\n\n` +
+                `🔑 သင့် login code:\n\n` +
+                `<code>${code}</code>\n\n` +
+                `⏰ Code သက်တမ်း: <b>၁၀ မိနစ်</b>\n` +
+                `ဒီ code ကို https://choco.de5.net မှာ login ဝင်ဖို့ သုံးပါ။\n\n` +
+                `⚠️ Code သက်တမ်းကုန်ရင် /code ကို ထပ်နှိပ်ပါ!`
+              );
+              return;
+            }
+          }
+
+          // Fallback to original logic if no date range set
           const trialDaysRow = await db.select().from(settings).where(eq(settings.keyName, "auto_trial_days")).limit(1);
           const trialDays = parseInt(trialDaysRow[0]?.value ?? "7");
           const subId = nanoid(36);
@@ -135,19 +173,47 @@ export async function handleTelegramUpdate(update: any) {
       const autoEnabledRow = await db.select().from(settings).where(eq(settings.keyName, "auto_trial_enabled")).limit(1);
       const autoEnabled = autoEnabledRow[0]?.value === "true";
       if (autoEnabled) {
-        const trialDaysRow = await db.select().from(settings).where(eq(settings.keyName, "auto_trial_days")).limit(1);
-        const trialDays = parseInt(trialDaysRow[0]?.value ?? "7");
-        const subId = nanoid(36);
-        const trialExpiry = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000);
-        await db.insert(subscriptions).values({
-          id: subId,
-          userId: newUserId,
-          plan: "trial",
-          startsAt: new Date(),
-          expiresAt: trialExpiry,
-          createdByAdmin: "system",
-          note: "Auto trial " + trialDays + " days",
-        });
+        // 🆕 Check trial date range
+        const trialEnabledRow = await db.select().from(settings).where(eq(settings.keyName, "trial_enabled")).limit(1);
+        const trialEnabled = trialEnabledRow[0]?.value === "true";
+        if (trialEnabled) {
+          const startDateRow = await db.select().from(settings).where(eq(settings.keyName, "trial_start_date")).limit(1);
+          const endDateRow = await db.select().from(settings).where(eq(settings.keyName, "trial_end_date")).limit(1);
+          const startDate = startDateRow[0]?.value;
+          const endDate = endDateRow[0]?.value;
+          const today = new Date().toISOString().split('T')[0];
+
+          // Only give trial if today is within the trial period
+          if (startDate && endDate && today >= startDate && today <= endDate) {
+            const trialDays = parseInt(trialDaysRow[0]?.value ?? "7");
+            const subId = nanoid(36);
+            const trialExpiry = new Date(endDate); // Trial ends on period end date
+            await db.insert(subscriptions).values({
+              id: subId,
+              userId: newUserId,
+              plan: "trial",
+              startsAt: new Date(),
+              expiresAt: trialExpiry,
+              createdByAdmin: "system",
+              note: "Auto trial " + trialDays + " days (trial period)",
+            });
+          }
+        } else {
+          // Original logic (no date range set)
+          const trialDaysRow = await db.select().from(settings).where(eq(settings.keyName, "auto_trial_days")).limit(1);
+          const trialDays = parseInt(trialDaysRow[0]?.value ?? "7");
+          const subId = nanoid(36);
+          const trialExpiry = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000);
+          await db.insert(subscriptions).values({
+            id: subId,
+            userId: newUserId,
+            plan: "trial",
+            startsAt: new Date(),
+            expiresAt: trialExpiry,
+            createdByAdmin: "system",
+            note: "Auto trial " + trialDays + " days",
+          });
+        }
       }
       await sendMessage(chatId,
         `🎉 <b>LUMIX へ ကြိုဆိုပါတယ်, ${firstName}!</b>\n\n` +

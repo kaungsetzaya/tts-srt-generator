@@ -100,6 +100,15 @@ jspm_packages/
 # Temporary folders
 tmp/
 temp/
+tmp_video/
+
+# Generated media files
+*.mp3
+*.srt
+*.mp4
+*.wav
+*.webm
+output/
 
 # Database
 *.db

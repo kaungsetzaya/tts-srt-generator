@@ -362,11 +362,50 @@ export const appRouter = router({
         const [activeWeek] = await db.select({ count: sql<number>`count(distinct user_id)` }).from(ttsConversions).where(gte(ttsConversions.createdAt, weekAgo));
         const planCounts = await db.select({ plan: subscriptions.plan, count: sql<number>`count(*)` })
           .from(subscriptions).where(gte(subscriptions.expiresAt, now)).groupBy(subscriptions.plan);
+
+        // Feature breakdown for monthly stats
+        const [totalTTS] = await db.select({ count: sql<number>`count(*)` })
+          .from(ttsConversions)
+          .where(and(gte(ttsConversions.createdAt, monthAgo), eq(ttsConversions.feature, "tts")));
+        const [totalVideoUpload] = await db.select({ count: sql<number>`count(*)` })
+          .from(ttsConversions)
+          .where(and(gte(ttsConversions.createdAt, monthAgo), eq(ttsConversions.feature, "dub_file")));
+        const [totalVideoLink] = await db.select({ count: sql<number>`count(*)` })
+          .from(ttsConversions)
+          .where(and(gte(ttsConversions.createdAt, monthAgo), eq(ttsConversions.feature, "dub_link")));
+        const [totalTranslateFile] = await db.select({ count: sql<number>`count(*)` })
+          .from(ttsConversions)
+          .where(and(gte(ttsConversions.createdAt, monthAgo), eq(ttsConversions.feature, "translate_file")));
+        const [totalTranslateLink] = await db.select({ count: sql<number>`count(*)` })
+          .from(ttsConversions)
+          .where(and(gte(ttsConversions.createdAt, monthAgo), eq(ttsConversions.feature, "translate_link")));
+
         return {
           generations: { total: totalGen.count, today: todayGen.count, week: weekGen.count, month: monthGen.count },
           chars: { total: totalChars.sum ?? 0 },
           activeUsers: { today: activeToday.count, week: activeWeek.count },
           planCounts,
+          featureBreakdown: {
+            tts: totalTTS.count,
+            videoUpload: totalVideoUpload.count,
+            videoLink: totalVideoLink.count,
+            translation: totalTranslateFile.count + totalTranslateLink.count,
+          },
+        };
+      }),
+
+    onlineUsers: publicProcedure
+      .query(async ({ ctx }) => {
+        if (!ctx.user || ctx.user.role !== "admin") throw new Error("Unauthorized");
+        const db = await getDb();
+        if (!db) throw new Error("DB error");
+        const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000);
+        const activeUsers = await db.select({ userId: ttsConversions.userId })
+          .where(gte(ttsConversions.createdAt, fifteenMinsAgo))
+          .groupBy(ttsConversions.userId);
+        return {
+          onlineCount: activeUsers.length,
+          lastUpdated: new Date(),
         };
       }),
 
@@ -1025,28 +1064,52 @@ export const appRouter = router({
     get: publicProcedure.query(async ({ ctx }) => {
       if (ctx.user?.role !== "admin") throw new Error("Unauthorized");
       const db = await getDb();
-      if (!db) return { autoTrialEnabled: true, autoTrialDays: 7 };
+      if (!db) return { autoTrialEnabled: true, autoTrialDays: 7, trialStartDate: null, trialEndDate: null, trialEnabled: false };
       const rows = await db.select().from(settings);
       const map = Object.fromEntries(rows.map(r => [r.keyName, r.value]));
       return {
         autoTrialEnabled: map["auto_trial_enabled"] === "true",
         autoTrialDays: parseInt(map["auto_trial_days"] ?? "7"),
+        trialStartDate: map["trial_start_date"] || null,
+        trialEndDate: map["trial_end_date"] || null,
+        trialEnabled: map["trial_enabled"] === "true",
       };
     }),
 
     update: publicProcedure
       .input(z.object({
-        autoTrialEnabled: z.boolean(),
-        autoTrialDays: z.number().min(1).max(365),
+        autoTrialEnabled: z.boolean().optional(),
+        autoTrialDays: z.number().min(1).max(365).optional(),
+        trialStartDate: z.string().optional(),
+        trialEndDate: z.string().optional(),
+        trialEnabled: z.boolean().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user?.role !== "admin") throw new Error("Unauthorized");
         const db = await getDb();
         if (!db) throw new Error("DB not available");
-        await db.insert(settings).values({ keyName: "auto_trial_enabled", value: String(input.autoTrialEnabled) })
-          .onDuplicateKeyUpdate({ set: { value: String(input.autoTrialEnabled) } });
-        await db.insert(settings).values({ keyName: "auto_trial_days", value: String(input.autoTrialDays) })
-          .onDuplicateKeyUpdate({ set: { value: String(input.autoTrialDays) } });
+
+        if (input.autoTrialEnabled !== undefined) {
+          await db.insert(settings).values({ keyName: "auto_trial_enabled", value: String(input.autoTrialEnabled) })
+            .onDuplicateKeyUpdate({ set: { value: String(input.autoTrialEnabled) } });
+        }
+        if (input.autoTrialDays !== undefined) {
+          await db.insert(settings).values({ keyName: "auto_trial_days", value: String(input.autoTrialDays) })
+            .onDuplicateKeyUpdate({ set: { value: String(input.autoTrialDays) } });
+        }
+        if (input.trialStartDate !== undefined) {
+          await db.insert(settings).values({ keyName: "trial_start_date", value: input.trialStartDate })
+            .onDuplicateKeyUpdate({ set: { value: input.trialStartDate } });
+        }
+        if (input.trialEndDate !== undefined) {
+          await db.insert(settings).values({ keyName: "trial_end_date", value: input.trialEndDate })
+            .onDuplicateKeyUpdate({ set: { value: input.trialEndDate } });
+        }
+        if (input.trialEnabled !== undefined) {
+          await db.insert(settings).values({ keyName: "trial_enabled", value: String(input.trialEnabled) })
+            .onDuplicateKeyUpdate({ set: { value: String(input.trialEnabled) } });
+        }
+
         return { success: true };
       }),
   }),
