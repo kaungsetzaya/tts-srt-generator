@@ -10,19 +10,28 @@ function FadeInSection({
   children,
   delay = 0,
   className = "",
+  direction = "up",
+  zoom = false,
 }: {
   children: React.ReactNode;
   delay?: number;
   className?: string;
+  direction?: "up" | "down" | "left" | "right";
+  zoom?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-80px" });
+  const isInView = useInView(ref, { once: true, margin: "-60px" });
+
+  const offsets = { up: { y: 60 }, down: { y: -60 }, left: { x: 80 }, right: { x: -80 } };
+  const initial = { opacity: 0, ...offsets[direction], ...(zoom ? { scale: 0.9 } : {}) };
+  const animate = isInView ? { opacity: 1, x: 0, y: 0, scale: 1 } : {};
+
   return (
     <motion.div
       ref={ref}
-      initial={{ opacity: 0, y: 50 }}
-      animate={isInView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.7, delay, ease: "easeOut" }}
+      initial={initial}
+      animate={animate}
+      transition={{ duration: 0.8, delay, ease: [0.25, 0.46, 0.45, 0.94] }}
       className={className}
     >
       {children}
@@ -36,7 +45,7 @@ function FadeInSection({
 const features = [
   {
     icon: "🎙️",
-    title: "AI Voice Generation (TTS)",
+    title: "Voice Generation (TTS)",
     badge: "Multiple Voices",
     desc: "စာသားမှ Studio-Quality အသံဖိုင်များသို့ တစ်ချက်နှိပ်ပြောင်းလဲပေးသည်။ အမျိုးသား / အမျိုးသမီး အသံပေါင်း ၁၀ ကျော် ပါဝင်ပြီး Speed နှင့် Pitch ကို စိတ်ကြိုက်ချိန်ညှိနိုင်သည်။",
     detail: "Male & Female voices · Speed & Pitch control · Download MP3/WAV",
@@ -50,17 +59,10 @@ const features = [
   },
   {
     icon: "🎬",
-    title: "AI Auto Video Maker",
-    badge: "One-Click Dubbing",
-    desc: "ဗီဒီယိုကို တင်လိုက်ပါ။ AI က အင်္ဂလိပ်မှ မြန်မာသို့ အလိုအလျောက် ဘာသာပြန်ပြီး အသံထည့်ကာ စာတန်းထိုးအပါအဝင် အချောသတ် ဗီဒီယိုကို ထုတ်ပေးမည်ဖြစ်သည်။",
-    detail: "Auto translate · AI voice · Subtitle burn-in · One-click export",
-  },
-  {
-    icon: "🌍",
-    title: "Any Language Recognition",
-    badge: "Global Support",
-    desc: "ကမ္ဘာ့ဘာသာစကား ၅၀ ကျော်ကို မှတ်မိနိုင်သည်။ ဗီဒီယိုတွင် ရောနှောပြောဆိုသော ဘာသာများကိုပင် ခွဲခြားစစ်ဆေး၍ တိကျသော Output ပေးနိုင်သည်။",
-    detail: "50+ languages · Mixed-language support · High accuracy",
+    title: "All-in-One Video Maker",
+    badge: "One-Click Export",
+    desc: "ဗီဒီယိုကို တင်ပြီး မြန်မာအသံ ထည့်လိုက်ပါ။ အင်္ဂလိပ်ဗီဒီယိုကို မြန်မာဘာသာပြန်ပြီး အသံနှင့် စာတန်းထိုးအပါအဝင် အချောသတ် ဗီဒီယိုအဖြစ် ထုတ်ပေးသည်။ ကိုယ်ပိုင် Content ဖန်တီးဖို့ အလွန်လွယ်ကူပါတယ်။",
+    detail: "Auto translate · Voice dubbing · Subtitle burn-in · One-click export",
   },
 ];
 
@@ -68,10 +70,10 @@ const features = [
    Steps / How it works
 ───────────────────────────────────────────── */
 const steps = [
-  { num: "01", title: "Login", desc: "Telegram Bot မှ code ရယူပြီး ဝင်ရောက်ပါ။" },
-  { num: "02", title: "Choose", desc: "TTS, Video Translate သို့ AI Dubbing ရွေးပါ။" },
-  { num: "03", title: "Upload", desc: "စာသားရိုက်ပါ သို့ ဗီဒီယို တင်ပါ။" },
-  { num: "04", title: "Download", desc: "ရလဒ်ကို ချက်ချင်း Download ယူပါ။" },
+  { num: "01", title: "Login", desc: "Telegram Bot မှ Login Code ရယူပြီး Website တွင် ဝင်ရောက်ပါ။" },
+  { num: "02", title: "ရွေးချယ်ပါ", desc: "TTS (စာမှအသံ), ဗီဒီယိုဘာသာပြန်, All-in-One Video Maker မှ ရွေးပါ။" },
+  { num: "03", title: "ဖန်တီးပါ", desc: "စာသားရိုက်ထည့်ပါ (သို့) ဗီဒီယိုတင်ပြီး အသံ/စာတန်းထိုး ဆက်တင် ရွေးပါ။" },
+  { num: "04", title: "ဒေါင်းလုတ်", desc: "ပြီးဆုံးသော MP3, SRT, MP4 ဖိုင်ကို ချက်ချင်း ဒေါင်းလုတ် ယူပါ။" },
 ];
 
 /* ─────────────────────────────────────────────
@@ -344,13 +346,13 @@ export default function Landing() {
             </h2>
           </FadeInSection>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {features.map((f, i) => (
-              <FadeInSection key={f.title} delay={i * 0.08}>
+              <FadeInSection key={f.title} delay={i * 0.12} direction={i === 0 ? "left" : i === 2 ? "right" : "up"} zoom>
                 <motion.div
-                  whileHover={{ y: -6, borderColor: "oklch(0.65 0.25 310 / 50%)" }}
-                  transition={{ duration: 0.3 }}
-                  className="p-6 sm:p-8 flex flex-col items-start text-left h-full relative overflow-hidden"
+                  whileHover={{ y: -8, borderColor: "oklch(0.65 0.25 310 / 50%)", scale: 1.02 }}
+                  transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  className="p-6 sm:p-8 flex flex-col items-start text-left h-full relative overflow-hidden rounded-2xl"
                   style={{
                     border: "1px solid oklch(0.65 0.25 310 / 18%)",
                     background:
@@ -432,9 +434,10 @@ export default function Landing() {
             />
 
             {steps.map((s, i) => (
-              <FadeInSection key={s.num} delay={i * 0.12} className="flex flex-col items-center text-center px-2">
+              <FadeInSection key={s.num} delay={i * 0.15} direction="up" zoom className="flex flex-col items-center text-center px-2">
                 <motion.div
-                  whileHover={{ scale: 1.1 }}
+                  whileHover={{ scale: 1.15, rotate: 5 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 15 }}
                   className="w-14 h-14 md:w-[72px] md:h-[72px] rounded-full flex items-center justify-center text-lg md:text-xl font-black mb-4 md:mb-6 relative z-10"
                   style={{
                     background:
