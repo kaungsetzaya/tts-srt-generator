@@ -15,7 +15,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { History, Crown, BookOpen, Settings, PanelLeft, Mic, FileVideo, Wand2, Zap } from "lucide-react";
+import { History, Crown, BookOpen, Settings, PanelLeft, Mic, FileVideo, Wand2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { CompactUsageDisplay } from "./CompactUsageDisplay";
 
@@ -136,57 +136,17 @@ function TTSGeneratorSidebar({ currentTab, onTabChange }: TTSGeneratorSidebarPro
       >
         <div className="flex items-center justify-between gap-2 px-2 py-3">
           {!isCollapsed ? (
-            <motion.div
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.3 }}
-              className="flex items-center gap-2 min-w-0"
-            >
-              {/* Animated Logo Icon */}
-              <motion.div
-                animate={{
-                  boxShadow: [
-                    "0 0 8px rgba(139,92,246,0.4)",
-                    "0 0 18px rgba(139,92,246,0.7)",
-                    "0 0 8px rgba(139,92,246,0.4)",
-                  ],
-                }}
-                transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
-                className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{
-                  background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
-                }}
-              >
-                <Zap className="w-3.5 h-3.5 text-white" />
-              </motion.div>
-              <div className="min-w-0">
-                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-purple-400 leading-none">
-                  LUMIX
-                </p>
-                {me && (
-                  <p className="text-[10px] opacity-50 truncate mt-0.5 leading-none" style={{ color: "#a78bfa" }}>
-                    {me.name}
-                  </p>
-                )}
-              </div>
-            </motion.div>
+            <div className="flex items-center gap-2 min-w-0">
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-purple-400 leading-none">
+                LUMIX
+              </p>
+            </div>
           ) : (
-            <motion.div
-              animate={{
-                boxShadow: [
-                  "0 0 8px rgba(139,92,246,0.4)",
-                  "0 0 18px rgba(139,92,246,0.7)",
-                  "0 0 8px rgba(139,92,246,0.4)",
-                ],
-              }}
-              transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
-              className="w-7 h-7 rounded-lg flex items-center justify-center mx-auto"
-              style={{
-                background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
-              }}
-            >
-              <Zap className="w-3.5 h-3.5 text-white" />
-            </motion.div>
+            <div className="flex items-center gap-2 min-w-0">
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-purple-400 leading-none">
+                L
+              </p>
+            </div>
           )}
           <SidebarTrigger
             className="flex-shrink-0 rounded-lg p-1.5 transition-colors"

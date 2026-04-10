@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { trpc } from "@/lib/trpc";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, Download, Volume2, LogOut, Crown, AlertCircle, Mic, FileVideo, Settings, Sparkles, Upload, Sun, Moon, Copy, Check, Link as LinkIcon, Wand2, Clock as ClockIcon, Info, ChevronDown, BookOpen, History as HistoryIcon, Zap } from "lucide-react";
+import { Loader2, Download, Volume2, LogOut, Crown, AlertCircle, Mic, FileVideo, Settings, Sparkles, Upload, Sun, Moon, Copy, Check, Link as LinkIcon, Wand2, Clock as ClockIcon, Info, ChevronDown, BookOpen, History as HistoryIcon } from "lucide-react";
 import { useLocation } from "wouter";
 import { TTSGeneratorLayout } from "@/components/TTSGeneratorLayout";
 
@@ -63,7 +63,7 @@ const T = {
     preview: "နားဆင်မည်",
     videoTitle: "ဗီဒီယိုမှ မြန်မာဘာသာပြန်",
     videoDesc: "ဗီဒီယို (သို့) Link ထည့်ပြီး မြန်မာဘာသာပြန်ရယူပါ",
-    videoLimit: "အများဆုံး ၂၅MB (သို့) YouTube/TikTok Link",
+    videoLimit: "အများဆုံး ၂၅MB (သို့) ဗီဒီယိုအရှည်၂မိနစ်၃ဝစက္ကန့်",
     dropVideo: "ဗီဒီယိုဖိုင် ဤနေရာတွင်ချပါ သို့မဟုတ် နှိပ်ပါ",
     linkInputLabel: "VIDEO LINK ထည့်ရန်",
     linkPlaceholder: "https://youtube.com/...",
@@ -111,7 +111,7 @@ const T = {
     preview: "Preview",
     videoTitle: "VIDEO TRANSLATION",
     videoDesc: "Upload video or paste link for Myanmar translation",
-    videoLimit: "Max 25MB or YouTube/TikTok Link",
+    videoLimit: "Max 25MB or video length 2 minutes 30 seconds",
     dropVideo: "Drop video here or click to upload",
     linkInputLabel: "VIDEO LINK",
     linkPlaceholder: "https://youtube.com/...",
@@ -219,6 +219,7 @@ export default function TTSGenerator() {
 
   const [, navigate] = useLocation();
   const utils = trpc.useUtils();
+  const { data: historyData, isLoading: historyLoading } = trpc.history.getMyHistory.useQuery({ limit: 100 });
   const { data: me } = trpc.auth.me.useQuery();
   const { data: subStatus, isLoading: subLoading } = trpc.subscription.myStatus.useQuery();
   const logoutMutation = trpc.auth.logout.useMutation({ onSuccess: () => { window.location.href = "/login"; } });
@@ -530,18 +531,6 @@ export default function TTSGenerator() {
       >
         {/* Left: Animated Logo */}
         <div className="flex items-center gap-2.5">
-          <motion.div
-            animate={{
-              boxShadow: isDark
-                ? ['0 0 8px rgba(124,58,237,0.5)', '0 0 20px rgba(124,58,237,0.85)', '0 0 8px rgba(124,58,237,0.5)']
-                : ['0 0 6px rgba(109,40,217,0.3)', '0 0 14px rgba(109,40,217,0.5)', '0 0 6px rgba(109,40,217,0.3)'],
-            }}
-            transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }}
-            className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}
-          >
-            <Zap className="w-4 h-4 text-white" />
-          </motion.div>
           <span
             className="font-black uppercase tracking-[0.2em] text-sm hidden sm:inline"
             style={{ color: accent, textShadow: isDark ? `0 0 12px ${accent}80` : 'none' }}
@@ -1328,58 +1317,76 @@ export default function TTSGenerator() {
               <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-widest mb-2" style={{ color: accent }}>{lang === "mm" ? "အသုံးပြုမှတ်တမ်း" : "Usage History"}</h2>
               <p className="text-xs sm:text-sm" style={{ color: subtextColor }}>{lang === "mm" ? "သင်၏ ဖန်တီးမှုအားလုံးကို ဤနေရာတွင် ကြည့်နိုင်ပါသည်" : "View all your past generations here"}</p>
             </div>
-            {(() => {
-              const logs = (subStatus as any)?.recentLogs || [];
-              if (logs.length === 0) return (
-                <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
-                  <div className="text-center py-12 sm:py-16 px-4">
-                    {/* Empty State Icon */}
-                    <div className="w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center" style={{ background: `${accent}15` }}>
-                      <ClockIcon className="w-10 h-10" style={{ color: accent }} />
-                    </div>
-
-                    {/* Empty State Text */}
-                    <h3 className="text-xl sm:text-2xl font-bold mb-2" style={{ color: textColor }}>
-                      {lang === "mm" ? "မှတ်တမ်း မရှိသေးပါ" : "No history yet"}
-                    </h3>
-                    <p className="text-sm mb-6 max-w-md mx-auto" style={{ color: subtextColor, lineHeight: "1.7" }}>
-                      {lang === "mm"
-                        ? "သင်၏ ပထမ TTS ဖန်တီးမှုကို စတင်ပါ။ စာသားရိုက်ထည့်ပြီး Generate ခလုတ်ကို နှိပ်ပါ"
-                        : "Start generating your first audio! Type your text and click the Generate button."
-                      }
-                    </p>
-
-                    {/* CTA Button */}
-                    <button
-                      onClick={() => setSecondaryTab(null)}
-                      className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all hover:scale-105 hover:shadow-lg"
-                      style={{
-                        background: accent,
-                        color: "#fff",
-                        border: `2px solid ${accent}`
-                      }}
-                    >
-                      <Wand2 className="w-4 h-4" />
-                      {lang === "mm" ? "စတင်ဖန်တီးရန်" : "Start Generating"}
-                    </button>
+            {historyLoading ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="w-8 h-8 border-2 rounded-full animate-spin" style={{ borderColor: accent, borderTopColor: "transparent" }} />
+              </div>
+            ) : !historyData || historyData.length === 0 ? (
+              <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
+                <div className="text-center py-12 sm:py-16 px-4">
+                  <div className="w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center" style={{ background: `${accent}15` }}>
+                    <ClockIcon className="w-10 h-10" style={{ color: accent }} />
                   </div>
+                  <h3 className="text-xl sm:text-2xl font-bold mb-2" style={{ color: textColor }}>
+                    {lang === "mm" ? "မှတ်တမ်း မရှိသေးပါ" : "No history yet"}
+                  </h3>
+                  <p className="text-sm mb-6 max-w-md mx-auto" style={{ color: subtextColor, lineHeight: "1.7" }}>
+                    {lang === "mm"
+                      ? "သင်၏ ပထမ TTS ဖန်တီးမှုကို စတင်ပါ။ စာသားရိုက်ထည့်ပြီး Generate ခလုတ်ကို နှိပ်ပါ"
+                      : "Start generating your first audio! Type your text and click the Generate button."
+                    }
+                  </p>
+                  <button
+                    onClick={() => setSecondaryTab(null)}
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all hover:scale-105 hover:shadow-lg"
+                    style={{ background: accent, color: "#fff", border: `2px solid ${accent}` }}
+                  >
+                    <Wand2 className="w-4 h-4" />
+                    {lang === "mm" ? "စတင်ဖန်တီးရန်" : "Start Generating"}
+                  </button>
                 </div>
-              );
-              return (
-                <div className="space-y-2">
-                  {logs.map((log: any, i: number) => (
-                    <div key={i} className={`${box} flex items-center gap-3`} style={{ background: cardBg, borderColor: cardBorder, boxShadow, padding: "12px 16px" }}>
-                      <span className="text-lg">{log.type === "tts" ? "🎙️" : log.type === "video" ? "📹" : "🎬"}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs sm:text-sm font-bold truncate" style={{ color: textColor }}>{log.type?.toUpperCase()} — {log.voice || "-"}</p>
-                        <p className="text-[10px] sm:text-xs" style={{ color: subtextColor }}>{new Date(log.createdAt).toLocaleString()}</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {historyData.map((item) => {
+                  const featureLabel = (feat: string) => {
+                    const labels: Record<string, string> = lang === "mm" 
+                      ? { tts: "စာမှအသံ", translate_file: "ဗီဒီယိုဘာသာပြန်", translate_link: "Link ဘာသာပြန်", dub_file: "AI Video (ဖိုင်)", dub_link: "AI Video (Link)" }
+                      : { tts: "Text to Speech", translate_file: "Video Translate", translate_link: "Link Translate", dub_file: "AI Video (File)", dub_link: "AI Video (Link)" };
+                    return labels[feat] || feat;
+                  };
+                  const featureEmoji = (feat: string) => {
+                    if (feat === "tts") return "🎙️";
+                    if (feat?.includes("translate")) return "📹";
+                    if (feat?.includes("dub")) return "🎬";
+                    return "📋";
+                  };
+                  return (
+                    <div key={item.id} className="flex items-center gap-3 p-3 sm:p-4 rounded-2xl border backdrop-blur-xl transition-all" style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
+                      <div className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: item.status === "fail" ? "rgba(220,38,38,0.2)" : `${accent}15`, color: item.status === "fail" ? "#ef4444" : accent }}>
+                        <span className="text-lg">{featureEmoji(item.feature || "tts")}</span>
                       </div>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${log.status === "success" ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>{log.status === "success" ? "✓" : "✗"}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-bold truncate" style={{ color: textColor }}>{featureLabel(item.feature || "tts")}</span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.status === "success" ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>{item.status === "success" ? "✓" : "✗"}</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs" style={{ color: subtextColor }}>
+                          {item.voice && <span>{item.character || item.voice}</span>}
+                          {(item.charCount ?? 0) > 0 && <span>{item.charCount?.toLocaleString()} {lang === "mm" ? "စာလုံး" : "chars"}</span>}
+                          {(item.durationMs ?? 0) > 0 && <span>{Math.floor((item.durationMs ?? 0) / 1000)}s</span>}
+                        </div>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <div className="text-xs font-semibold" style={{ color: subtextColor }}>
+                          {item.createdAt ? new Date(item.createdAt as any).toLocaleString(lang === "mm" ? "my-MM" : "en-US", { month: "short", day: "2-digit", hour: "numeric", minute: "2-digit", hour12: true }) : "-"}
+                        </div>
+                      </div>
                     </div>
-                  ))}
-                </div>
-              );
-            })()}
+                  );
+                })}
+              </div>
+            )
           </div>
         )}
 
@@ -1388,24 +1395,7 @@ export default function TTSGenerator() {
           <div className="max-w-3xl mx-auto py-4 sm:py-8 animate-in fade-in zoom-in-95 duration-300">
             {/* Header */}
             <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center mb-4">
-                <motion.div
-                  animate={{
-                    boxShadow: [
-                      `0 0 12px ${accent}60`,
-                      `0 0 28px ${accent}90`,
-                      `0 0 12px ${accent}60`,
-                    ],
-                    scale: [1, 1.05, 1],
-                  }}
-                  transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }}
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center"
-                  style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}
-                >
-                  <Zap className="w-7 h-7 text-white" />
-                </motion.div>
-              </div>
-              <h2 className="text-xl sm:text-2xl font-black uppercase tracking-widest mb-1" style={{ color: textColor }}>{lang === "mm" ? "သင့် Plan" : "Your Plan"}</h2>
+              <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-widest mb-2" style={{ color: accent }}>{lang === "mm" ? "သင့် Plan" : "Your Plan"}</h2>
             </div>
 
             {/* Current Plan Card */}
@@ -1493,25 +1483,7 @@ export default function TTSGenerator() {
           <div className="max-w-3xl mx-auto py-4 sm:py-8 animate-in fade-in zoom-in-95 duration-300">
             {/* Header */}
             <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center mb-4">
-                <motion.div
-                  animate={{
-                    boxShadow: [
-                      `0 0 12px ${accent}60`,
-                      `0 0 28px ${accent}90`,
-                      `0 0 12px ${accent}60`,
-                    ],
-                    scale: [1, 1.05, 1],
-                  }}
-                  transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }}
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center"
-                  style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}
-                >
-                  <Zap className="w-7 h-7 text-white" />
-                </motion.div>
-              </div>
-              <h2 className="text-xl sm:text-2xl font-black uppercase tracking-widest mb-1" style={{ color: textColor }}>{lang === "mm" ? "အသုံးပြုနန်း" : "How to Use"}</h2>
-              <p className="text-xs sm:text-sm" style={{ color: subtextColor }}>{lang === "mm" ? "Feature တစ်ခုချင်းစီ၏ အသေးစိတ် လမ်းညွှန်ချက်" : "Step-by-step guide for every feature"}</p>
+              <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-widest mb-2" style={{ color: accent }}>{lang === "mm" ? "အသုံးပြုနည်း" : "How to Use"}</h2>
             </div>
             <div className="space-y-5">
               {/* TTS Guide */}
