@@ -35,9 +35,6 @@ export function TTSGeneratorLayout({ children, currentSecondaryTab, onTabChange,
           onTabChange={onTabChange}
         />
         <SidebarInset className="bg-transparent border-none">
-          <header className="flex h-14 shrink-0 items-center gap-2 px-4 border-b">
-            <div className="text-sm font-semibold opacity-60">LUMIX TTS Generator</div>
-          </header>
           <main className="flex-1 overflow-auto">
             {children}
           </main>
@@ -72,8 +69,8 @@ function TTSGeneratorSidebar({ currentTab, onTabChange }: TTSGeneratorSidebarPro
   ];
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b border-purple-500/20">
+    <Sidebar collapsible="icon" className="bg-transparent">
+      <SidebarHeader className="border-b border-purple-500/20 bg-transparent">
         <div className="flex items-center gap-2 px-2 py-4">
           <div className="flex-1">
             <h2 className="text-lg font-black uppercase tracking-wider text-purple-400">LUMIX</h2>
@@ -92,7 +89,7 @@ function TTSGeneratorSidebar({ currentTab, onTabChange }: TTSGeneratorSidebarPro
         <CompactUsageDisplay subStatus={subStatus} isCollapsed={isCollapsed} />
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="bg-transparent">
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -113,7 +110,7 @@ function TTSGeneratorSidebar({ currentTab, onTabChange }: TTSGeneratorSidebarPro
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-purple-500/20">
+      <SidebarFooter className="border-t border-purple-500/20 bg-transparent">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={handleLogout}>
