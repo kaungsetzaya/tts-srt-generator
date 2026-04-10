@@ -721,9 +721,9 @@ export default function AdminDashboard() {
                   <p className="text-xs opacity-50 mt-1">New user register လုပ်တာနဲ့ auto trial ပေးမည်</p>
                 </div>
                 <button onClick={() => setAutoTrialEnabled(!autoTrialEnabled)}
-                  className={`relative w-12 h-6 rounded-full transition-all ${autoTrialEnabled ? "" : "bg-gray-600"}`}
+                  className={`relative w-11 h-6 rounded-full transition-all ${autoTrialEnabled ? "" : "bg-gray-600"}`}
                   style={{ background: autoTrialEnabled ? C : undefined }}>
-                  <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${autoTrialEnabled ? "left-7" : "left-1"}`} />
+                  <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all shadow ${autoTrialEnabled ? "left-6" : "left-0.5"}`} />
                 </button>
               </div>
               <div>

@@ -1,0 +1,20 @@
+# YouTube Cookies for yt-dlp
+# This file is required for downloading YouTube videos that have bot detection
+#
+# HOW TO GET COOKIES:
+# 1. Install a browser extension:
+#    - Chrome: "Get cookies.txt LOCALLY" or "yt-dlp-cookies"
+#    - Firefox: "Get cookies.txt" or "Cookie Quick Manager"
+#
+# 2. Go to YouTube and make sure you're logged in
+#
+# 3. Use the extension to export cookies to this file:
+#    - Rename this file from cookies.txt.example to cookies.txt
+#    - Export cookies to cookies.txt in the project root directory
+#
+# 4. Make sure cookies.txt is in .gitignore (it already is)
+#
+# ALTERNATIVE: Use browser cookies manually
+# yt-dlp --cookies cookies.txt [URL]
+#
+# NOTE: Cookies expire periodically. If YouTube downloads fail, re-export fresh cookies.

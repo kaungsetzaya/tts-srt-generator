@@ -938,9 +938,9 @@ export default function TTSGenerator() {
                         <p className="text-xs mt-0.5" style={{ color: subtextColor }}>{lang === "mm" ? "SRT စာတန်းထိုး ဖွင့်/ပိတ်" : "Toggle subtitle on/off"}</p>
                       </div>
                       <button onClick={() => setSrtEnabled(!srtEnabled)}
-                        className="relative w-14 h-7 rounded-full transition-all"
+                        className="relative w-11 h-6 rounded-full transition-all"
                         style={{ background: srtEnabled ? accent : (isDark ? "rgba(255,255,255,0.15)" : "#d1d5db") }}>
-                        <span className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all shadow-md ${srtEnabled ? "left-8" : "left-1"}`} />
+                        <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all shadow-md ${srtEnabled ? "left-6" : "left-0.5"}`} />
                       </button>
                     </div>
 
@@ -974,7 +974,7 @@ export default function TTSGenerator() {
                           <button onClick={() => setSrtDropShadow(!srtDropShadow)}
                             className="relative w-11 h-6 rounded-full transition-all"
                             style={{ background: srtDropShadow ? accent : (isDark ? "rgba(255,255,255,0.15)" : "#d1d5db") }}>
-                            <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all shadow ${srtDropShadow ? "left-5" : "left-0.5"}`} />
+                            <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all shadow ${srtDropShadow ? "left-6" : "left-0.5"}`} />
                           </button>
                         </div>
 
@@ -983,7 +983,7 @@ export default function TTSGenerator() {
                           <button onClick={() => setSrtBlurBg(!srtBlurBg)}
                             className="relative w-11 h-6 rounded-full transition-all"
                             style={{ background: srtBlurBg ? accent : (isDark ? "rgba(255,255,255,0.15)" : "#d1d5db") }}>
-                            <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all shadow ${srtBlurBg ? "left-5" : "left-0.5"}`} />
+                            <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all shadow ${srtBlurBg ? "left-6" : "left-0.5"}`} />
                           </button>
                         </div>
 
@@ -1029,7 +1029,7 @@ export default function TTSGenerator() {
                               <button onClick={() => setSrtFullWidth(!srtFullWidth)}
                                 className="relative w-11 h-6 rounded-full transition-all"
                                 style={{ background: srtFullWidth ? accent : (isDark ? "rgba(255,255,255,0.15)" : "#d1d5db") }}>
-                                <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all shadow ${srtFullWidth ? "left-5" : "left-0.5"}`} />
+                                <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all shadow ${srtFullWidth ? "left-6" : "left-0.5"}`} />
                               </button>
                             </div>
 
