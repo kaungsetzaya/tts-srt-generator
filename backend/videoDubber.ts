@@ -353,58 +353,18 @@ export async function dubVideoFromLink(url: string, options: DubOptions): Promis
   try {
     console.log(`[Dubber] Downloading video from: ${url}`);
 
-    let downloadUrl = "";
-
-    // --- Try Cobalt API first ---
-    try {
-      const controller = new AbortController();
-      const cobaltTimeout = setTimeout(() => controller.abort(), 20000);
-      const cobaltRes = await fetch("https://api.cobalt.tools/", {
-        method: "POST",
-        headers: {
-          "Accept": "application/json",
-          "Content-Type": "application/json",
-          "User-Agent": "Mozilla/5.0 (compatible; CobaltClient/1.0)",
-        },
-        body: JSON.stringify({ url, downloadMode: "auto", videoQuality: "720", audioFormat: "mp3" }),
-        signal: controller.signal,
-      });
-      clearTimeout(cobaltTimeout);
-      if (cobaltRes.ok) {
-        const cobaltData = await cobaltRes.json() as any;
-        if (cobaltData && (cobaltData.status === "tunnel" || cobaltData.status === "redirect") && cobaltData.url) {
-          downloadUrl = cobaltData.url;
-          console.log(`[Dubber] Cobalt success: ${cobaltData.status}`);
-        } else if (cobaltData?.status === "picker" && cobaltData?.picker?.length > 0) {
-          downloadUrl = cobaltData.picker[0]?.url || "";
-        } else {
-          console.warn(`[Dubber] Cobalt returned:`, JSON.stringify(cobaltData).slice(0, 200));
-        }
-      } else {
-        console.warn(`[Dubber] Cobalt API HTTP ${cobaltRes.status}`);
-      }
-    } catch (e: any) {
-      console.warn("[Dubber Cobalt Error]", e.name === "AbortError" ? "Timeout" : e.message?.slice(0, 200));
-    }
-
-    if (downloadUrl) {
-      // 🔐 FFmpeg Command Guard: use execFile with argument array
-      await execFileAsync("curl", ["-s", "-L", "--max-time", "120", "-o", tempVideoPath, downloadUrl], { timeout: 130000 });
-    } else {
-      // yt-dlp fallback — 🔐 uses execFile with argument array
-      console.log("[Dubber] Downloading with yt-dlp...");
-      // 🔐 FFmpeg Command Guard: execFile prevents command injection
-      await execFileAsync("yt-dlp", [
-        "--no-cookies",
-        "--no-check-certificates",
-        "--no-playlist",
-        "--no-warnings",
-        "--max-filesize", "50M",
-        "-f", "b[ext=mp4]/b",
-        "-o", tempVideoPath,
-        url
-      ], { timeout: 300000 });
-    }
+    // 🔐 FFmpeg Command Guard: execFile prevents command injection
+    console.log("[Dubber] Downloading with yt-dlp...");
+    await execFileAsync("yt-dlp", [
+      "--no-cookies",
+      "--no-check-certificates",
+      "--no-playlist",
+      "--no-warnings",
+      "--max-filesize", "50M",
+      "-f", "b[ext=mp4]/b",
+      "-o", tempVideoPath,
+      url
+    ], { timeout: 300000 });
 
     // Verify file
     const fileStat = await fs.stat(tempVideoPath).catch(() => null);

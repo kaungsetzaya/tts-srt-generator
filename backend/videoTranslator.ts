@@ -114,74 +114,20 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
 
     try {
         console.log(`[Video Translator] Attempting to download: ${url}`);
-        
-        let downloadUrl = "";
 
-        // --- Try Cobalt API v10 first ---
-        try {
-            const controller = new AbortController();
-            const cobaltTimeout = setTimeout(() => controller.abort(), 20000);
-            const cobaltRes = await fetch("https://api.cobalt.tools/", {
-                method: "POST",
-                headers: {
-                    "Accept": "application/json",
-                    "Content-Type": "application/json",
-                    "User-Agent": "Mozilla/5.0 (compatible; CobaltClient/1.0)",
-                },
-                body: JSON.stringify({ url, downloadMode: "auto", videoQuality: "720", audioFormat: "mp3" }),
-                signal: controller.signal,
-            });
-            clearTimeout(cobaltTimeout);
-            if (cobaltRes.ok) {
-                const cobaltData = await cobaltRes.json() as any;
-                if (cobaltData && (cobaltData.status === "tunnel" || cobaltData.status === "redirect") && cobaltData.url) {
-                    downloadUrl = cobaltData.url;
-                    console.log(`[Video Translator] Cobalt API success. Status: ${cobaltData.status}`);
-                } else if (cobaltData?.status === "picker" && cobaltData?.picker?.length > 0) {
-                    downloadUrl = cobaltData.picker[0]?.url || "";
-                    if (downloadUrl) console.log(`[Video Translator] Cobalt API picker mode, picked first.`);
-                } else {
-                    console.log(`[Video Translator] Cobalt returned:`, JSON.stringify(cobaltData).slice(0, 300));
-                }
-            } else {
-                console.warn(`[Video Translator] Cobalt API HTTP ${cobaltRes.status}`);
-            }
-        } catch (e: any) {
-            console.warn("[Cobalt API Error]", e.name === "AbortError" ? "Timeout" : e.message?.slice(0, 200));
-        }
-
-        if (downloadUrl) {
-            console.log(`[Video Translator] Downloading via Cobalt URL...`);
-            // 🔐 FFmpeg Command Guard: execFile with argument array
-            await execFileAsync("curl", ["-s", "-L", "--max-time", "120", "-o", tempVideoPath, downloadUrl], { timeout: 130000 });
-        } else {
-            // --- Fallback to yt-dlp ---
-            console.log("[Video Translator] Cobalt unavailable, using yt-dlp fallback...");
-            const cookiePath = path.join(process.cwd(), 'cookies.txt');
-            const hasCookies = existsSync(cookiePath);
-            
-            // ── STEP 1: Ensure yt-dlp is up-to-date ──
-            try {
-                await execFileAsync("pip3", ["install", "--upgrade", "--pre", "yt-dlp"], { timeout: 90000 });
-                console.log("[Video Translator] yt-dlp updated");
-            } catch {
-                try { await execFileAsync("yt-dlp", ["-U"], { timeout: 30000 }); } catch {}
-            }
-
-            // ── STEP 2: Simple yt-dlp download without problematic flags ──
-            console.log("[Video Translator] Downloading with yt-dlp...");
-            // 🔐 FFmpeg Command Guard: execFile with argument array prevents command injection
-            await execFileAsync("yt-dlp", [
-                "--no-cookies",
-                "--no-check-certificates",
-                "--no-playlist",
-                "--no-warnings",
-                "--max-filesize", "50M",
-                "-f", "b[ext=mp4]/b",
-                "-o", tempVideoPath,
-                url
-            ], { timeout: 300000 });
-        }
+        // ── Download with yt-dlp ──
+        console.log("[Video Translator] Downloading with yt-dlp...");
+        // 🔐 FFmpeg Command Guard: execFile with argument array prevents command injection
+        await execFileAsync("yt-dlp", [
+            "--no-cookies",
+            "--no-check-certificates",
+            "--no-playlist",
+            "--no-warnings",
+            "--max-filesize", "50M",
+            "-f", "b[ext=mp4]/b",
+            "-o", tempVideoPath,
+            url
+        ], { timeout: 300000 });
 
         // Verify file exists and has content
         const fileStat = await fs.stat(tempVideoPath).catch(() => null);
