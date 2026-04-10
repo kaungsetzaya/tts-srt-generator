@@ -479,7 +479,7 @@ export default function TTSGenerator() {
   };
 
   return (
-    <TTSGeneratorLayout currentSecondaryTab={secondaryTab} onTabChange={setSecondaryTab} backgroundStyle={{ background: bgGradient }}>
+    <TTSGeneratorLayout currentSecondaryTab={secondaryTab} onTabChange={setSecondaryTab} backgroundStyle={{ background: bgGradient }} mainTab={mainTab} setMainTab={setMainTab}>
       <div className="h-full relative overflow-hidden transition-colors duration-500 font-sans" style={{ color: textColor }}>
       {/* Error Toast */}
       {errorToast && (
@@ -541,7 +541,7 @@ export default function TTSGenerator() {
       {/* TABS */}
       <div className="relative z-10 flex gap-1 px-2 sm:px-4 pt-2 sm:pt-3 border-b overflow-x-auto scrollbar-hide" style={{ borderColor: cardBorder, background: isDark ? 'rgba(15,12,41,0.5)' : 'rgba(255,255,255,0.5)' }}>
         {([{ id: "tts" as MainTab, label: t.tabs.tts, icon: <Mic className="w-3.5 h-3.5" /> }, { id: "video" as MainTab, label: t.tabs.video, icon: <FileVideo className="w-3.5 h-3.5" /> }, { id: "dubbing" as MainTab, label: t.tabs.dubbing, icon: <Wand2 className="w-3.5 h-3.5" /> }]).map(({ id, label: lbl, icon }) => (
-          <button key={id} onClick={() => setMainTab(id)} className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all border-b-2 rounded-t-xl whitespace-nowrap" style={{ borderColor: mainTab === id ? accent : 'transparent', color: mainTab === id ? accent : subtextColor, background: mainTab === id ? cardBg : 'transparent' }}>{icon} {lbl}</button>
+          <button key={id} onClick={() => { setMainTab(id); setSecondaryTab(null); }} className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all border-b-2 rounded-t-xl whitespace-nowrap" style={{ borderColor: mainTab === id ? accent : 'transparent', color: mainTab === id ? accent : subtextColor, background: mainTab === id ? cardBg : 'transparent' }}>{icon} {lbl}</button>
         ))}
       </div>
 
@@ -1140,6 +1140,37 @@ export default function TTSGenerator() {
                     {savedKey && (<button onClick={() => { setSavedKey(""); localStorage.removeItem("gemini_key"); }} className="px-3 sm:px-4 font-bold text-sm border border-red-500 text-red-600 hover:bg-red-500/10 rounded-xl transition-colors">{t.removeKey}</button>)}
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Quick Links Section */}
+            <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
+              <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{lang === "mm" ? "မြန်ဆန် လင့်ခ်များ" : "Quick Links"}</div>
+              <div className="space-y-2 mt-3">
+                <button
+                  onClick={() => setSecondaryTab("history")}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl transition-all hover:scale-[1.02] min-h-[44px]"
+                  style={{ background: inputBg, border: `1px solid ${cardBorder}` }}
+                >
+                  <History className="w-5 h-5 flex-shrink-0" style={{ color: accent }} />
+                  <span className="text-sm font-bold" style={{ color: textColor }}>{lang === "mm" ? "မှတ်တမ်း" : "History"}</span>
+                </button>
+                <button
+                  onClick={() => setSecondaryTab("plan")}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl transition-all hover:scale-[1.02] min-h-[44px]"
+                  style={{ background: inputBg, border: `1px solid ${cardBorder}` }}
+                >
+                  <Crown className="w-5 h-5 flex-shrink-0" style={{ color: accent }} />
+                  <span className="text-sm font-bold" style={{ color: textColor }}>Plan</span>
+                </button>
+                <button
+                  onClick={() => setSecondaryTab("guide")}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl transition-all hover:scale-[1.02] min-h-[44px]"
+                  style={{ background: inputBg, border: `1px solid ${cardBorder}` }}
+                >
+                  <BookOpen className="w-5 h-5 flex-shrink-0" style={{ color: accent }} />
+                  <span className="text-sm font-bold" style={{ color: textColor }}>{lang === "mm" ? "လမ်းညွှန်" : "Guide"}</span>
+                </button>
               </div>
             </div>
           </div>

@@ -13,18 +13,20 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { History, Crown, BookOpen, Settings, PanelLeft } from "lucide-react";
+import { History, Crown, BookOpen, Settings, PanelLeft, Mic, FileVideo, Wand2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { CompactUsageDisplay } from "./CompactUsageDisplay";
 
 interface TTSGeneratorLayoutProps {
   children: ReactNode;
   currentSecondaryTab: string | null;
-  onTabChange: (tab: string | null) => void;
+  onTabChange: (tab: "history" | "plan" | "guide" | "settings" | null) => void;
   backgroundStyle?: React.CSSProperties;
+  mainTab: "tts" | "video" | "dubbing";
+  setMainTab: (tab: "tts" | "video" | "dubbing") => void;
 }
 
-export function TTSGeneratorLayout({ children, currentSecondaryTab, onTabChange, backgroundStyle }: TTSGeneratorLayoutProps) {
+export function TTSGeneratorLayout({ children, currentSecondaryTab, onTabChange, backgroundStyle, mainTab, setMainTab }: TTSGeneratorLayoutProps) {
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full" style={backgroundStyle}>
@@ -37,29 +39,38 @@ export function TTSGeneratorLayout({ children, currentSecondaryTab, onTabChange,
             {children}
           </main>
 
-          {/* Mobile Bottom Navigation */}
+          {/* Mobile Bottom Navigation - Main Tabs */}
           <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t backdrop-blur-lg" style={{ background: "rgba(15, 12, 41, 0.95)", borderColor: "rgba(139, 92, 246, 0.2)" }}>
             <div className="flex items-center justify-around py-2">
               <button
-                onClick={() => onTabChange(currentSecondaryTab === "history" ? null : "history")}
-                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all min-h-[44px] ${currentSecondaryTab === "history" ? "text-purple-400" : "opacity-60"}`}
+                onClick={() => {
+                  setMainTab("tts");
+                  onTabChange(null); // Clear secondary tab
+                }}
+                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all min-h-[44px] ${mainTab === "tts" && !currentSecondaryTab ? "text-purple-400" : "opacity-60"}`}
               >
-                <History className="w-5 h-5" />
-                <span className="text-[10px] font-bold">မှတ်တမ်း</span>
+                <Mic className="w-5 h-5" />
+                <span className="text-[10px] font-bold">TTS</span>
               </button>
               <button
-                onClick={() => onTabChange(currentSecondaryTab === "plan" ? null : "plan")}
-                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all min-h-[44px] ${currentSecondaryTab === "plan" ? "text-purple-400" : "opacity-60"}`}
+                onClick={() => {
+                  setMainTab("video");
+                  onTabChange(null); // Clear secondary tab
+                }}
+                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all min-h-[44px] ${mainTab === "video" && !currentSecondaryTab ? "text-purple-400" : "opacity-60"}`}
               >
-                <Crown className="w-5 h-5" />
-                <span className="text-[10px] font-bold">Plan</span>
+                <FileVideo className="w-5 h-5" />
+                <span className="text-[10px] font-bold">Video</span>
               </button>
               <button
-                onClick={() => onTabChange(currentSecondaryTab === "guide" ? null : "guide")}
-                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all min-h-[44px] ${currentSecondaryTab === "guide" ? "text-purple-400" : "opacity-60"}`}
+                onClick={() => {
+                  setMainTab("dubbing");
+                  onTabChange(null); // Clear secondary tab
+                }}
+                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all min-h-[44px] ${mainTab === "dubbing" && !currentSecondaryTab ? "text-purple-400" : "opacity-60"}`}
               >
-                <BookOpen className="w-5 h-5" />
-                <span className="text-[10px] font-bold">လမ်းညွှန်</span>
+                <Wand2 className="w-5 h-5" />
+                <span className="text-[10px] font-bold">AI Video</span>
               </button>
               <button
                 onClick={() => onTabChange(currentSecondaryTab === "settings" ? null : "settings")}
