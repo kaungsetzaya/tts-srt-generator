@@ -1,3 +1,6 @@
+/* Myanmar Fonts - must be first */
+@import url('https://fonts.googleapis.com/css2?family=Pyidaungsu:wght@400;700&family=Padauk:wght@400;700&display=swap');
+
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -262,5 +265,39 @@
     @apply transition-all duration-200;
     @apply hover:shadow-[0_0_20px_oklch(0.6_0.28_280)];
     @apply active:scale-95;
+  }
+
+  /* Myanmar Typography Improvements */
+  .myanmar-text {
+    font-family: 'Pyidaungsu', 'Padauk', sans-serif;
+    line-height: 1.7;
+  }
+
+  .myanmar-text-lg {
+    font-family: 'Pyidaungsu', 'Padauk', sans-serif;
+    font-size: 1.125rem;
+    line-height: 1.75;
+  }
+
+  /* Better readability for all text */
+  body {
+    line-height: 1.6;
+  }
+
+  p, span, div {
+    font-family: inherit;
+  }
+
+  /* Myanmar text specifically */
+  [lang="mm"] {
+    font-family: 'Pyidaungsu', 'Padauk', sans-serif;
+    line-height: 1.7;
+  }
+
+  /* Mobile touch targets */
+  @media (max-width: 768px) {
+    button, a, input, textarea, select {
+      min-height: 44px;
+    }
   }
 }

@@ -33,9 +33,43 @@ export function TTSGeneratorLayout({ children, currentSecondaryTab, onTabChange,
           onTabChange={onTabChange}
         />
         <SidebarInset className="bg-transparent border-none">
-          <main className="flex-1 overflow-auto">
+          <main className="flex-1 overflow-auto pb-16 md:pb-0">
             {children}
           </main>
+
+          {/* Mobile Bottom Navigation */}
+          <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t backdrop-blur-lg" style={{ background: "rgba(15, 12, 41, 0.95)", borderColor: "rgba(139, 92, 246, 0.2)" }}>
+            <div className="flex items-center justify-around py-2">
+              <button
+                onClick={() => onTabChange(currentSecondaryTab === "history" ? null : "history")}
+                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all min-h-[44px] ${currentSecondaryTab === "history" ? "text-purple-400" : "opacity-60"}`}
+              >
+                <History className="w-5 h-5" />
+                <span className="text-[10px] font-bold">မှတ်တမ်း</span>
+              </button>
+              <button
+                onClick={() => onTabChange(currentSecondaryTab === "plan" ? null : "plan")}
+                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all min-h-[44px] ${currentSecondaryTab === "plan" ? "text-purple-400" : "opacity-60"}`}
+              >
+                <Crown className="w-5 h-5" />
+                <span className="text-[10px] font-bold">Plan</span>
+              </button>
+              <button
+                onClick={() => onTabChange(currentSecondaryTab === "guide" ? null : "guide")}
+                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all min-h-[44px] ${currentSecondaryTab === "guide" ? "text-purple-400" : "opacity-60"}`}
+              >
+                <BookOpen className="w-5 h-5" />
+                <span className="text-[10px] font-bold">လမ်းညွှန်</span>
+              </button>
+              <button
+                onClick={() => onTabChange(currentSecondaryTab === "settings" ? null : "settings")}
+                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all min-h-[44px] ${currentSecondaryTab === "settings" ? "text-purple-400" : "opacity-60"}`}
+              >
+                <Settings className="w-5 h-5" />
+                <span className="text-[10px] font-bold">ဆက်တင်</span>
+              </button>
+            </div>
+          </div>
         </SidebarInset>
       </div>
     </SidebarProvider>

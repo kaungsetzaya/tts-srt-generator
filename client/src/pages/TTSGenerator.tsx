@@ -147,6 +147,13 @@ export default function TTSGenerator() {
     setTimeout(() => setErrorToast(""), 5000);
   };
 
+  // Success toast state
+  const [successToast, setSuccessToast] = useState("");
+  const showSuccess = (msg: string) => {
+    setSuccessToast(msg);
+    setTimeout(() => setSuccessToast(""), 3000);
+  };
+
   const [text, setText] = useState("");
   const [voice, setVoice] = useState<"thiha" | "nilar">("thiha");
   const [character, setCharacter] = useState<string>("");
@@ -319,6 +326,7 @@ export default function TTSGenerator() {
     try {
       await navigator.clipboard.writeText(editedVideoText);
       setVideoCopied(true);
+      showSuccess(lang === "mm" ? "SRT ကူးယူပြီးပါပြီ!" : "SRT copied!");
       setTimeout(() => setVideoCopied(false), 2000);
     } catch { /* fallback */ }
   };
@@ -402,6 +410,7 @@ export default function TTSGenerator() {
     try {
       await navigator.clipboard.writeText(dubEditedText);
       setDubCopied(true);
+      showSuccess(lang === "mm" ? "SRT ကူးယူပြီးပါပြီ!" : "SRT copied!");
       setTimeout(() => setDubCopied(false), 2000);
     } catch { /* fallback */ }
   };
@@ -488,13 +497,29 @@ export default function TTSGenerator() {
         </div>
       )}
 
+      {/* Success Toast */}
+      {successToast && (
+        <div className="fixed top-4 right-4 z-[100] animate-in fade-in slide-in-from-top-4 duration-300 max-w-[90vw]">
+          <div className="flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border" style={{
+            background: "rgba(34, 197, 94, 0.95)",
+            borderColor: "rgba(34, 197, 94, 0.5)",
+            color: "#fff",
+            backdropFilter: "blur(12px)",
+          }}>
+            <Check className="w-5 h-5 flex-shrink-0" />
+            <span className="text-sm font-bold">{successToast}</span>
+            <button onClick={() => setSuccessToast("")} className="ml-2 opacity-60 hover:opacity-100 text-lg">×</button>
+          </div>
+        </div>
+      )}
+
       {/* Subtle Grid Background */}
       <div className="absolute inset-0 pointer-events-none" style={{ opacity: isDark ? 0.05 : 0.15 }}>
         <div className="absolute inset-0" style={{ backgroundImage: `linear-gradient(0deg, transparent 24%, ${isDark ? '#66ccff' : '#6d28d9'} 25%, ${isDark ? '#66ccff' : '#6d28d9'} 26%, transparent 27%, transparent 74%, ${isDark ? '#66ccff' : '#6d28d9'} 75%, ${isDark ? '#66ccff' : '#6d28d9'} 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, ${isDark ? '#66ccff' : '#6d28d9'} 25%, ${isDark ? '#66ccff' : '#6d28d9'} 26%, transparent 27%, transparent 74%, ${isDark ? '#66ccff' : '#6d28d9'} 75%, ${isDark ? '#66ccff' : '#6d28d9'} 76%, transparent 77%, transparent)`, backgroundSize: '50px 50px' }} />
       </div>
 
-      {/* TOP NAVIGATION */}
-      <div className="relative z-10 flex items-center justify-between px-3 sm:px-6 py-3 border-b backdrop-blur-xl" style={{ borderColor: cardBorder, background: isDark ? 'rgba(15,12,41,0.8)' : 'rgba(255,255,255,0.85)' }}>
+      {/* TOP NAVIGATION - Sticky */}
+      <div className="sticky top-0 z-50 flex items-center justify-between px-3 sm:px-6 py-3 border-b backdrop-blur-xl" style={{ borderColor: cardBorder, background: isDark ? 'rgba(15,12,41,0.95)' : 'rgba(255,255,255,0.95)' }}>
         <div className="flex items-center gap-2">
           <span className="font-black uppercase tracking-widest text-base sm:text-lg" style={{ color: accent, textShadow: isDark ? `0 0 10px ${accent}` : 'none' }}>{t.appName}</span>
         </div>
@@ -542,7 +567,32 @@ export default function TTSGenerator() {
               <div className="lg:col-span-2 space-y-2">
                 <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
                   <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{t.inputText}</div>
-                  <textarea value={text} onChange={e => { if (!isAdmin && e.target.value.length > currentCharLimit) return; setText(e.target.value); }} placeholder={t.inputPlaceholder} disabled={!hasPlan} className="w-full h-28 sm:h-32 md:h-40 p-3 sm:p-4 border rounded-xl focus:outline-none focus:ring-2 resize-none disabled:opacity-50 transition-colors text-sm leading-relaxed" style={{ background: inputBg, borderColor: inputBorder, color: textColor }} />
+                  <div className="relative">
+                    <textarea
+                      value={text}
+                      onChange={e => {
+                        if (!isAdmin && e.target.value.length > currentCharLimit) return;
+                        setText(e.target.value);
+                      }}
+                      placeholder={t.inputPlaceholder}
+                      disabled={!hasPlan}
+                      className="w-full h-28 sm:h-32 md:h-40 p-3 sm:p-4 pr-24 border rounded-xl focus:outline-none focus:ring-2 resize-none disabled:opacity-50 transition-colors text-sm leading-relaxed"
+                      style={{
+                        background: inputBg,
+                        borderColor: !isAdmin && text.length > currentCharLimit * 0.9 ? (text.length >= currentCharLimit ? "#dc2626" : "#f59e0b") : inputBorder,
+                        color: textColor,
+                        fontFamily: lang === "mm" ? "'Pyidaungsu', sans-serif" : "inherit"
+                      }}
+                    />
+                    {/* Real-time character count - always visible */}
+                    <div className="absolute bottom-3 right-3 px-2 py-1 rounded-lg text-xs font-bold transition-colors" style={{
+                      background: !isAdmin && text.length > currentCharLimit * 0.9 ? (text.length >= currentCharLimit ? "rgba(220, 38, 38, 0.2)" : "rgba(245, 158, 11, 0.2)") : inputBg,
+                      color: !isAdmin && text.length > currentCharLimit * 0.9 ? (text.length >= currentCharLimit ? "#dc2626" : "#f59e0b") : accent,
+                      border: `1px solid ${!isAdmin && text.length > currentCharLimit * 0.9 ? (text.length >= currentCharLimit ? "#dc2626" : "#f59e0b") : accent}`
+                    }}>
+                      {text.length.toLocaleString()} / {!isAdmin && hasPlan ? currentCharLimit.toLocaleString() : "∞"}
+                    </div>
+                  </div>
                   <div className="mt-2 flex items-center justify-between text-xs font-semibold" style={{ color: subtextColor }}>
                     <span>
                       {!isAdmin && hasPlan && currentPlan !== 'trial' && planUsage && planLimits && (
@@ -551,8 +601,8 @@ export default function TTSGenerator() {
                         </span>
                       )}
                     </span>
-                    <span style={{ color: !isAdmin && text.length > currentCharLimit * 0.9 ? "#dc2626" : subtextColor }}>
-                      {text.length}{!isAdmin && hasPlan ? ` / ${currentCharLimit.toLocaleString()}` : ""}
+                    <span className="text-[10px] opacity-70">
+                      {lang === "mm" ? "စာလုံး" : "characters"}
                     </span>
                   </div>
                 </div>
@@ -1106,9 +1156,36 @@ export default function TTSGenerator() {
               const logs = (subStatus as any)?.recentLogs || [];
               if (logs.length === 0) return (
                 <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
-                  <div className="text-center py-10">
-                    <Clock className="w-12 h-12 mx-auto mb-3 opacity-30" style={{ color: subtextColor }} />
-                    <p className="text-sm font-bold" style={{ color: subtextColor }}>{lang === "mm" ? "မှတ်တမ်း မရှိသေးပါ" : "No history yet"}</p>
+                  <div className="text-center py-12 sm:py-16 px-4">
+                    {/* Empty State Icon */}
+                    <div className="w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center" style={{ background: `${accent}15` }}>
+                      <Clock className="w-10 h-10" style={{ color: accent }} />
+                    </div>
+
+                    {/* Empty State Text */}
+                    <h3 className="text-xl sm:text-2xl font-bold mb-2" style={{ color: textColor }}>
+                      {lang === "mm" ? "မှတ်တမ်း မရှိသေးပါ" : "No history yet"}
+                    </h3>
+                    <p className="text-sm mb-6 max-w-md mx-auto" style={{ color: subtextColor, lineHeight: "1.7" }}>
+                      {lang === "mm"
+                        ? "သင်၏ ပထမ TTS ဖန်တီးမှုကို စတင်ပါ။ စာသားရိုက်ထည့်ပြီး Generate ခလုတ်ကို နှိပ်ပါ"
+                        : "Start generating your first audio! Type your text and click the Generate button."
+                      }
+                    </p>
+
+                    {/* CTA Button */}
+                    <button
+                      onClick={() => setSecondaryTab(null)}
+                      className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all hover:scale-105 hover:shadow-lg"
+                      style={{
+                        background: accent,
+                        color: "#fff",
+                        border: `2px solid ${accent}`
+                      }}
+                    >
+                      <Wand2 className="w-4 h-4" />
+                      {lang === "mm" ? "စတင်ဖန်တီးရန်" : "Start Generating"}
+                    </button>
                   </div>
                 </div>
               );
