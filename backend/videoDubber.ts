@@ -355,23 +355,51 @@ export async function dubVideoFromLink(url: string, options: DubOptions): Promis
 
     // 🔐 FFmpeg Command Guard: execFile prevents command injection
     console.log("[Dubber] Downloading with yt-dlp...");
-    await execFileAsync("yt-dlp", [
-      "--no-cookies",
-      "--no-check-certificates",
-      "--no-playlist",
-      "--no-warnings",
-      "--max-filesize", "50M",
-      "-f", "b[ext=mp4]/b",
-      "-o", tempVideoPath,
-      url
-    ], { timeout: 300000 });
 
-    // Verify file
-    const fileStat = await fs.stat(tempVideoPath).catch(() => null);
-    if (!fileStat || fileStat.size < 1000) {
-      throw new Error("Downloaded file is empty or too small.");
+    // Try different player client strategies to bypass bot detection
+    const strategies = [
+      // tv client — most reliable for bot detection
+      ["--extractor-args", "youtube:player_client=tv", "-f", "b[ext=mp4]/b", "--merge-output-format", "mp4"],
+      // mweb client
+      ["--extractor-args", "youtube:player_client=mweb", "-f", "b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4"],
+      // android client
+      ["--extractor-args", "youtube:player_client=android", "-f", "b[ext=mp4]/b", "--merge-output-format", "mp4"],
+      // web_creator client
+      ["--extractor-args", "youtube:player_client=web_creator", "-f", "b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4"],
+      // generic fallback
+      ["-f", "bv*+ba/b", "--merge-output-format", "mp4"],
+    ];
+
+    let dlSuccess = false;
+    for (let i = 0; i < strategies.length; i++) {
+      await fs.unlink(tempVideoPath).catch(() => {});
+      try {
+        console.log(`[Dubber] Strategy ${i + 1}/${strategies.length}...`);
+        await execFileAsync("yt-dlp", [
+          "--no-cookies",
+          "--no-check-certificates",
+          "--no-playlist",
+          "--no-warnings",
+          "--max-filesize", "50M",
+          ...strategies[i],
+          "-o", tempVideoPath,
+          url
+        ], { timeout: 300000 });
+
+        const stat = await fs.stat(tempVideoPath).catch(() => null);
+        if (stat && stat.size > 10000) {
+          dlSuccess = true;
+          console.log(`[Dubber] ✅ Strategy ${i + 1} success (${Math.round(stat.size / 1024)}KB)`);
+          break;
+        }
+      } catch (e: any) {
+        console.warn(`[Dubber] Strategy ${i + 1} failed: ${e.message?.slice(0, 100)}`);
+      }
     }
-    console.log(`[Dubber] Video downloaded: ${Math.round(fileStat.size / 1024 / 1024 * 10) / 10}MB`);
+
+    if (!dlSuccess) {
+      throw new Error("ဗီဒီယိုကို ဒေါင်းလုတ်မရပါ။ YouTube bot detection ကြောင့် ဖြစ်နိုင်ပါသည်။");
+    }
 
     // Read video buffer and pass to dubVideoFromBuffer
     const videoBuffer = await fs.readFile(tempVideoPath);

@@ -115,25 +115,54 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
     try {
         console.log(`[Video Translator] Attempting to download: ${url}`);
 
-        // ── Download with yt-dlp ──
+        // ── Download with yt-dlp using player client strategies ──
         console.log("[Video Translator] Downloading with yt-dlp...");
-        // 🔐 FFmpeg Command Guard: execFile with argument array prevents command injection
-        await execFileAsync("yt-dlp", [
-            "--no-cookies",
-            "--no-check-certificates",
-            "--no-playlist",
-            "--no-warnings",
-            "--max-filesize", "50M",
-            "-f", "b[ext=mp4]/b",
-            "-o", tempVideoPath,
-            url
-        ], { timeout: 300000 });
 
-        // Verify file exists and has content
-        const fileStat = await fs.stat(tempVideoPath).catch(() => null);
-        if (!fileStat || fileStat.size < 1000) {
-            throw new Error("Downloaded file is empty or too small. The video may be unavailable or restricted.");
+        const strategies = [
+          // tv client — most reliable for bot detection
+          ["--extractor-args", "youtube:player_client=tv", "-f", "b[ext=mp4]/b", "--merge-output-format", "mp4"],
+          // mweb client
+          ["--extractor-args", "youtube:player_client=mweb", "-f", "b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4"],
+          // android client
+          ["--extractor-args", "youtube:player_client=android", "-f", "b[ext=mp4]/b", "--merge-output-format", "mp4"],
+          // web_creator client
+          ["--extractor-args", "youtube:player_client=web_creator", "-f", "b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4"],
+          // generic fallback
+          ["-f", "bv*+ba/b", "--merge-output-format", "mp4"],
+        ];
+
+        let dlSuccess = false;
+        for (let i = 0; i < strategies.length; i++) {
+          await fs.unlink(tempVideoPath).catch(() => {});
+          try {
+            console.log(`[Video Translator] Strategy ${i + 1}/${strategies.length}...`);
+            await execFileAsync("yt-dlp", [
+              "--no-cookies",
+              "--no-check-certificates",
+              "--no-playlist",
+              "--no-warnings",
+              "--max-filesize", "50M",
+              ...strategies[i],
+              "-o", tempVideoPath,
+              url
+            ], { timeout: 300000 });
+
+            const stat = await fs.stat(tempVideoPath).catch(() => null);
+            if (stat && stat.size > 10000) {
+              dlSuccess = true;
+              console.log(`[Video Translator] ✅ Strategy ${i + 1} success (${Math.round(stat.size / 1024)}KB)`);
+              break;
+            }
+          } catch (e: any) {
+            console.warn(`[Video Translator] Strategy ${i + 1} failed: ${e.message?.slice(0, 100)}`);
+          }
         }
+
+        if (!dlSuccess) {
+          throw new Error("ဗီဒီယိုကို ဒေါင်းလုတ်မရပါ။ YouTube bot detection ကြောင့် ဖြစ်နိုင်ပါသည်။");
+        }
+
+        const fileStat = await fs.stat(tempVideoPath).catch(() => null);
         console.log(`[Video Translator] Video downloaded: ${Math.round(fileStat.size / 1024 / 1024 * 10) / 10}MB`);
 
         console.log(`[Video Translator] Extracting Audio...`);
