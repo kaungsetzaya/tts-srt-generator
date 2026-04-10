@@ -11,6 +11,26 @@ type SecondaryTab = "history" | "plan" | "guide" | "settings" | null;
 type Theme = "dark" | "light";
 type Lang = "mm" | "en";
 
+// ─── Helper: Convert YouTube URL to embed URL ─────────────
+function getYouTubeEmbedUrl(url: string): string | null {
+  if (!url) return null;
+
+  // Match various YouTube URL formats
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match && match[1]) {
+      return `https://www.youtube.com/embed/${match[1]}?autoplay=0&controls=1`;
+    }
+  }
+
+  return null;
+}
+
 // ─── User-friendly error messages ─────────────
 function friendlyError(raw: string): string {
   if (!raw) return "တစ်ခုခုမှားယွင်းနေပါသည်။ ထပ်ကြိုးစားပါ။";
@@ -299,11 +319,9 @@ export default function TTSGenerator() {
     if (dubVideoUrl.trim() && !dubVideoFile) {
       setVideoLoading(true);
       setVideoPreviewError("");
-      const timer = setTimeout(() => {
-        setDubPreviewUrl(dubVideoUrl.trim());
-        setVideoLoading(false);
-      }, 500);
-      return () => clearTimeout(timer);
+      setDubPreviewUrl(dubVideoUrl.trim());
+      setVideoLoading(false);
+      return;
     } else if (!dubVideoUrl && !dubVideoFile) {
       setDubPreviewUrl("");
       setVideoPreviewError("");
@@ -1045,12 +1063,6 @@ export default function TTSGenerator() {
                     {dubVideoFile ? (<><FileVideo className="w-8 h-8 mx-auto mb-2 text-green-600" /><p className="font-bold text-green-600 text-sm">{dubVideoFile.name}</p><p className="text-xs font-semibold mt-1" style={{ color: subtextColor }}>{(dubVideoFile.size / 1024 / 1024).toFixed(1)} MB</p></>) : (<><Upload className="w-8 h-8 mx-auto mb-2" style={{ color: subtextColor }} /><p className="font-bold text-sm" style={{ color: subtextColor }}>{t.dropVideo}</p><p className="text-xs font-semibold mt-2" style={{ color: subtextColor }}>MP4, MOV, AVI, MKV</p></>)}
                   </div>
                 </div>
-
-                {(dubVideoFile || dubVideoUrl) && (
-                  <button onClick={handleDubPreview} className="w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 rounded-2xl text-white font-black uppercase tracking-widest transition-all hover:scale-[1.02] mt-4 shadow-lg text-sm sm:text-base" style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, boxShadow: isDark ? `0 0 20px ${accent}` : `0 8px 20px rgba(109,40,217,0.25)` }}>
-                    <FileVideo className="w-5 h-5" /> {lang === "mm" ? "ဗီဒီယိုကြိုကြည့်ရန်" : "Preview Video"}
-                  </button>
-                )}
               </>
             )}
 
@@ -1093,26 +1105,47 @@ export default function TTSGenerator() {
                         overflow: "hidden",
                         borderRadius: "12px",
                       }}>
-                        <video
-                          ref={dubPreviewRef}
-                          src={dubPreviewUrl}
-                          controls
-                          className="w-full h-full"
-                          style={{ objectFit: "cover", borderRadius: "12px" }}
-                          onLoadedMetadata={(e) => {
-                            const v = e.currentTarget;
-                            const w = v.videoWidth;
-                            const h = v.videoHeight;
-                            if (h > w) setDubDetectedRatio("9:16");
-                            else setDubDetectedRatio("16:9");
-                            setVideoLoading(false);
-                            setVideoPreviewError("");
-                          }}
-                          onError={() => {
-                            setVideoPreviewError("Failed to load video. Check if the link is valid or try uploading the file.");
-                            setVideoLoading(false);
-                          }}
-                        />
+                        {getYouTubeEmbedUrl(dubVideoUrl) ? (
+                          // YouTube embed iframe
+                          <iframe
+                            src={getYouTubeEmbedUrl(dubVideoUrl)!}
+                            title="YouTube video preview"
+                            className="w-full h-full"
+                            style={{ border: "none", borderRadius: "12px" }}
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            onLoad={() => {
+                              setVideoLoading(false);
+                              setVideoPreviewError("");
+                            }}
+                            onError={() => {
+                              setVideoPreviewError("Failed to load video. Check if the link is valid or try uploading the file.");
+                              setVideoLoading(false);
+                            }}
+                          />
+                        ) : (
+                          // HTML5 video tag for uploaded files
+                          <video
+                            ref={dubPreviewRef}
+                            src={dubPreviewUrl}
+                            controls
+                            className="w-full h-full"
+                            style={{ objectFit: "cover", borderRadius: "12px" }}
+                            onLoadedMetadata={(e) => {
+                              const v = e.currentTarget;
+                              const w = v.videoWidth;
+                              const h = v.videoHeight;
+                              if (h > w) setDubDetectedRatio("9:16");
+                              else setDubDetectedRatio("16:9");
+                              setVideoLoading(false);
+                              setVideoPreviewError("");
+                            }}
+                            onError={() => {
+                              setVideoPreviewError("Failed to load video. Check if the link is valid or try uploading the file.");
+                              setVideoLoading(false);
+                            }}
+                          />
+                        )}
                         {videoLoading && (
                           <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-xl" style={{ zIndex: 20 }}>
                             <Loader2 className="w-8 h-8 animate-spin text-white" />
