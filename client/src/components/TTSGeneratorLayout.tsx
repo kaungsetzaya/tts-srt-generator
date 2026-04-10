@@ -108,18 +108,16 @@ function TTSGeneratorSidebar({ currentTab, onTabChange }: TTSGeneratorSidebarPro
   return (
     <Sidebar collapsible="icon" className="bg-transparent">
       <SidebarHeader className="border-b border-purple-500/20 bg-transparent">
-        <div className="flex items-center gap-2 px-2 py-4">
-          <div className="flex-1">
+        <div className="flex items-center justify-between gap-2 px-2 py-4">
+          <div className="flex items-center gap-2">
             <h2 className="text-lg font-black uppercase tracking-wider text-purple-400">LUMIX</h2>
             {me && !isCollapsed && (
-              <p className="text-xs opacity-60 mt-0.5">{me.name}</p>
+              <p className="text-xs opacity-60">{me.name}</p>
             )}
           </div>
-          {!isCollapsed && (
-            <SidebarTrigger className="-mr-1">
-              <PanelLeft className="h-4 w-4" />
-            </SidebarTrigger>
-          )}
+          <SidebarTrigger className="flex-shrink-0 hover:bg-purple-500/10 rounded p-1">
+            <PanelLeft className="h-4 w-4" />
+          </SidebarTrigger>
         </div>
 
         {/* Usage Display */}

@@ -38,14 +38,14 @@ export function CompactUsageDisplay({ subStatus, isCollapsed }: CompactUsageDisp
 
     return (
       <div className="px-3 py-2 space-y-2">
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-2 mb-2 p-2 rounded-lg" style={{ background: "rgba(245, 158, 11, 0.15)", border: "1px solid rgba(245, 158, 11, 0.3)" }}>
           <Crown className="w-4 h-4" style={{ color: "#f59e0b" }} />
           <span className="text-xs font-bold text-yellow-500">TRIAL</span>
         </div>
 
         <div className="grid grid-cols-2 gap-2 text-xs">
           {/* TTS */}
-          <div>
+          <div className="p-2 rounded" style={{ background: "rgba(0,0,0,0.2)" }}>
             <div className="opacity-60" style={{ fontSize: "9px" }}>TTS</div>
             <div className="font-bold">
               {usage.tts}/{limits.totalTtsSrt}
@@ -56,7 +56,7 @@ export function CompactUsageDisplay({ subStatus, isCollapsed }: CompactUsageDisp
           </div>
 
           {/* AI Video */}
-          <div>
+          <div className="p-2 rounded" style={{ background: "rgba(0,0,0,0.2)" }}>
             <div className="opacity-60" style={{ fontSize: "9px" }}>AI Video</div>
             <div className="font-bold">
               {usage.aiVideo}/{limits.totalAiVideo}
@@ -67,7 +67,7 @@ export function CompactUsageDisplay({ subStatus, isCollapsed }: CompactUsageDisp
           </div>
 
           {/* Character Voice */}
-          <div>
+          <div className="p-2 rounded" style={{ background: "rgba(0,0,0,0.2)" }}>
             <div className="opacity-60" style={{ fontSize: "9px" }}>VC</div>
             <div className="font-bold">
               {usage.characterUse}/{limits.totalCharacterUse}
@@ -78,7 +78,7 @@ export function CompactUsageDisplay({ subStatus, isCollapsed }: CompactUsageDisp
           </div>
 
           {/* Video Translate */}
-          <div>
+          <div className="p-2 rounded" style={{ background: "rgba(0,0,0,0.2)" }}>
             <div className="opacity-60" style={{ fontSize: "9px" }}>Translate</div>
             <div className="font-bold">
               {usage.videoTranslate}/{limits.totalVideoTranslate}
@@ -108,14 +108,14 @@ export function CompactUsageDisplay({ subStatus, isCollapsed }: CompactUsageDisp
 
     return (
       <div className="px-3 py-2 space-y-2">
-        <div className="flex items-center gap-2 mb-2">
-          <Crown className="w-4 h-4" style={{ color: "#16a34a" }} />
-          <span className="text-xs font-bold text-green-500">{plan?.toUpperCase()}</span>
+        <div className="flex items-center gap-2 mb-2 p-2 rounded-lg" style={{ background: "rgba(34, 197, 94, 0.15)", border: "1px solid rgba(34, 197, 94, 0.3)" }}>
+          <Crown className="w-4 h-4" style={{ color: "#22c55e" }} />
+          <span className="text-xs font-bold text-green-400">{plan?.toUpperCase()}</span>
         </div>
 
         <div className="grid grid-cols-2 gap-2 text-xs">
           {/* TTS */}
-          <div>
+          <div className="p-2 rounded" style={{ background: "rgba(0,0,0,0.2)" }}>
             <div className="opacity-60" style={{ fontSize: "9px" }}>TTS (Today)</div>
             <div className="font-bold">
               {usage.tts}/{limits.dailyTtsSrt}
@@ -123,7 +123,7 @@ export function CompactUsageDisplay({ subStatus, isCollapsed }: CompactUsageDisp
           </div>
 
           {/* Character Voice */}
-          <div>
+          <div className="p-2 rounded" style={{ background: "rgba(0,0,0,0.2)" }}>
             <div className="opacity-60" style={{ fontSize: "9px" }}>VC (Today)</div>
             <div className="font-bold">
               {usage.characterUse}/{limits.dailyCharacterUse}
@@ -131,7 +131,7 @@ export function CompactUsageDisplay({ subStatus, isCollapsed }: CompactUsageDisp
           </div>
 
           {/* Video Translate */}
-          <div>
+          <div className="p-2 rounded" style={{ background: "rgba(0,0,0,0.2)" }}>
             <div className="opacity-60" style={{ fontSize: "9px" }}>Translate</div>
             <div className="font-bold">
               {usage.videoTranslate}/{limits.dailyVideoTranslate}
@@ -139,7 +139,7 @@ export function CompactUsageDisplay({ subStatus, isCollapsed }: CompactUsageDisp
           </div>
 
           {/* AI Video */}
-          <div>
+          <div className="p-2 rounded" style={{ background: "rgba(0,0,0,0.2)" }}>
             <div className="opacity-60" style={{ fontSize: "9px" }}>AI Video</div>
             <div className="font-bold">
               {usage.aiVideo}/{limits.dailyAiVideo}

@@ -865,13 +865,13 @@ export default function TTSGenerator() {
             {/* ── STEP: Video Preview + Settings ── */}
             {dubPreviewUrl && !dubResult && (
               <>
-                {/* Video Preview — STICKY on scroll */}
-                <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow, position: "sticky", top: "8px", zIndex: 20 }}>
+                {/* Video Preview — STICKY on desktop, normal on mobile */}
+                <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow, position: "sticky", top: "8px", zIndex: 10 }}>
                   <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{lang === "mm" ? "ဗီဒီယိုကြိုကြည့်" : "Video Preview"}</div>
                   <div className="flex justify-center mt-2">
                     <div style={{
-                      width: dubDetectedRatio === "9:16" ? "200px" : "100%",
-                      maxWidth: dubDetectedRatio === "9:16" ? "200px" : "100%",
+                      width: dubDetectedRatio === "9:16" ? "240px" : "100%",
+                      maxWidth: dubDetectedRatio === "9:16" ? "240px" : "100%",
                       aspectRatio: dubDetectedRatio === "9:16" ? "9/16" : "16/9",
                       position: "relative",
                       overflow: "hidden",
