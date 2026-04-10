@@ -538,8 +538,8 @@ export default function TTSGenerator() {
         </div>
       </div>
 
-      {/* TABS */}
-      <div className="relative z-10 flex gap-1 px-2 sm:px-4 pt-2 sm:pt-3 border-b overflow-x-auto scrollbar-hide" style={{ borderColor: cardBorder, background: isDark ? 'rgba(15,12,41,0.5)' : 'rgba(255,255,255,0.5)' }}>
+      {/* TABS - Hidden on mobile, shown on desktop */}
+      <div className="relative z-10 hidden md:flex gap-1 px-2 sm:px-4 pt-2 sm:pt-3 border-b overflow-x-auto scrollbar-hide" style={{ borderColor: cardBorder, background: isDark ? 'rgba(15,12,41,0.5)' : 'rgba(255,255,255,0.5)' }}>
         {([{ id: "tts" as MainTab, label: t.tabs.tts, icon: <Mic className="w-3.5 h-3.5" /> }, { id: "video" as MainTab, label: t.tabs.video, icon: <FileVideo className="w-3.5 h-3.5" /> }, { id: "dubbing" as MainTab, label: t.tabs.dubbing, icon: <Wand2 className="w-3.5 h-3.5" /> }]).map(({ id, label: lbl, icon }) => (
           <button key={id} onClick={() => { setMainTab(id); setSecondaryTab(null); }} className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all border-b-2 rounded-t-xl whitespace-nowrap" style={{ borderColor: mainTab === id ? accent : 'transparent', color: mainTab === id ? accent : subtextColor, background: mainTab === id ? cardBg : 'transparent' }}>{icon} {lbl}</button>
         ))}
