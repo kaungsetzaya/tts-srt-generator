@@ -1,0 +1,25 @@
+# Server files
+server/
+dist/
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Development files
+*.log
+scripts/
+docs/
+
+# Uploads
+uploads/
+
+# VPS specific
+cookies.txt
+cookies.txt.example
