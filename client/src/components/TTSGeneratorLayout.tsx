@@ -6,6 +6,7 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
+  SidebarInset,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -29,22 +30,23 @@ export function TTSGeneratorLayout({ children, currentSecondaryTab, onTabChange 
 
   return (
     <SidebarProvider>
-      <TTSGeneratorSidebar
-        currentTab={currentSecondaryTab}
-        onTabChange={onTabChange}
-        isMobileMenuOpen={isMobileMenuOpen}
-        setIsMobileMenuOpen={setIsMobileMenuOpen}
-      />
       <div className="flex min-h-screen w-full">
-        <Sidebar className="border-r border-purple-500/20" />
-        <main className="flex-1 overflow-auto">
-          <div className="sticky top-0 z-10 flex items-center gap-2 border-b bg-background/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <TTSGeneratorSidebar
+          currentTab={currentSecondaryTab}
+          onTabChange={onTabChange}
+          isMobileMenuOpen={isMobileMenuOpen}
+          setIsMobileMenuOpen={setIsMobileMenuOpen}
+        />
+        <SidebarInset>
+          <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4">
             <SidebarTrigger className="md:hidden">
               <Menu className="h-5 w-5" />
             </SidebarTrigger>
-          </div>
-          {children}
-        </main>
+          </header>
+          <main className="flex-1 overflow-auto">
+            {children}
+          </main>
+        </SidebarInset>
       </div>
     </SidebarProvider>
   );
