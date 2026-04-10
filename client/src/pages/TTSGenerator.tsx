@@ -522,7 +522,7 @@ export default function TTSGenerator() {
 
       {/* TOP NAVIGATION - Premium Sticky */}
       <div
-        className="sticky top-0 z-50 flex items-center justify-between px-3 sm:px-5 py-2.5 border-b backdrop-blur-xl"
+        className={`${text.trim() ? 'sticky top-0' : ''} z-50 flex items-center justify-between px-3 sm:px-5 py-2.5 border-b backdrop-blur-xl`}
         style={{
           borderColor: isDark ? 'rgba(124,58,237,0.25)' : 'rgba(109,40,217,0.12)',
           background: isDark ? 'rgba(9,7,28,0.97)' : 'rgba(255,255,255,0.97)',
