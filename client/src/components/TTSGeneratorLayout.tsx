@@ -14,7 +14,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { History, Crown, BookOpen, Settings, LogOut, Menu } from "lucide-react";
+import { History, Crown, BookOpen, Settings, LogOut, Menu, PanelLeft } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { trpc } from "@/lib/trpc";
 import { CompactUsageDisplay } from "./CompactUsageDisplay";
@@ -26,22 +26,21 @@ interface TTSGeneratorLayoutProps {
 }
 
 export function TTSGeneratorLayout({ children, currentSecondaryTab, onTabChange }: TTSGeneratorLayoutProps) {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <TTSGeneratorSidebar
           currentTab={currentSecondaryTab}
           onTabChange={onTabChange}
-          isMobileMenuOpen={isMobileMenuOpen}
-          setIsMobileMenuOpen={setIsMobileMenuOpen}
         />
         <SidebarInset>
-          <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4">
-            <SidebarTrigger className="md:hidden">
-              <Menu className="h-5 w-5" />
-            </SidebarTrigger>
+          <header className="flex h-14 shrink-0 items-center gap-2 px-4 border-b">
+            <div className="w-full flex items-center justify-between">
+              <div className="text-sm font-semibold opacity-60">LUMIX TTS Generator</div>
+              <SidebarTrigger className="-ml-1">
+                <PanelLeftIcon className="h-5 w-5" />
+              </SidebarTrigger>
+            </div>
           </header>
           <main className="flex-1 overflow-auto">
             {children}
@@ -67,7 +66,7 @@ function TTSGeneratorSidebar({ currentTab, onTabChange }: TTSGeneratorSidebarPro
   const isCollapsed = !sidebar.open;
 
   const handleLogout = async () => {
-    await queryClient.invalidateQueries(["auth.me"]);
+    await queryClient.invalidateQueries({ queryKey: [] });
     window.location.href = "/login";
   };
 
@@ -85,7 +84,7 @@ function TTSGeneratorSidebar({ currentTab, onTabChange }: TTSGeneratorSidebarPro
           <div className="flex-1">
             <h2 className="text-lg font-black uppercase tracking-wider text-purple-400">LUMIX</h2>
             {me && !isCollapsed && (
-              <p className="text-xs opacity-60 mt-0.5">{me.telegramFirstName}</p>
+              <p className="text-xs opacity-60 mt-0.5">{me.name}</p>
             )}
           </div>
         </div>
