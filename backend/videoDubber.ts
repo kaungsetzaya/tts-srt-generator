@@ -399,11 +399,6 @@ export async function dubVideoFromLink(url: string, options: DubOptions): Promis
       const baseArgs = ["--no-check-certificates", "--no-playlist", "--no-warnings", "--geo-bypass", "--max-filesize", "50M"];
 
       const strategies: string[][] = [
-        ...(hasCookies ? [
-          [...baseArgs, "--cookies", cookiePath, "--extractor-args", "youtube:player_client=tv", "-f", "bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b", "--merge-output-format", "mp4"],
-          [...baseArgs, "--cookies", cookiePath, "--extractor-args", "youtube:player_client=web_creator", "-f", "bv*+ba/b", "--merge-output-format", "mp4"],
-          [...baseArgs, "--cookies", cookiePath, "-f", "b", "--recode-video", "mp4"],
-        ] : []),
         // tv client — most reliable without cookies
         [...baseArgs, "--extractor-args", "youtube:player_client=tv", "-f", "b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4"],
         // mweb client
@@ -412,6 +407,11 @@ export async function dubVideoFromLink(url: string, options: DubOptions): Promis
         [...baseArgs, "--extractor-args", "youtube:player_client=android", "-f", "b[ext=mp4]/b", "--merge-output-format", "mp4"],
         // web_creator client
         [...baseArgs, "--extractor-args", "youtube:player_client=web_creator", "-f", "b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4"],
+        ...(hasCookies ? [
+          [...baseArgs, "--cookies", cookiePath, "--extractor-args", "youtube:player_client=tv", "-f", "bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b", "--merge-output-format", "mp4"],
+          [...baseArgs, "--cookies", cookiePath, "--extractor-args", "youtube:player_client=web_creator", "-f", "bv*+ba/b", "--merge-output-format", "mp4"],
+          [...baseArgs, "--cookies", cookiePath, "-f", "b", "--recode-video", "mp4"],
+        ] : []),
         // generic fallback
         [...baseArgs, "-f", "bv*+ba/b", "--merge-output-format", "mp4"],
         [...baseArgs, "-f", "worst[ext=mp4]/worst", "--recode-video", "mp4"],
