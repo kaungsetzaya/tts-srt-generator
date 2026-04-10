@@ -1,17 +1,17 @@
 {
   "version": 2,
-  "buildCommand": "vite build",
-  "outputDirectory": "dist/public",
-  "framework": "vite",
+  "buildCommand": "cd frontend && pnpm install && pnpm build",
+  "outputDirectory": "frontend/dist",
+  "framework": null,
   "installCommand": "pnpm install",
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://your-vps-domain.com/api/:path*"
+      "destination": "https://choco.de5.net/api/:path*"
     },
     {
       "source": "/trpc/:path*",
-      "destination": "https://your-vps-domain.com/trpc/:path*"
+      "destination": "https://choco.de5.net/trpc/:path*"
     },
     {
       "source": "/(.*)",
@@ -39,3 +39,4 @@
     }
   ]
 }
+
