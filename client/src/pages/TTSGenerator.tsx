@@ -174,6 +174,11 @@ export default function TTSGenerator() {
   const [videoCopied, setVideoCopied] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Video preview state for translate tab
+  const [translatePreviewUrl, setTranslatePreviewUrl] = useState<string>("");
+  const [translateVideoLoading, setTranslateVideoLoading] = useState(false);
+  const [translateVideoError, setTranslateVideoError] = useState<string>("");
+
   // === DUBBING TAB STATE (fully independent) ===
   const [dubVideoFile, setDubVideoFile] = useState<File | null>(null);
   const [dubVideoUrl, setDubVideoUrl] = useState<string>("");
@@ -270,6 +275,41 @@ export default function TTSGenerator() {
   const accent30 = withOpacity(accent, 0.30);
   const accent40 = withOpacity(accent, 0.40);
   const accent80 = withOpacity(accent, 0.80);
+
+  // Auto-preview video for translate tab when URL changes
+  useEffect(() => {
+    if (videoUrl.trim() && !videoFile) {
+      setTranslateVideoLoading(true);
+      setTranslateVideoError("");
+      // Simulate loading delay
+      const timer = setTimeout(() => {
+        setTranslatePreviewUrl(videoUrl.trim());
+        setTranslateVideoLoading(false);
+      }, 500);
+      return () => clearTimeout(timer);
+    } else if (!videoUrl && !videoFile) {
+      setTranslatePreviewUrl("");
+      setTranslateVideoError("");
+      setTranslateVideoLoading(false);
+    }
+  }, [videoUrl, videoFile]);
+
+  // Auto-preview video for dubbing tab when URL changes
+  useEffect(() => {
+    if (dubVideoUrl.trim() && !dubVideoFile) {
+      setVideoLoading(true);
+      setVideoPreviewError("");
+      const timer = setTimeout(() => {
+        setDubPreviewUrl(dubVideoUrl.trim());
+        setVideoLoading(false);
+      }, 500);
+      return () => clearTimeout(timer);
+    } else if (!dubVideoUrl && !dubVideoFile) {
+      setDubPreviewUrl("");
+      setVideoPreviewError("");
+      setVideoLoading(false);
+    }
+  }, [dubVideoUrl, dubVideoFile]);
 
   // Light theme: clean white/slate, Dark: cyberpunk gradient
   const bgGradient = isDark
@@ -811,6 +851,50 @@ export default function TTSGenerator() {
                     {videoFile ? (<><FileVideo className="w-8 h-8 mx-auto mb-2 text-green-600" /><p className="font-bold text-green-600 text-sm">{videoFile.name}</p><p className="text-xs font-semibold mt-1" style={{ color: subtextColor }}>{(videoFile.size / 1024 / 1024).toFixed(1)} MB</p></>) : (<><Upload className="w-8 h-8 mx-auto mb-2" style={{ color: subtextColor }} /><p className="font-bold text-sm" style={{ color: subtextColor }}>{t.dropVideo}</p><p className="text-xs font-semibold mt-2" style={{ color: subtextColor }}>MP4, MOV, AVI, MKV</p></>)}
                   </div>
                 </div>
+
+                {/* Video Preview for Translate Tab */}
+                {(translatePreviewUrl || videoFile) && (
+                  <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
+                    <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>
+                      {lang === "mm" ? "ဗီဒီယို ကြိုတင်ကြည့်ရန်" : "Video Preview"}
+                    </div>
+                    <div className="relative w-full rounded-xl overflow-hidden bg-black" style={{ aspectRatio: "16/9", maxHeight: "400px" }}>
+                      {videoFile ? (
+                        <video
+                          src={URL.createObjectURL(videoFile)}
+                          controls
+                          className="w-full h-full"
+                          style={{ objectFit: "contain", borderRadius: "12px" }}
+                        />
+                      ) : translatePreviewUrl ? (
+                        <video
+                          src={translatePreviewUrl}
+                          controls
+                          className="w-full h-full"
+                          style={{ objectFit: "contain", borderRadius: "12px" }}
+                          onLoadedMetadata={() => setTranslateVideoLoading(false)}
+                          onError={() => {
+                            setTranslateVideoError(lang === "mm" ? "ဗီဒီယိုကို လော့နိုင်းမရပါ။ လင့်ခ်ကို စစ်ဆေးပါ" : "Failed to load video. Check if the link is valid.");
+                            setTranslateVideoLoading(false);
+                          }}
+                        />
+                      ) : null}
+                      {translateVideoLoading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-xl" style={{ zIndex: 20 }}>
+                          <Loader2 className="w-8 h-8 animate-spin text-white" />
+                        </div>
+                      )}
+                      {translateVideoError && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-xl p-4" style={{ zIndex: 20 }}>
+                          <div className="text-center">
+                            <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-2" />
+                            <p className="text-white text-sm font-semibold">{translateVideoError}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {(videoFile || videoUrl) && (
                   <button onClick={handleTranslate} disabled={translateMutation.isPending || translateLinkMutation.isPending} className="w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 rounded-2xl text-white font-black uppercase tracking-widest transition-all disabled:opacity-50 hover:scale-[1.02] mt-4 shadow-lg text-sm sm:text-base" style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, boxShadow: isDark ? `0 0 20px ${accent}` : `0 8px 20px rgba(109,40,217,0.25)` }}>

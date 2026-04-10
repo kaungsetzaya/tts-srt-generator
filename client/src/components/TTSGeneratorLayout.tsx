@@ -134,7 +134,24 @@ function TTSGeneratorSidebar({ currentTab, onTabChange }: TTSGeneratorSidebarPro
         className="border-b bg-transparent"
         style={{ borderColor: "rgba(139, 92, 246, 0.2)" }}
       >
-        <div className="flex items-center justify-end gap-2 px-2 py-3">
+        <div className="flex items-center justify-between gap-2 px-3 py-4">
+          {/* LUMIX Logo */}
+          {!isCollapsed && (
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(79, 70, 229, 0.2))", border: "1px solid rgba(139, 92, 246, 0.3)" }}>
+                <span className="text-lg font-black" style={{ color: "#a78bfa" }}>L</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-black uppercase tracking-wider" style={{ color: "#a78bfa" }}>LUMIX</span>
+              </div>
+            </div>
+          )}
+          {isCollapsed && (
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto" style={{ background: "linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(79, 70, 229, 0.2))", border: "1px solid rgba(139, 92, 246, 0.3)" }}>
+              <span className="text-lg font-black" style={{ color: "#a78bfa" }}>L</span>
+            </div>
+          )}
+
           <SidebarTrigger
             className="flex-shrink-0 rounded-lg p-1.5 transition-colors"
             style={{ color: "rgba(167,139,250,0.7)" }}
