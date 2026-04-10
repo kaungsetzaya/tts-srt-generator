@@ -655,7 +655,10 @@ export default function TTSGenerator() {
             {!videoResult && (
               <>
                 <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
-                  <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{t.linkInputLabel}</div>
+                  <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>
+                    {t.linkInputLabel}
+                    <span className="text-[10px] opacity-70 ml-2">({lang === "mm" ? "MP4, WebM URL only" : "Direct MP4/WebM URL only"})</span>
+                  </div>
                   <div className="flex items-center gap-3 mt-1">
                     <LinkIcon className="w-5 h-5 flex-shrink-0" style={{ color: subtextColor }} />
                     <input
@@ -674,54 +677,6 @@ export default function TTSGenerator() {
                       style={{ borderColor: videoUrl ? accent : inputBorder, color: textColor }}
                     />
                   </div>
-                  {videoUrl.trim() && (
-                    <div className="mt-3 p-3 rounded-xl" style={{ background: `${accent}10`, border: `1px solid ${accent}30` }}>
-                      <p className="text-xs font-semibold mb-2" style={{ color: accent }}>
-                        {lang === "mm" ? "ဗီဒီယို URL သတင်းမှန်:" : "Direct video URL required"}
-                      </p>
-                      <p className="text-[10px] opacity-80 mb-2" style={{ color: subtextColor }}>
-                        {lang === "mm"
-                          ? "တိုက်ရိုက် MP4, WebM ဖိုင်း URL များသာ အလုပ်လုပ်ပါမည်။ YouTube, TikTok, Facebook လင့်ခ်များကို ဗီဒီယိုဖိုင်း download ပြုလုပ်ပြီး သုံးပါ။"
-                          : "Only direct MP4/WebM file URLs work. Download videos from YouTube/TikTok/Facebook first."
-                        }
-                      </p>
-                      <button
-                        onClick={() => {
-                          setVideoPreviewError("");
-                          setVideoLoading(true);
-                          // Try to load the video as preview
-                          const testVideo = document.createElement('video');
-                          testVideo.src = videoUrl.trim();
-                          testVideo.onloadedmetadata = () => {
-                            setVideoLoading(false);
-                            setVideoPreviewError("");
-                          };
-                          testVideo.onerror = () => {
-                            setVideoLoading(false);
-                            setVideoPreviewError(lang === "mm"
-                              ? "ဗီဒီယို မတင်နိုင်ပါ။ URL ကိုစစ်ပြီး ဖိုင် upload လုပ်ပါ။"
-                              : "Cannot load video. Check URL or upload file instead.");
-                          };
-                        }}
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all hover:scale-105"
-                        style={{ background: accent, color: "#fff" }}
-                      >
-                        <Sparkles className="w-3.5 h-3.5" />
-                        {lang === "mm" ? "ဗီဒီယို စမ်းကြည့်ရန်" : "Test Video URL"}
-                      </button>
-                    </div>
-                  )}
-                  {videoPreviewError && (
-                    <div className="mt-3 p-3 rounded-xl" style={{ background: "rgba(220, 38, 38, 0.1)", border: "1px solid rgba(220, 38, 38, 0.3)" }}>
-                      <p className="text-xs font-semibold" style={{ color: "#dc2626" }}>{videoPreviewError}</p>
-                    </div>
-                  )}
-                  {videoLoading && (
-                    <div className="mt-3 flex items-center gap-2 p-3 rounded-xl" style={{ background: `${accent}10` }}>
-                      <Loader2 className="w-4 h-4 animate-spin" style={{ color: accent }} />
-                      <span className="text-xs font-semibold" style={{ color: accent }}>{lang === "mm" ? "ဗီဒီယို စစ်နေသည်..." : "Testing video..."}</span>
-                    </div>
-                  )}
                 </div>
 
                 <div className="flex items-center justify-center gap-4 my-2" style={{ color: subtextColor }}>
@@ -803,7 +758,10 @@ export default function TTSGenerator() {
             {!dubPreviewUrl && !dubResult && (
               <>
                 <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
-                  <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{t.linkInputLabel}</div>
+                  <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>
+                    {t.linkInputLabel}
+                    <span className="text-[10px] opacity-70 ml-2">({lang === "mm" ? "MP4, WebM URL only" : "Direct MP4/WebM URL only"})</span>
+                  </div>
                   <div className="flex items-center gap-3 mt-1">
                     <LinkIcon className="w-5 h-5 flex-shrink-0" style={{ color: subtextColor }} />
                     <input
@@ -822,19 +780,6 @@ export default function TTSGenerator() {
                       style={{ borderColor: dubVideoUrl ? accent : inputBorder, color: textColor }}
                     />
                   </div>
-                  {dubVideoUrl.trim() && (
-                    <div className="mt-3 p-3 rounded-xl" style={{ background: `${accent}10`, border: `1px solid ${accent}30` }}>
-                      <p className="text-xs font-semibold mb-2" style={{ color: accent }}>
-                        {lang === "mm" ? "ဗီဒီယို URL သတင်းမှန်:" : "Direct video URL required"}
-                      </p>
-                      <p className="text-[10px] opacity-80" style={{ color: subtextColor }}>
-                        {lang === "mm"
-                          ? "တိုက်ရိုက် MP4, WebM ဖိုင်း URL များသာ အလုပ်လုပ်ပါမည်။"
-                          : "Only direct MP4/WebM file URLs work."
-                        }
-                      </p>
-                    </div>
-                  )}
                   {videoPreviewError && (
                     <div className="mt-3 p-3 rounded-xl" style={{ background: "rgba(220, 38, 38, 0.1)", border: "1px solid rgba(220, 38, 38, 0.3)" }}>
                       <p className="text-xs font-semibold" style={{ color: "#dc2626" }}>{videoPreviewError}</p>
@@ -1233,8 +1178,7 @@ export default function TTSGenerator() {
 
             {/* Quick Links Section */}
             <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
-              <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{lang === "mm" ? "မြန်ဆန် လင့်ခ်များ" : "Quick Links"}</div>
-              <div className="space-y-2 mt-3">
+              <div className="space-y-2 pt-2">
                 <button
                   onClick={() => setSecondaryTab("history")}
                   className="w-full flex items-center gap-3 p-3 rounded-xl transition-all hover:scale-[1.02] min-h-[44px]"
