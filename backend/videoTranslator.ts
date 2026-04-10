@@ -168,61 +168,19 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
                 try { await execFileAsync("yt-dlp", ["-U"], { timeout: 30000 }); } catch {}
             }
 
-            // ── STEP 2: Smart download strategies — all using execFile ──
-            const baseArgs = ["--no-check-certificates", "--no-playlist", "--no-warnings", "--geo-bypass", "--max-filesize", "50M"];
-            
-            const formatStrategies: string[][] = [
-                // tv client — most reliable without cookies
-                [...baseArgs, "--extractor-args", "youtube:player_client=tv", "-f", "b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4"],
-                // mweb client
-                [...baseArgs, "--extractor-args", "youtube:player_client=mweb", "-f", "b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4"],
-                // android client
-                [...baseArgs, "--extractor-args", "youtube:player_client=android", "-f", "b[ext=mp4]/b", "--merge-output-format", "mp4"],
-                // web_creator client
-                [...baseArgs, "--extractor-args", "youtube:player_client=web_creator", "-f", "b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4"],
-                ...(hasCookies ? [
-                    [...baseArgs, "--cookies", cookiePath, "--extractor-args", "youtube:player_client=tv", "-f", "bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b", "--merge-output-format", "mp4"],
-                    [...baseArgs, "--cookies", cookiePath, "--extractor-args", "youtube:player_client=web_creator", "-f", "bv*+ba/b", "--merge-output-format", "mp4"],
-                    [...baseArgs, "--cookies", cookiePath, "-f", "b", "--recode-video", "mp4"],
-                ] : []),
-                // generic fallback
-                [...baseArgs, "-f", "bv*+ba/b", "--merge-output-format", "mp4"],
-                [...baseArgs, "-f", "worst[ext=mp4]/worst", "--recode-video", "mp4"],
-            ];
-            
-            let dlSuccess = false;
-            for (let i = 0; i < formatStrategies.length; i++) {
-                await fs.unlink(tempVideoPath).catch(() => {});
-                try {
-                    const isCookie = formatStrategies[i].includes("--cookies");
-                    const groupLabel = isCookie ? "Web+Cookies" : "NoCookies";
-                    console.log(`[Video Translator] Strategy ${i + 1}/${formatStrategies.length} [${groupLabel}]...`);
-                    // 🔐 FFmpeg Command Guard: execFile prevents command injection
-                    await execFileAsync(
-                        "yt-dlp",
-                        [...formatStrategies[i], "-o", tempVideoPath, url],
-                        { timeout: 300000 }
-                    );
-                    const checkStat = await fs.stat(tempVideoPath).catch(() => null);
-                    if (checkStat && checkStat.size > 10000) {
-                        dlSuccess = true;
-                        console.log(`[Video Translator] ✅ Strategy ${i + 1} [${groupLabel}] success (${Math.round(checkStat.size / 1024)}KB)`);
-                        break;
-                    } else {
-                        console.warn(`[Video Translator] Strategy ${i + 1} produced empty/tiny file (${checkStat?.size ?? 0} bytes)`);
-                    }
-                } catch (e: any) {
-                    const msg = e.message?.slice(0, 300) ?? "";
-                    console.warn(`[Video Translator] Strategy ${i + 1} failed: ${msg}`);
-                }
-            }
-            
-            if (!dlSuccess) {
-                throw new Error(
-                    "ဗီဒီယိုကို ဒေါင်းလုတ်မရပါ။ YouTube bot detection ကြောင့် ဖြစ်နိုင်ပါသည်။\n" +
-                    "ဖြေရှင်းနည်း: cookies.txt ကို browser မှ အသစ်ပြန် export လုပ်ပါ။"
-                );
-            }
+            // ── STEP 2: Simple yt-dlp download without problematic flags ──
+            console.log("[Video Translator] Downloading with yt-dlp...");
+            // 🔐 FFmpeg Command Guard: execFile with argument array prevents command injection
+            await execFileAsync("yt-dlp", [
+                "--no-cookies",
+                "--no-check-certificates",
+                "--no-playlist",
+                "--no-warnings",
+                "--max-filesize", "50M",
+                "-f", "b[ext=mp4]/b",
+                "-o", tempVideoPath,
+                url
+            ], { timeout: 300000 });
         }
 
         // Verify file exists and has content

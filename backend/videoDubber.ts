@@ -392,48 +392,18 @@ export async function dubVideoFromLink(url: string, options: DubOptions): Promis
       await execFileAsync("curl", ["-s", "-L", "--max-time", "120", "-o", tempVideoPath, downloadUrl], { timeout: 130000 });
     } else {
       // yt-dlp fallback — 🔐 uses execFile with argument array
-      console.log("[Dubber] Using yt-dlp fallback...");
-      const cookiePath = path.join(process.cwd(), 'cookies.txt');
-      const hasCookies = existsSync(cookiePath);
-
-      const baseArgs = ["--no-check-certificates", "--no-playlist", "--no-warnings", "--geo-bypass", "--max-filesize", "50M"];
-
-      const strategies: string[][] = [
-        // tv client — most reliable without cookies
-        [...baseArgs, "--extractor-args", "youtube:player_client=tv", "-f", "b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4"],
-        // mweb client
-        [...baseArgs, "--extractor-args", "youtube:player_client=mweb", "-f", "b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4"],
-        // android client
-        [...baseArgs, "--extractor-args", "youtube:player_client=android", "-f", "b[ext=mp4]/b", "--merge-output-format", "mp4"],
-        // web_creator client
-        [...baseArgs, "--extractor-args", "youtube:player_client=web_creator", "-f", "b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4"],
-        ...(hasCookies ? [
-          [...baseArgs, "--cookies", cookiePath, "--extractor-args", "youtube:player_client=tv", "-f", "bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b", "--merge-output-format", "mp4"],
-          [...baseArgs, "--cookies", cookiePath, "--extractor-args", "youtube:player_client=web_creator", "-f", "bv*+ba/b", "--merge-output-format", "mp4"],
-          [...baseArgs, "--cookies", cookiePath, "-f", "b", "--recode-video", "mp4"],
-        ] : []),
-        // generic fallback
-        [...baseArgs, "-f", "bv*+ba/b", "--merge-output-format", "mp4"],
-        [...baseArgs, "-f", "worst[ext=mp4]/worst", "--recode-video", "mp4"],
-      ];
-
-      let dlSuccess = false;
-      for (let i = 0; i < strategies.length; i++) {
-        await fs.unlink(tempVideoPath).catch(() => {});
-        try {
-          console.log(`[Dubber] yt-dlp strategy ${i + 1}/${strategies.length}...`);
-          // 🔐 FFmpeg Command Guard: execFile prevents injection
-          await execFileAsync("yt-dlp", [...strategies[i], "-o", tempVideoPath, url], { timeout: 300000 });
-          const stat = await fs.stat(tempVideoPath).catch(() => null);
-          if (stat && stat.size > 10000) { dlSuccess = true; break; }
-        } catch (e: any) {
-          console.warn(`[Dubber] Strategy ${i + 1} failed: ${e.message?.slice(0, 200)}`);
-        }
-      }
-
-      if (!dlSuccess) {
-        throw new Error("ဗီဒီယိုကို ဒေါင်းလုတ်မရပါ။ Link ကို စစ်ပြီး ထပ်ကြိုးစားပါ။");
-      }
+      console.log("[Dubber] Downloading with yt-dlp...");
+      // 🔐 FFmpeg Command Guard: execFile prevents command injection
+      await execFileAsync("yt-dlp", [
+        "--no-cookies",
+        "--no-check-certificates",
+        "--no-playlist",
+        "--no-warnings",
+        "--max-filesize", "50M",
+        "-f", "b[ext=mp4]/b",
+        "-o", tempVideoPath,
+        url
+      ], { timeout: 300000 });
     }
 
     // Verify file
