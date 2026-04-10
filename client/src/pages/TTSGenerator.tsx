@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, Download, Volume2, LogOut, Crown, AlertCircle, Mic, FileVideo, Settings, Sparkles, Upload, Sun, Moon, Copy, Check, Link as LinkIcon, Wand2, Clock, Info, ChevronDown, BookOpen } from "lucide-react";
+import { Loader2, Download, Volume2, LogOut, Crown, AlertCircle, Mic, FileVideo, Settings, Sparkles, Upload, Sun, Moon, Copy, Check, Link as LinkIcon, Wand2, Clock as ClockIcon, Info, ChevronDown, BookOpen, History as HistoryIcon } from "lucide-react";
 import { useLocation } from "wouter";
 import { TTSGeneratorLayout } from "@/components/TTSGeneratorLayout";
 
@@ -1240,7 +1240,7 @@ export default function TTSGenerator() {
                   className="w-full flex items-center gap-3 p-3 rounded-xl transition-all hover:scale-[1.02] min-h-[44px]"
                   style={{ background: inputBg, border: `1px solid ${cardBorder}` }}
                 >
-                  <History className="w-5 h-5 flex-shrink-0" style={{ color: accent }} />
+                  <HistoryIcon className="w-5 h-5 flex-shrink-0" style={{ color: accent }} />
                   <span className="text-sm font-bold" style={{ color: textColor }}>{lang === "mm" ? "မှတ်တမ်း" : "History"}</span>
                 </button>
                 <button
@@ -1278,7 +1278,7 @@ export default function TTSGenerator() {
                   <div className="text-center py-12 sm:py-16 px-4">
                     {/* Empty State Icon */}
                     <div className="w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center" style={{ background: `${accent}15` }}>
-                      <Clock className="w-10 h-10" style={{ color: accent }} />
+                      <ClockIcon className="w-10 h-10" style={{ color: accent }} />
                     </div>
 
                     {/* Empty State Text */}
