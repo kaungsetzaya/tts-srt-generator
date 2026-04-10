@@ -1,7 +1,8 @@
 import { useState, useRef } from "react";
+import { motion } from "framer-motion";
 import { trpc } from "@/lib/trpc";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, Download, Volume2, LogOut, Crown, AlertCircle, Mic, FileVideo, Settings, Sparkles, Upload, Sun, Moon, Copy, Check, Link as LinkIcon, Wand2, Clock as ClockIcon, Info, ChevronDown, BookOpen, History as HistoryIcon } from "lucide-react";
+import { Loader2, Download, Volume2, LogOut, Crown, AlertCircle, Mic, FileVideo, Settings, Sparkles, Upload, Sun, Moon, Copy, Check, Link as LinkIcon, Wand2, Clock as ClockIcon, Info, ChevronDown, BookOpen, History as HistoryIcon, Zap } from "lucide-react";
 import { useLocation } from "wouter";
 import { TTSGeneratorLayout } from "@/components/TTSGeneratorLayout";
 
@@ -518,31 +519,143 @@ export default function TTSGenerator() {
         <div className="absolute inset-0" style={{ backgroundImage: `linear-gradient(0deg, transparent 24%, ${isDark ? '#66ccff' : '#6d28d9'} 25%, ${isDark ? '#66ccff' : '#6d28d9'} 26%, transparent 27%, transparent 74%, ${isDark ? '#66ccff' : '#6d28d9'} 75%, ${isDark ? '#66ccff' : '#6d28d9'} 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, ${isDark ? '#66ccff' : '#6d28d9'} 25%, ${isDark ? '#66ccff' : '#6d28d9'} 26%, transparent 27%, transparent 74%, ${isDark ? '#66ccff' : '#6d28d9'} 75%, ${isDark ? '#66ccff' : '#6d28d9'} 76%, transparent 77%, transparent)`, backgroundSize: '50px 50px' }} />
       </div>
 
-      {/* TOP NAVIGATION - Sticky */}
-      <div className="sticky top-0 z-50 flex items-center justify-between px-3 sm:px-6 py-3 border-b backdrop-blur-xl" style={{ borderColor: cardBorder, background: isDark ? 'rgba(15,12,41,0.95)' : 'rgba(255,255,255,0.95)' }}>
-        <div className="flex items-center gap-2">
-          <span className="font-black uppercase tracking-widest text-base sm:text-lg" style={{ color: accent, textShadow: isDark ? `0 0 10px ${accent}` : 'none' }}>{t.appName}</span>
+      {/* TOP NAVIGATION - Premium Sticky */}
+      <div
+        className="sticky top-0 z-50 flex items-center justify-between px-3 sm:px-5 py-2.5 border-b backdrop-blur-xl"
+        style={{
+          borderColor: isDark ? 'rgba(124,58,237,0.25)' : 'rgba(109,40,217,0.12)',
+          background: isDark ? 'rgba(9,7,28,0.97)' : 'rgba(255,255,255,0.97)',
+          boxShadow: isDark ? '0 2px 20px rgba(109,40,217,0.15)' : '0 2px 12px rgba(109,40,217,0.06)',
+        }}
+      >
+        {/* Left: Animated Logo */}
+        <div className="flex items-center gap-2.5">
+          <motion.div
+            animate={{
+              boxShadow: isDark
+                ? ['0 0 8px rgba(124,58,237,0.5)', '0 0 20px rgba(124,58,237,0.85)', '0 0 8px rgba(124,58,237,0.5)']
+                : ['0 0 6px rgba(109,40,217,0.3)', '0 0 14px rgba(109,40,217,0.5)', '0 0 6px rgba(109,40,217,0.3)'],
+            }}
+            transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }}
+            className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}
+          >
+            <Zap className="w-4 h-4 text-white" />
+          </motion.div>
+          <span
+            className="font-black uppercase tracking-[0.2em] text-sm hidden sm:inline"
+            style={{ color: accent, textShadow: isDark ? `0 0 12px ${accent}80` : 'none' }}
+          >
+            {t.appName}
+          </span>
         </div>
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="hidden md:flex items-center gap-1 text-xs font-bold" style={{ color: subColor }}>
-            {hasActiveSub ? <Crown className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-            <span>{isAdmin ? t.admin : subStatus?.active && daysLeft !== null ? `${subStatus.plan === 'trial' ? (lang === 'mm' ? 'အစမ်းသုံး' : 'Trial') : subStatus.plan} · ${daysLeft} ${t.daysLeft}` : subStatus?.active ? subStatus.plan : (me ? (lang === 'mm' ? 'Subscription မရှိ' : t.noSub) : t.noSub)}</span>
+        {/* Right: Controls */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Subscription badge */}
+          <div
+            className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
+            style={{
+              background: isDark ? 'rgba(124,58,237,0.12)' : 'rgba(109,40,217,0.06)',
+              border: `1px solid ${subColor}40`,
+              color: subColor,
+            }}
+          >
+            {hasActiveSub ? <Crown className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+            <span>
+              {isAdmin ? t.admin : subStatus?.active && daysLeft !== null
+                ? `${subStatus.plan === 'trial' ? (lang === 'mm' ? 'အစမ်းသုံး' : 'Trial') : subStatus.plan} · ${daysLeft}d`
+                : subStatus?.active ? subStatus.plan
+                : me ? (lang === 'mm' ? 'Subscription မရှိ' : t.noSub) : t.noSub}
+            </span>
           </div>
-          {/* Username display */}
-          <span className="hidden md:inline text-xs font-bold" style={{ color: accent }}>@{(me as any)?.username || me?.name}</span>
-          <div className="flex items-center gap-1 sm:gap-2 border-l pl-2 sm:pl-3 ml-1" style={{ borderColor: cardBorder }}>
-            <button onClick={() => setLang(lang === "mm" ? "en" : "mm")} className="px-2 py-1 text-xs font-bold rounded border transition-colors uppercase" style={{ borderColor: cardBorder, background: cardBg, color: textColor }}>{lang === "mm" ? "EN" : "MM"}</button>
-            <button onClick={() => setTheme(isDark ? "light" : "dark")} className="p-1.5 rounded border transition-colors flex items-center justify-center" style={{ borderColor: cardBorder, background: cardBg, color: textColor }}>{isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}</button>
-            <button onClick={() => logoutMutation.mutate()} className="flex items-center gap-1 text-xs px-2 sm:px-3 py-1.5 border border-red-500/50 text-red-500 hover:bg-red-500/10 rounded transition-all font-bold uppercase"><LogOut className="w-3 h-3" /> <span className="hidden sm:inline">{t.logout}</span></button>
-          </div>
+          {/* Username */}
+          <span
+            className="hidden md:inline text-xs font-bold px-2.5 py-1 rounded-full"
+            style={{
+              background: isDark ? 'rgba(124,58,237,0.1)' : 'rgba(109,40,217,0.05)',
+              color: accent,
+            }}
+          >
+            @{(me as any)?.username || me?.name}
+          </span>
+          {/* Divider */}
+          <div className="w-px h-5 mx-0.5" style={{ background: isDark ? 'rgba(124,58,237,0.3)' : 'rgba(109,40,217,0.15)' }} />
+          {/* Lang toggle */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setLang(lang === 'mm' ? 'en' : 'mm')}
+            className="px-2.5 py-1 text-xs font-black rounded-lg uppercase tracking-widest transition-all"
+            style={{
+              border: `1px solid ${isDark ? 'rgba(124,58,237,0.35)' : 'rgba(109,40,217,0.2)'}`,
+              background: isDark ? 'rgba(124,58,237,0.1)' : 'rgba(109,40,217,0.04)',
+              color: textColor,
+            }}
+          >
+            {lang === 'mm' ? 'EN' : 'MM'}
+          </motion.button>
+          {/* Theme toggle */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setTheme(isDark ? 'light' : 'dark')}
+            className="p-1.5 rounded-lg transition-all flex items-center justify-center"
+            style={{
+              border: `1px solid ${isDark ? 'rgba(124,58,237,0.35)' : 'rgba(109,40,217,0.2)'}`,
+              background: isDark ? 'rgba(124,58,237,0.1)' : 'rgba(109,40,217,0.04)',
+              color: textColor,
+            }}
+          >
+            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </motion.button>
+          {/* Logout */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => logoutMutation.mutate()}
+            className="flex items-center gap-1.5 text-xs px-2.5 sm:px-3 py-1.5 rounded-lg font-bold uppercase tracking-wider transition-all"
+            style={{
+              border: '1px solid rgba(239,68,68,0.4)',
+              background: 'rgba(239,68,68,0.08)',
+              color: '#ef4444',
+            }}
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">{t.logout}</span>
+          </motion.button>
         </div>
       </div>
 
-      {/* TABS - Hidden on mobile, shown on desktop */}
-      <div className="relative z-10 hidden md:flex gap-1 px-2 sm:px-4 pt-2 sm:pt-3 border-b overflow-x-auto scrollbar-hide" style={{ borderColor: cardBorder, background: isDark ? 'rgba(15,12,41,0.5)' : 'rgba(255,255,255,0.5)' }}>
-        {([{ id: "tts" as MainTab, label: t.tabs.tts, icon: <Mic className="w-3.5 h-3.5" /> }, { id: "video" as MainTab, label: t.tabs.video, icon: <FileVideo className="w-3.5 h-3.5" /> }, { id: "dubbing" as MainTab, label: t.tabs.dubbing, icon: <Wand2 className="w-3.5 h-3.5" /> }]).map(({ id, label: lbl, icon }) => (
-          <button key={id} onClick={() => { setMainTab(id); setSecondaryTab(null); }} className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all border-b-2 rounded-t-xl whitespace-nowrap" style={{ borderColor: mainTab === id ? accent : 'transparent', color: mainTab === id ? accent : subtextColor, background: mainTab === id ? cardBg : 'transparent' }}>{icon} {lbl}</button>
-        ))}
+      {/* TABS - Premium animated, hidden on mobile */}
+      <div
+        className="relative z-10 hidden md:flex gap-1 px-3 sm:px-5 pt-3 pb-0 border-b overflow-x-auto scrollbar-hide"
+        style={{
+          borderColor: isDark ? 'rgba(124,58,237,0.2)' : 'rgba(109,40,217,0.1)',
+          background: isDark ? 'rgba(9,7,28,0.6)' : 'rgba(255,255,255,0.6)',
+        }}
+      >
+        {([{ id: 'tts' as MainTab, label: t.tabs.tts, icon: <Mic className="w-3.5 h-3.5" /> }, { id: 'video' as MainTab, label: t.tabs.video, icon: <FileVideo className="w-3.5 h-3.5" /> }, { id: 'dubbing' as MainTab, label: t.tabs.dubbing, icon: <Wand2 className="w-3.5 h-3.5" /> }]).map(({ id, label: lbl, icon }) => {
+          const isActive = mainTab === id && !secondaryTab;
+          return (
+            <motion.button
+              key={id}
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => { setMainTab(id); setSecondaryTab(null); }}
+              className="relative flex items-center gap-1.5 px-4 sm:px-5 py-2.5 text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap rounded-t-xl overflow-hidden"
+              style={{
+                color: isActive ? accent : subtextColor,
+                background: isActive
+                  ? isDark ? 'rgba(124,58,237,0.12)' : 'rgba(109,40,217,0.06)'
+                  : 'transparent',
+                borderBottom: isActive ? `2px solid ${accent}` : '2px solid transparent',
+              }}
+            >
+              {icon}
+              {lbl}
+            </motion.button>
+          );
+        })}
       </div>
 
       <div className="relative z-10 px-3 sm:px-4 py-6 sm:py-8 md:py-10 max-w-7xl mx-auto">
@@ -657,7 +770,7 @@ export default function TTSGenerator() {
                 <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
                   <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>
                     {t.linkInputLabel}
-                    <span className="text-[10px] opacity-70 ml-2">({lang === "mm" ? "MP4, WebM URL only" : "Direct MP4/WebM URL only"})</span>
+                    <span className="text-[10px] opacity-70 ml-2">({lang === "mm" ? "YouTube / TikTok / Facebook" : "YouTube / TikTok / Facebook"})</span>
                   </div>
                   <div className="flex items-center gap-3 mt-1">
                     <LinkIcon className="w-5 h-5 flex-shrink-0" style={{ color: subtextColor }} />
@@ -760,7 +873,7 @@ export default function TTSGenerator() {
                 <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
                   <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>
                     {t.linkInputLabel}
-                    <span className="text-[10px] opacity-70 ml-2">({lang === "mm" ? "MP4, WebM URL only" : "Direct MP4/WebM URL only"})</span>
+                    <span className="text-[10px] opacity-70 ml-2">({lang === "mm" ? "YouTube / TikTok / Facebook" : "YouTube / TikTok / Facebook"})</span>
                   </div>
                   <div className="flex items-center gap-3 mt-1">
                     <LinkIcon className="w-5 h-5 flex-shrink-0" style={{ color: subtextColor }} />
@@ -1275,10 +1388,24 @@ export default function TTSGenerator() {
           <div className="max-w-3xl mx-auto py-4 sm:py-8 animate-in fade-in zoom-in-95 duration-300">
             {/* Header */}
             <div className="text-center mb-8">
-              <div className="inline-block mb-4">
-                <span className="text-5xl sm:text-6xl font-black uppercase tracking-tighter" style={{ color: accent, textShadow: `0 0 40px ${accent}60` }}>LUMIX</span>
+              <div className="inline-flex items-center justify-center mb-4">
+                <motion.div
+                  animate={{
+                    boxShadow: [
+                      `0 0 12px ${accent}60`,
+                      `0 0 28px ${accent}90`,
+                      `0 0 12px ${accent}60`,
+                    ],
+                    scale: [1, 1.05, 1],
+                  }}
+                  transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }}
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center"
+                  style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}
+                >
+                  <Zap className="w-7 h-7 text-white" />
+                </motion.div>
               </div>
-              <h2 className="text-xl sm:text-2xl font-black uppercase tracking-widest mb-1" style={{ color: textColor }}>{lang === "mm" ? "သင့် Plan" : "Your Plan"}</h2>
+              <h2 className="text-xl sm:text-2xl font-black uppercase tracking-widest mb-1" style={{ color: textColor }}>{lang === "mm" ? "သင့် Plan" : "Your Plan"}</h2>
             </div>
 
             {/* Current Plan Card */}
@@ -1366,10 +1493,24 @@ export default function TTSGenerator() {
           <div className="max-w-3xl mx-auto py-4 sm:py-8 animate-in fade-in zoom-in-95 duration-300">
             {/* Header */}
             <div className="text-center mb-8">
-              <div className="inline-block mb-4">
-                <span className="text-5xl sm:text-6xl font-black uppercase tracking-tighter" style={{ color: accent, textShadow: `0 0 40px ${accent}60` }}>LUMIX</span>
+              <div className="inline-flex items-center justify-center mb-4">
+                <motion.div
+                  animate={{
+                    boxShadow: [
+                      `0 0 12px ${accent}60`,
+                      `0 0 28px ${accent}90`,
+                      `0 0 12px ${accent}60`,
+                    ],
+                    scale: [1, 1.05, 1],
+                  }}
+                  transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }}
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center"
+                  style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}
+                >
+                  <Zap className="w-7 h-7 text-white" />
+                </motion.div>
               </div>
-              <h2 className="text-xl sm:text-2xl font-black uppercase tracking-widest mb-1" style={{ color: textColor }}>{lang === "mm" ? "အသုံးပြုနည်း" : "How to Use"}</h2>
+              <h2 className="text-xl sm:text-2xl font-black uppercase tracking-widest mb-1" style={{ color: textColor }}>{lang === "mm" ? "အသုံးပြုနန်း" : "How to Use"}</h2>
               <p className="text-xs sm:text-sm" style={{ color: subtextColor }}>{lang === "mm" ? "Feature တစ်ခုချင်းစီ၏ အသေးစိတ် လမ်းညွှန်ချက်" : "Step-by-step guide for every feature"}</p>
             </div>
             <div className="space-y-5">

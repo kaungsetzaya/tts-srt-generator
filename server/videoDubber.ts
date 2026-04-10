@@ -358,20 +358,30 @@ export async function dubVideoFromLink(url: string, options: DubOptions): Promis
     // --- Try Cobalt API first ---
     try {
       const controller = new AbortController();
-      const cobaltTimeout = setTimeout(() => controller.abort(), 15000);
+      const cobaltTimeout = setTimeout(() => controller.abort(), 20000);
       const cobaltRes = await fetch("https://api.cobalt.tools/", {
         method: "POST",
-        headers: { "Accept": "application/json", "Content-Type": "application/json" },
-        body: JSON.stringify({ url, downloadMode: "auto" }),
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+          "User-Agent": "Mozilla/5.0 (compatible; CobaltClient/1.0)",
+        },
+        body: JSON.stringify({ url, downloadMode: "auto", videoQuality: "720", audioFormat: "mp3" }),
         signal: controller.signal,
       });
       clearTimeout(cobaltTimeout);
-      const cobaltData = await cobaltRes.json() as any;
-      if (cobaltData && (cobaltData.status === "tunnel" || cobaltData.status === "redirect") && cobaltData.url) {
-        downloadUrl = cobaltData.url;
-        console.log(`[Dubber] Cobalt success: ${cobaltData.status}`);
-      } else if (cobaltData?.status === "picker" && cobaltData?.picker?.length > 0) {
-        downloadUrl = cobaltData.picker[0]?.url || "";
+      if (cobaltRes.ok) {
+        const cobaltData = await cobaltRes.json() as any;
+        if (cobaltData && (cobaltData.status === "tunnel" || cobaltData.status === "redirect") && cobaltData.url) {
+          downloadUrl = cobaltData.url;
+          console.log(`[Dubber] Cobalt success: ${cobaltData.status}`);
+        } else if (cobaltData?.status === "picker" && cobaltData?.picker?.length > 0) {
+          downloadUrl = cobaltData.picker[0]?.url || "";
+        } else {
+          console.warn(`[Dubber] Cobalt returned:`, JSON.stringify(cobaltData).slice(0, 200));
+        }
+      } else {
+        console.warn(`[Dubber] Cobalt API HTTP ${cobaltRes.status}`);
       }
     } catch (e: any) {
       console.warn("[Dubber Cobalt Error]", e.name === "AbortError" ? "Timeout" : e.message?.slice(0, 200));
@@ -386,16 +396,23 @@ export async function dubVideoFromLink(url: string, options: DubOptions): Promis
       const cookiePath = path.join(process.cwd(), 'cookies.txt');
       const hasCookies = existsSync(cookiePath);
 
-      const baseArgs = ["--js-runtimes", "node", "--no-check-certificates", "--no-playlist", "--no-warnings", "--geo-bypass", "--max-filesize", "50M"];
+      const baseArgs = ["--no-check-certificates", "--no-playlist", "--no-warnings", "--geo-bypass", "--max-filesize", "50M"];
 
       const strategies: string[][] = [
         ...(hasCookies ? [
-          [...baseArgs, "--cookies", cookiePath, "-f", "bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b", "--merge-output-format", "mp4"],
+          [...baseArgs, "--cookies", cookiePath, "--extractor-args", "youtube:player_client=tv", "-f", "bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b", "--merge-output-format", "mp4"],
           [...baseArgs, "--cookies", cookiePath, "--extractor-args", "youtube:player_client=web_creator", "-f", "bv*+ba/b", "--merge-output-format", "mp4"],
           [...baseArgs, "--cookies", cookiePath, "-f", "b", "--recode-video", "mp4"],
         ] : []),
-        [...baseArgs, "--extractor-args", "youtube:player_client=web_creator", "-f", "b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4"],
+        // tv client — most reliable without cookies
+        [...baseArgs, "--extractor-args", "youtube:player_client=tv", "-f", "b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4"],
+        // mweb client
+        [...baseArgs, "--extractor-args", "youtube:player_client=mweb", "-f", "b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4"],
+        // android client
         [...baseArgs, "--extractor-args", "youtube:player_client=android", "-f", "b[ext=mp4]/b", "--merge-output-format", "mp4"],
+        // web_creator client
+        [...baseArgs, "--extractor-args", "youtube:player_client=web_creator", "-f", "b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4"],
+        // generic fallback
         [...baseArgs, "-f", "bv*+ba/b", "--merge-output-format", "mp4"],
         [...baseArgs, "-f", "worst[ext=mp4]/worst", "--recode-video", "mp4"],
       ];
