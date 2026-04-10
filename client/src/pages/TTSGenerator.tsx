@@ -6,7 +6,7 @@ import { useLocation } from "wouter";
 import { TTSGeneratorLayout } from "@/components/TTSGeneratorLayout";
 
 type MainTab = "tts" | "video" | "dubbing";
-type SecondaryTab = "history" | "plan" | "guide" | "settings";
+type SecondaryTab = "history" | "plan" | "guide" | "settings" | null;
 type Theme = "dark" | "light";
 type Lang = "mm" | "en";
 
@@ -135,7 +135,7 @@ const T = {
 
 export default function TTSGenerator() {
   const [mainTab, setMainTab] = useState<MainTab>("tts");
-  const [secondaryTab, setSecondaryTab] = useState<SecondaryTab>("history");
+  const [secondaryTab, setSecondaryTab] = useState<SecondaryTab>(null);
   const [theme, setTheme] = useState<Theme>("dark");
   const [lang, setLang] = useState<Lang>("mm");
   const t = T[lang];
@@ -470,8 +470,8 @@ export default function TTSGenerator() {
   };
 
   return (
-    <TTSGeneratorLayout currentSecondaryTab={secondaryTab} onTabChange={setSecondaryTab}>
-      <div className="min-h-screen relative overflow-hidden transition-colors duration-500 font-sans" style={{ background: bgGradient, color: textColor }}>
+    <TTSGeneratorLayout currentSecondaryTab={secondaryTab} onTabChange={setSecondaryTab} backgroundStyle={{ background: bgGradient }}>
+      <div className="h-full relative overflow-hidden transition-colors duration-500 font-sans" style={{ color: textColor }}>
       {/* Error Toast */}
       {errorToast && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-top-4 duration-300 max-w-[90vw]">
@@ -521,7 +521,9 @@ export default function TTSGenerator() {
       </div>
 
       <div className="relative z-10 px-3 sm:px-4 py-6 sm:py-8 md:py-10 max-w-7xl mx-auto">
-
+        {/* Main Tab Content - Only show when no secondary tab is active */}
+        {!secondaryTab && (
+          <>
         {/* === TTS TAB === */}
         {mainTab === "tts" && (
           <div className="animate-in fade-in zoom-in-95 duration-300">
@@ -1065,6 +1067,8 @@ export default function TTSGenerator() {
               </div>
             )}
           </div>
+        )}
+        </>
         )}
 
         {/* === SETTINGS TAB === */}

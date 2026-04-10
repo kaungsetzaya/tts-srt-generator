@@ -21,26 +21,22 @@ import { CompactUsageDisplay } from "./CompactUsageDisplay";
 
 interface TTSGeneratorLayoutProps {
   children: ReactNode;
-  currentSecondaryTab: string;
-  onTabChange: (tab: string) => void;
+  currentSecondaryTab: string | null;
+  onTabChange: (tab: string | null) => void;
+  backgroundStyle?: React.CSSProperties;
 }
 
-export function TTSGeneratorLayout({ children, currentSecondaryTab, onTabChange }: TTSGeneratorLayoutProps) {
+export function TTSGeneratorLayout({ children, currentSecondaryTab, onTabChange, backgroundStyle }: TTSGeneratorLayoutProps) {
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full">
+      <div className="flex min-h-screen w-full" style={backgroundStyle}>
         <TTSGeneratorSidebar
           currentTab={currentSecondaryTab}
           onTabChange={onTabChange}
         />
         <SidebarInset>
           <header className="flex h-14 shrink-0 items-center gap-2 px-4 border-b">
-            <div className="w-full flex items-center justify-between">
-              <div className="text-sm font-semibold opacity-60">LUMIX TTS Generator</div>
-              <SidebarTrigger className="-ml-1">
-                <PanelLeft className="h-5 w-5" />
-              </SidebarTrigger>
-            </div>
+            <div className="text-sm font-semibold opacity-60">LUMIX TTS Generator</div>
           </header>
           <main className="flex-1 overflow-auto">
             {children}
@@ -85,6 +81,11 @@ function TTSGeneratorSidebar({ currentTab, onTabChange }: TTSGeneratorSidebarPro
               <p className="text-xs opacity-60 mt-0.5">{me.name}</p>
             )}
           </div>
+          {!isCollapsed && (
+            <SidebarTrigger className="-mr-1">
+              <PanelLeft className="h-4 w-4" />
+            </SidebarTrigger>
+          )}
         </div>
 
         {/* Usage Display */}
