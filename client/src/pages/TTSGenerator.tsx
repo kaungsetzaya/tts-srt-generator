@@ -726,7 +726,7 @@ export default function TTSGenerator() {
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 max-w-6xl mx-auto">
               <div className="lg:col-span-2 space-y-2">
-                <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
+                <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow, position: text.trim() ? "sticky" : "relative", top: text.trim() ? "20px" : "auto", zIndex: text.trim() ? 10 : "auto" }}>
                   <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{t.inputText}</div>
                   <div className="relative">
                     <textarea
