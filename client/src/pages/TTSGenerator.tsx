@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
 import { trpc } from "@/lib/trpc";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, Download, Volume2, LogOut, Star, AlertCircle, Mic, FileVideo, Settings, Sparkles, Upload, Sun, Moon, Copy, Check, Link as LinkIcon, Wand2, Clock as ClockIcon, Info, ChevronDown, BookOpen, History as HistoryIcon } from "lucide-react";
+import { Loader2, Download, Volume2, LogOut, Crown, AlertCircle, Mic, FileVideo, Settings, Sparkles, Upload, Sun, Moon, Copy, Check, Link as LinkIcon, Wand2, Clock as ClockIcon, Info, ChevronDown, BookOpen, History as HistoryIcon, Zap, ExternalLink, Star } from "lucide-react";
 import { useLocation } from "wouter";
 import { TTSGeneratorLayout } from "@/components/TTSGeneratorLayout";
 
@@ -252,9 +252,9 @@ export default function TTSGenerator() {
   // --- PREMIUM UI COLORS ---
   const isDark = theme === "dark";
 
-  // Premium colors - light theme uses deep indigo/violet that's readable
-  const accent = isDark ? "oklch(0.65 0.25 310)" : "#6d28d9";
-  const accentSecondary = isDark ? "oklch(0.6 0.28 280)" : "#4c1d95";
+  // Premium colors - light theme uses indigo/violet palette matching Canvas Cloud
+  const accent = isDark ? "oklch(0.65 0.25 310)" : "#6366f1";
+  const accentSecondary = isDark ? "oklch(0.6 0.28 280)" : "#4f46e5";
   const subColor = isAdmin ? accent : daysLeft === null ? accent : daysLeft > 14 ? "#16a34a" : daysLeft > 4 ? "#ea580c" : "#dc2626";
 
   // Helper functions for color opacity (works with both OKLCH and hex)
@@ -311,22 +311,22 @@ export default function TTSGenerator() {
     }
   }, [dubVideoUrl, dubVideoFile]);
 
-  // Light theme: clean white/slate, Dark: cyberpunk gradient
+  // Light theme: Canvas Cloud #EDF1F5, Dark: cyberpunk gradient
   const bgGradient = isDark
     ? "linear-gradient(135deg, #0F0C29 0%, #302B63 50%, #24243E 100%)"
-    : "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%)";
+    : "linear-gradient(135deg, #EDF1F5 0%, #E3E9F0 50%, #EDF1F5 100%)";
 
-  // Card backgrounds
-  const cardBg = isDark ? "rgba(15, 12, 41, 0.6)" : "rgba(255, 255, 255, 0.85)";
-  const cardBorder = isDark ? "rgba(167, 139, 250, 0.2)" : "rgba(109, 40, 217, 0.15)";
+  // Card backgrounds — light uses soft white glass on Canvas Cloud
+  const cardBg = isDark ? "rgba(15, 12, 41, 0.6)" : "rgba(255, 255, 255, 0.82)";
+  const cardBorder = isDark ? "rgba(167, 139, 250, 0.2)" : "rgba(99, 102, 241, 0.12)";
   const textColor = isDark ? "#F0EEFF" : "#1e1b4b";
-  const subtextColor = isDark ? "rgba(240,238,255,0.6)" : "#475569";
+  const subtextColor = isDark ? "rgba(240,238,255,0.6)" : "#64748b";
   const labelBg = isDark ? "#1f1b3e" : "#ffffff";
-  const inputBg = isDark ? "rgba(0, 0, 0, 0.3)" : "rgba(255, 255, 255, 0.9)";
-  const inputBorder = isDark ? "rgba(167,139,250,0.2)" : "rgba(109, 40, 217, 0.2)";
+  const inputBg = isDark ? "rgba(0, 0, 0, 0.3)" : "rgba(255, 255, 255, 0.95)";
+  const inputBorder = isDark ? "rgba(167,139,250,0.2)" : "rgba(99, 102, 241, 0.18)";
 
   const box = "relative border p-4 md:p-5 pt-8 backdrop-blur-xl transition-all duration-300 rounded-2xl mt-6";
-  const boxShadow = isDark ? "0 8px 32px rgba(0,0,0,0.2)" : "0 4px 24px rgba(109, 40, 217, 0.08)";
+  const boxShadow = isDark ? "0 8px 32px rgba(0,0,0,0.2)" : "0 2px 20px rgba(99, 102, 241, 0.06), 0 1px 6px rgba(0,0,0,0.04)";
   const labelStyle = "absolute -top-3.5 left-4 px-3 py-1 text-xs uppercase tracking-widest font-black rounded-lg z-10 shadow-sm border";
 
   const handleGenerate = async () => {
@@ -490,6 +490,13 @@ export default function TTSGenerator() {
     URL.revokeObjectURL(url);
   };
 
+  // Detect if a URL is an external platform link (YouTube, TikTok, Facebook)
+  const isExternalVideoUrl = (url: string) => {
+    if (!url) return false;
+    const lower = url.toLowerCase();
+    return lower.includes('youtube.com') || lower.includes('youtu.be') || lower.includes('tiktok.com') || lower.includes('facebook.com') || lower.includes('fb.watch') || lower.includes('fb.com');
+  };
+
   const handleDubPreview = () => {
     setVideoLoading(true);
     setVideoPreviewError("");
@@ -499,7 +506,12 @@ export default function TTSGenerator() {
         const url = URL.createObjectURL(dubVideoFile);
         setDubPreviewUrl(url);
       } else if (dubVideoUrl.trim()) {
+        // For external URLs (YouTube/TikTok/FB), we can't preview directly
+        // but we set the URL to show the external link card
         setDubPreviewUrl(dubVideoUrl.trim());
+        if (isExternalVideoUrl(dubVideoUrl.trim())) {
+          setVideoLoading(false); // No loading for external URLs
+        }
       }
     } catch (error) {
       setVideoPreviewError("Failed to load video. Please try again.");
@@ -539,6 +551,13 @@ export default function TTSGenerator() {
     });
   };
 
+  // Determine if the nav should be sticky
+  const shouldNavStick = useMemo(() => {
+    if (mainTab === 'tts' && text.trim()) return true;
+    if (mainTab === 'dubbing' && dubPreviewUrl && !dubResult) return true;
+    return false;
+  }, [mainTab, text, dubPreviewUrl, dubResult]);
+
   return (
     <TTSGeneratorLayout currentSecondaryTab={secondaryTab} onTabChange={setSecondaryTab} backgroundStyle={{ background: bgGradient }} mainTab={mainTab} setMainTab={setMainTab}>
       <div className="h-full relative overflow-hidden transition-colors duration-500 font-sans" style={{ color: textColor }}>
@@ -575,136 +594,177 @@ export default function TTSGenerator() {
       )}
 
       {/* Subtle Grid Background */}
-      <div className="absolute inset-0 pointer-events-none" style={{ opacity: isDark ? 0.05 : 0.15 }}>
-        <div className="absolute inset-0" style={{ backgroundImage: `linear-gradient(0deg, transparent 24%, ${isDark ? '#66ccff' : '#6d28d9'} 25%, ${isDark ? '#66ccff' : '#6d28d9'} 26%, transparent 27%, transparent 74%, ${isDark ? '#66ccff' : '#6d28d9'} 75%, ${isDark ? '#66ccff' : '#6d28d9'} 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, ${isDark ? '#66ccff' : '#6d28d9'} 25%, ${isDark ? '#66ccff' : '#6d28d9'} 26%, transparent 27%, transparent 74%, ${isDark ? '#66ccff' : '#6d28d9'} 75%, ${isDark ? '#66ccff' : '#6d28d9'} 76%, transparent 77%, transparent)`, backgroundSize: '50px 50px' }} />
+      <div className="absolute inset-0 pointer-events-none" style={{ opacity: isDark ? 0.05 : 0.04 }}>
+        <div className="absolute inset-0" style={{ backgroundImage: `linear-gradient(0deg, transparent 24%, ${isDark ? '#66ccff' : '#6366f1'} 25%, ${isDark ? '#66ccff' : '#6366f1'} 26%, transparent 27%, transparent 74%, ${isDark ? '#66ccff' : '#6366f1'} 75%, ${isDark ? '#66ccff' : '#6366f1'} 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, ${isDark ? '#66ccff' : '#6366f1'} 25%, ${isDark ? '#66ccff' : '#6366f1'} 26%, transparent 27%, transparent 74%, ${isDark ? '#66ccff' : '#6366f1'} 75%, ${isDark ? '#66ccff' : '#6366f1'} 76%, transparent 77%, transparent)`, backgroundSize: '50px 50px' }} />
       </div>
 
-      {/* TOP NAVIGATION - Premium Sticky */}
-      <div
-        className={`${text.trim() ? 'sticky top-0' : ''} z-50 flex items-center justify-between px-3 sm:px-5 py-2.5 border-b backdrop-blur-xl`}
+      {/* ═══ UNIFIED PREMIUM MENU BAR ═══ */}
+      <motion.div
+        className={`${shouldNavStick ? 'sticky top-0' : ''} z-50 backdrop-blur-2xl border-b`}
+        initial={{ y: -10, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
         style={{
-          borderColor: isDark ? 'rgba(124,58,237,0.25)' : 'rgba(109,40,217,0.12)',
-          background: isDark ? 'rgba(9,7,28,0.97)' : 'rgba(255,255,255,0.97)',
-          boxShadow: isDark ? '0 2px 20px rgba(109,40,217,0.15)' : '0 2px 12px rgba(109,40,217,0.06)',
+          borderColor: isDark ? 'rgba(139,92,246,0.15)' : 'rgba(99,102,241,0.08)',
+          background: isDark ? 'rgba(9,7,28,0.97)' : 'rgba(237,241,245,0.95)',
+          boxShadow: isDark ? '0 4px 30px rgba(109,40,217,0.12)' : '0 1px 12px rgba(99,102,241,0.06)',
         }}
       >
-        {/* Left: Animated Logo */}
-        <div className="flex items-center gap-2.5">
-          <span
-            className="font-black uppercase tracking-[0.2em] text-sm hidden sm:inline"
-            style={{ color: accent, textShadow: isDark ? `0 0 12px ${accent80}` : 'none' }}
+        {/* Top Row: Logo + Controls */}
+        <div className="flex items-center justify-between px-3 sm:px-5 py-2">
+          {/* Left: Animated LUMIX Logo */}
+          <motion.div
+            className="flex items-center gap-2.5"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
           >
-            {t.appName}
-          </span>
-        </div>
-        {/* Right: Controls */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Subscription badge */}
-          <div
-            className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
-            style={{
-              background: isDark ? 'rgba(124,58,237,0.12)' : 'rgba(109,40,217,0.06)',
-              border: `1px solid ${subColor}40`,
-              color: subColor,
-            }}
-          >
-            {hasActiveSub ? <Star className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
-            <span>
-              {isAdmin ? t.admin : subStatus?.active && daysLeft !== null
-                ? `${subStatus.plan === 'trial' ? (lang === 'mm' ? 'အစမ်းသုံး' : 'Trial') : subStatus.plan} · ${daysLeft}d`
-                : subStatus?.active ? subStatus.plan
-                : me ? (lang === 'mm' ? 'Subscription မရှိ' : t.noSub) : t.noSub}
-            </span>
-          </div>
-          {/* Username */}
-          <span
-            className="hidden md:inline text-xs font-bold px-2.5 py-1 rounded-full"
-            style={{
-              background: isDark ? 'rgba(124,58,237,0.1)' : 'rgba(109,40,217,0.05)',
-              color: accent,
-            }}
-          >
-            @{(me as any)?.username || me?.name}
-          </span>
-          {/* Divider */}
-          <div className="w-px h-5 mx-0.5" style={{ background: isDark ? 'rgba(124,58,237,0.3)' : 'rgba(109,40,217,0.15)' }} />
-          {/* Lang toggle */}
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setLang(lang === 'mm' ? 'en' : 'mm')}
-            className="px-2.5 py-1 text-xs font-black rounded-lg uppercase tracking-widest transition-all"
-            style={{
-              border: `1px solid ${isDark ? 'rgba(124,58,237,0.35)' : 'rgba(109,40,217,0.2)'}`,
-              background: isDark ? 'rgba(124,58,237,0.1)' : 'rgba(109,40,217,0.04)',
-              color: textColor,
-            }}
-          >
-            {lang === 'mm' ? 'EN' : 'MM'}
-          </motion.button>
-          {/* Theme toggle */}
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setTheme(isDark ? 'light' : 'dark')}
-            className="p-1.5 rounded-lg transition-all flex items-center justify-center"
-            style={{
-              border: `1px solid ${isDark ? 'rgba(124,58,237,0.35)' : 'rgba(109,40,217,0.2)'}`,
-              background: isDark ? 'rgba(124,58,237,0.1)' : 'rgba(109,40,217,0.04)',
-              color: textColor,
-            }}
-          >
-            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          </motion.button>
-          {/* Logout */}
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => logoutMutation.mutate()}
-            className="flex items-center gap-1.5 text-xs px-2.5 sm:px-3 py-1.5 rounded-lg font-bold uppercase tracking-wider transition-all"
-            style={{
-              border: '1px solid rgba(239,68,68,0.4)',
-              background: 'rgba(239,68,68,0.08)',
-              color: '#ef4444',
-            }}
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{t.logout}</span>
-          </motion.button>
-        </div>
-      </div>
-
-      {/* TABS - Premium animated, hidden on mobile */}
-      <div
-        className="relative z-10 hidden md:flex gap-1 px-3 sm:px-5 pt-3 pb-0 border-b overflow-x-auto scrollbar-hide"
-        style={{
-          borderColor: isDark ? 'rgba(124,58,237,0.2)' : 'rgba(109,40,217,0.1)',
-          background: isDark ? 'rgba(9,7,28,0.6)' : 'rgba(255,255,255,0.6)',
-        }}
-      >
-        {([{ id: 'tts' as MainTab, label: t.tabs.tts, icon: <Mic className="w-3.5 h-3.5" /> }, { id: 'video' as MainTab, label: t.tabs.video, icon: <FileVideo className="w-3.5 h-3.5" /> }, { id: 'dubbing' as MainTab, label: t.tabs.dubbing, icon: <Wand2 className="w-3.5 h-3.5" /> }]).map(({ id, label: lbl, icon }) => {
-          const isActive = mainTab === id && !secondaryTab;
-          return (
-            <motion.button
-              key={id}
-              whileHover={{ y: -1 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => { setMainTab(id); setSecondaryTab(null); }}
-              className="relative flex items-center gap-1.5 px-4 sm:px-5 py-2.5 text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap rounded-t-xl overflow-hidden"
+            {/* Animated Logo Icon */}
+            <motion.div
+              className="relative flex items-center justify-center w-8 h-8 rounded-lg overflow-hidden"
+              whileHover={{ scale: 1.1, rotate: 5 }}
+              whileTap={{ scale: 0.9 }}
               style={{
-                color: isActive ? accent : subtextColor,
-                background: isActive
-                  ? isDark ? 'rgba(124,58,237,0.12)' : 'rgba(109,40,217,0.06)'
-                  : 'transparent',
-                borderBottom: isActive ? `2px solid ${accent}` : '2px solid transparent',
+                background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`,
+                boxShadow: isDark ? `0 0 20px ${accent80}, 0 0 40px ${accent30}` : `0 4px 16px rgba(99,102,241,0.25)`,
               }}
             >
-              {icon}
-              {lbl}
+              <Zap className="w-4 h-4 text-white" style={{ filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.6))' }} />
+              {/* Animated glow pulse */}
+              <motion.div
+                className="absolute inset-0 rounded-lg"
+                animate={{ opacity: [0, 0.4, 0] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                style={{ background: `radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%)` }}
+              />
+            </motion.div>
+            {/* Logo Text */}
+            <motion.span
+              className="font-black uppercase tracking-[0.25em] text-base sm:text-lg"
+              style={{
+                background: `linear-gradient(135deg, ${accent}, ${isDark ? '#c084fc' : '#6366f1'})`,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                filter: isDark ? `drop-shadow(0 0 8px ${accent80})` : 'none',
+              }}
+            >
+              LUMIX
+            </motion.span>
+          </motion.div>
+
+          {/* Right: Controls */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Subscription badge */}
+            <div
+              className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
+              style={{
+                background: isDark ? 'rgba(124,58,237,0.12)' : 'rgba(99,102,241,0.06)',
+                border: `1px solid ${subColor}30`,
+                color: subColor,
+              }}
+            >
+              {hasActiveSub ? <Crown className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+              <span>
+                {isAdmin ? t.admin : subStatus?.active && daysLeft !== null
+                  ? `${subStatus.plan === 'trial' ? (lang === 'mm' ? 'အစမ်းသုံး' : 'Trial') : subStatus.plan} · ${daysLeft}d`
+                  : subStatus?.active ? subStatus.plan
+                  : me ? (lang === 'mm' ? 'Subscription မရှိ' : t.noSub) : t.noSub}
+              </span>
+            </div>
+            {/* Username */}
+            <span
+              className="hidden md:inline text-xs font-bold px-2.5 py-1 rounded-full"
+              style={{
+                background: isDark ? 'rgba(124,58,237,0.1)' : 'rgba(99,102,241,0.06)',
+                color: accent,
+              }}
+            >
+              @{(me as any)?.username || me?.name}
+            </span>
+            {/* Divider */}
+            <div className="w-px h-5 mx-0.5" style={{ background: isDark ? 'rgba(124,58,237,0.3)' : 'rgba(99,102,241,0.12)' }} />
+            {/* Lang toggle */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setLang(lang === 'mm' ? 'en' : 'mm')}
+              className="px-2.5 py-1 text-xs font-black rounded-lg uppercase tracking-widest transition-all"
+              style={{
+                border: `1px solid ${isDark ? 'rgba(124,58,237,0.35)' : 'rgba(99,102,241,0.15)'}`,
+                background: isDark ? 'rgba(124,58,237,0.1)' : 'rgba(255,255,255,0.7)',
+                color: textColor,
+              }}
+            >
+              {lang === 'mm' ? 'EN' : 'MM'}
             </motion.button>
-          );
-        })}
-      </div>
+            {/* Theme toggle */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setTheme(isDark ? 'light' : 'dark')}
+              className="p-1.5 rounded-lg transition-all flex items-center justify-center"
+              style={{
+                border: `1px solid ${isDark ? 'rgba(124,58,237,0.35)' : 'rgba(99,102,241,0.15)'}`,
+                background: isDark ? 'rgba(124,58,237,0.1)' : 'rgba(255,255,255,0.7)',
+                color: textColor,
+              }}
+            >
+              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </motion.button>
+            {/* Logout */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => logoutMutation.mutate()}
+              className="flex items-center gap-1.5 text-xs px-2.5 sm:px-3 py-1.5 rounded-lg font-bold uppercase tracking-wider transition-all"
+              style={{
+                border: '1px solid rgba(239,68,68,0.3)',
+                background: isDark ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.05)',
+                color: '#ef4444',
+              }}
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{t.logout}</span>
+            </motion.button>
+          </div>
+        </div>
+
+        {/* Bottom Row: Integrated Tabs - hidden on mobile */}
+        <div
+          className="hidden md:flex items-center gap-1 px-3 sm:px-5 overflow-x-auto scrollbar-hide"
+        >
+          {([{ id: 'tts' as MainTab, label: t.tabs.tts, icon: <Mic className="w-3.5 h-3.5" /> }, { id: 'video' as MainTab, label: t.tabs.video, icon: <FileVideo className="w-3.5 h-3.5" /> }, { id: 'dubbing' as MainTab, label: t.tabs.dubbing, icon: <Wand2 className="w-3.5 h-3.5" /> }]).map(({ id, label: lbl, icon }) => {
+            const isActive = mainTab === id && !secondaryTab;
+            return (
+              <motion.button
+                key={id}
+                whileHover={{ y: -1 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => { setMainTab(id); setSecondaryTab(null); }}
+                className="relative flex items-center gap-1.5 px-4 sm:px-5 py-2.5 text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap rounded-t-xl overflow-hidden"
+                style={{
+                  color: isActive ? (isDark ? '#c4b5fd' : accent) : subtextColor,
+                  background: isActive
+                    ? isDark ? 'rgba(124,58,237,0.12)' : 'rgba(99,102,241,0.08)'
+                    : 'transparent',
+                }}
+              >
+                {icon}
+                {lbl}
+                {/* Active indicator line */}
+                {isActive && (
+                  <motion.div
+                    layoutId="activeTabIndicator"
+                    className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full"
+                    style={{ background: `linear-gradient(90deg, ${accent}, ${accentSecondary})`, boxShadow: isDark ? `0 0 8px ${accent80}` : `0 0 6px rgba(99,102,241,0.3)` }}
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.5 }}
+                  />
+                )}
+              </motion.button>
+            );
+          })}
+        </div>
+      </motion.div>
 
       <div className="relative z-10 px-3 sm:px-4 py-6 sm:py-8 md:py-10 max-w-7xl mx-auto">
         {/* Main Tab Content - Only show when no secondary tab is active */}
@@ -852,49 +912,7 @@ export default function TTSGenerator() {
                   </div>
                 </div>
 
-                {/* Video Preview for Translate Tab */}
-                {(translatePreviewUrl || videoFile) && (
-                  <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
-                    <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>
-                      {lang === "mm" ? "ဗီဒီယို ကြိုတင်ကြည့်ရန်" : "Video Preview"}
-                    </div>
-                    <div className="relative w-full rounded-xl overflow-hidden bg-black" style={{ aspectRatio: "16/9", maxHeight: "400px" }}>
-                      {videoFile ? (
-                        <video
-                          src={URL.createObjectURL(videoFile)}
-                          controls
-                          className="w-full h-full"
-                          style={{ objectFit: "contain", borderRadius: "12px" }}
-                        />
-                      ) : translatePreviewUrl ? (
-                        <video
-                          src={translatePreviewUrl}
-                          controls
-                          className="w-full h-full"
-                          style={{ objectFit: "contain", borderRadius: "12px" }}
-                          onLoadedMetadata={() => setTranslateVideoLoading(false)}
-                          onError={() => {
-                            setTranslateVideoError(lang === "mm" ? "ဗီဒီယိုကို လော့နိုင်းမရပါ။ လင့်ခ်ကို စစ်ဆေးပါ" : "Failed to load video. Check if the link is valid.");
-                            setTranslateVideoLoading(false);
-                          }}
-                        />
-                      ) : null}
-                      {translateVideoLoading && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-xl" style={{ zIndex: 20 }}>
-                          <Loader2 className="w-8 h-8 animate-spin text-white" />
-                        </div>
-                      )}
-                      {translateVideoError && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-xl p-4" style={{ zIndex: 20 }}>
-                          <div className="text-center">
-                            <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-2" />
-                            <p className="text-white text-sm font-semibold">{translateVideoError}</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
+                {/* Video Preview removed from translate tab — not needed */}
 
                 {(videoFile || videoUrl) && (
                   <button onClick={handleTranslate} disabled={translateMutation.isPending || translateLinkMutation.isPending} className="w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 rounded-2xl text-white font-black uppercase tracking-widest transition-all disabled:opacity-50 hover:scale-[1.02] mt-4 shadow-lg text-sm sm:text-base" style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, boxShadow: isDark ? `0 0 20px ${accent}` : `0 8px 20px rgba(109,40,217,0.25)` }}>
@@ -1015,81 +1033,108 @@ export default function TTSGenerator() {
             {/* ── STEP: Video Preview + Settings ── */}
             {dubPreviewUrl && !dubResult && (
               <>
-                {/* Video Preview — STICKY on desktop, normal on mobile */}
+                {/* Video Preview — STICKY on desktop when preview is available */}
                 <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow, position: "sticky", top: "8px", zIndex: 10 }}>
                   <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{lang === "mm" ? "ဗီဒီယိုကြိုကြည့်" : "Video Preview"}</div>
                   <div className="flex justify-center mt-2">
-                    <div style={{
-                      width: dubDetectedRatio === "9:16" ? "240px" : "100%",
-                      maxWidth: dubDetectedRatio === "9:16" ? "240px" : "100%",
-                      aspectRatio: dubDetectedRatio === "9:16" ? "9/16" : "16/9",
-                      position: "relative",
-                      overflow: "hidden",
-                      borderRadius: "12px",
-                    }}>
-                      <video
-                        ref={dubPreviewRef}
-                        src={dubPreviewUrl}
-                        controls
-                        className="w-full h-full"
-                        style={{ objectFit: "cover", borderRadius: "12px" }}
-                        onLoadedMetadata={(e) => {
-                          const v = e.currentTarget;
-                          const w = v.videoWidth;
-                          const h = v.videoHeight;
-                          if (h > w) setDubDetectedRatio("9:16");
-                          else setDubDetectedRatio("16:9");
-                          setVideoLoading(false);
-                          setVideoPreviewError("");
+                    {/* External URL card (YouTube/TikTok/FB can't play in video tag) */}
+                    {isExternalVideoUrl(dubPreviewUrl) ? (
+                      <div
+                        className="w-full rounded-xl p-5 text-center"
+                        style={{
+                          background: isDark ? 'rgba(124,58,237,0.08)' : 'rgba(109,40,217,0.04)',
+                          border: `1px solid ${cardBorder}`,
                         }}
-                        onError={() => {
-                          setVideoPreviewError("Failed to load video. Check if the link is valid or try uploading the file.");
-                          setVideoLoading(false);
-                        }}
-                      />
-                      {videoLoading && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-xl" style={{ zIndex: 20 }}>
-                          <Loader2 className="w-8 h-8 animate-spin text-white" />
+                      >
+                        <div className="w-16 h-16 mx-auto mb-3 rounded-full flex items-center justify-center" style={{ background: accent15 }}>
+                          <ExternalLink className="w-8 h-8" style={{ color: accent }} />
                         </div>
-                      )}
-                      {videoPreviewError && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-xl p-4" style={{ zIndex: 20 }}>
-                          <div className="text-center">
-                            <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-2" />
-                            <p className="text-white text-sm font-semibold">{videoPreviewError}</p>
+                        <p className="text-sm font-bold mb-1" style={{ color: textColor }}>
+                          {lang === "mm" ? "ဗီဒီယို Link အဆင်သင့်ဖြစ်ပါပြီ" : "Video Link Ready"}
+                        </p>
+                        <p className="text-xs mb-3" style={{ color: subtextColor }}>
+                          {dubPreviewUrl.length > 50 ? dubPreviewUrl.slice(0, 50) + '...' : dubPreviewUrl}
+                        </p>
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold" style={{ background: accent15, color: accent }}>
+                          <Info className="w-3.5 h-3.5" />
+                          {lang === "mm" ? "ဗီဒီယိုကို Server မှ ဒေါင်းလုတ်ပြီး ပြုလုပ်ပါမည်" : "Video will be downloaded by server for processing"}
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{
+                        width: dubDetectedRatio === "9:16" ? "240px" : "100%",
+                        maxWidth: dubDetectedRatio === "9:16" ? "240px" : "100%",
+                        aspectRatio: dubDetectedRatio === "9:16" ? "9/16" : "16/9",
+                        position: "relative",
+                        overflow: "hidden",
+                        borderRadius: "12px",
+                      }}>
+                        <video
+                          ref={dubPreviewRef}
+                          src={dubPreviewUrl}
+                          controls
+                          className="w-full h-full"
+                          style={{ objectFit: "cover", borderRadius: "12px" }}
+                          onLoadedMetadata={(e) => {
+                            const v = e.currentTarget;
+                            const w = v.videoWidth;
+                            const h = v.videoHeight;
+                            if (h > w) setDubDetectedRatio("9:16");
+                            else setDubDetectedRatio("16:9");
+                            setVideoLoading(false);
+                            setVideoPreviewError("");
+                          }}
+                          onError={() => {
+                            setVideoPreviewError("Failed to load video. Check if the link is valid or try uploading the file.");
+                            setVideoLoading(false);
+                          }}
+                        />
+                        {videoLoading && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-xl" style={{ zIndex: 20 }}>
+                            <Loader2 className="w-8 h-8 animate-spin text-white" />
                           </div>
-                        </div>
-                      )}
-                      {srtEnabled && (
-                        <div className="absolute left-0 right-0 flex justify-center pointer-events-none"
-                          style={{
-                            zIndex: 10,
-                            top: `${Math.max(2, Math.round(78 - (srtMarginV / 200) * 76))}%`,
-                            transition: "top 0.2s ease-out",
-                          }}>
-                          <div style={{
-                            padding: srtFullWidth ? `${srtBoxPadding}px 0` : `${srtBoxPadding}px ${srtBoxPadding + 10}px`,
-                            borderRadius: srtFullWidth ? "0" : (srtBorderRadius === "rounded" ? "12px" : "4px"),
-                            fontSize: `${Math.max(10, Math.min(srtFontSize, 22))}px`,
-                            color: srtColor,
-                            textShadow: srtDropShadow ? "2px 2px 4px rgba(0,0,0,0.8)" : "none",
-                            background: srtBlurBg ? (srtBlurColor === "black" ? `rgba(0,0,0,${Math.min(0.85, srtBlurSize * 0.06)})` : `rgba(255,255,255,${Math.min(0.85, srtBlurSize * 0.06)})`) : "transparent",
-                            backdropFilter: srtBlurBg ? `blur(${srtBlurSize}px)` : "none",
-                            textAlign: "center",
-                            width: srtFullWidth ? "100%" : "auto",
-                            maxWidth: srtFullWidth ? "100%" : "90%",
-                            transition: "all 0.2s ease-out",
-                          }}>
-                            {lang === "mm" ? "မြန်မာ စာတန်း နမူနာ" : "Subtitle Preview"}
+                        )}
+                        {videoPreviewError && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-xl p-4" style={{ zIndex: 20 }}>
+                            <div className="text-center">
+                              <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-2" />
+                              <p className="text-white text-sm font-semibold">{videoPreviewError}</p>
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
+                        {srtEnabled && (
+                          <div className="absolute left-0 right-0 flex justify-center pointer-events-none"
+                            style={{
+                              zIndex: 10,
+                              top: `${Math.max(2, Math.round(78 - (srtMarginV / 200) * 76))}%`,
+                              transition: "top 0.2s ease-out",
+                            }}>
+                            <div style={{
+                              padding: srtFullWidth ? `${srtBoxPadding}px 0` : `${srtBoxPadding}px ${srtBoxPadding + 10}px`,
+                              borderRadius: srtFullWidth ? "0" : (srtBorderRadius === "rounded" ? "12px" : "4px"),
+                              fontSize: `${Math.max(10, Math.min(srtFontSize, 22))}px`,
+                              color: srtColor,
+                              textShadow: srtDropShadow ? "2px 2px 4px rgba(0,0,0,0.8)" : "none",
+                              background: srtBlurBg ? (srtBlurColor === "black" ? `rgba(0,0,0,${Math.min(0.85, srtBlurSize * 0.06)})` : `rgba(255,255,255,${Math.min(0.85, srtBlurSize * 0.06)})`) : "transparent",
+                              backdropFilter: srtBlurBg ? `blur(${srtBlurSize}px)` : "none",
+                              textAlign: "center",
+                              width: srtFullWidth ? "100%" : "auto",
+                              maxWidth: srtFullWidth ? "100%" : "90%",
+                              transition: "all 0.2s ease-out",
+                            }}>
+                              {lang === "mm" ? "မြန်မာ စာတန်း နမူနာ" : "Subtitle Preview"}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {!isExternalVideoUrl(dubPreviewUrl) && (
+                    <div className="flex items-center justify-center gap-2 mt-3 text-xs" style={{ color: subtextColor }}>
+                      <span className="px-2 py-1 rounded-lg border font-bold" style={{ borderColor: cardBorder }}>{dubDetectedRatio}</span>
+                      <span>{lang === "mm" ? "အချိုး" : "Aspect Ratio"}</span>
                     </div>
-                  </div>
-                  <div className="flex items-center justify-center gap-2 mt-3 text-xs" style={{ color: subtextColor }}>
-                    <span className="px-2 py-1 rounded-lg border font-bold" style={{ borderColor: cardBorder }}>{dubDetectedRatio}</span>
-                    <span>{lang === "mm" ? "အချိုး" : "Aspect Ratio"}</span>
-                  </div>
+                  )}
                 </div>
 
                 {/* ── ACCORDION: Voice Selection ── */}

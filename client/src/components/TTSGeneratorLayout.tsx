@@ -121,70 +121,37 @@ function TTSGeneratorSidebar({ currentTab, onTabChange }: TTSGeneratorSidebarPro
   const sidebar = useSidebar();
   const isCollapsed = !sidebar.open;
 
-  const menuItems: { id: "history" | "plan" | "guide" | "settings"; label: string; labelEn: string; icon: React.ElementType }[] = [
-    { id: "history", label: "မှတ်တမ်း", labelEn: "History", icon: History },
-    { id: "plan", label: "Plan", labelEn: "Plan", icon: Star },
-    { id: "guide", label: "လမ်းညွှန်", labelEn: "Guide", icon: BookOpen },
-    { id: "settings", label: "ဆက်တင်", labelEn: "Settings", icon: Settings },
+  const menuItems: { id: "history" | "plan" | "guide" | "settings"; label: string; labelEn: string; icon: React.ElementType; emoji: string }[] = [
+    { id: "history", label: "မှတ်တမ်း", labelEn: "History", icon: History, emoji: "📋" },
+    { id: "plan", label: "Plan", labelEn: "Plan", icon: Star, emoji: "⭐" },
+    { id: "guide", label: "လမ်းညွှန်", labelEn: "Guide", icon: BookOpen, emoji: "📖" },
+    { id: "settings", label: "ဆက်တင်", labelEn: "Settings", icon: Settings, emoji: "⚙️" },
   ];
 
   return (
-    <>
-      {/* External Logo - shows when sidebar is collapsed */}
-      {isCollapsed && (
-        <div
-          className="fixed top-4 left-4 z-50 flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-300"
-          style={{
-            background: "linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(79, 70, 229, 0.1))",
-            border: "1px solid rgba(139, 92, 246, 0.3)",
-            backdropFilter: "blur(10px)",
-            animation: "fadeIn 0.3s ease-out"
-          }}
-        >
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(79, 70, 229, 0.2))", border: "1px solid rgba(139, 92, 246, 0.3)" }}>
-            <span className="text-lg font-black" style={{ color: "#a78bfa" }}>L</span>
-          </div>
-          <span className="text-sm font-black uppercase tracking-wider" style={{ color: "#a78bfa" }}>LUMIX</span>
+    <Sidebar collapsible="icon" className="bg-transparent">
+      <SidebarHeader
+        className="border-b bg-transparent"
+        style={{ borderColor: "rgba(139, 92, 246, 0.2)" }}
+      >
+        {/* Toggle button always visible */}
+        <div className="flex items-center justify-end px-3 py-2">
+          <SidebarTrigger
+            className="flex-shrink-0 rounded-lg p-1.5 transition-colors"
+            style={{ color: "rgba(167,139,250,0.7)" }}
+          >
+            <PanelLeft className="h-4 w-4" />
+          </SidebarTrigger>
         </div>
-      )}
 
-      <Sidebar collapsible="icon" className="bg-transparent">
-        <SidebarHeader
-          className="border-b bg-transparent"
-          style={{ borderColor: "rgba(139, 92, 246, 0.2)" }}
-        >
-          {/* Logo inside sidebar - shows when expanded */}
-          {!isCollapsed && (
-            <div className="px-3 py-4 mb-2">
-              <div className="flex items-center gap-2 transition-all duration-300" style={{ animation: "slideIn 0.3s ease-out" }}>
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(79, 70, 229, 0.2))", border: "1px solid rgba(139, 92, 246, 0.3)" }}>
-                  <span className="text-lg font-black" style={{ color: "#a78bfa" }}>L</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-sm font-black uppercase tracking-wider" style={{ color: "#a78bfa" }}>LUMIX</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Toggle button always visible */}
-          <div className="flex items-center justify-end px-3 py-2">
-            <SidebarTrigger
-              className="flex-shrink-0 rounded-lg p-1.5 transition-colors"
-              style={{ color: "rgba(167,139,250,0.7)" }}
-            >
-              <PanelLeft className="h-4 w-4" />
-            </SidebarTrigger>
-          </div>
-
-          {/* Usage Display */}
-          <CompactUsageDisplay subStatus={subStatus} isCollapsed={isCollapsed} />
-        </SidebarHeader>
+        {/* Usage Display */}
+        <CompactUsageDisplay subStatus={subStatus} isCollapsed={isCollapsed} />
+      </SidebarHeader>
 
       <SidebarContent className="bg-transparent">
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="space-y-1 px-1">
               {menuItems.map((item) => {
                 const isActive = currentTab === item.id;
                 return (
@@ -193,21 +160,23 @@ function TTSGeneratorSidebar({ currentTab, onTabChange }: TTSGeneratorSidebarPro
                       onClick={() => onTabChange(item.id)}
                       isActive={isActive}
                       tooltip={item.labelEn}
-                      className="relative overflow-hidden transition-all duration-200"
+                      className="relative overflow-hidden transition-all duration-300 rounded-xl h-10"
                       style={
                         isActive
                           ? {
                               background: "linear-gradient(135deg, rgba(124,58,237,0.25), rgba(79,70,229,0.15))",
-                              color: "#a78bfa",
-                              borderLeft: "2px solid #7c3aed",
+                              color: "#c4b5fd",
+                              borderLeft: "3px solid #8b5cf6",
+                              boxShadow: "0 0 16px rgba(139,92,246,0.15), inset 0 0 12px rgba(139,92,246,0.05)",
                             }
                           : {
-                              color: "rgba(255,255,255,0.55)",
+                              color: "rgba(255,255,255,0.5)",
+                              borderLeft: "3px solid transparent",
                             }
                       }
                     >
                       <item.icon className="h-4 w-4" />
-                      <span className="font-semibold">{item.label}</span>
+                      <span className="font-semibold text-[13px]">{item.label}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
@@ -217,6 +186,5 @@ function TTSGeneratorSidebar({ currentTab, onTabChange }: TTSGeneratorSidebarPro
         </SidebarGroup>
       </SidebarContent>
     </Sidebar>
-    </>
   );
 }
