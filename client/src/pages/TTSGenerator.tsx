@@ -3,8 +3,10 @@ import { trpc } from "@/lib/trpc";
 import { Slider } from "@/components/ui/slider";
 import { Loader2, Download, Volume2, LogOut, Crown, AlertCircle, Mic, FileVideo, Settings, Sparkles, Upload, Sun, Moon, Copy, Check, Link as LinkIcon, Wand2, Clock, Info, ChevronDown } from "lucide-react";
 import { useLocation } from "wouter";
+import { TTSGeneratorLayout } from "@/components/TTSGeneratorLayout";
 
-type Tab = "tts" | "video" | "dubbing" | "settings" | "history" | "plan" | "guide";
+type MainTab = "tts" | "video" | "dubbing";
+type SecondaryTab = "history" | "plan" | "guide" | "settings";
 type Theme = "dark" | "light";
 type Lang = "mm" | "en";
 
@@ -132,7 +134,8 @@ const T = {
 };
 
 export default function TTSGenerator() {
-  const [tab, setTab] = useState<Tab>("tts");
+  const [mainTab, setMainTab] = useState<MainTab>("tts");
+  const [secondaryTab, setSecondaryTab] = useState<SecondaryTab>("history");
   const [theme, setTheme] = useState<Theme>("dark");
   const [lang, setLang] = useState<Lang>("mm");
   const t = T[lang];
@@ -177,6 +180,8 @@ export default function TTSGenerator() {
   const [dubPreviewUrl, setDubPreviewUrl] = useState<string>("");
   const dubPreviewRef = useRef<HTMLVideoElement>(null);
   const [dubDetectedRatio, setDubDetectedRatio] = useState<"9:16" | "16:9">("16:9");
+  const [videoPreviewError, setVideoPreviewError] = useState<string>("");
+  const [videoLoading, setVideoLoading] = useState(false);
   const [dubVoice, setDubVoice] = useState<"thiha" | "nilar">("thiha");
   const [dubCharacter, setDubCharacter] = useState<string>("");
   const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">("standard");
@@ -416,11 +421,19 @@ export default function TTSGenerator() {
   };
 
   const handleDubPreview = () => {
-    if (dubVideoFile) {
-      const url = URL.createObjectURL(dubVideoFile);
-      setDubPreviewUrl(url);
-    } else if (dubVideoUrl.trim()) {
-      setDubPreviewUrl(dubVideoUrl.trim());
+    setVideoLoading(true);
+    setVideoPreviewError("");
+
+    try {
+      if (dubVideoFile) {
+        const url = URL.createObjectURL(dubVideoFile);
+        setDubPreviewUrl(url);
+      } else if (dubVideoUrl.trim()) {
+        setDubPreviewUrl(dubVideoUrl.trim());
+      }
+    } catch (error) {
+      setVideoPreviewError("Failed to load video. Please try again.");
+      console.error("Video preview error:", error);
     }
   };
 
@@ -457,7 +470,8 @@ export default function TTSGenerator() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden transition-colors duration-500 font-sans" style={{ background: bgGradient, color: textColor }}>
+    <TTSGeneratorLayout currentSecondaryTab={secondaryTab} onTabChange={setSecondaryTab}>
+      <div className="min-h-screen relative overflow-hidden transition-colors duration-500 font-sans" style={{ background: bgGradient, color: textColor }}>
       {/* Error Toast */}
       {errorToast && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-top-4 duration-300 max-w-[90vw]">
@@ -499,118 +513,21 @@ export default function TTSGenerator() {
         </div>
       </div>
 
-      {/* 🎯 TRIAL LIMIT DISPLAY */}
-      {me && !isAdmin && hasPlan && currentPlan === 'trial' && (subStatus as any)?.trialUsage && (subStatus as any)?.trialLimits && (
-        <div className="mx-3 sm:mx-4 mb-3 sm:mb-4 animate-in fade-in zoom-in-95 duration-300" style={{
-          background: "oklch(0.65 0.25 310 / 8%)",
-          border: "1px solid oklch(0.65 0.25 310 / 25%)",
-          borderRadius: "12px",
-          padding: "12px 16px",
-          boxShadow: isDark ? "0 4px 20px oklch(0.65 0.25 310 / 15%)" : "0 2px 10px oklch(0.65 0.25 310 / 10%)"
-        }}>
-          <div className="flex items-center gap-2 mb-3">
-            <Clock className="w-4 h-4" style={{ color: "oklch(0.65 0.25 310)" }} />
-            <span className="font-bold text-sm" style={{ color: "oklch(0.65 0.25 310)" }}>Trial အသုံးပြုမှု:</span>
-            {(subStatus as any).expiresAt && (
-              <span className="ml-auto text-xs" style={{ color: "oklch(0.65 0.25 310 / 60%)" }}>
-                သက်တမ်း: {new Date((subStatus as any).expiresAt).toLocaleDateString('my-MM')}
-              </span>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 text-xs">
-            {/* TTS */}
-            <div className="bg-black/20 rounded-lg p-2 border" style={{ borderColor: "oklch(0.65 0.25 310 / 20%)" }}>
-              <div className="opacity-70 mb-1" style={{ fontSize: "10px" }}>စာမှအသံ</div>
-              <div className="font-bold text-sm">
-                {(subStatus as any).trialUsage.tts}/{(subStatus as any).trialLimits.totalTtsSrt}
-              </div>
-              <div className={((subStatus as any).trialLimits.totalTtsSrt - (subStatus as any).trialUsage.tts) <= 2 ? "text-red-400" : "text-green-400"} style={{ fontSize: "10px" }}>
-                {(subStatus as any).trialLimits.totalTtsSrt - (subStatus as any).trialUsage.tts} ကျန်
-              </div>
-            </div>
-
-            {/* AI Video */}
-            <div className="bg-black/20 rounded-lg p-2 border" style={{ borderColor: "oklch(0.65 0.25 310 / 20%)" }}>
-              <div className="opacity-70 mb-1" style={{ fontSize: "10px" }}>AI Video</div>
-              <div className="font-bold text-sm">
-                {(subStatus as any).trialUsage.aiVideo}/{(subStatus as any).trialLimits.totalAiVideo}
-              </div>
-              <div className={((subStatus as any).trialLimits.totalAiVideo - (subStatus as any).trialUsage.aiVideo) <= 1 ? "text-red-400" : "text-green-400"} style={{ fontSize: "10px" }}>
-                {(subStatus as any).trialLimits.totalAiVideo - (subStatus as any).trialUsage.aiVideo} ကျန်
-              </div>
-            </div>
-
-            {/* Character Voice */}
-            <div className="bg-black/20 rounded-lg p-2 border" style={{ borderColor: "oklch(0.65 0.25 310 / 20%)" }}>
-              <div className="opacity-70 mb-1" style={{ fontSize: "10px" }}>Character Voice</div>
-              <div className="font-bold text-sm">
-                {(subStatus as any).trialUsage.characterUse}/{(subStatus as any).trialLimits.totalCharacterUse}
-              </div>
-              <div className={((subStatus as any).trialLimits.totalCharacterUse - (subStatus as any).trialUsage.characterUse) <= 1 ? "text-red-400" : "text-green-400"} style={{ fontSize: "10px" }}>
-                {(subStatus as any).trialLimits.totalCharacterUse - (subStatus as any).trialUsage.characterUse} ကျန်
-              </div>
-            </div>
-
-            {/* Video Translate */}
-            <div className="bg-black/20 rounded-lg p-2 border" style={{ borderColor: "oklch(0.65 0.25 310 / 20%)" }}>
-              <div className="opacity-70 mb-1" style={{ fontSize: "10px" }}>ဗီဒီယိုဘာသာပြန်</div>
-              <div className="font-bold text-sm">
-                {(subStatus as any).trialUsage.videoTranslate}/{(subStatus as any).trialLimits.totalVideoTranslate}
-              </div>
-              <div className={((subStatus as any).trialLimits.totalVideoTranslate - (subStatus as any).trialUsage.videoTranslate) <= 1 ? "text-red-400" : "text-green-400"} style={{ fontSize: "10px" }}>
-                {(subStatus as any).trialLimits.totalVideoTranslate - (subStatus as any).trialUsage.videoTranslate} ကျန်
-              </div>
-            </div>
-          </div>
-
-          {/* Progress bar */}
-          <div className="mt-2 h-1.5 rounded-full bg-white/5 overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-500"
-              style={{
-                width: `${Math.min(((subStatus as any).trialUsage.tts + (subStatus as any).trialUsage.aiVideo) / ((subStatus as any).trialLimits.totalTtsSrt + (subStatus as any).trialLimits.totalAiVideo) * 100, 100)}%`,
-                background: `linear-gradient(90deg, oklch(0.65 0.25 310), oklch(0.72 0.25 310))`
-              }}
-            />
-          </div>
-        </div>
-      )}
-
       {/* TABS */}
       <div className="relative z-10 flex gap-1 px-2 sm:px-4 pt-2 sm:pt-3 border-b overflow-x-auto scrollbar-hide" style={{ borderColor: cardBorder, background: isDark ? 'rgba(15,12,41,0.5)' : 'rgba(255,255,255,0.5)' }}>
-        {([{ id: "tts" as Tab, label: t.tabs.tts, icon: <Mic className="w-3.5 h-3.5" /> }, { id: "video" as Tab, label: t.tabs.video, icon: <FileVideo className="w-3.5 h-3.5" /> }, { id: "dubbing" as Tab, label: t.tabs.dubbing, icon: <Wand2 className="w-3.5 h-3.5" /> }, { id: "history" as Tab, label: t.tabs.history, icon: <Clock className="w-3.5 h-3.5" /> }, { id: "plan" as Tab, label: t.tabs.plan, icon: <Crown className="w-3.5 h-3.5" /> }, { id: "guide" as Tab, label: t.tabs.guide, icon: <Info className="w-3.5 h-3.5" /> }, { id: "settings" as Tab, label: t.tabs.settings, icon: <Settings className="w-3.5 h-3.5" /> }]).map(({ id, label: lbl, icon }) => (
-          <button key={id} onClick={() => setTab(id)} className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all border-b-2 rounded-t-xl whitespace-nowrap" style={{ borderColor: tab === id ? accent : 'transparent', color: tab === id ? accent : subtextColor, background: tab === id ? cardBg : 'transparent' }}>{icon} {lbl}</button>
+        {([{ id: "tts" as MainTab, label: t.tabs.tts, icon: <Mic className="w-3.5 h-3.5" /> }, { id: "video" as MainTab, label: t.tabs.video, icon: <FileVideo className="w-3.5 h-3.5" /> }, { id: "dubbing" as MainTab, label: t.tabs.dubbing, icon: <Wand2 className="w-3.5 h-3.5" /> }]).map(({ id, label: lbl, icon }) => (
+          <button key={id} onClick={() => setMainTab(id)} className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all border-b-2 rounded-t-xl whitespace-nowrap" style={{ borderColor: mainTab === id ? accent : 'transparent', color: mainTab === id ? accent : subtextColor, background: mainTab === id ? cardBg : 'transparent' }}>{icon} {lbl}</button>
         ))}
       </div>
 
       <div className="relative z-10 px-3 sm:px-4 py-6 sm:py-8 md:py-10 max-w-7xl mx-auto">
 
         {/* === TTS TAB === */}
-        {tab === "tts" && (
+        {mainTab === "tts" && (
           <div className="animate-in fade-in zoom-in-95 duration-300">
             <div className="mb-4 sm:mb-6 relative text-center py-2">
               <h1 className="text-2xl sm:text-3xl md:text-5xl font-black uppercase tracking-wider sm:tracking-widest mb-2" style={{ textShadow: isDark ? `0 0 20px ${accent}, 0 0 40px ${accent}` : 'none', color: accent }}>TTS Generator</h1>
               <p className="text-xs sm:text-sm font-bold uppercase tracking-wider opacity-80 mt-1" style={{ color: subtextColor }}>Convert Text to Speech</p>
-              {/* Plan Usage Banner */}
-              {!isAdmin && hasPlan && planLimits && planUsage && (
-                <div className="mt-3 mx-auto max-w-lg flex flex-wrap items-center justify-center gap-2 sm:gap-3 px-3 py-2 rounded-xl text-xs font-bold" style={{ background: isDark ? 'rgba(167,139,250,0.1)' : 'rgba(109,40,217,0.06)', border: `1px solid ${cardBorder}` }}>
-                  <span className="px-2 py-0.5 rounded-lg" style={{ background: currentPlan === 'trial' ? '#f59e0b' : '#16a34a', color: '#fff' }}>{currentPlan === 'trial' ? (lang === 'mm' ? 'အစမ်းသုံး' : 'TRIAL') : (currentPlan?.toUpperCase() ?? 'SUB')}</span>
-                  {currentPlan === 'trial' && (subStatus as any)?.trialUsage && (subStatus as any)?.trialLimits ? (
-                    <>
-                      <span style={{ color: subtextColor }}>TTS: <b style={{ color: (subStatus as any).trialUsage.tts >= (subStatus as any).trialLimits.totalTtsSrt ? '#dc2626' : accent }}>{(subStatus as any).trialUsage.tts}/{(subStatus as any).trialLimits.totalTtsSrt}</b></span>
-                      <span style={{ color: subtextColor }}>VC: <b style={{ color: (subStatus as any).trialUsage.characterUse >= (subStatus as any).trialLimits.totalCharacterUse ? '#dc2626' : accent }}>{(subStatus as any).trialUsage.characterUse}/{(subStatus as any).trialLimits.totalCharacterUse}</b></span>
-                      <span style={{ color: subtextColor }}>{lang === 'mm' ? 'စာလုံး' : 'Chars'}: <b style={{ color: accent }}>{voiceMode === 'character' ? (subStatus as any).trialLimits.charLimitCharacter.toLocaleString() : (subStatus as any).trialLimits.charLimitStandard.toLocaleString()}</b></span>
-                    </>
-                  ) : currentPlan !== 'trial' && planUsage ? (
-                    <>
-                      <span style={{ color: subtextColor }}>TTS: <b style={{ color: planUsage.tts >= planLimits.dailyTtsSrt ? '#dc2626' : accent }}>{planUsage.tts}/{planLimits.dailyTtsSrt}</b></span>
-                      <span style={{ color: subtextColor }}>VC: <b style={{ color: planUsage.characterUse >= planLimits.dailyCharacterUse ? '#dc2626' : accent }}>{planUsage.characterUse}/{planLimits.dailyCharacterUse}</b></span>
-                      <span style={{ color: subtextColor }}>{lang === 'mm' ? 'စာလုံး' : 'Chars'}: <b style={{ color: accent }}>{currentCharLimit.toLocaleString()}</b></span>
-                    </>
-                  ) : null}
-                </div>
-              )}
               {/* No Plan Banner */}
               {!isAdmin && !hasPlan && me && (
                 <div className="mt-3 mx-auto max-w-lg flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold" style={{ background: isDark ? 'rgba(220,38,38,0.15)' : '#fef2f2', border: '1px solid rgba(220,38,38,0.3)', color: '#dc2626' }}>
@@ -669,19 +586,12 @@ export default function TTSGenerator() {
         )}
 
         {/* === VIDEO TAB — Simple Translation === */}
-        {tab === "video" && (
+        {mainTab === "video" && (
           <div className="max-w-xl mx-auto animate-in fade-in zoom-in-95 duration-300 space-y-4">
             <div className="text-center mb-4 sm:mb-6">
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-black uppercase tracking-wider sm:tracking-widest mb-2 leading-normal" style={{ textShadow: isDark ? `0 0 20px ${accent}` : 'none', color: accent }}>{t.videoTitle}</h2>
               <p className="font-bold tracking-wider text-xs sm:text-sm mt-1" style={{ color: subtextColor }}>{t.videoDesc}</p>
               <p className="text-xs mt-1" style={{ color: subtextColor }}>{t.videoLimit}</p>
-              {/* Video Translation Usage Banner */}
-              {!isAdmin && hasPlan && currentPlan !== 'trial' && planLimits && planUsage && (
-                <div className="mt-3 mx-auto max-w-md flex items-center justify-center gap-3 px-3 py-2 rounded-xl text-xs font-bold" style={{ background: isDark ? 'rgba(167,139,250,0.1)' : 'rgba(109,40,217,0.06)', border: `1px solid ${cardBorder}` }}>
-                  <span className="px-2 py-0.5 rounded-lg" style={{ background: currentPlan === 'trial' ? '#f59e0b' : '#16a34a', color: '#fff' }}>{currentPlan === 'trial' ? (lang === 'mm' ? 'အစမ်းသုံး' : 'TRIAL') : (currentPlan?.toUpperCase() ?? 'SUB')}</span>
-                  <span style={{ color: planUsage.videoTranslate >= planLimits.dailyVideoTranslate ? '#dc2626' : subtextColor }}>{lang === 'mm' ? 'ယနေ့' : 'Today'}: <b style={{ color: planUsage.videoTranslate >= planLimits.dailyVideoTranslate ? '#dc2626' : accent }}>{planUsage.videoTranslate}/{planLimits.dailyVideoTranslate}</b> {lang === 'mm' ? 'ကြိမ်' : 'uses'}</span>
-                </div>
-              )}
               {!isAdmin && !hasPlan && me && (
                 <div className="mt-3 mx-auto max-w-md flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold" style={{ background: isDark ? 'rgba(220,38,38,0.15)' : '#fef2f2', border: '1px solid rgba(220,38,38,0.3)', color: '#dc2626' }}>
                   <AlertCircle className="w-4 h-4" />
@@ -764,7 +674,7 @@ export default function TTSGenerator() {
         )}
 
         {/* === DUBBING TAB — AI Auto Video Maker === */}
-        {tab === "dubbing" && (
+        {mainTab === "dubbing" && (
           <div className="max-w-2xl mx-auto animate-in fade-in zoom-in-95 duration-300 space-y-4">
             <div className="text-center mb-4 sm:mb-6">
               <h2 className="text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-wider sm:tracking-widest mb-2 leading-normal" style={{ textShadow: isDark ? `0 0 20px ${accent}` : 'none', color: accent }}>
@@ -773,13 +683,6 @@ export default function TTSGenerator() {
               <p className="font-bold tracking-wider text-xs sm:text-sm mt-1" style={{ color: subtextColor }}>
                 {lang === "mm" ? "AI ဖြင့် Video ဖန်တီးခြင်း" : "Create dubbed videos with AI"}
               </p>
-              {/* AI Video Usage Banner */}
-              {!isAdmin && hasPlan && currentPlan !== 'trial' && planLimits && planUsage && (
-                <div className="mt-3 mx-auto max-w-md flex items-center justify-center gap-3 px-3 py-2 rounded-xl text-xs font-bold" style={{ background: isDark ? 'rgba(167,139,250,0.1)' : 'rgba(109,40,217,0.06)', border: `1px solid ${cardBorder}` }}>
-                  <span className="px-2 py-0.5 rounded-lg" style={{ background: currentPlan === 'trial' ? '#f59e0b' : '#16a34a', color: '#fff' }}>{currentPlan === 'trial' ? (lang === 'mm' ? 'အစမ်းသုံး' : 'TRIAL') : (currentPlan?.toUpperCase() ?? 'SUB')}</span>
-                  <span style={{ color: planUsage.aiVideo >= planLimits.dailyAiVideo ? '#dc2626' : subtextColor }}>{lang === 'mm' ? 'ယနေ့' : 'Today'}: <b style={{ color: planUsage.aiVideo >= planLimits.dailyAiVideo ? '#dc2626' : accent }}>{planUsage.aiVideo}/{planLimits.dailyAiVideo}</b> {lang === 'mm' ? 'ကြိမ်' : 'uses'}</span>
-                </div>
-              )}
               {!isAdmin && !hasPlan && me && (
                 <div className="mt-3 mx-auto max-w-md flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold" style={{ background: isDark ? 'rgba(220,38,38,0.15)' : '#fef2f2', border: '1px solid rgba(220,38,38,0.3)', color: '#dc2626' }}>
                   <AlertCircle className="w-4 h-4" />
@@ -846,8 +749,27 @@ export default function TTSGenerator() {
                           const h = v.videoHeight;
                           if (h > w) setDubDetectedRatio("9:16");
                           else setDubDetectedRatio("16:9");
+                          setVideoLoading(false);
+                          setVideoPreviewError("");
+                        }}
+                        onError={() => {
+                          setVideoPreviewError("Failed to load video. Check if the link is valid or try uploading the file.");
+                          setVideoLoading(false);
                         }}
                       />
+                      {videoLoading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-xl" style={{ zIndex: 20 }}>
+                          <Loader2 className="w-8 h-8 animate-spin text-white" />
+                        </div>
+                      )}
+                      {videoPreviewError && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-xl p-4" style={{ zIndex: 20 }}>
+                          <div className="text-center">
+                            <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-2" />
+                            <p className="text-white text-sm font-semibold">{videoPreviewError}</p>
+                          </div>
+                        </div>
+                      )}
                       {srtEnabled && (
                         <div className="absolute left-0 right-0 flex justify-center pointer-events-none"
                           style={{
@@ -1146,7 +1068,7 @@ export default function TTSGenerator() {
         )}
 
         {/* === SETTINGS TAB === */}
-        {tab === "settings" && (
+        {secondaryTab === "settings" && (
           <div className="max-w-xl mx-auto py-4 sm:py-8 animate-in fade-in zoom-in-95 duration-300">
             <div className="text-center mb-6 sm:mb-8">
               <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-widest mb-2" style={{ color: accent }}>{t.settingsTitle}</h2>
@@ -1170,7 +1092,7 @@ export default function TTSGenerator() {
         )}
 
         {/* === HISTORY TAB === */}
-        {tab === "history" && (
+        {secondaryTab === "history" && (
           <div className="max-w-3xl mx-auto py-4 sm:py-8 animate-in fade-in zoom-in-95 duration-300">
             <div className="text-center mb-6">
               <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-widest mb-2" style={{ color: accent }}>{lang === "mm" ? "အသုံးပြုမှတ်တမ်း" : "Usage History"}</h2>
@@ -1205,7 +1127,7 @@ export default function TTSGenerator() {
         )}
 
         {/* === PLAN TAB === */}
-        {tab === "plan" && (
+        {secondaryTab === "plan" && (
           <div className="max-w-3xl mx-auto py-4 sm:py-8 animate-in fade-in zoom-in-95 duration-300">
             {/* Header */}
             <div className="text-center mb-8">
@@ -1296,7 +1218,7 @@ export default function TTSGenerator() {
         )}
 
         {/* === GUIDE TAB === */}
-        {tab === "guide" && (
+        {secondaryTab === "guide" && (
           <div className="max-w-3xl mx-auto py-4 sm:py-8 animate-in fade-in zoom-in-95 duration-300">
             {/* Header */}
             <div className="text-center mb-8">
@@ -1422,5 +1344,6 @@ export default function TTSGenerator() {
       </div>
       <audio ref={audioRef} className="hidden" />
     </div>
+    </TTSGeneratorLayout>
   );
 }
