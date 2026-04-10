@@ -497,6 +497,30 @@ export default function TTSGenerator() {
     return lower.includes('youtube.com') || lower.includes('youtu.be') || lower.includes('tiktok.com') || lower.includes('facebook.com') || lower.includes('fb.watch') || lower.includes('fb.com');
   };
 
+  // Extract YouTube video ID from various URL formats
+  const getYouTubeVideoId = (url: string): string | null => {
+    if (!url) return null;
+    // youtube.com/watch?v=VIDEO_ID
+    const watchMatch = url.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
+    if (watchMatch) return watchMatch[1];
+    // youtube.com/shorts/VIDEO_ID
+    const shortsMatch = url.match(/\/shorts\/([a-zA-Z0-9_-]{11})/);
+    if (shortsMatch) return shortsMatch[1];
+    // youtu.be/VIDEO_ID
+    const shortMatch = url.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+    if (shortMatch) return shortMatch[1];
+    // youtube.com/embed/VIDEO_ID
+    const embedMatch = url.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
+    if (embedMatch) return embedMatch[1];
+    return null;
+  };
+
+  const isYouTubeUrl = (url: string) => {
+    if (!url) return false;
+    const lower = url.toLowerCase();
+    return lower.includes('youtube.com') || lower.includes('youtu.be');
+  };
+
   const handleDubPreview = () => {
     setVideoLoading(true);
     setVideoPreviewError("");
