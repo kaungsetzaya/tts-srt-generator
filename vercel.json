@@ -4,7 +4,6 @@
   "outputDirectory": "frontend/dist",
   "framework": null,
   "installCommand": "cd frontend && corepack enable && corepack prepare pnpm@9.1.0 && pnpm install",
-  "nodeVersion": "20.x",
   "rewrites": [
     {
       "source": "/api/:path*",

@@ -4,6 +4,9 @@
   "type": "module",
   "license": "MIT",
   "packageManager": "pnpm@9.1.0",
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
