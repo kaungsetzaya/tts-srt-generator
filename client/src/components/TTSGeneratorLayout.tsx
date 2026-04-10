@@ -62,7 +62,7 @@ function TTSGeneratorSidebar({ currentTab, onTabChange }: TTSGeneratorSidebarPro
   const { data: me } = trpc.auth.me.useQuery();
   const { data: subStatus } = trpc.subscription.myStatus.useQuery();
   const sidebar = useSidebar();
-  const isCollapsed = sidebar.state === "collapsed";
+  const isCollapsed = !sidebar.open;
 
   const handleLogout = async () => {
     await queryClient.invalidateQueries(["auth.me"]);
