@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { trpc } from "@/lib/trpc";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, Download, Volume2, LogOut, Crown, AlertCircle, Mic, FileVideo, Settings, Sparkles, Upload, Sun, Moon, Copy, Check, Link as LinkIcon, Wand2, Clock as ClockIcon, Info, ChevronDown, BookOpen, History as HistoryIcon } from "lucide-react";
+import { Loader2, Download, Volume2, LogOut, Star, AlertCircle, Mic, FileVideo, Settings, Sparkles, Upload, Sun, Moon, Copy, Check, Link as LinkIcon, Wand2, Clock as ClockIcon, Info, ChevronDown, BookOpen, History as HistoryIcon } from "lucide-react";
 import { useLocation } from "wouter";
 import { TTSGeneratorLayout } from "@/components/TTSGeneratorLayout";
 
@@ -608,7 +608,7 @@ export default function TTSGenerator() {
               color: subColor,
             }}
           >
-            {hasActiveSub ? <Crown className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+            {hasActiveSub ? <Star className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
             <span>
               {isAdmin ? t.admin : subStatus?.active && daysLeft !== null
                 ? `${subStatus.plan === 'trial' ? (lang === 'mm' ? 'အစမ်းသုံး' : 'Trial') : subStatus.plan} · ${daysLeft}d`
@@ -1397,7 +1397,7 @@ export default function TTSGenerator() {
                   className="w-full flex items-center gap-3 p-3 rounded-xl transition-all hover:scale-[1.02] min-h-[44px]"
                   style={{ background: inputBg, border: `1px solid ${cardBorder}` }}
                 >
-                  <Crown className="w-5 h-5 flex-shrink-0" style={{ color: accent }} />
+                  <Star className="w-5 h-5 flex-shrink-0" style={{ color: accent }} />
                   <span className="text-sm font-bold" style={{ color: textColor }}>Plan</span>
                 </button>
                 <button
@@ -1505,7 +1505,7 @@ export default function TTSGenerator() {
             <div className="rounded-2xl border-2 p-6 sm:p-8 mb-6" style={{ background: `linear-gradient(135deg, ${isDark ? 'rgba(139,92,246,0.08)' : 'rgba(139,92,246,0.05)'}, ${cardBg})`, borderColor: accent40, boxShadow: `0 0 30px ${accent15}` }}>
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-3">
-                  <Crown className="w-6 h-6" style={{ color: currentPlan === 'trial' ? '#f59e0b' : accent }} />
+                  <Star className="w-6 h-6" style={{ color: currentPlan === 'trial' ? '#f59e0b' : accent }} />
                   <span className="text-lg sm:text-xl font-black uppercase tracking-wider" style={{ color: textColor }}>{currentPlan === 'trial' ? (lang === 'mm' ? 'အစမ်းသုံး Plan' : 'Trial Plan') : currentPlan?.toUpperCase() || (lang === 'mm' ? 'Plan မရှိ' : 'No Plan')}</span>
                 </div>
                 {daysLeft !== null && (

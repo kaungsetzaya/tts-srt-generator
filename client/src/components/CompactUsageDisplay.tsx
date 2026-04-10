@@ -1,4 +1,4 @@
-import { Crown } from "lucide-react";
+import { Star } from "lucide-react";
 
 interface CompactUsageDisplayProps {
   subStatus: any;
@@ -30,7 +30,7 @@ export function CompactUsageDisplay({ subStatus, isCollapsed }: CompactUsageDisp
     if (isCollapsed) {
       return (
         <div className="px-2 py-3 text-center">
-          <Crown className="w-5 h-5 mx-auto mb-1" style={{ color: "#f59e0b" }} />
+          <Star className="w-5 h-5 mx-auto mb-1" style={{ color: "#f59e0b" }} />
           <div className="text-xs font-bold text-yellow-500">TRIAL</div>
         </div>
       );
@@ -39,7 +39,7 @@ export function CompactUsageDisplay({ subStatus, isCollapsed }: CompactUsageDisp
     return (
       <div className="px-3 py-2 space-y-2">
         <div className="flex items-center gap-2 mb-2 p-2 rounded-lg" style={{ background: "rgba(245, 158, 11, 0.15)", border: "1px solid rgba(245, 158, 11, 0.3)" }}>
-          <Crown className="w-4 h-4" style={{ color: "#f59e0b" }} />
+          <Star className="w-4 h-4" style={{ color: "#f59e0b" }} />
           <span className="text-xs font-bold text-yellow-500">TRIAL</span>
         </div>
 
@@ -100,7 +100,7 @@ export function CompactUsageDisplay({ subStatus, isCollapsed }: CompactUsageDisp
     if (isCollapsed) {
       return (
         <div className="px-2 py-3 text-center">
-          <Crown className="w-5 h-5 mx-auto mb-1" style={{ color: "#16a34a" }} />
+          <Star className="w-5 h-5 mx-auto mb-1" style={{ color: "#16a34a" }} />
           <div className="text-xs font-bold text-green-500">{plan?.toUpperCase()}</div>
         </div>
       );
@@ -109,7 +109,7 @@ export function CompactUsageDisplay({ subStatus, isCollapsed }: CompactUsageDisp
     return (
       <div className="px-3 py-2 space-y-2">
         <div className="flex items-center gap-2 mb-2 p-2 rounded-lg" style={{ background: "rgba(34, 197, 94, 0.15)", border: "1px solid rgba(34, 197, 94, 0.3)" }}>
-          <Crown className="w-4 h-4" style={{ color: "#22c55e" }} />
+          <Star className="w-4 h-4" style={{ color: "#22c55e" }} />
           <span className="text-xs font-bold text-green-400">{plan?.toUpperCase()}</span>
         </div>
 
