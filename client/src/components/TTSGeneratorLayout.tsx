@@ -34,7 +34,7 @@ export function TTSGeneratorLayout({ children, currentSecondaryTab, onTabChange,
           currentTab={currentSecondaryTab}
           onTabChange={onTabChange}
         />
-        <SidebarInset>
+        <SidebarInset className="bg-transparent border-none">
           <header className="flex h-14 shrink-0 items-center gap-2 px-4 border-b">
             <div className="text-sm font-semibold opacity-60">LUMIX TTS Generator</div>
           </header>
@@ -48,8 +48,8 @@ export function TTSGeneratorLayout({ children, currentSecondaryTab, onTabChange,
 }
 
 interface TTSGeneratorSidebarProps {
-  currentTab: string;
-  onTabChange: (tab: string) => void;
+  currentTab: string | null;
+  onTabChange: (tab: string | null) => void;
 }
 
 function TTSGeneratorSidebar({ currentTab, onTabChange }: TTSGeneratorSidebarProps) {
