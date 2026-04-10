@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -14,7 +14,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { History, Crown, BookOpen, Settings, LogOut, Menu, PanelLeft } from "lucide-react";
+import { History, Crown, BookOpen, Settings, LogOut, PanelLeft } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { trpc } from "@/lib/trpc";
 import { CompactUsageDisplay } from "./CompactUsageDisplay";
@@ -38,7 +38,7 @@ export function TTSGeneratorLayout({ children, currentSecondaryTab, onTabChange 
             <div className="w-full flex items-center justify-between">
               <div className="text-sm font-semibold opacity-60">LUMIX TTS Generator</div>
               <SidebarTrigger className="-ml-1">
-                <PanelLeftIcon className="h-5 w-5" />
+                <PanelLeft className="h-5 w-5" />
               </SidebarTrigger>
             </div>
           </header>
@@ -54,8 +54,6 @@ export function TTSGeneratorLayout({ children, currentSecondaryTab, onTabChange 
 interface TTSGeneratorSidebarProps {
   currentTab: string;
   onTabChange: (tab: string) => void;
-  isMobileMenuOpen: boolean;
-  setIsMobileMenuOpen: (open: boolean) => void;
 }
 
 function TTSGeneratorSidebar({ currentTab, onTabChange }: TTSGeneratorSidebarProps) {
