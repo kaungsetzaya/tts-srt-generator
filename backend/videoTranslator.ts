@@ -115,19 +115,28 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
     try {
         console.log(`[Video Translator] Attempting to download: ${url}`);
 
-        // ── Download with yt-dlp using player client strategies ──
-        console.log("[Video Translator] Downloading with yt-dlp...");
+        const cookiePath = path.join(process.cwd(), 'cookies.txt');
+        const hasCookies = existsSync(cookiePath);
+
+        if (!hasCookies) {
+          throw new Error("cookies.txt not found. Please upload cookies.txt to the server.");
+        }
+
+        // ── Download with yt-dlp using cookies and player client strategies ──
+        console.log("[Video Translator] Downloading with yt-dlp (using cookies)...");
 
         const strategies = [
-          // tv client — most reliable for bot detection
+          // WITH COOKIES - tv client
+          ["--cookies", cookiePath, "--extractor-args", "youtube:player_client=tv", "-f", "bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b", "--merge-output-format", "mp4"],
+          // WITH COOKIES - web_creator client
+          ["--cookies", cookiePath, "--extractor-args", "youtube:player_client=web_creator", "-f", "bv*+ba/b", "--merge-output-format", "mp4"],
+          // WITH COOKIES - generic
+          ["--cookies", cookiePath, "-f", "b", "--recode-video", "mp4"],
+          // WITHOUT COOKIES - tv client
           ["--extractor-args", "youtube:player_client=tv", "-f", "b[ext=mp4]/b", "--merge-output-format", "mp4"],
-          // mweb client
+          // WITHOUT COOKIES - mweb client
           ["--extractor-args", "youtube:player_client=mweb", "-f", "b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4"],
-          // android client
-          ["--extractor-args", "youtube:player_client=android", "-f", "b[ext=mp4]/b", "--merge-output-format", "mp4"],
-          // web_creator client
-          ["--extractor-args", "youtube:player_client=web_creator", "-f", "b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4"],
-          // generic fallback
+          // WITHOUT COOKIES - generic fallback
           ["-f", "bv*+ba/b", "--merge-output-format", "mp4"],
         ];
 
@@ -135,9 +144,11 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
         for (let i = 0; i < strategies.length; i++) {
           await fs.unlink(tempVideoPath).catch(() => {});
           try {
-            console.log(`[Video Translator] Strategy ${i + 1}/${strategies.length}...`);
+            const isCookie = strategies[i].includes("--cookies");
+            const label = isCookie ? "WithCookies" : "NoCookies";
+            console.log(`[Video Translator] Strategy ${i + 1}/${strategies.length} [${label}]...`);
+
             await execFileAsync("yt-dlp", [
-              "--no-cookies",
               "--no-check-certificates",
               "--no-playlist",
               "--no-warnings",
@@ -150,7 +161,7 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
             const stat = await fs.stat(tempVideoPath).catch(() => null);
             if (stat && stat.size > 10000) {
               dlSuccess = true;
-              console.log(`[Video Translator] ✅ Strategy ${i + 1} success (${Math.round(stat.size / 1024)}KB)`);
+              console.log(`[Video Translator] ✅ Strategy ${i + 1} [${label}] success (${Math.round(stat.size / 1024)}KB)`);
               break;
             }
           } catch (e: any) {

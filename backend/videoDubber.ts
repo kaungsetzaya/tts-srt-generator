@@ -353,20 +353,29 @@ export async function dubVideoFromLink(url: string, options: DubOptions): Promis
   try {
     console.log(`[Dubber] Downloading video from: ${url}`);
 
-    // 🔐 FFmpeg Command Guard: execFile prevents command injection
-    console.log("[Dubber] Downloading with yt-dlp...");
+    const cookiePath = path.join(process.cwd(), 'cookies.txt');
+    const hasCookies = existsSync(cookiePath);
 
-    // Try different player client strategies to bypass bot detection
+    if (!hasCookies) {
+      throw new Error("cookies.txt not found. Please upload cookies.txt to the server.");
+    }
+
+    // 🔐 FFmpeg Command Guard: execFile prevents command injection
+    console.log("[Dubber] Downloading with yt-dlp (using cookies)...");
+
+    // Try different strategies with cookies first, then without
     const strategies = [
-      // tv client — most reliable for bot detection
+      // WITH COOKIES - tv client
+      ["--cookies", cookiePath, "--extractor-args", "youtube:player_client=tv", "-f", "bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b", "--merge-output-format", "mp4"],
+      // WITH COOKIES - web_creator client
+      ["--cookies", cookiePath, "--extractor-args", "youtube:player_client=web_creator", "-f", "bv*+ba/b", "--merge-output-format", "mp4"],
+      // WITH COOKIES - generic
+      ["--cookies", cookiePath, "-f", "b", "--recode-video", "mp4"],
+      // WITHOUT COOKIES - tv client
       ["--extractor-args", "youtube:player_client=tv", "-f", "b[ext=mp4]/b", "--merge-output-format", "mp4"],
-      // mweb client
+      // WITHOUT COOKIES - mweb client
       ["--extractor-args", "youtube:player_client=mweb", "-f", "b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4"],
-      // android client
-      ["--extractor-args", "youtube:player_client=android", "-f", "b[ext=mp4]/b", "--merge-output-format", "mp4"],
-      // web_creator client
-      ["--extractor-args", "youtube:player_client=web_creator", "-f", "b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4"],
-      // generic fallback
+      // WITHOUT COOKIES - generic fallback
       ["-f", "bv*+ba/b", "--merge-output-format", "mp4"],
     ];
 
@@ -374,9 +383,11 @@ export async function dubVideoFromLink(url: string, options: DubOptions): Promis
     for (let i = 0; i < strategies.length; i++) {
       await fs.unlink(tempVideoPath).catch(() => {});
       try {
-        console.log(`[Dubber] Strategy ${i + 1}/${strategies.length}...`);
+        const isCookie = strategies[i].includes("--cookies");
+        const label = isCookie ? "WithCookies" : "NoCookies";
+        console.log(`[Dubber] Strategy ${i + 1}/${strategies.length} [${label}]...`);
+
         await execFileAsync("yt-dlp", [
-          "--no-cookies",
           "--no-check-certificates",
           "--no-playlist",
           "--no-warnings",
@@ -389,7 +400,7 @@ export async function dubVideoFromLink(url: string, options: DubOptions): Promis
         const stat = await fs.stat(tempVideoPath).catch(() => null);
         if (stat && stat.size > 10000) {
           dlSuccess = true;
-          console.log(`[Dubber] ✅ Strategy ${i + 1} success (${Math.round(stat.size / 1024)}KB)`);
+          console.log(`[Dubber] ✅ Strategy ${i + 1} [${label}] success (${Math.round(stat.size / 1024)}KB)`);
           break;
         }
       } catch (e: any) {
@@ -398,7 +409,7 @@ export async function dubVideoFromLink(url: string, options: DubOptions): Promis
     }
 
     if (!dlSuccess) {
-      throw new Error("ဗီဒီယိုကို ဒေါင်းလုတ်မရပါ။ YouTube bot detection ကြောင့် ဖြစ်နိုင်ပါသည်။");
+      throw new Error("ဗီဒီယိုကို ဒေါင်းလုတ်မရပါ။ Link ကို စစ်ပြီး ထပ်ကြိုးစားပါ။");
     }
 
     // Read video buffer and pass to dubVideoFromBuffer
