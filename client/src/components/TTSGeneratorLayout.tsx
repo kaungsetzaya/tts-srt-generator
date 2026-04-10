@@ -2,7 +2,6 @@ import { ReactNode } from "react";
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
@@ -14,8 +13,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { History, Crown, BookOpen, Settings, LogOut, PanelLeft } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { History, Crown, BookOpen, Settings, PanelLeft } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { CompactUsageDisplay } from "./CompactUsageDisplay";
 
@@ -50,16 +48,10 @@ interface TTSGeneratorSidebarProps {
 }
 
 function TTSGeneratorSidebar({ currentTab, onTabChange }: TTSGeneratorSidebarProps) {
-  const queryClient = useQueryClient();
   const { data: me } = trpc.auth.me.useQuery();
   const { data: subStatus } = trpc.subscription.myStatus.useQuery();
   const sidebar = useSidebar();
   const isCollapsed = !sidebar.open;
-
-  const handleLogout = async () => {
-    await queryClient.invalidateQueries({ queryKey: [] });
-    window.location.href = "/login";
-  };
 
   const menuItems = [
     { id: "history", label: "မှတ်တမ်း", labelEn: "History", icon: History },
@@ -109,17 +101,6 @@ function TTSGeneratorSidebar({ currentTab, onTabChange }: TTSGeneratorSidebarPro
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-
-      <SidebarFooter className="border-t border-purple-500/20 bg-transparent">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleLogout}>
-              <LogOut className="h-4 w-4" />
-              <span>Logout</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
     </Sidebar>
   );
 }
