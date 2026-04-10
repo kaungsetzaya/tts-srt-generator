@@ -246,11 +246,30 @@ export default function TTSGenerator() {
 
   // --- PREMIUM UI COLORS ---
   const isDark = theme === "dark";
-  
+
   // Premium colors - light theme uses deep indigo/violet that's readable
-  const accent = isDark ? "oklch(0.65 0.25 310)" : "#6d28d9"; 
-  const accentSecondary = isDark ? "oklch(0.6 0.28 280)" : "#4c1d95"; 
+  const accent = isDark ? "oklch(0.65 0.25 310)" : "#6d28d9";
+  const accentSecondary = isDark ? "oklch(0.6 0.28 280)" : "#4c1d95";
   const subColor = isAdmin ? accent : daysLeft === null ? accent : daysLeft > 14 ? "#16a34a" : daysLeft > 4 ? "#ea580c" : "#dc2626";
+
+  // Helper functions for color opacity (works with both OKLCH and hex)
+  const withOpacity = (color: string, opacity: number) => {
+    if (color.startsWith('oklch')) {
+      return color.replace(')', ` / ${opacity})`);
+    }
+    // Hex color: convert to rgba or use 8-digit hex
+    if (color.startsWith('#') && color.length === 7) {
+      const hex = color.slice(1);
+      const alpha = Math.round(opacity * 255).toString(16).padStart(2, '0');
+      return `#${hex}${alpha}`;
+    }
+    return color;
+  };
+
+  const accent15 = withOpacity(accent, 0.15);
+  const accent30 = withOpacity(accent, 0.30);
+  const accent40 = withOpacity(accent, 0.40);
+  const accent80 = withOpacity(accent, 0.80);
 
   // Light theme: clean white/slate, Dark: cyberpunk gradient
   const bgGradient = isDark
@@ -533,7 +552,7 @@ export default function TTSGenerator() {
         <div className="flex items-center gap-2.5">
           <span
             className="font-black uppercase tracking-[0.2em] text-sm hidden sm:inline"
-            style={{ color: accent, textShadow: isDark ? `0 0 12px ${accent}80` : 'none' }}
+            style={{ color: accent, textShadow: isDark ? `0 0 12px ${accent80}` : 'none' }}
           >
             {t.appName}
           </span>
@@ -1090,7 +1109,7 @@ export default function TTSGenerator() {
                         </div>
 
                         {srtBlurBg && (
-                          <div className="space-y-4 pl-2 border-l-2" style={{ borderColor: `${accent}40` }}>
+                          <div className="space-y-4 pl-2 border-l-2" style={{ borderColor: accent40 }}>
                             <div>
                               <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: subtextColor }}>{lang === "mm" ? "ဘောက်စ် အရောင်" : "Box Color"}</p>
                               <div className="flex gap-2">
@@ -1324,7 +1343,7 @@ export default function TTSGenerator() {
             ) : !historyData || historyData.length === 0 ? (
               <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
                 <div className="text-center py-12 sm:py-16 px-4">
-                  <div className="w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center" style={{ background: `${accent}15` }}>
+                  <div className="w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center" style={{ background: accent15 }}>
                     <ClockIcon className="w-10 h-10" style={{ color: accent }} />
                   </div>
                   <h3 className="text-xl sm:text-2xl font-bold mb-2" style={{ color: textColor }}>
@@ -1363,7 +1382,7 @@ export default function TTSGenerator() {
                   };
                   return (
                     <div key={item.id} className="flex items-center gap-3 p-3 sm:p-4 rounded-2xl border backdrop-blur-xl transition-all" style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
-                      <div className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: item.status === "fail" ? "rgba(220,38,38,0.2)" : `${accent}15`, color: item.status === "fail" ? "#ef4444" : accent }}>
+                      <div className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: item.status === "fail" ? "rgba(220,38,38,0.2)" : accent15, color: item.status === "fail" ? "#ef4444" : accent }}>
                         <span className="text-lg">{featureEmoji(item.feature || "tts")}</span>
                       </div>
                       <div className="flex-1 min-w-0">
@@ -1386,7 +1405,7 @@ export default function TTSGenerator() {
                   );
                 })}
               </div>
-            )
+            )}
           </div>
         )}
 
@@ -1399,7 +1418,7 @@ export default function TTSGenerator() {
             </div>
 
             {/* Current Plan Card */}
-            <div className="rounded-2xl border-2 p-6 sm:p-8 mb-6" style={{ background: `linear-gradient(135deg, ${isDark ? 'rgba(139,92,246,0.08)' : 'rgba(139,92,246,0.05)'}, ${cardBg})`, borderColor: accent + '40', boxShadow: `0 0 30px ${accent}15` }}>
+            <div className="rounded-2xl border-2 p-6 sm:p-8 mb-6" style={{ background: `linear-gradient(135deg, ${isDark ? 'rgba(139,92,246,0.08)' : 'rgba(139,92,246,0.05)'}, ${cardBg})`, borderColor: accent40, boxShadow: `0 0 30px ${accent15}` }}>
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-3">
                   <Crown className="w-6 h-6" style={{ color: currentPlan === 'trial' ? '#f59e0b' : accent }} />
@@ -1420,10 +1439,10 @@ export default function TTSGenerator() {
                   { label: lang === 'mm' ? 'ဗီဒီယိုဘာသာပြန်' : 'Video Translation', used: tu.videoTranslate || 0, total: tl.totalVideoTranslate || 0, color: '#60a5fa' },
                   { label: lang === 'mm' ? 'ဗီဒီယိုဖန်တီးမှု' : 'Video Creation', used: tu.aiVideo || 0, total: tl.totalAiVideo || 0, color: '#4ade80' },
                 ] : currentPlan !== 'trial' && planUsage && planLimits ? [
-                  { label: lang === 'mm' ? 'အသံဖန်တီးမှု' : 'Voice Generation', used: planUsage.tts, total: planLimits.dailyTtsSrt, color: accent },
-                  { label: lang === 'mm' ? 'အသံပြောင်းမှု' : 'Voice Change', used: planUsage.characterUse, total: planLimits.dailyCharacterUse, color: '#f59e0b' },
-                  { label: lang === 'mm' ? 'ဗီဒီယိုဘာသာပြန်' : 'Video Translation', used: planUsage.videoTranslate, total: planLimits.dailyVideoTranslate, color: '#60a5fa' },
-                  { label: lang === 'mm' ? 'ဗီဒီယိုဖန်တီးမှု' : 'Video Creation', used: planUsage.aiVideo, total: planLimits.dailyAiVideo, color: '#4ade80' },
+                  { label: lang === 'mm' ? 'အသံဖန်တီးမှု' : 'Voice Generation', used: planUsage.tts || 0, total: planLimits.dailyTtsSrt || 0, color: accent },
+                  { label: lang === 'mm' ? 'အသံပြောင်းမှု' : 'Voice Change', used: planUsage.characterUse || 0, total: planLimits.dailyCharacterUse || 0, color: '#f59e0b' },
+                  { label: lang === 'mm' ? 'ဗီဒီယိုဘာသာပြန်' : 'Video Translation', used: planUsage.videoTranslate || 0, total: planLimits.dailyVideoTranslate || 0, color: '#60a5fa' },
+                  { label: lang === 'mm' ? 'ဗီဒီယိုဖန်တီးမှု' : 'Video Creation', used: planUsage.aiVideo || 0, total: planLimits.dailyAiVideo || 0, color: '#4ade80' },
                 ] : [];
                 return (
                   <div className="space-y-4">
@@ -1453,7 +1472,7 @@ export default function TTSGenerator() {
                   { name: "Business", price: "30,000 Ks", period: lang === "mm" ? "/ လ" : "/ mo", features: [lang === "mm" ? "အကန့်အသတ်မဲ့" : "Unlimited", lang === "mm" ? "စာလုံး ၁၀၀,၀၀၀" : "100,000 chars", lang === "mm" ? "ဗီဒီယို ၂၀/ရက်" : "20 videos/day", "Priority Support"], color: "#f59e0b", popular: false },
                   { name: "Enterprise", price: lang === "mm" ? "ညှိနှိုင်း" : "Custom", period: "", features: [lang === "mm" ? "အကုန်အကန့်အသတ်မဲ့" : "Everything unlimited", "API Access", "24/7 Support", lang === "mm" ? "စနစ်ချိတ်ဆက်မှု" : "Custom integration"], color: "#c084fc", popular: false },
                 ].map(plan => (
-                  <div key={plan.name} className="rounded-2xl border p-5 sm:p-6 relative transition-all hover:scale-[1.02]" style={{ background: `linear-gradient(145deg, ${cardBg}, ${isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)'})`, borderColor: plan.popular ? accent : cardBorder, boxShadow: plan.popular ? `0 0 25px ${accent}30` : boxShadow }}>
+                  <div key={plan.name} className="rounded-2xl border p-5 sm:p-6 relative transition-all hover:scale-[1.02]" style={{ background: `linear-gradient(145deg, ${cardBg}, ${isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)'})`, borderColor: plan.popular ? accent : cardBorder, boxShadow: plan.popular ? `0 0 25px ${accent30}` : boxShadow }}>
                     {plan.popular && <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-wider" style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, color: "#fff" }}>{lang === "mm" ? "လူကြိုက်များ" : "Popular"}</div>}
                     <h4 className="text-lg font-black uppercase mt-1" style={{ color: plan.color }}>{plan.name}</h4>
                     <div className="flex items-baseline gap-1 mt-2 mb-4">
@@ -1467,7 +1486,7 @@ export default function TTSGenerator() {
                         </div>
                       ))}
                     </div>
-                    <button className="w-full py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all hover:brightness-110" style={{ background: plan.popular ? `linear-gradient(135deg, ${accent}, ${accentSecondary})` : 'transparent', color: plan.popular ? '#fff' : accent, border: plan.popular ? 'none' : `2px solid ${accent}40` }}>
+                    <button className="w-full py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all hover:brightness-110" style={{ background: plan.popular ? `linear-gradient(135deg, ${accent}, ${accentSecondary})` : 'transparent', color: plan.popular ? '#fff' : accent, border: plan.popular ? 'none' : `2px solid ${accent40}` }}>
                       {lang === "mm" ? "ဝယ်ယူရန်" : "Subscribe"}
                     </button>
                   </div>
@@ -1489,7 +1508,7 @@ export default function TTSGenerator() {
               {/* TTS Guide */}
               <div className="rounded-2xl border p-5 sm:p-7" style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
                 <div className="flex items-center gap-3 mb-4">
-                  <span className="w-10 h-10 rounded-xl flex items-center justify-center text-lg" style={{ background: accent + '15' }}>🎙️</span>
+                  <span className="w-10 h-10 rounded-xl flex items-center justify-center text-lg" style={{ background: accent15 }}>🎙️</span>
                   <h3 className="text-base sm:text-lg font-black uppercase tracking-wider" style={{ color: accent }}>{lang === "mm" ? "စာမှအသံ (TTS)" : "Text-to-Speech (TTS)"}</h3>
                 </div>
                 <div className="space-y-2.5 pl-1">

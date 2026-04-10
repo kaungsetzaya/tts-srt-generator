@@ -15,7 +15,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { History, Crown, BookOpen, Settings, PanelLeft, Mic, FileVideo, Wand2 } from "lucide-react";
+import { History, Star, BookOpen, Settings, PanelLeft, Mic, FileVideo, Wand2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { CompactUsageDisplay } from "./CompactUsageDisplay";
 
@@ -123,7 +123,7 @@ function TTSGeneratorSidebar({ currentTab, onTabChange }: TTSGeneratorSidebarPro
 
   const menuItems: { id: "history" | "plan" | "guide" | "settings"; label: string; labelEn: string; icon: React.ElementType }[] = [
     { id: "history", label: "မှတ်တမ်း", labelEn: "History", icon: History },
-    { id: "plan", label: "Plan", labelEn: "Plan", icon: Crown },
+    { id: "plan", label: "Plan", labelEn: "Plan", icon: Star },
     { id: "guide", label: "လမ်းညွှန်", labelEn: "Guide", icon: BookOpen },
     { id: "settings", label: "ဆက်တင်", labelEn: "Settings", icon: Settings },
   ];
@@ -134,20 +134,7 @@ function TTSGeneratorSidebar({ currentTab, onTabChange }: TTSGeneratorSidebarPro
         className="border-b bg-transparent"
         style={{ borderColor: "rgba(139, 92, 246, 0.2)" }}
       >
-        <div className="flex items-center justify-between gap-2 px-2 py-3">
-          {!isCollapsed ? (
-            <div className="flex items-center gap-2 min-w-0">
-              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-purple-400 leading-none">
-                LUMIX
-              </p>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 min-w-0">
-              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-purple-400 leading-none">
-                L
-              </p>
-            </div>
-          )}
+        <div className="flex items-center justify-end gap-2 px-2 py-3">
           <SidebarTrigger
             className="flex-shrink-0 rounded-lg p-1.5 transition-colors"
             style={{ color: "rgba(167,139,250,0.7)" }}
