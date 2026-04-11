@@ -53,7 +53,7 @@ export default function Landing() {
 
       {/* NAV */}
       <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-2xl" style={{ background: C.glass, backdropFilter: "blur(24px)", border: `1px solid ${C.glassB}`, boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-8">
           <span className="text-2xl font-black tracking-tight" style={{ color: C.gold }}>LUMIX</span>
           <button onClick={() => featRef.current?.scrollIntoView({ behavior: 'smooth' })} className="text-xs uppercase tracking-[0.2em]" style={{ color: C.nude }}>Features</button>
           <button onClick={go} className="px-6 py-2 rounded-full text-xs font-bold uppercase tracking-[0.15em]" style={{ background: C.gold, color: C.dark }}>Login</button>
@@ -64,7 +64,7 @@ export default function Landing() {
       <div ref={heroRef} className="relative z-10 flex items-center justify-center min-h-screen px-4" style={{ scrollSnapAlign: "start" }}>
         <motion.div style={{ opacity: heroOp, scale: heroScale, rotateX: heroRotate }} className="text-center">
           <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-            className="mb-6 inline-block px-4 py-1.5 rounded-full text-[10px] uppercase tracking-[0.4em] font-semibold"
+            className="mb-12 inline-block px-4 py-1.5 rounded-full text-[10px] uppercase tracking-[0.4em] font-semibold"
             style={{ background: C.glass, backdropFilter: "blur(12px)", border: `1px solid ${C.glassB}`, color: C.gold }}>
             Myanmar AI Content Platform
           </motion.div>
@@ -87,8 +87,8 @@ export default function Landing() {
             AI Voice · Smart Subtitles · Video-to-Burmese Translation
           </motion.p>
           <motion.button initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}
-            whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.96 }} onClick={() => featRef.current?.scrollIntoView({ behavior: 'smooth' })}
-            className="px-10 py-4 rounded-2xl text-sm font-black uppercase tracking-[0.15em]"
+            whileTap={{ scale: 0.96 }} onClick={() => featRef.current?.scrollIntoView({ behavior: 'smooth' })}
+            className="px-10 py-4 rounded-2xl text-sm font-black uppercase tracking-[0.15em] transition-transform duration-150"
             style={{ background: C.glass, backdropFilter: "blur(16px)", border: `1px solid ${C.glassB}`, color: C.gold, boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
             Ready to Use ↓
           </motion.button>
