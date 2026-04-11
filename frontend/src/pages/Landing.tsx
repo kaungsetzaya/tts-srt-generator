@@ -140,6 +140,7 @@ export default function Landing() {
       style={{
         background: `radial-gradient(ellipse 120% 80% at 50% -10%, ${C.teal}33 0%, ${C.bg} 60%)`,
         fontFamily: "'Inter', 'Segoe UI', sans-serif",
+        scrollSnapType: "y proximity",
       }}
     >
       {/* ─── FULL PAGE GRID ─── */}
@@ -225,7 +226,7 @@ export default function Landing() {
           HERO SECTION
       ═══════════════════════════════════════════ */}
       <div
-        ref={heroRef}
+        ref={heroRef} style={{ scrollSnapAlign: "start" }}
         className="relative z-10 flex flex-col items-center justify-center min-h-screen text-center px-4"
       >
         {/* BIG glow blob */}

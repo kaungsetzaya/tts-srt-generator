@@ -131,6 +131,10 @@
 }
 
 @layer base {
+    html {
+      scroll-behavior: smooth;
+      scroll-snap-type: y proximity;
+    }
   * {
     @apply border-border outline-ring/50;
   }
