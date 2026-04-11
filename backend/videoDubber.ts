@@ -58,12 +58,11 @@ function getAudioDuration(filePath: string): Promise<number> {
   });
 }
 
-// ───── Whisper transcription — uses execFile with argument array ─────
+// ───── Whisper transcription ─────
 async function transcribeLocalWhisper(audioPath: string): Promise<{ text: string; srt: string }> {
   const outputDir = path.dirname(audioPath);
   const baseName = path.parse(audioPath).name;
 
-  // 🔐 FFmpeg Command Guard: execFile with argument array prevents command injection
   await execFileAsync("whisper", [
     audioPath,
     "--model", "base",
@@ -74,7 +73,6 @@ async function transcribeLocalWhisper(audioPath: string): Promise<{ text: string
   const textPath = path.join(outputDir, `${baseName}.txt`);
   const srtPath = path.join(outputDir, `${baseName}.srt`);
 
-  // 🔐 Path traversal check
   if (!isPathWithinDir(textPath, outputDir) || !isPathWithinDir(srtPath, outputDir)) {
     throw new Error("Invalid file path detected.");
   }
@@ -159,7 +157,6 @@ function buildMyanmarSRT(text: string, durationMs: number, charsPerLine: number 
 
 // ───── Convert hex color to ASS color format ─────
 function hexToASS(hex: string): string {
-  // ASS format: &HAABBGGRR (alpha, blue, green, red)
   const r = hex.slice(1, 3);
   const g = hex.slice(3, 5);
   const b = hex.slice(5, 7);
@@ -168,12 +165,10 @@ function hexToASS(hex: string): string {
 
 // ───── MAIN: Dub video from buffer ─────
 export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, options: DubOptions): Promise<DubResult> {
-  // 🔐 UUID Filenames: never use original filename
   const id = randomUUID();
   const tempDir = path.join(tmpdir(), `dub_${id}`);
   await fs.mkdir(tempDir, { recursive: true });
 
-  // 🔐 Path traversal check
   if (!isPathWithinDir(tempDir, tmpdir())) {
     throw new Error("Invalid temp directory.");
   }
@@ -185,11 +180,9 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
   const tempOutputPath = path.join(tempDir, `output_${id}.mp4`);
 
   try {
-    // Step 1: Write video to disk
     await fs.writeFile(tempVideoPath, videoBuffer);
     console.log(`[Dubber] Video saved: ${Math.round(videoBuffer.length / 1024)}KB`);
 
-    // Step 2: Extract audio
     console.log(`[Dubber] Extracting audio...`);
     await new Promise<void>((resolve, reject) => {
       ffmpeg(tempVideoPath)
@@ -200,17 +193,14 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
         .save(tempAudioExtract);
     });
 
-    // Step 3: Whisper transcribe
     console.log(`[Dubber] Transcribing with Whisper...`);
     const { text: englishText } = await transcribeLocalWhisper(tempAudioExtract);
     if (!englishText?.trim()) throw new Error("Whisper could not detect any speech.");
 
-    // Step 4: Gemini translate to Myanmar (with prompt injection guard)
     console.log(`[Dubber] Translating to Myanmar...`);
     const sanitizedText = sanitizeForAI(englishText);
     const { myanmar: myanmarText } = await geminiTranslate(sanitizedText);
 
-    // Step 5: Generate TTS audio
     console.log(`[Dubber] Generating TTS (voice=${options.character || options.voice}, speed=${options.speed}, pitch=${options.pitch})...`);
     let ttsResult;
     if (options.character && options.character.trim()) {
@@ -220,42 +210,33 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
     }
     await fs.writeFile(tempTTSAudio, ttsResult.audioBuffer);
 
-    // Step 6: Get durations
     const videoDuration = await getVideoDuration(tempVideoPath);
     const audioDuration = await getAudioDuration(tempTTSAudio);
     console.log(`[Dubber] Video duration: ${videoDuration.toFixed(1)}s, TTS duration: ${audioDuration.toFixed(1)}s`);
 
-    // Step 7: Calculate speed adjustment
     const speedRatio = videoDuration / audioDuration;
     const needSpeedAdjust = Math.abs(speedRatio - 1.0) > 0.05;
 
-    // Step 8: Build SRT file if enabled
     let srtContent = "";
     if (options.srtEnabled) {
       srtContent = buildMyanmarSRT(myanmarText, ttsResult.durationMs, 20);
-      // 🔤 Write SRT with UTF-8 BOM for Myanmar character encoding
       const BOM = '\uFEFF';
       await fs.writeFile(tempSrtPath, BOM + srtContent, 'utf-8');
     }
 
-    // Step 9: Combine everything with FFmpeg
     console.log(`[Dubber] Combining video + TTS audio${needSpeedAdjust ? ` (speed adjust: ${speedRatio.toFixed(2)}x)` : ""}${options.srtEnabled ? " + SRT" : ""}...`);
-    
+
     await new Promise<void>((resolve, reject) => {
       let cmd = ffmpeg(tempVideoPath);
-      
-      // Add TTS audio as second input
       cmd = cmd.input(tempTTSAudio);
 
-      // Build complex filter
       const filters: string[] = [];
-      
-      // Video: adjust speed if needed
+
       if (needSpeedAdjust) {
         const clampedRatio = Math.max(0.5, Math.min(2.0, speedRatio));
         filters.push(`[0:v]setpts=PTS/${clampedRatio}[vspeed]`);
       }
-      
+
       const videoLabel = needSpeedAdjust ? "[vspeed]" : "[0:v]";
 
       if (options.srtEnabled && existsSync(tempSrtPath)) {
@@ -263,24 +244,20 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
         const fontColor = hexToASS(options.srtColor || "#ffffff");
         const marginV = options.srtMarginV ?? 30;
         const shadowStr = options.srtDropShadow !== false ? ",Shadow=2,BackColour=&H80000000" : ",Shadow=0";
-        
+
         const blurColor = options.srtBlurColor === "white" ? "FFFFFF" : "000000";
         const blurAlpha = options.srtBlurBg !== false ? Math.min(255, Math.max(0, Math.round((options.srtBlurSize ?? 8) * 16))).toString(16).toUpperCase().padStart(2, '0') : 'FF';
         const borderStyle = options.srtBlurBg !== false ? `,BorderStyle=4,BackColour=&H${blurAlpha}${blurColor},Outline=0` : ",BorderStyle=1,Outline=2,OutlineColour=&H40000000";
-        
+
         const marginLR = options.srtFullWidth ? ",MarginL=0,MarginR=0" : "";
-        
         const escapedSrtPath = tempSrtPath.replace(/\\/g, '/').replace(/:/g, '\\:');
-        
-        // 🔤 Myanmar Font Fix: specify fonts that support Myanmar Unicode
-        // Priority: Noto Sans Myanmar → Padauk → Myanmar Text → Pyidaungsu → fallback
         const myanmarFont = "Fontname=Noto Sans Myanmar";
-        const encoding = ",Encoding=1"; // UTF-8 encoding for ASS
-        
+        const encoding = ",Encoding=1";
+
         filters.push(`${videoLabel}subtitles='${escapedSrtPath}':force_style='${myanmarFont},FontSize=${fontSize},PrimaryColour=${fontColor},Alignment=2,MarginV=${marginV}${marginLR}${shadowStr}${borderStyle}${encoding}'[vfinal]`);
       } else {
         if (needSpeedAdjust) {
-          filters.push(`${videoLabel}copy[vfinal]`);
+          filters.push(`${videoLabel}null[vfinal]`);
         }
       }
 
@@ -318,7 +295,6 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
         .save(tempOutputPath);
     });
 
-    // Step 10: Read output and return
     const outputBuffer = await fs.readFile(tempOutputPath);
     console.log(`[Dubber] ✅ Done! Output: ${Math.round(outputBuffer.length / 1024 / 1024 * 10) / 10}MB`);
 
@@ -330,14 +306,12 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
     };
 
   } finally {
-    // Cleanup
     await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
   }
 }
 
 // ───── MAIN: Dub video from URL ─────
 export async function dubVideoFromLink(url: string, options: DubOptions): Promise<DubResult> {
-  // 🔐 yt-dlp Domain Whitelist
   if (!isAllowedVideoUrl(url)) {
     throw new Error("ခွင့်ပြုထားသော Link များသာ သုံးနိုင်ပါသည်။ YouTube, TikTok, Facebook Link သာ ထည့်ပါ။");
   }
@@ -345,7 +319,6 @@ export async function dubVideoFromLink(url: string, options: DubOptions): Promis
   const id = randomUUID();
   const tempVideoPath = path.join(tmpdir(), `dub_dl_${id}.mp4`);
 
-  // 🔐 Path traversal check
   if (!isPathWithinDir(tempVideoPath, tmpdir())) {
     throw new Error("Invalid temp directory.");
   }
@@ -356,41 +329,53 @@ export async function dubVideoFromLink(url: string, options: DubOptions): Promis
     const cookiePath = path.join(process.cwd(), 'cookies.txt');
     const hasCookies = existsSync(cookiePath);
 
-    if (!hasCookies) {
-      throw new Error("cookies.txt not found. Please upload cookies.txt to the server.");
+    // 🌐 Proxy support — reads YTDLP_PROXY from .env
+    const proxyUrl = process.env.YTDLP_PROXY || "";
+    const proxyArgs = proxyUrl ? ["--proxy", proxyUrl] : [];
+
+    if (proxyUrl) {
+      console.log(`[Dubber] Using proxy: ${proxyUrl.replace(/:[^:@]+@/, ':***@')}`);
     }
 
-    // 🔐 FFmpeg Command Guard: execFile prevents command injection
-    console.log("[Dubber] Downloading with yt-dlp (using cookies)...");
+    console.log("[Dubber] Downloading with yt-dlp...");
 
-    // Try different strategies with cookies first, then without
     const strategies = [
-      // WITH COOKIES - tv client
-      ["--cookies", cookiePath, "--extractor-args", "youtube:player_client=tv", "-f", "bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b", "--merge-output-format", "mp4"],
-      // WITH COOKIES - web_creator client
-      ["--cookies", cookiePath, "--extractor-args", "youtube:player_client=web_creator", "-f", "bv*+ba/b", "--merge-output-format", "mp4"],
-      // WITH COOKIES - generic
-      ["--cookies", cookiePath, "-f", "b", "--recode-video", "mp4"],
-      // WITHOUT COOKIES - tv client
+      // ✅ WITH COOKIES + PROXY - default best
+      ...(hasCookies ? [
+        ["--cookies", cookiePath, ...proxyArgs, "-f", "18/mp4[height<=480]/worst[ext=mp4]"],
+        ["--cookies", cookiePath, ...proxyArgs, "--extractor-args", "youtube:player_client=tv", "-f", "18/mp4[height<=480]/worst[ext=mp4]"],
+        ["--cookies", cookiePath, ...proxyArgs, "-f", "b", "--recode-video", "mp4"],
+      ] : []),
+      // ✅ PROXY ONLY - no cookies
+      ...(proxyUrl ? [
+        [...proxyArgs, "-f", "18/mp4[height<=480]/worst[ext=mp4]"],
+        [...proxyArgs, "--extractor-args", "youtube:player_client=tv", "-f", "b[ext=mp4]/b", "--merge-output-format", "mp4"],
+      ] : []),
+      // ✅ NO PROXY NO COOKIES - last resort
+      ["-f", "18/mp4[height<=480]/worst[ext=mp4]"],
       ["--extractor-args", "youtube:player_client=tv", "-f", "b[ext=mp4]/b", "--merge-output-format", "mp4"],
-      // WITHOUT COOKIES - mweb client
-      ["--extractor-args", "youtube:player_client=mweb", "-f", "b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4"],
-      // WITHOUT COOKIES - generic fallback
-      ["-f", "bv*+ba/b", "--merge-output-format", "mp4"],
     ];
 
     let dlSuccess = false;
     for (let i = 0; i < strategies.length; i++) {
       await fs.unlink(tempVideoPath).catch(() => {});
       try {
-        const isCookie = strategies[i].includes("--cookies");
-        const label = isCookie ? "WithCookies" : "NoCookies";
+        const hasCookie = strategies[i].includes("--cookies");
+        const hasProxy = strategies[i].includes("--proxy");
+        const label = `${hasCookie ? "Cookies" : "NoCookies"}+${hasProxy ? "Proxy" : "NoProxy"}`;
         console.log(`[Dubber] Strategy ${i + 1}/${strategies.length} [${label}]...`);
 
         await execFileAsync("yt-dlp", [
           "--no-check-certificates",
+          "--socket-timeout", "30",
+          "--no-part",
+          "--socket-timeout", "30",
+          "--no-part",
           "--no-playlist",
           "--no-warnings",
+          "--retries", "3",
+          "--fragment-retries", "3",
+          "--http-chunk-size", "10M",
           "--max-filesize", "50M",
           ...strategies[i],
           "-o", tempVideoPath,
@@ -412,7 +397,6 @@ export async function dubVideoFromLink(url: string, options: DubOptions): Promis
       throw new Error("ဗီဒီယိုကို ဒေါင်းလုတ်မရပါ။ Link ကို စစ်ပြီး ထပ်ကြိုးစားပါ။");
     }
 
-    // Read video buffer and pass to dubVideoFromBuffer
     const videoBuffer = await fs.readFile(tempVideoPath);
     return await dubVideoFromBuffer(videoBuffer, `downloaded_${id}.mp4`, options);
 

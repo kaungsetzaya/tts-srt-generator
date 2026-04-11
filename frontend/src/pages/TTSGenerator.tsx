@@ -1,8 +1,8 @@
 import { useState, useRef, useMemo, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { trpc } from "@/lib/trpc";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, Download, Volume2, LogOut, Crown, AlertCircle, Mic, FileVideo, Settings, Sparkles, Upload, Sun, Moon, Copy, Check, Link as LinkIcon, Wand2, Clock as ClockIcon, Info, ChevronDown, BookOpen, History as HistoryIcon, Zap, ExternalLink, Star } from "lucide-react";
+import { ChevronUp, Loader2, Download, Volume2, LogOut, Crown, AlertCircle, Mic, FileVideo, Settings, Sparkles, Upload, Sun, Moon, Copy, Check, Link as LinkIcon, Wand2, Clock as ClockIcon, Info, ChevronDown, BookOpen, History as HistoryIcon, Zap, ExternalLink, Star } from "lucide-react";
 import { useLocation } from "wouter";
 import { TTSGeneratorLayout } from "@/components/TTSGeneratorLayout";
 
@@ -157,6 +157,7 @@ const T = {
 export default function TTSGenerator() {
   const [mainTab, setMainTab] = useState<MainTab>("tts");
   const [secondaryTab, setSecondaryTab] = useState<SecondaryTab>(null);
+  const [menuOpen, setMenuOpen] = useState(true);
   const [theme, setTheme] = useState<Theme>("dark");
   const [lang, setLang] = useState<Lang>("mm");
   const t = T[lang];
@@ -223,7 +224,7 @@ export default function TTSGenerator() {
 
   // Dubbing SRT overlay settings
   const [srtEnabled, setSrtEnabled] = useState(true);
-  const [srtFontSize, setSrtFontSize] = useState(24);
+  const [srtFontSize, setSrtFontSize] = useState(10);
   const [srtColor, setSrtColor] = useState("#ffffff");
   const [srtDropShadow, setSrtDropShadow] = useState(true);
   const [srtBlurBg, setSrtBlurBg] = useState(true);
@@ -232,7 +233,7 @@ export default function TTSGenerator() {
   const [srtBlurColor, setSrtBlurColor] = useState<"black" | "white">("black");
   const [srtFullWidth, setSrtFullWidth] = useState(false);
   const [srtBorderRadius, setSrtBorderRadius] = useState<"rounded" | "square">("rounded");
-  const [srtBoxPadding, setSrtBoxPadding] = useState(8); // Blur box height/padding in px
+  const [srtBoxPadding, setSrtBoxPadding] = useState(4); // Blur box height/padding in px
 
   // Accordion state for mobile-friendly collapsible sections
   const [voiceAccordionOpen, setVoiceAccordionOpen] = useState(true);
@@ -315,19 +316,29 @@ export default function TTSGenerator() {
   }, [videoUrl, videoFile]);
 
   // Auto-preview video for dubbing tab when URL changes
+  const dubPreviewMutation = trpc.video.previewLink.useMutation();
+  const dubPreviewUrlRef = useRef<string>("");
+
   useEffect(() => {
-    if (dubVideoUrl.trim() && !dubVideoFile) {
-      setVideoLoading(true);
-      setVideoPreviewError("");
-      setDubPreviewUrl(dubVideoUrl.trim());
-      setVideoLoading(false);
-      return;
-    } else if (!dubVideoUrl && !dubVideoFile) {
+    if (!dubVideoUrl && !dubVideoFile) {
       setDubPreviewUrl("");
       setVideoPreviewError("");
       setVideoLoading(false);
+      dubPreviewUrlRef.current = "";
+      return;
     }
+    if (!dubVideoUrl.trim() || dubVideoFile) return;
+    const timer = setTimeout(() => {
+      const url = dubVideoUrl.trim();
+      if (!url || dubPreviewUrlRef.current === url) return;
+      dubPreviewUrlRef.current = url;
+      setVideoPreviewError("");
+      setDubPreviewUrl(url);
+      setVideoLoading(false);
+    }, 800);
+    return () => clearTimeout(timer);
   }, [dubVideoUrl, dubVideoFile]);
+
 
   // Light theme: Canvas Cloud #EDF1F5, Dark: cyberpunk gradient
   const bgGradient = isDark
@@ -640,61 +651,15 @@ export default function TTSGenerator() {
         <div className="absolute inset-0" style={{ backgroundImage: `linear-gradient(0deg, transparent 24%, ${isDark ? '#66ccff' : '#6366f1'} 25%, ${isDark ? '#66ccff' : '#6366f1'} 26%, transparent 27%, transparent 74%, ${isDark ? '#66ccff' : '#6366f1'} 75%, ${isDark ? '#66ccff' : '#6366f1'} 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, ${isDark ? '#66ccff' : '#6366f1'} 25%, ${isDark ? '#66ccff' : '#6366f1'} 26%, transparent 27%, transparent 74%, ${isDark ? '#66ccff' : '#6366f1'} 75%, ${isDark ? '#66ccff' : '#6366f1'} 76%, transparent 77%, transparent)`, backgroundSize: '50px 50px' }} />
       </div>
 
-      {/* ═══ UNIFIED PREMIUM MENU BAR ═══ */}
-      <motion.div
-        className={`${shouldNavStick ? 'sticky top-0' : ''} z-50 backdrop-blur-2xl border-b`}
-        initial={{ y: -10, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
+      {/* ═══ TOP CONTROLS BAR ═══ */}
+      <div
+        className={`${shouldNavStick ? 'sticky top-0' : ''} z-50 backdrop-blur-2xl border-b flex items-center justify-end px-3 sm:px-5 py-2`}
         style={{
           borderColor: isDark ? 'rgba(139,92,246,0.15)' : 'rgba(99,102,241,0.08)',
           background: isDark ? 'rgba(9,7,28,0.97)' : 'rgba(237,241,245,0.95)',
           boxShadow: isDark ? '0 4px 30px rgba(109,40,217,0.12)' : '0 1px 12px rgba(99,102,241,0.06)',
         }}
       >
-        {/* Top Row: Logo + Controls */}
-        <div className="flex items-center justify-between px-3 sm:px-5 py-2">
-          {/* Left: Animated LUMIX Logo */}
-          <motion.div
-            className="flex items-center gap-2.5"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-          >
-            {/* Animated Logo Icon */}
-            <motion.div
-              className="relative flex items-center justify-center w-8 h-8 rounded-lg overflow-hidden"
-              whileHover={{ scale: 1.1, rotate: 5 }}
-              whileTap={{ scale: 0.9 }}
-              style={{
-                background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`,
-                boxShadow: isDark ? `0 0 20px ${accent80}, 0 0 40px ${accent30}` : `0 4px 16px rgba(99,102,241,0.25)`,
-              }}
-            >
-              <Zap className="w-4 h-4 text-white" style={{ filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.6))' }} />
-              {/* Animated glow pulse */}
-              <motion.div
-                className="absolute inset-0 rounded-lg"
-                animate={{ opacity: [0, 0.4, 0] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                style={{ background: `radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%)` }}
-              />
-            </motion.div>
-            {/* Logo Text */}
-            <motion.span
-              className="font-black uppercase tracking-[0.25em] text-base sm:text-lg"
-              style={{
-                background: `linear-gradient(135deg, ${accent}, ${isDark ? '#c084fc' : '#6366f1'})`,
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                filter: isDark ? `drop-shadow(0 0 8px ${accent80})` : 'none',
-              }}
-            >
-              LUMIX
-            </motion.span>
-          </motion.div>
-
-          {/* Right: Controls */}
           <div className="flex items-center gap-1.5 sm:gap-2">
             {/* Subscription badge */}
             <div
@@ -769,44 +734,7 @@ export default function TTSGenerator() {
               <span className="hidden sm:inline">{t.logout}</span>
             </motion.button>
           </div>
-        </div>
-
-        {/* Bottom Row: Integrated Tabs - hidden on mobile */}
-        <div
-          className="hidden md:flex items-center gap-1 px-3 sm:px-5 overflow-x-auto scrollbar-hide"
-        >
-          {([{ id: 'tts' as MainTab, label: t.tabs.tts, icon: <Mic className="w-3.5 h-3.5" /> }, { id: 'video' as MainTab, label: t.tabs.video, icon: <FileVideo className="w-3.5 h-3.5" /> }, { id: 'dubbing' as MainTab, label: t.tabs.dubbing, icon: <Wand2 className="w-3.5 h-3.5" /> }]).map(({ id, label: lbl, icon }) => {
-            const isActive = mainTab === id && !secondaryTab;
-            return (
-              <motion.button
-                key={id}
-                whileHover={{ y: -1 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => { setMainTab(id); setSecondaryTab(null); }}
-                className="relative flex items-center gap-1.5 px-4 sm:px-5 py-2.5 text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap rounded-t-xl overflow-hidden"
-                style={{
-                  color: isActive ? (isDark ? '#c4b5fd' : accent) : subtextColor,
-                  background: isActive
-                    ? isDark ? 'rgba(124,58,237,0.12)' : 'rgba(99,102,241,0.08)'
-                    : 'transparent',
-                }}
-              >
-                {icon}
-                {lbl}
-                {/* Active indicator line */}
-                {isActive && (
-                  <motion.div
-                    layoutId="activeTabIndicator"
-                    className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full"
-                    style={{ background: `linear-gradient(90deg, ${accent}, ${accentSecondary})`, boxShadow: isDark ? `0 0 8px ${accent80}` : `0 0 6px rgba(99,102,241,0.3)` }}
-                    transition={{ type: "spring", bounce: 0.2, duration: 0.5 }}
-                  />
-                )}
-              </motion.button>
-            );
-          })}
-        </div>
-      </motion.div>
+      </div>
 
       <div className="relative z-10 px-3 sm:px-4 py-6 sm:py-8 md:py-10 max-w-7xl mx-auto">
         {/* Main Tab Content - Only show when no secondary tab is active */}
@@ -1070,31 +998,96 @@ export default function TTSGenerator() {
             {dubPreviewUrl && !dubResult && (
               <>
                 {/* Video Preview — STICKY on desktop when preview is available */}
-                <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow, position: "sticky", top: "8px", zIndex: 10 }}>
+                <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow, position: "sticky", top: "4px", zIndex: 50 }}>
                   <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{lang === "mm" ? "ဗီဒီယိုကြိုကြည့်" : "Video Preview"}</div>
                   <div className="flex justify-center mt-2">
-                    {/* External URL card (YouTube/TikTok/FB can't play in video tag) */}
-                    {isExternalVideoUrl(dubPreviewUrl) ? (
-                      <div
-                        className="w-full rounded-xl p-5 text-center"
-                        style={{
-                          background: isDark ? 'rgba(124,58,237,0.08)' : 'rgba(109,40,217,0.04)',
-                          border: `1px solid ${cardBorder}`,
-                        }}
-                      >
-                        <div className="w-16 h-16 mx-auto mb-3 rounded-full flex items-center justify-center" style={{ background: accent15 }}>
-                          <ExternalLink className="w-8 h-8" style={{ color: accent }} />
-                        </div>
-                        <p className="text-sm font-bold mb-1" style={{ color: textColor }}>
-                          {lang === "mm" ? "ဗီဒီယို Link အဆင်သင့်ဖြစ်ပါပြီ" : "Video Link Ready"}
+                    {/* Preview: spinner → blob video → info card → HTML5 video */}
+                    {dubPreviewUrl === "loading" || dubPreviewMutation.isPending ? (
+                      <div className="w-full rounded-xl flex flex-col items-center justify-center gap-3 py-14"
+                        style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}`, minHeight: "180px" }}>
+                        <Loader2 className="w-10 h-10 animate-spin" style={{ color: accent }} />
+                        <p className="text-sm font-bold" style={{ color: subtextColor }}>
+                          {lang === "mm" ? "ဗီဒီယို ပြင်ဆင်နေသည်..." : "Preparing preview..."}
                         </p>
-                        <p className="text-xs mb-3" style={{ color: subtextColor }}>
-                          {dubPreviewUrl.length > 50 ? dubPreviewUrl.slice(0, 50) + '...' : dubPreviewUrl}
-                        </p>
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold" style={{ background: accent15, color: accent }}>
-                          <Info className="w-3.5 h-3.5" />
-                          {lang === "mm" ? "ဗီဒီယိုကို Server မှ ဒေါင်းလုတ်ပြီး ပြုလုပ်ပါမည်" : "Video will be downloaded by server for processing"}
-                        </div>
+                      </div>
+                    ) : dubPreviewUrl.startsWith("blob:") ? (
+                      <div style={{
+                        width: dubDetectedRatio === "9:16" ? "180px" : "100%",
+                        margin: dubDetectedRatio === "9:16" ? "0 auto" : "0",
+                        aspectRatio: dubDetectedRatio === "9:16" ? "9/16" : "16/9",
+                        borderRadius: "12px",
+                        overflow: "hidden",
+                        position: "relative",
+                        background: "#000",
+                      }}>
+                        <video
+                          ref={dubPreviewRef}
+                          src={dubPreviewUrl}
+                          controls
+                          className="w-full h-full"
+                          style={{ objectFit: "cover", borderRadius: "12px", display: "block" }}
+                          onLoadedMetadata={(e) => {
+                            const v = e.currentTarget;
+                            if (v.videoHeight > v.videoWidth) setDubDetectedRatio("9:16");
+                            else setDubDetectedRatio("16:9");
+                            setVideoLoading(false);
+                          }}
+                          onError={() => { setVideoLoading(false); }}
+                        />
+                        {srtEnabled && (
+                          <div className="absolute left-0 right-0 flex justify-center pointer-events-none"
+                            style={{
+                              zIndex: 10,
+                              top: `${Math.max(2, Math.round(78 - (srtMarginV / 200) * 76))}%`,
+                              transition: "top 0.2s ease-out",
+                            }}>
+                            <div style={{
+                              padding: srtFullWidth ? `${srtBoxPadding}px 0` : `${srtBoxPadding}px ${srtBoxPadding + 10}px`,
+                              borderRadius: srtFullWidth ? "0" : (srtBorderRadius === "rounded" ? "12px" : "4px"),
+                              fontSize: `${Math.max(6, srtFontSize)}px`,
+                              color: srtColor,
+                              textShadow: srtDropShadow ? "2px 2px 4px rgba(0,0,0,0.8)" : "none",
+                              background: srtBlurBg ? (srtBlurColor === "black" ? `rgba(0,0,0,${Math.min(0.85, srtBlurSize * 0.06)})` : `rgba(255,255,255,${Math.min(0.85, srtBlurSize * 0.06)})`) : "transparent",
+                              backdropFilter: srtBlurBg ? `blur(${srtBlurSize}px)` : "none",
+                              textAlign: "center",
+                              width: srtFullWidth ? "100%" : "auto",
+                              maxWidth: srtFullWidth ? "100%" : "90%",
+                              fontFamily: "'Noto Sans Myanmar', 'Pyidaungsu', sans-serif",
+                              transition: "all 0.2s ease-out",
+                            }}>
+                              {lang === "mm" ? "မြန်မာ စာတန်း နမူနာ" : "Subtitle Preview"}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : dubPreviewUrl.startsWith("fallback:") || isExternalVideoUrl(dubPreviewUrl) ? (
+                      <div className="w-full rounded-xl overflow-hidden" style={{ position: "relative", width: dubPreviewUrl.includes("/shorts/") ? "169px" : "100%", aspectRatio: dubPreviewUrl.includes("/shorts/") ? "9/16" : "16/9", margin: dubPreviewUrl.includes("/shorts/") ? "0 auto" : "0", background: "#000", borderRadius: "12px", overflow: "hidden" }}>
+                        {(() => {
+                          const ytMatch = dubPreviewUrl.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([\w-]{11})/);
+                          const videoId = ytMatch ? ytMatch[1] : null;
+                          return videoId ? (
+                            <img
+                              src={`https://img.youtube.com/vi/${videoId}/0.jpg`}
+                              alt="thumbnail"
+                              onError={(e) => { (e.target as HTMLImageElement).src = `https://wsrv.nl/?url=https://img.youtube.com/vi/${videoId}/0.jpg`; }}
+                              style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "12px", display: "block", position: "absolute", top: 0, left: 0 }}
+                            />
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center gap-2" style={{ minHeight: "180px" }}>
+                              <ExternalLink className="w-8 h-8" style={{ color: accent }} />
+                              <p className="text-xs font-bold" style={{ color: subtextColor }}>{lang === "mm" ? "ဗီဒီယို Link အဆင်သင့်" : "Video Link Ready"}</p>
+                            </div>
+                          );
+                        })()}
+                        {srtEnabled && (
+                          <div className="absolute left-0 right-0 flex justify-center pointer-events-none"
+                            style={{ zIndex: 10, top: `${Math.max(2, Math.round(78 - (srtMarginV / 200) * 76))}%`, transition: "top 0.2s ease-out" }}>
+                            <div style={{ padding: srtFullWidth ? `${srtBoxPadding}px 0` : `${srtBoxPadding}px ${srtBoxPadding + 10}px`, borderRadius: srtFullWidth ? "0" : (srtBorderRadius === "rounded" ? "12px" : "4px"), fontSize: `${Math.max(6, srtFontSize)}px`, color: srtColor, textShadow: "2px 2px 6px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,1)", background: srtBlurBg ? (srtBlurColor === "black" ? `rgba(0,0,0,${Math.min(0.85, srtBlurSize * 0.06)})` : `rgba(255,255,255,${Math.min(0.85, srtBlurSize * 0.06)})`) : "transparent", backdropFilter: srtBlurBg ? `blur(${srtBlurSize}px)` : "none", textAlign: "center", width: srtFullWidth ? "100%" : "auto", maxWidth: srtFullWidth ? "100%" : "90%", fontFamily: "Noto Sans Myanmar", transition: "all 0.2s ease-out" }}>
+                              {lang === "mm" ? "မြန်မာ စာတန်း နမူနာ" : "Subtitle Preview"}
+                            </div>
+                          </div>
+                        )}
+
                       </div>
                     ) : (
                       <div style={{
@@ -1169,7 +1162,7 @@ export default function TTSGenerator() {
                             <div style={{
                               padding: srtFullWidth ? `${srtBoxPadding}px 0` : `${srtBoxPadding}px ${srtBoxPadding + 10}px`,
                               borderRadius: srtFullWidth ? "0" : (srtBorderRadius === "rounded" ? "12px" : "4px"),
-                              fontSize: `${Math.max(10, Math.min(srtFontSize, 22))}px`,
+                              fontSize: `${Math.max(6, srtFontSize)}px`,
                               color: srtColor,
                               textShadow: srtDropShadow ? "2px 2px 4px rgba(0,0,0,0.8)" : "none",
                               background: srtBlurBg ? (srtBlurColor === "black" ? `rgba(0,0,0,${Math.min(0.85, srtBlurSize * 0.06)})` : `rgba(255,255,255,${Math.min(0.85, srtBlurSize * 0.06)})`) : "transparent",
@@ -1256,7 +1249,7 @@ export default function TTSGenerator() {
                         <div>
                           <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: subtextColor }}>{lang === "mm" ? "စာအရွယ်အစား" : "Text Size"}</p>
                           <div className="flex items-center gap-3">
-                            <Slider value={[srtFontSize]} onValueChange={v => setSrtFontSize(v[0])} min={12} max={48} step={2} className="flex-1" />
+                            <Slider value={[srtFontSize]} onValueChange={v => setSrtFontSize(v[0])} min={8} max={48} step={1} className="flex-1" />
                             <span className="text-sm font-black min-w-[40px] text-right" style={{ color: accent }}>{srtFontSize}px</span>
                           </div>
                         </div>
@@ -1376,7 +1369,7 @@ export default function TTSGenerator() {
                 </div>
 
                 {/* Generate Dubbing Button */}
-                <button onClick={handleDubGenerate} disabled={dubFileMutation.isPending || dubLinkMutation.isPending} className="w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 rounded-2xl text-white font-black uppercase tracking-widest transition-all disabled:opacity-50 hover:scale-[1.02] mt-2 shadow-lg text-sm sm:text-base" style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, boxShadow: isDark ? `0 0 20px ${accent}` : `0 8px 20px rgba(109,40,217,0.25)` }}>
+                <button onClick={handleDubGenerate} disabled={dubFileMutation.isPending || dubLinkMutation.isPending || dubPreviewUrl === 'loading' || dubPreviewMutation.isPending} className="w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 rounded-2xl text-white font-black uppercase tracking-widest transition-all disabled:opacity-50 hover:scale-[1.02] mt-2 shadow-lg text-sm sm:text-base" style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, boxShadow: isDark ? `0 0 20px ${accent}` : `0 8px 20px rgba(109,40,217,0.25)` }}>
                   {(dubFileMutation.isPending || dubLinkMutation.isPending) ? <><Loader2 className="w-5 h-5 animate-spin" /><span className="text-xs sm:text-sm">{lang === "mm" ? "ဖန်တီးနေသည်... (၃-၅ မိနစ်)" : "Generating... (3-5 min)"}</span></> : <><Wand2 className="w-5 h-5" />{lang === "mm" ? "AI ဖြင့် ဖန်တီးမည်" : "Generate with AI"}</>}
                 </button>
 

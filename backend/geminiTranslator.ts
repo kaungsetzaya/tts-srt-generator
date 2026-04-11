@@ -3,12 +3,10 @@ import path from "path";
 
 const QUOTA_FILE = path.join(process.cwd(), "tmp_video", "gemini_quota.json");
 
-// 🌟 Only Free Tier Available Gemini Models
+// ✅ Verified working models (tested April 2026)
 const MODELS = [
-  { id: "gemini-3.1-flash-lite", name: "Gemini 3.1 Flash Lite", rpd: 500 },
-  { id: "gemini-3-flash", name: "Gemini 3 Flash", rpd: 20 },
-  { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", rpd: 20 },
-  { id: "gemini-2.5-flash-lite", name: "Gemini 2.5 Flash Lite", rpd: 20 }
+  { id: "gemini-2.5-flash-lite", name: "Gemini 2.5 Flash Lite", rpd: 20, rpm: 10, tpm: 250000 },
+  { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", rpd: 20, rpm: 5, tpm: 250000 },
 ];
 
 interface QuotaData {
@@ -46,7 +44,6 @@ async function incrementQuota(modelId: string): Promise<void> {
 async function getAvailableModel(): Promise<typeof MODELS[0] | null> {
   const quota = await loadQuota();
   const today = new Date().toISOString().split("T")[0];
-
   for (const model of MODELS) {
     const usage = quota[model.id];
     const todayCount = (!usage || usage.date !== today) ? 0 : usage.count;
@@ -57,14 +54,16 @@ async function getAvailableModel(): Promise<typeof MODELS[0] | null> {
   return null;
 }
 
-// 🔄 Multiple API Keys Round-robin System
+// 🔄 Multiple API Keys Round-robin — tries ALL keys for each model
 let currentGeminiKeyIndex = 0;
-function getSystemGeminiKey(): string | null {
+function getAllSystemKeys(): string[] {
   const keysStr = process.env.GEMINI_API_KEY || "";
-  const keys = keysStr.split(",").map(k => k.trim()).filter(k => k.length > 0);
-  
+  return keysStr.split(",").map(k => k.trim()).filter(k => k.length > 0);
+}
+
+function getSystemGeminiKey(): string | null {
+  const keys = getAllSystemKeys();
   if (keys.length === 0) return null;
-  
   const key = keys[currentGeminiKeyIndex % keys.length];
   currentGeminiKeyIndex++;
   return key;
@@ -72,7 +71,6 @@ function getSystemGeminiKey(): string | null {
 
 function buildTranslatePrompt(fontSize?: number): string {
   const charsPerLine = fontSize ? Math.max(12, Math.round(60 - (fontSize - 12) * 1.2)) : 22;
-
   return `You are a professional Myanmar YouTube movie recap narrator.
 
 Translate the following text (any language) into Myanmar movie recap narration style.
@@ -93,7 +91,7 @@ ABSOLUTE STRICT RULES — VIOLATION IS UNACCEPTABLE:
    * "Emma" → "အဲမ်မာ"
 3. ALL technical/English terms MUST be Myanmar:
    * "Phone" → "ဖုန်း"
-   * "OK" → "ကောင်းပြီ"  
+   * "OK" → "ကောင်းပြီ"
    * "Sorry" → "စိတ်မကောင်းပါဘူး"
    * "Email" → "အီးမေးလ်"
    * "Computer" → "ကွန်ပျူတာ"
@@ -113,55 +111,74 @@ ABSOLUTE STRICT RULES — VIOLATION IS UNACCEPTABLE:
 Text:`;
 }
 
-export async function geminiTranslate(text: string, userApiKey?: string, fontSize?: number): Promise<{ myanmar: string; modelUsed: string }> {
-  // ✅ User Key ပါလာရင် User Key သုံးမည်၊ မပါလာရင် System Key (.env) ကို အလှည့်ကျသုံးမည်
-  const apiKey = (userApiKey && userApiKey.trim() !== "") ? userApiKey.trim() : getSystemGeminiKey();
-  
-  if (!apiKey) throw new Error("GEMINI_API_KEY is not set in .env and no user key was provided.");
+// 🔄 Try all keys for a given model before giving up
+async function tryTranslateWithAllKeys(
+  text: string,
+  modelId: string,
+  modelName: string,
+  userApiKey?: string,
+  fontSize?: number
+): Promise<string | null> {
+  const systemKeys = getAllSystemKeys();
+  const keysToTry = (userApiKey && userApiKey.trim())
+    ? [userApiKey.trim(), ...systemKeys]
+    : systemKeys;
 
-  const model = await getAvailableModel();
-  if (!model) throw new Error("All Gemini quotas exhausted for today. Try again tomorrow.");
+  for (const key of keysToTry) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${key}`;
+    const body = JSON.stringify({
+      contents: [{ parts: [{ text: `${buildTranslatePrompt(fontSize)}\n${text}` }] }]
+    });
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model.id}:generateContent?key=${apiKey}`;
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+      });
+      const data = await res.json() as any;
 
-  const body = JSON.stringify({
-    contents: [{ parts: [{ text: `${buildTranslatePrompt(fontSize)}\n${text}` }] }]
-  });
+      if (res.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
+        const myanmar = data.candidates[0].content.parts[0].text;
+        const keyType = (userApiKey && userApiKey.trim() === key) ? "User Key" : "System Key";
+        console.log(`[Gemini] ✅ Used ${modelName} with ${keyType} ending in ...${key.slice(-4)}`);
+        return myanmar;
+      } else {
+        console.log(`[Gemini] ${modelName} key ...${key.slice(-4)} failed (${res.status})`);
+      }
+    } catch (e: any) {
+      console.log(`[Gemini] ${modelName} key ...${key.slice(-4)} error: ${e.message}`);
+    }
+  }
+  return null;
+}
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body,
-  });
-
-  const data = await res.json() as any;
-
-  // If rate limited, mark as full and try next
-  if (!res.ok || !data.candidates?.[0]?.content?.parts?.[0]?.text) {
-    console.log(`[Gemini] ${model.name} failed (${res.status}), trying next model...`);
-    // Mark as exhausted for today
-    const quota = await loadQuota();
-    const today = new Date().toISOString().split("T")[0];
-    quota[model.id] = { date: today, count: model.rpd };
-    await saveQuota(quota);
-    // Retry with next model (will still use the correct API key)
-    return geminiTranslate(text, userApiKey, fontSize);
+export async function geminiTranslate(
+  text: string,
+  userApiKey?: string,
+  fontSize?: number
+): Promise<{ myanmar: string; modelUsed: string }> {
+  const systemKeys = getAllSystemKeys();
+  if (systemKeys.length === 0 && !userApiKey) {
+    throw new Error("GEMINI_API_KEY is not set in .env and no user key was provided.");
   }
 
-  await incrementQuota(model.id);
-  const myanmar = data.candidates[0].content.parts[0].text;
-  
-  // Log which key type was used for debugging
-  const keyType = (userApiKey && userApiKey.trim() !== "") ? "User Key" : "System Key";
-  console.log(`[Gemini] Used ${model.name} with ${keyType} ending in ...${apiKey.slice(-4)} (${(await loadQuota())[model.id]?.count ?? 1}/${model.rpd} today)`);
+  // Try each model with ALL keys before moving to next model
+  for (const model of MODELS) {
+    const result = await tryTranslateWithAllKeys(text, model.id, model.name, userApiKey, fontSize);
+    if (result) {
+      await incrementQuota(model.id);
+      return { myanmar: result, modelUsed: model.name };
+    }
+    console.log(`[Gemini] All keys exhausted for ${model.name}, trying next model...`);
+  }
 
-  return { myanmar, modelUsed: model.name };
+  throw new Error("All Gemini models and keys exhausted. Add more API keys or try again tomorrow.");
 }
 
 export async function getQuotaStatus(): Promise<Array<{ model: string; used: number; limit: number; available: number }>> {
   const quota = await loadQuota();
   const today = new Date().toISOString().split("T")[0];
-
   return MODELS.map(m => {
     const used = (!quota[m.id] || quota[m.id].date !== today) ? 0 : quota[m.id].count;
     return { model: m.name, used, limit: m.rpd, available: m.rpd - used };

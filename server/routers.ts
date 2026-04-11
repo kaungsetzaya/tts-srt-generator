@@ -428,6 +428,64 @@ export const appRouter = router({
         if (!ctx.user || ctx.user.role !== "admin") throw new Error("Unauthorized");
         return getQuotaStatus();
       }),
+
+    // ───── PREVIEW: Download short clip for browser preview ─────
+    previewLink: publicProcedure
+      .input(z.object({ url: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        if (!ctx.user) throw new Error("Please login first.");
+        if (!isAllowedVideoUrl(input.url)) throw new Error("Invalid URL.");
+        
+        const { execFile } = await import("child_process");
+        const { promisify } = await import("util");
+        const execFileAsync = promisify(execFile);
+        const { promises: fs } = await import("fs");
+        const { existsSync } = await import("fs");
+        const path = await import("path");
+        const { tmpdir } = await import("os");
+        const { randomUUID } = await import("crypto");
+
+        const id = randomUUID();
+        const tempPath = path.join(tmpdir(), `preview_${id}.mp4`);
+        
+        const cookiePath = path.join(process.cwd(), 'cookies.txt');
+        const hasCookies = existsSync(cookiePath);
+        const proxyUrl = process.env.YTDLP_PROXY || "";
+        const proxyArgs = proxyUrl ? ["--proxy", proxyUrl] : [];
+        const cookieArgs = hasCookies ? ["--cookies", cookiePath] : [];
+
+        console.log(`[Preview] Starting: ${input.url}`);
+        try {
+          await execFileAsync("yt-dlp", [
+            "--no-check-certificates",
+            "--no-playlist",
+            "--no-warnings",
+            "--max-filesize", "30M",
+            ...cookieArgs,
+            ...proxyArgs,
+            "-f", "18/93/91/best[height<=360][ext=mp4]",
+            "-o", tempPath,
+            input.url
+          ], { timeout: 120000 });
+
+          const stat = await fs.stat(tempPath).catch(() => null);
+          console.log(`[Preview] Size: ${stat?.size ?? 0} bytes`);
+          if (!stat || stat.size < 1000) throw new Error("Download failed");
+
+          const buffer = await fs.readFile(tempPath);
+          console.log(`[Preview] ✅ Done: ${Math.round(buffer.length/1024)}KB`);
+          return {
+            success: true,
+            videoBase64: buffer.toString('base64'),
+            sizeMB: Math.round(buffer.length / 1024 / 1024 * 10) / 10
+          };
+        } catch(err: any) {
+          console.error(`[Preview] ❌ ${err.message}`);
+          throw err;
+        } finally {
+          await fs.unlink(tempPath).catch(() => {});
+        }
+      }),
     translateLink: publicProcedure.input(z.object({ url: z.string() })).mutation(async ({ input, ctx }) => {
       if (!ctx.user) throw new Error("Please login first.");
       // 🔐 yt-dlp Domain Whitelist
@@ -1142,3 +1200,6 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
+
+// ───── VIDEO PREVIEW DOWNLOAD (for dubbing tab live preview) ─────
+// This is appended before the closing brace — add inside appRouter manually

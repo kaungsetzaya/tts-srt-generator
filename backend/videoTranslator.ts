@@ -174,7 +174,7 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
         }
 
         const fileStat = await fs.stat(tempVideoPath).catch(() => null);
-        console.log(`[Video Translator] Video downloaded: ${Math.round(fileStat.size / 1024 / 1024 * 10) / 10}MB`);
+        if (fileStat) console.log(`[Video Translator] Video downloaded: ${Math.round(fileStat.size / 1024 / 1024 * 10) / 10}MB`);
 
         console.log(`[Video Translator] Extracting Audio...`);
         await new Promise((resolve, reject) => {
