@@ -54,9 +54,9 @@ export default function Landing() {
       {/* NAV */}
       <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-2xl" style={{ background: C.glass, backdropFilter: "blur(24px)", border: `1px solid ${C.glassB}`, boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
         <div className="flex items-center gap-6">
-          <span className="text-lg font-black tracking-tight" style={{ color: C.gold }}>LUMIX</span>
-          <button onClick={() => featRef.current?.scrollIntoView({ behavior: 'smooth' })} className="text-[10px] uppercase tracking-[0.2em]" style={{ color: C.nude }}>Features</button>
-          <button onClick={go} className="px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-[0.15em]" style={{ background: C.gold, color: C.dark }}>Login</button>
+          <span className="text-2xl font-black tracking-tight" style={{ color: C.gold }}>LUMIX</span>
+          <button onClick={() => featRef.current?.scrollIntoView({ behavior: 'smooth' })} className="text-xs uppercase tracking-[0.2em]" style={{ color: C.nude }}>Features</button>
+          <button onClick={go} className="px-6 py-2 rounded-full text-xs font-bold uppercase tracking-[0.15em]" style={{ background: C.gold, color: C.dark }}>Login</button>
         </div>
       </nav>
 
@@ -87,7 +87,7 @@ export default function Landing() {
             AI Voice · Smart Subtitles · Video-to-Burmese Translation
           </motion.p>
           <motion.button initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}
-            whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.96 }} onClick={() => featRef.current?.scrollIntoView({ behavior: 'smooth' })}
+            whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.96 }} onClick={() => featRef.current?.scrollIntoView({ behavior: 'smooth' })}
             className="px-10 py-4 rounded-2xl text-sm font-black uppercase tracking-[0.15em]"
             style={{ background: C.glass, backdropFilter: "blur(16px)", border: `1px solid ${C.glassB}`, color: C.gold, boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
             Ready to Use ↓
