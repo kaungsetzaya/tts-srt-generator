@@ -61,7 +61,7 @@ export default function Landing() {
       </nav>
 
       {/* HERO - 3D floating */}
-      <div ref={heroRef} className="relative z-10 flex items-center justify-center min-h-screen px-4" style={{ scrollSnapAlign: "start" }}>
+      <div ref={heroRef} className="relative z-10 flex items-center justify-center min-h-screen px-4 pt-24" style={{ scrollSnapAlign: "start" }}>
         <motion.div style={{ opacity: heroOp, scale: heroScale, rotateX: heroRotate }} className="text-center">
           <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
             className="mb-12 inline-block px-4 py-1.5 rounded-full text-[10px] uppercase tracking-[0.4em] font-semibold"
