@@ -6,16 +6,16 @@ import { useRef, useEffect, useState } from "react";
    Teal/Cyan Color Tokens (from reference image)
 ───────────────────────────────────────────── */
 const C = {
-  bg: "#0a1a1a",
-  teal: "#008080",
-  cyan: "#00e5e5",
-  aqua: "#00ffff",
-  glow: "#00cccc",
+  bg: "#0a1628",
+  teal: "#1A73E8",
+  cyan: "#4a9af5",
+  aqua: "#7BA8F2",
+  glow: "#1A73E8",
   textPrimary: "#ffffff",
   textMuted: "rgba(255,255,255,0.65)",
-  glass: "rgba(0,128,128,0.08)",
-  glassBorder: "rgba(0,229,229,0.2)",
-  glassBorderHover: "rgba(0,229,229,0.45)",
+  glass: "rgba(26,115,232,0.08)",
+  glassBorder: "rgba(26,115,232,0.2)",
+  glassBorderHover: "rgba(26,115,232,0.45)",
 };
 
 /* ─────────────────────────────────────────────
@@ -62,7 +62,7 @@ function GlassCard({ children, className = "" }: { children: React.ReactNode; cl
     <div
       className={className}
       style={{
-        background: "rgba(0,128,128,0.06)",
+        background: "rgba(26,115,232,0.06)",
         backdropFilter: "blur(24px)",
         WebkitBackdropFilter: "blur(24px)",
         border: `1px solid ${C.glassBorder}`,
@@ -166,7 +166,7 @@ export default function Landing() {
       <nav
         className="fixed top-0 left-0 right-0 z-50 px-6 py-4"
         style={{
-          background: "rgba(10,26,26,0.6)",
+          background: "rgba(10,22,40,0.7)",
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
           borderBottom: `1px solid ${C.glassBorder}`,
@@ -454,7 +454,7 @@ export default function Landing() {
                   transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
                   className="p-6 sm:p-8 flex flex-col items-start text-left h-full relative overflow-hidden"
                   style={{
-                    background: "rgba(0,128,128,0.06)",
+                    background: "rgba(26,115,232,0.06)",
                     backdropFilter: "blur(24px)",
                     WebkitBackdropFilter: "blur(24px)",
                     border: `1px solid ${C.glassBorder}`,
