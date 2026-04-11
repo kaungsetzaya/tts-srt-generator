@@ -1,7 +1,22 @@
-
 import { useLocation } from "wouter";
 import { motion, useScroll, useTransform, useInView, AnimatePresence } from "framer-motion";
 import { useRef, useEffect, useState } from "react";
+
+/* ─────────────────────────────────────────────
+   Teal/Cyan Color Tokens (from reference image)
+───────────────────────────────────────────── */
+const C = {
+  bg: "#0a1a1a",
+  teal: "#008080",
+  cyan: "#00e5e5",
+  aqua: "#00ffff",
+  glow: "#00cccc",
+  textPrimary: "#ffffff",
+  textMuted: "rgba(255,255,255,0.65)",
+  glass: "rgba(0,128,128,0.08)",
+  glassBorder: "rgba(0,229,229,0.2)",
+  glassBorderHover: "rgba(0,229,229,0.45)",
+};
 
 /* ─────────────────────────────────────────────
    Reusable animated section wrapper
@@ -40,6 +55,26 @@ function FadeInSection({
 }
 
 /* ─────────────────────────────────────────────
+   Glass Card Component
+───────────────────────────────────────────── */
+function GlassCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div
+      className={className}
+      style={{
+        background: "rgba(0,128,128,0.06)",
+        backdropFilter: "blur(24px)",
+        WebkitBackdropFilter: "blur(24px)",
+        border: `1px solid ${C.glassBorder}`,
+        borderRadius: "20px",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
    Feature card data
 ───────────────────────────────────────────── */
 const features = [
@@ -61,7 +96,7 @@ const features = [
     icon: "🎬",
     title: "All-in-One Video Maker",
     badge: "One-Click Export",
-    desc: "ဗီဒီယိုကို တင်ပြီး မြန်မာအသံ ထည့်လိုက်ပါ။ အင်္ဂလိပ်ဗီဒီယိုကို မြန်မာဘာသာပြန်ပြီး အသံနှင့် စာတန်းထိုးအပါအဝင် အချောသတ် ဗီဒီယိုအဖြစ် ထုတ်ပေးသည်။ ကိုယ်ပိုင် Content ဖန်တီးဖို့ အလွန်လွယ်ကူပါတယ်။",
+    desc: "ဗီဒီယိုကို တင်ပြီး မြန်မာအသံ ထည့်လိုက်ပါ။ အင်္ဂလိပ်ဗီဒီယိုကို မြန်မာဘာသာပြန်ပြီး အသံနှင့် စာတန်းထိုးအပါအဝင် အချောသတ် ဗီဒီယိုအဖြစ် ထုတ်ပေးသည်။",
     detail: "Auto translate · Voice dubbing · Subtitle burn-in · One-click export",
   },
 ];
@@ -103,8 +138,7 @@ export default function Landing() {
     <div
       className="min-h-screen text-white relative font-sans overflow-x-hidden"
       style={{
-        background:
-          "radial-gradient(ellipse 120% 80% at 50% -10%, oklch(0.18 0.08 290) 0%, #000 60%)",
+        background: `radial-gradient(ellipse 120% 80% at 50% -10%, ${C.teal}33 0%, ${C.bg} 60%)`,
         fontFamily: "'Inter', 'Segoe UI', sans-serif",
       }}
     >
@@ -113,19 +147,87 @@ export default function Landing() {
         className="fixed inset-0 pointer-events-none z-0"
         style={{
           backgroundImage:
-            "linear-gradient(rgba(139,92,246,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(139,92,246,0.08) 1px, transparent 1px)",
+            `linear-gradient(${C.teal}15 1px, transparent 1px), linear-gradient(90deg, ${C.teal}15 1px, transparent 1px)`,
           backgroundSize: "60px 60px",
         }}
       />
 
-      {/* Extra vertical gradient overlay to make grid fade at bottom */}
+      {/* Vertical gradient overlay */}
       <div
         className="fixed inset-0 pointer-events-none z-0"
         style={{
-          background:
-            "linear-gradient(to bottom, transparent 60%, oklch(0.06 0.02 290) 100%)",
+          background: `linear-gradient(to bottom, transparent 60%, ${C.bg}ee 100%)`,
         }}
       />
+
+      {/* ═══════════════════════════════════════════
+          NAV BAR (Glass)
+      ═══════════════════════════════════════════ */}
+      <nav
+        className="fixed top-0 left-0 right-0 z-50 px-6 py-4"
+        style={{
+          background: "rgba(10,26,26,0.6)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          borderBottom: `1px solid ${C.glassBorder}`,
+        }}
+      >
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span
+              className="text-2xl font-black tracking-tight"
+              style={{
+                color: C.aqua,
+                textShadow: `0 0 30px ${C.cyan}66`,
+              }}
+            >
+              LUMIX
+            </span>
+            <span style={{ color: C.textMuted }}>·</span>
+            <span className="text-xs uppercase tracking-[0.3em]" style={{ color: C.textMuted }}>
+              Studio
+            </span>
+          </div>
+          <div className="flex items-center gap-6">
+            <button
+              onClick={() => featuresRef.current?.scrollIntoView({ behavior: 'smooth' })}
+              className="text-xs uppercase tracking-[0.2em] hover:opacity-100 transition-opacity"
+              style={{ color: C.textMuted }}
+            >
+              Features
+            </button>
+            <motion.button
+              whileHover={{ scale: 1.05, boxShadow: `0 0 30px ${C.cyan}66` }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                setTransitioning(true);
+                setTimeout(() => navigate("/login"), 600);
+              }}
+              className="px-5 py-2 rounded-full text-xs font-bold uppercase tracking-[0.2em]"
+              style={{
+                background: `linear-gradient(135deg, ${C.teal}, ${C.cyan})`,
+                color: C.bg,
+              }}
+            >
+              Login
+            </motion.button>
+          </div>
+        </div>
+      </nav>
+
+      {/* Blur transition overlay */}
+      <AnimatePresence>
+        {transitioning && (
+          <motion.div
+            initial={{ opacity: 0, scale: 1 }}
+            animate={{ opacity: 1, scale: 1.2, filter: "blur(20px)" }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.6, ease: "easeInOut" }}
+            className="fixed inset-0 z-[200]"
+            style={{ background: C.bg }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* ═══════════════════════════════════════════
           HERO SECTION
@@ -133,33 +235,18 @@ export default function Landing() {
       <div
         ref={heroRef}
         className="relative z-10 flex flex-col items-center justify-center min-h-screen text-center px-4"
-        style={{ scrollSnapAlign: "start" }}
       >
-        {/* Blur transition overlay */}
-        <AnimatePresence>
-          {transitioning && (
-            <motion.div
-              initial={{ opacity: 0, scale: 1 }}
-              animate={{ opacity: 1, scale: 1.2, filter: "blur(20px)" }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.6, ease: "easeInOut" }}
-              className="fixed inset-0 z-[200]"
-              style={{ background: "oklch(0.08 0.04 290)" }}
-            />
-          )}
-        </AnimatePresence>
         {/* BIG glow blob */}
         <motion.div
           style={{ y: glowY }}
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
         >
           <div
-            className="rounded-full blur-[160px]"
+            className="rounded-full blur-[180px]"
             style={{
               width: "min(900px, 90vw)",
               height: "min(550px, 60vw)",
-              background:
-                "radial-gradient(circle, oklch(0.55 0.28 310 / 40%) 0%, oklch(0.45 0.22 270 / 20%) 60%, transparent 100%)",
+              background: `radial-gradient(circle, ${C.cyan}55 0%, ${C.teal}33 50%, transparent 100%)`,
             }}
           />
         </motion.div>
@@ -173,11 +260,12 @@ export default function Landing() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="mb-8 px-5 py-2 rounded-full border text-xs font-bold uppercase tracking-[0.4em]"
+            className="mb-8 px-5 py-2 rounded-full text-xs font-bold uppercase tracking-[0.4em]"
             style={{
-              borderColor: "oklch(0.65 0.25 310 / 40%)",
-              background: "oklch(0.65 0.25 310 / 10%)",
-              color: "oklch(0.8 0.18 310)",
+              border: `1px solid ${C.glassBorder}`,
+              background: C.glass,
+              backdropFilter: "blur(12px)",
+              color: C.cyan,
             }}
           >
             Myanmar AI Content Platform
@@ -191,9 +279,8 @@ export default function Landing() {
             className="font-black uppercase leading-[0.85] mb-3"
             style={{
               fontSize: "clamp(64px, 16vw, 200px)",
-              color: "oklch(0.72 0.22 310)",
-              textShadow:
-                "0 0 60px oklch(0.65 0.25 310 / 70%), 0 0 120px oklch(0.55 0.28 310 / 30%)",
+              color: C.aqua,
+              textShadow: `0 0 60px ${C.cyan}bb, 0 0 120px ${C.teal}55`,
               letterSpacing: "-0.04em",
             }}
           >
@@ -207,9 +294,8 @@ export default function Landing() {
             className="font-black uppercase leading-[0.85] mb-8"
             style={{
               fontSize: "clamp(64px, 16vw, 200px)",
-              color: "oklch(0.72 0.22 310)",
-              textShadow:
-                "0 0 60px oklch(0.65 0.25 310 / 70%), 0 0 120px oklch(0.55 0.28 310 / 30%)",
+              color: C.aqua,
+              textShadow: `0 0 60px ${C.cyan}bb, 0 0 120px ${C.teal}55`,
               letterSpacing: "-0.04em",
             }}
           >
@@ -224,8 +310,8 @@ export default function Landing() {
             className="font-semibold uppercase mb-4 max-w-3xl"
             style={{
               fontSize: "clamp(14px, 2.5vw, 22px)",
-              color: "oklch(0.6 0.28 280)",
-              textShadow: "0 0 30px oklch(0.6 0.28 280 / 50%)",
+              color: C.cyan,
+              textShadow: `0 0 30px ${C.cyan}88`,
               letterSpacing: "0.12em",
             }}
           >
@@ -236,7 +322,8 @@ export default function Landing() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.45 }}
-            className="text-gray-400 mb-14 max-w-xl text-sm leading-relaxed px-4"
+            className="mb-14 max-w-xl text-sm leading-relaxed px-4"
+            style={{ color: C.textMuted }}
           >
             AI Voice · Smart Subtitles · Video-to-Burmese Translation — one platform, endlessly powerful
           </motion.p>
@@ -248,26 +335,23 @@ export default function Landing() {
             transition={{ duration: 0.7, delay: 0.55 }}
             whileHover={{
               scale: 1.06,
-              boxShadow: "0 0 80px oklch(0.65 0.25 310 / 80%)",
+              boxShadow: `0 0 80px ${C.cyan}bb`,
             }}
             whileTap={{ scale: 0.95 }}
             onClick={() => featuresRef.current?.scrollIntoView({ behavior: 'smooth' })}
             className="relative px-10 sm:px-16 md:px-24 py-4 md:py-6 mb-32 text-base sm:text-lg md:text-xl font-black uppercase tracking-widest text-white overflow-hidden rounded-full group"
             style={{
-              background:
-                "linear-gradient(135deg, oklch(0.65 0.28 310), oklch(0.55 0.28 270))",
-              boxShadow: "0 0 60px oklch(0.65 0.25 310 / 55%)",
+              background: `linear-gradient(135deg, ${C.teal}, ${C.cyan})`,
+              boxShadow: `0 0 60px ${C.cyan}88`,
             }}
           >
-            {/* shimmer sweep */}
             <span
               className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out"
               style={{
-                background:
-                  "linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)",
+                background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)",
               }}
             />
-            <span className="relative z-10">Ready to Use ↓</span>
+            <span className="relative z-10" style={{ color: C.bg }}>Ready to Use ↓</span>
           </motion.button>
         </motion.div>
 
@@ -280,7 +364,7 @@ export default function Landing() {
         >
           <span
             className="text-[10px] uppercase tracking-[0.45em] font-bold"
-            style={{ color: "oklch(0.65 0.18 310)" }}
+            style={{ color: C.cyan }}
           >
             Scroll
           </span>
@@ -289,14 +373,13 @@ export default function Landing() {
             transition={{ repeat: Infinity, duration: 1.6, ease: "easeInOut" }}
             className="w-[1px] h-14"
             style={{
-              background:
-                "linear-gradient(to bottom, oklch(0.65 0.25 310), transparent)",
+              background: `linear-gradient(to bottom, ${C.cyan}, transparent)`,
             }}
           />
           <motion.div
             animate={{ opacity: [0.4, 1, 0.4] }}
             transition={{ repeat: Infinity, duration: 1.6 }}
-            style={{ color: "oklch(0.65 0.25 310)" }}
+            style={{ color: C.cyan }}
           >
             ↓
           </motion.div>
@@ -311,18 +394,18 @@ export default function Landing() {
           <FadeInSection>
             <p
               className="text-xs uppercase tracking-[0.5em] font-bold mb-4"
-              style={{ color: "oklch(0.65 0.25 310)" }}
+              style={{ color: C.cyan }}
             >
               About This Platform
             </p>
             <h2
-              className="font-black uppercase mb-6"
+              className="font-black uppercase mb-6 text-white"
               style={{ fontSize: "clamp(28px, 5vw, 52px)", letterSpacing: "-0.02em" }}
             >
               Myanmar Content Creation,{" "}
-              <span style={{ color: "oklch(0.72 0.22 310)" }}>Simplified.</span>
+              <span style={{ color: C.aqua }}>Simplified.</span>
             </h2>
-            <p className="text-gray-400 text-base leading-loose max-w-2xl mx-auto px-2">
+            <p className="text-base leading-loose max-w-2xl mx-auto px-2" style={{ color: C.textMuted }}>
               Lumix Studio သည် Myanmar Content Creator များအတွက် အထူးဒီဇိုင်းထုတ်ထားသော AI-Powered Platform တစ်ခုဖြစ်သည်။ 
               သင်သည် YouTube, TikTok, Facebook Video များ ထုတ်လုပ်ရာတွင် လိုအပ်သော — AI Voice, Auto Subtitle, 
               နှင့် Video Translation — တို့ကို ဤနေရာတစ်ခုတည်းတွင် ရရှိနိုင်သည်။
@@ -333,26 +416,25 @@ export default function Landing() {
       </section>
 
       {/* ═══════════════════════════════════════════
-          FEATURES GRID
+          FEATURES GRID (Glass Cards)
       ═══════════════════════════════════════════ */}
       <section
         className="relative z-10 px-6 md:px-12 py-24"
         style={{
-          scrollSnapAlign: "start",
-          borderTop: "1px solid oklch(0.65 0.25 310 / 12%)",
-          borderBottom: "1px solid oklch(0.65 0.25 310 / 12%)",
+          borderTop: `1px solid ${C.glassBorder}`,
+          borderBottom: `1px solid ${C.glassBorder}`,
         }}
       >
         <div className="max-w-7xl mx-auto">
           <FadeInSection className="text-center mb-16">
             <p
               className="text-xs uppercase tracking-[0.5em] font-bold mb-3"
-              style={{ color: "oklch(0.65 0.25 310)" }}
+              style={{ color: C.cyan }}
             >
               Core Features
             </p>
             <h2
-              className="font-black uppercase"
+              className="font-black uppercase text-white"
               style={{ fontSize: "clamp(24px, 4vw, 44px)", letterSpacing: "-0.02em" }}
             >
               Everything You Need
@@ -363,22 +445,27 @@ export default function Landing() {
             {features.map((f, i) => (
               <FadeInSection key={f.title} delay={i * 0.12} direction={i === 0 ? "left" : i === 2 ? "right" : "up"} zoom>
                 <motion.div
-                  whileHover={{ y: -8, borderColor: "oklch(0.65 0.25 310 / 50%)", scale: 1.02 }}
+                  whileHover={{
+                    y: -8,
+                    borderColor: C.glassBorderHover,
+                    scale: 1.02,
+                    boxShadow: `0 8px 40px ${C.teal}33`,
+                  }}
                   transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
-                  className="p-6 sm:p-8 flex flex-col items-start text-left h-full relative overflow-hidden rounded-2xl"
+                  className="p-6 sm:p-8 flex flex-col items-start text-left h-full relative overflow-hidden"
                   style={{
-                    border: "1px solid oklch(0.65 0.25 310 / 18%)",
-                    background:
-                      "linear-gradient(135deg, oklch(0.08 0.03 290 / 80%) 0%, oklch(0.05 0.01 290 / 80%) 100%)",
-                    backdropFilter: "blur(12px)",
+                    background: "rgba(0,128,128,0.06)",
+                    backdropFilter: "blur(24px)",
+                    WebkitBackdropFilter: "blur(24px)",
+                    border: `1px solid ${C.glassBorder}`,
+                    borderRadius: "20px",
                   }}
                 >
                   {/* Top glow corner */}
                   <div
                     className="absolute top-0 right-0 w-28 h-28 pointer-events-none"
                     style={{
-                      background:
-                        "radial-gradient(circle at top right, oklch(0.65 0.25 310 / 12%), transparent 70%)",
+                      background: `radial-gradient(circle at top right, ${C.cyan}22, transparent 70%)`,
                     }}
                   />
 
@@ -388,9 +475,9 @@ export default function Landing() {
                   <span
                     className="text-[10px] font-black uppercase tracking-[0.35em] px-3 py-1 rounded-full mb-4"
                     style={{
-                      background: "oklch(0.65 0.25 310 / 15%)",
-                      color: "oklch(0.78 0.2 310)",
-                      border: "1px solid oklch(0.65 0.25 310 / 25%)",
+                      background: `${C.teal}22`,
+                      color: C.cyan,
+                      border: `1px solid ${C.glassBorder}`,
                     }}
                   >
                     {f.badge}
@@ -398,14 +485,14 @@ export default function Landing() {
 
                   <h4
                     className="text-lg font-black uppercase mb-3"
-                    style={{ color: "oklch(0.78 0.18 310)" }}
+                    style={{ color: C.aqua }}
                   >
                     {f.title}
                   </h4>
-                  <p className="text-gray-400 text-sm leading-relaxed mb-5">{f.desc}</p>
+                  <p className="text-sm leading-relaxed mb-5" style={{ color: C.textMuted }}>{f.desc}</p>
                   <p
                     className="text-xs mt-auto font-semibold"
-                    style={{ color: "oklch(0.65 0.2 310 / 70%)" }}
+                    style={{ color: `${C.cyan}aa` }}
                   >
                     {f.detail}
                   </p>
@@ -419,17 +506,17 @@ export default function Landing() {
       {/* ═══════════════════════════════════════════
           HOW IT WORKS
       ═══════════════════════════════════════════ */}
-      <section className="relative z-10 px-6 md:px-12 py-28" style={{ scrollSnapAlign: "start" }}>
+      <section className="relative z-10 px-6 md:px-12 py-28">
         <div className="max-w-5xl mx-auto">
           <FadeInSection className="text-center mb-16">
             <p
               className="text-xs uppercase tracking-[0.5em] font-bold mb-3"
-              style={{ color: "oklch(0.65 0.25 310)" }}
+              style={{ color: C.cyan }}
             >
               How It Works
             </p>
             <h2
-              className="font-black uppercase"
+              className="font-black uppercase text-white"
               style={{ fontSize: "clamp(24px, 4vw, 44px)", letterSpacing: "-0.02em" }}
             >
               4 Steps. That's It.
@@ -441,8 +528,7 @@ export default function Landing() {
             <div
               className="hidden md:block absolute top-[52px] left-[12.5%] right-[12.5%] h-[1px]"
               style={{
-                background:
-                  "linear-gradient(90deg, transparent, oklch(0.65 0.25 310 / 40%), transparent)",
+                background: `linear-gradient(90deg, transparent, ${C.cyan}66, transparent)`,
               }}
             />
 
@@ -453,17 +539,17 @@ export default function Landing() {
                   transition={{ type: "spring", stiffness: 300, damping: 15 }}
                   className="w-14 h-14 md:w-[72px] md:h-[72px] rounded-full flex items-center justify-center text-lg md:text-xl font-black mb-4 md:mb-6 relative z-10"
                   style={{
-                    background:
-                      "linear-gradient(135deg, oklch(0.65 0.28 310), oklch(0.55 0.28 270))",
-                    boxShadow: "0 0 30px oklch(0.65 0.25 310 / 50%)",
+                    background: `linear-gradient(135deg, ${C.teal}, ${C.cyan})`,
+                    boxShadow: `0 0 30px ${C.cyan}66`,
+                    color: C.bg,
                   }}
                 >
                   {s.num}
                 </motion.div>
-                <h5 className="font-black uppercase text-xs md:text-sm mb-2 tracking-wider">
+                <h5 className="font-black uppercase text-xs md:text-sm mb-2 tracking-wider text-white">
                   {s.title}
                 </h5>
-                <p className="text-gray-500 text-[11px] md:text-xs leading-relaxed">{s.desc}</p>
+                <p className="text-[11px] md:text-xs leading-relaxed" style={{ color: C.textMuted }}>{s.desc}</p>
               </FadeInSection>
             ))}
           </div>
@@ -471,65 +557,66 @@ export default function Landing() {
       </section>
 
       {/* ═══════════════════════════════════════════
-          CTA BANNER
+          CTA BANNER (Glass)
       ═══════════════════════════════════════════ */}
       <FadeInSection>
-        <section className="relative z-10 px-6 md:px-12 py-24 text-center overflow-hidden" style={{ scrollSnapAlign: "start" }}>
+        <section className="relative z-10 px-6 md:px-12 py-24 text-center overflow-hidden">
           {/* glow behind CTA */}
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
-              background:
-                "radial-gradient(ellipse 80% 60% at 50% 50%, oklch(0.55 0.28 310 / 15%), transparent 70%)",
+              background: `radial-gradient(ellipse 80% 60% at 50% 50%, ${C.cyan}22, transparent 70%)`,
             }}
           />
-          <p
-            className="text-xs uppercase tracking-[0.5em] font-bold mb-4"
-            style={{ color: "oklch(0.65 0.25 310)" }}
-          >
-            Get Started Now
-          </p>
-          <h2
-            className="font-black uppercase mb-6"
-            style={{
-              fontSize: "clamp(28px, 6vw, 64px)",
-              letterSpacing: "-0.03em",
-              textShadow: "0 0 40px oklch(0.65 0.25 310 / 40%)",
-            }}
-          >
-            Create Better Content,{" "}
-            <span style={{ color: "oklch(0.72 0.22 310)" }}>Faster.</span>
-          </h2>
-          <p className="text-gray-400 mb-10 max-w-lg mx-auto text-sm leading-relaxed px-4">
-            Account တစ်ခုဖန်တီးပြီး ယနေ့စတင်အသုံးပြုလိုက်ပါ
-          </p>
 
-          <motion.button
-            whileHover={{
-              scale: 1.06,
-              boxShadow: "0 0 80px oklch(0.65 0.25 310 / 80%)",
-            }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => {
-              setTransitioning(true);
-              setTimeout(() => navigate("/login"), 600);
-            }}
-            className="inline-block px-12 sm:px-20 py-5 md:py-6 text-base sm:text-xl font-black uppercase tracking-widest text-white rounded-full relative overflow-hidden group"
-            style={{
-              background:
-                "linear-gradient(135deg, oklch(0.65 0.28 310), oklch(0.55 0.28 270))",
-              boxShadow: "0 0 60px oklch(0.65 0.25 310 / 55%)",
-            }}
-          >
-            <span
-              className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out"
+          <GlassCard className="max-w-3xl mx-auto p-12 md:p-16">
+            <p
+              className="text-xs uppercase tracking-[0.5em] font-bold mb-4"
+              style={{ color: C.cyan }}
+            >
+              Get Started Now
+            </p>
+            <h2
+              className="font-black uppercase mb-6 text-white"
               style={{
-                background:
-                  "linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)",
+                fontSize: "clamp(28px, 6vw, 64px)",
+                letterSpacing: "-0.03em",
+                textShadow: `0 0 40px ${C.cyan}44`,
               }}
-            />
-            <span className="relative z-10">Login →</span>
-          </motion.button>
+            >
+              Create Better Content,{" "}
+              <span style={{ color: C.aqua }}>Faster.</span>
+            </h2>
+            <p className="mb-10 max-w-lg mx-auto text-sm leading-relaxed px-4" style={{ color: C.textMuted }}>
+              Account တစ်ခုဖန်တီးပြီး ယနေ့စတင်အသုံးပြုလိုက်ပါ
+            </p>
+
+            <motion.button
+              whileHover={{
+                scale: 1.06,
+                boxShadow: `0 0 80px ${C.cyan}bb`,
+              }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                setTransitioning(true);
+                setTimeout(() => navigate("/login"), 600);
+              }}
+              className="inline-block px-12 sm:px-20 py-5 md:py-6 text-base sm:text-xl font-black uppercase tracking-widest rounded-full relative overflow-hidden group"
+              style={{
+                background: `linear-gradient(135deg, ${C.teal}, ${C.cyan})`,
+                boxShadow: `0 0 60px ${C.cyan}88`,
+                color: C.bg,
+              }}
+            >
+              <span
+                className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out"
+                style={{
+                  background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)",
+                }}
+              />
+              <span className="relative z-10">Login →</span>
+            </motion.button>
+          </GlassCard>
         </section>
       </FadeInSection>
 
@@ -537,8 +624,8 @@ export default function Landing() {
       <footer
         className="relative z-10 text-center py-10 text-[10px] tracking-[0.5em] uppercase"
         style={{
-          borderTop: "1px solid oklch(0.65 0.25 310 / 10%)",
-          color: "oklch(0.4 0.05 310)",
+          borderTop: `1px solid ${C.glassBorder}`,
+          color: `${C.cyan}44`,
         }}
       >
         © 2026 LUMIX STUDIO · Professional Content Tools · Myanmar
