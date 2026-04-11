@@ -87,8 +87,8 @@ export default function Landing() {
             AI Voice · Smart Subtitles · Video-to-Burmese Translation
           </motion.p>
           <motion.button initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}
-            whileTap={{ scale: 0.96 }} onClick={() => featRef.current?.scrollIntoView({ behavior: 'smooth' })}
-            className="px-10 py-4 rounded-2xl text-sm font-black uppercase tracking-[0.15em] transition-transform duration-150"
+            whileHover={{ scale: 1.05, y: -3 }} whileTap={{ scale: 0.96 }} onClick={() => featRef.current?.scrollIntoView({ behavior: 'smooth' })}
+            className="px-10 py-4 rounded-2xl text-sm font-black uppercase tracking-[0.15em]"
             style={{ background: C.gold, color: C.dark, boxShadow: "0 8px 24px rgba(244,179,79,0.2)" }}>
             Ready to Use ↓
           </motion.button>
