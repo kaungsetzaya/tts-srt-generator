@@ -188,21 +188,6 @@ export default function Landing() {
             >
               Features
             </button>
-            <motion.button
-              whileHover={{ scale: 1.05, boxShadow: `0 0 0px transparent` }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => {
-                setTransitioning(true);
-                setTimeout(() => navigate("/login"), 600);
-              }}
-              className="px-5 py-2 rounded-full text-xs font-bold uppercase tracking-[0.2em]"
-              style={{
-                background: `linear-gradient(135deg, ${C.teal}, ${C.cyan})`,
-                color: C.bg,
-              }}
-            >
-              Login
-            </motion.button>
           </div>
         </div>
       </nav>
@@ -328,8 +313,11 @@ export default function Landing() {
               boxShadow: `0 0 0px transparent`,
             }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => featuresRef.current?.scrollIntoView({ behavior: 'smooth' })}
-            className="relative px-10 sm:px-16 md:px-24 py-4 md:py-6 mb-32 text-base sm:text-lg md:text-xl font-black uppercase tracking-widest text-white overflow-hidden rounded-full group"
+            onClick={() => {
+              setTransitioning(true);
+              setTimeout(() => navigate("/login"), 600);
+            }}
+            className="relative px-10 sm:px-16 md:px-24 py-4 md:py-6 text-base sm:text-lg md:text-xl font-black uppercase tracking-widest text-white overflow-hidden rounded-full group"
             style={{
               background: `linear-gradient(135deg, ${C.teal}, ${C.cyan})`,
               boxShadow: `0 0 0px transparent`,
@@ -341,7 +329,7 @@ export default function Landing() {
                 background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)",
               }}
             />
-            <span className="relative z-10" style={{ color: C.bg }}>Ready to Use ↓</span>
+            <span className="relative z-10" style={{ color: C.bg }}>Login →</span>
           </motion.button>
         </motion.div>
 
