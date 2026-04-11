@@ -1,9 +1,5 @@
 {
   "version": 2,
-  "buildCommand": "cd frontend && npm install -g pnpm@9.1.0 && pnpm install && pnpm build",
-  "outputDirectory": "frontend/dist",
-  "framework": null,
-  "installCommand": "cd frontend && npm install -g pnpm@9.1.0 && pnpm install",
   "rewrites": [
     {
       "source": "/api/:path*",
@@ -39,4 +35,3 @@
     }
   ]
 }
-
