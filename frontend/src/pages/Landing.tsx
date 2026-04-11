@@ -188,6 +188,21 @@ export default function Landing() {
             >
               Features
             </button>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                setTransitioning(true);
+                setTimeout(() => navigate("/login"), 600);
+              }}
+              className="px-5 py-2 rounded-full text-xs font-bold uppercase tracking-[0.2em]"
+              style={{
+                background: `linear-gradient(135deg, ${C.teal}, ${C.cyan})`,
+                color: C.bg,
+              }}
+            >
+              Login
+            </motion.button>
           </div>
         </div>
       </nav>
@@ -313,10 +328,7 @@ export default function Landing() {
               boxShadow: `0 0 0px transparent`,
             }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => {
-              setTransitioning(true);
-              setTimeout(() => navigate("/login"), 600);
-            }}
+            onClick={() => featuresRef.current?.scrollIntoView({ behavior: 'smooth' })}
             className="relative px-10 sm:px-16 md:px-24 py-4 md:py-6 text-base sm:text-lg md:text-xl font-black uppercase tracking-widest text-white overflow-hidden rounded-full group"
             style={{
               background: `linear-gradient(135deg, ${C.teal}, ${C.cyan})`,
@@ -329,38 +341,8 @@ export default function Landing() {
                 background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)",
               }}
             />
-            <span className="relative z-10" style={{ color: C.bg }}>Login →</span>
+            <span className="relative z-10" style={{ color: C.bg }}>Ready to Use ↓</span>
           </motion.button>
-        </motion.div>
-
-        {/* Scroll indicator */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.2 }}
-          className="absolute bottom-10 flex flex-col items-center gap-3"
-        >
-          <span
-            className="text-[10px] uppercase tracking-[0.45em] font-bold"
-            style={{ color: C.cyan }}
-          >
-            Scroll
-          </span>
-          <motion.div
-            animate={{ y: [0, 10, 0] }}
-            transition={{ repeat: Infinity, duration: 1.6, ease: "easeInOut" }}
-            className="w-[1px] h-14"
-            style={{
-              background: `linear-gradient(to bottom, ${C.cyan}, transparent)`,
-            }}
-          />
-          <motion.div
-            animate={{ opacity: [0.4, 1, 0.4] }}
-            transition={{ repeat: Infinity, duration: 1.6 }}
-            style={{ color: C.cyan }}
-          >
-            ↓
-          </motion.div>
         </motion.div>
       </div>
 
