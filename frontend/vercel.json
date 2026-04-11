@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "buildCommand": "pnpm install && pnpm build",
+  "buildCommand": "npm install && npm run build",
   "outputDirectory": "dist",
   "framework": null,
-  "installCommand": "pnpm install",
+  "installCommand": "npm install",
   "rewrites": [
     {
       "source": "/api/:path*",
