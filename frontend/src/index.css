@@ -1,6 +1,22 @@
 /* Myanmar Fonts - must be first */
 @import url('https://fonts.googleapis.com/css2?family=Pyidaungsu:wght@400;700&family=Padauk:wght@400;700&display=swap');
 
+/* Teko - headings */
+@font-face {
+  font-family: 'Teko';
+  src: url('/fonts/Teko-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Teko';
+  src: url('/fonts/Teko-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
 @import "tailwindcss";
 @import "tw-animate-css";
 

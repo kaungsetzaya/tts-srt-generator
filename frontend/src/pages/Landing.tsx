@@ -40,7 +40,7 @@ export default function Landing() {
   useEffect(() => { document.documentElement.style.scrollBehavior = "smooth"; return () => { document.documentElement.style.scrollBehavior = ""; }; }, []);
 
   return (
-    <div className="min-h-screen relative overflow-x-hidden" style={{ background: C.bg, color: C.cream, fontFamily: "'Inter', serif", perspective: "1200px" }}>
+    <div className="min-h-screen relative overflow-x-hidden" style={{ background: C.bg, color: C.cream, fontFamily: "'Teko', 'Inter', sans-serif", perspective: "1200px" }}>
 
       {/* Ambient glow blobs */}
       <div className="fixed inset-0 pointer-events-none z-0">
