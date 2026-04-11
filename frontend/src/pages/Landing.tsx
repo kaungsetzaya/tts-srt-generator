@@ -64,7 +64,7 @@ export default function Landing() {
       <div ref={heroRef} className="relative z-10 flex items-center justify-center min-h-screen px-4 pt-24" style={{ scrollSnapAlign: "start" }}>
         <motion.div style={{ opacity: heroOp, scale: heroScale, rotateX: heroRotate }} className="text-center">
           <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-            className="mb-12 inline-block px-4 py-1.5 rounded-full text-[10px] uppercase tracking-[0.4em] font-semibold"
+            className="mb-12 inline-block px-4 py-1.5 rounded-full text-sm uppercase tracking-[0.4em] font-semibold"
             style={{ background: C.glass, backdropFilter: "blur(12px)", border: `1px solid ${C.glassB}`, color: C.gold }}>
             Myanmar AI Content Platform
           </motion.div>
@@ -100,7 +100,7 @@ export default function Landing() {
         <div className="max-w-3xl mx-auto">
           <F>
             <div className="p-10 rounded-3xl text-center" style={{ background: C.glass, backdropFilter: "blur(20px)", border: `1px solid ${C.glassB}`, boxShadow: "0 20px 60px rgba(0,0,0,0.3)", transform: "translateZ(40px)" }}>
-              <p className="text-[10px] uppercase tracking-[0.5em] font-bold mb-3" style={{ color: C.gold }}>About</p>
+              <p className="text-sm uppercase tracking-[0.5em] font-bold mb-3" style={{ color: C.gold }}>About</p>
               <h2 className="font-black uppercase mb-5 text-2xl md:text-4xl" style={{ letterSpacing: "-0.02em" }}>
                 Myanmar Content, <span style={{ color: C.gold }}>Simplified.</span>
               </h2>
@@ -117,7 +117,7 @@ export default function Landing() {
       <section className="relative z-10 px-6 md:px-12 py-20" style={{ scrollSnapAlign: "start" }}>
         <div className="max-w-6xl mx-auto">
           <F className="text-center mb-14">
-            <p className="text-[10px] uppercase tracking-[0.5em] font-bold mb-2" style={{ color: C.gold }}>Core Features</p>
+            <p className="text-sm uppercase tracking-[0.5em] font-bold mb-2" style={{ color: C.gold }}>Core Features</p>
             <h2 className="font-black uppercase text-2xl md:text-4xl">Everything You Need</h2>
           </F>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6" style={{ transformStyle: "preserve-3d" }}>
@@ -127,7 +127,7 @@ export default function Landing() {
                   className="p-7 flex flex-col h-full rounded-3xl cursor-default"
                   style={{ background: C.glass, backdropFilter: "blur(20px)", border: `1px solid ${C.glassB}`, boxShadow: "0 16px 48px rgba(0,0,0,0.25)", transform: `translateZ(${30 - i * 10}px)` }}>
                   <span className="text-3xl mb-4">{f.icon}</span>
-                  <span className="text-[9px] font-bold uppercase tracking-[0.3em] px-2.5 py-1 rounded-full mb-3 w-fit" style={{ background: `${C.gold}15`, color: C.gold, border: `1px solid ${C.gold}22` }}>{f.badge}</span>
+                  <span className="text-xs font-bold uppercase tracking-[0.3em] px-2.5 py-1 rounded-full mb-3 w-fit" style={{ background: `${C.gold}15`, color: C.gold, border: `1px solid ${C.gold}22` }}>{f.badge}</span>
                   <h4 className="text-base font-black uppercase mb-2">{f.title}</h4>
                   <p className="text-sm leading-relaxed mb-4 flex-1" style={{ color: C.nude }}>{f.desc}</p>
                   <p className="text-xs font-semibold" style={{ color: C.copper }}>{f.detail}</p>
@@ -142,7 +142,7 @@ export default function Landing() {
       <section className="relative z-10 px-6 md:px-12 py-24" style={{ scrollSnapAlign: "start" }}>
         <div className="max-w-4xl mx-auto">
           <F className="text-center mb-14">
-            <p className="text-[10px] uppercase tracking-[0.5em] font-bold mb-2" style={{ color: C.gold }}>How It Works</p>
+            <p className="text-sm uppercase tracking-[0.5em] font-bold mb-2" style={{ color: C.gold }}>How It Works</p>
             <h2 className="font-black uppercase text-2xl md:text-4xl">4 Steps. That's It.</h2>
           </F>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-5 relative">
@@ -154,7 +154,7 @@ export default function Landing() {
                   {s.n}
                 </motion.div>
                 <h5 className="font-black uppercase text-xs mb-1.5 tracking-wider">{s.t}</h5>
-                <p className="text-[11px] leading-relaxed" style={{ color: C.nude }}>{s.d}</p>
+                <p className="text-sm leading-relaxed" style={{ color: C.nude }}>{s.d}</p>
               </F>
             ))}
           </div>
@@ -167,7 +167,7 @@ export default function Landing() {
           <motion.div whileHover={{ y: -6, rotateX: 2 }} transition={{ duration: 0.4 }}
             className="max-w-2xl mx-auto p-10 md:p-14 rounded-3xl"
             style={{ background: "rgba(26,26,26,0.8)", backdropFilter: "blur(24px)", border: `1px solid ${C.glassB}`, boxShadow: "0 24px 64px rgba(0,0,0,0.4)", color: C.cream }}>
-            <p className="text-[10px] uppercase tracking-[0.5em] font-bold mb-3" style={{ color: C.gold }}>Get Started</p>
+            <p className="text-sm uppercase tracking-[0.5em] font-bold mb-3" style={{ color: C.gold }}>Get Started</p>
             <h2 className="font-black uppercase mb-4 text-2xl md:text-4xl">
               Create Better, <span style={{ color: C.gold }}>Faster.</span>
             </h2>
@@ -181,7 +181,7 @@ export default function Landing() {
         </section>
       </F>
 
-      <footer className="relative z-10 text-center py-8 text-[9px] tracking-[0.4em] uppercase" style={{ borderTop: `1px solid ${C.glassB}`, color: `${C.nude}66` }}>
+      <footer className="relative z-10 text-center py-8 text-xs tracking-[0.4em] uppercase" style={{ borderTop: `1px solid ${C.glassB}`, color: `${C.nude}66` }}>
         © 2026 LUMIX STUDIO · Myanmar
       </footer>
     </div>
