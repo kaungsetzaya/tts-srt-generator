@@ -1,4 +1,4 @@
 import { createTRPCReact } from "@trpc/react-query";
-import type { AppRouter } from "../../../server/routers";
 
-export const trpc = createTRPCReact<AppRouter>();
+// Use `any` for standalone frontend deploy (backend types not available on Vercel)
+export const trpc = createTRPCReact<any>();

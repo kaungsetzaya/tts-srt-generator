@@ -1,13 +1,12 @@
 {
   "version": 2,
+  "buildCommand": "cd frontend && pnpm install && pnpm build",
+  "outputDirectory": "frontend/dist",
+  "framework": null,
   "rewrites": [
     {
       "source": "/api/:path*",
       "destination": "https://choco.de5.net/api/:path*"
-    },
-    {
-      "source": "/trpc/:path*",
-      "destination": "https://choco.de5.net/trpc/:path*"
     },
     {
       "source": "/(.*)",
