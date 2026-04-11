@@ -175,17 +175,9 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span
-              className="text-2xl font-black tracking-tight"
-              style={{
-                color: C.aqua,
-                textShadow: `0 0 30px ${C.cyan}66`,
-              }}
+              className="text-2xl font-black tracking-tight text-white"
             >
               LUMIX
-            </span>
-            <span style={{ color: C.textMuted }}>·</span>
-            <span className="text-xs uppercase tracking-[0.3em]" style={{ color: C.textMuted }}>
-              Studio
             </span>
           </div>
           <div className="flex items-center gap-6">
@@ -197,7 +189,7 @@ export default function Landing() {
               Features
             </button>
             <motion.button
-              whileHover={{ scale: 1.05, boxShadow: `0 0 30px ${C.cyan}66` }}
+              whileHover={{ scale: 1.05, boxShadow: `0 0 0px transparent` }}
               whileTap={{ scale: 0.95 }}
               onClick={() => {
                 setTransitioning(true);
@@ -279,8 +271,7 @@ export default function Landing() {
             className="font-black uppercase leading-[0.85] mb-3"
             style={{
               fontSize: "clamp(64px, 16vw, 200px)",
-              color: C.aqua,
-              textShadow: `0 0 60px ${C.cyan}bb, 0 0 120px ${C.teal}55`,
+              color: "#ffffff",
               letterSpacing: "-0.04em",
             }}
           >
@@ -294,8 +285,7 @@ export default function Landing() {
             className="font-black uppercase leading-[0.85] mb-8"
             style={{
               fontSize: "clamp(64px, 16vw, 200px)",
-              color: C.aqua,
-              textShadow: `0 0 60px ${C.cyan}bb, 0 0 120px ${C.teal}55`,
+              color: "#ffffff",
               letterSpacing: "-0.04em",
             }}
           >
@@ -311,7 +301,7 @@ export default function Landing() {
             style={{
               fontSize: "clamp(14px, 2.5vw, 22px)",
               color: C.cyan,
-              textShadow: `0 0 30px ${C.cyan}88`,
+              textShadow: `0 0 0px transparent`,
               letterSpacing: "0.12em",
             }}
           >
@@ -335,14 +325,14 @@ export default function Landing() {
             transition={{ duration: 0.7, delay: 0.55 }}
             whileHover={{
               scale: 1.06,
-              boxShadow: `0 0 80px ${C.cyan}bb`,
+              boxShadow: `0 0 0px transparent`,
             }}
             whileTap={{ scale: 0.95 }}
             onClick={() => featuresRef.current?.scrollIntoView({ behavior: 'smooth' })}
             className="relative px-10 sm:px-16 md:px-24 py-4 md:py-6 mb-32 text-base sm:text-lg md:text-xl font-black uppercase tracking-widest text-white overflow-hidden rounded-full group"
             style={{
               background: `linear-gradient(135deg, ${C.teal}, ${C.cyan})`,
-              boxShadow: `0 0 60px ${C.cyan}88`,
+              boxShadow: `0 0 0px transparent`,
             }}
           >
             <span
@@ -449,7 +439,7 @@ export default function Landing() {
                     y: -8,
                     borderColor: C.glassBorderHover,
                     scale: 1.02,
-                    boxShadow: `0 8px 40px ${C.teal}33`,
+                    boxShadow: `0 0 0px transparent`,
                   }}
                   transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
                   className="p-6 sm:p-8 flex flex-col items-start text-left h-full relative overflow-hidden"
@@ -540,7 +530,7 @@ export default function Landing() {
                   className="w-14 h-14 md:w-[72px] md:h-[72px] rounded-full flex items-center justify-center text-lg md:text-xl font-black mb-4 md:mb-6 relative z-10"
                   style={{
                     background: `linear-gradient(135deg, ${C.teal}, ${C.cyan})`,
-                    boxShadow: `0 0 30px ${C.cyan}66`,
+                    boxShadow: `0 0 0px transparent`,
                     color: C.bg,
                   }}
                 >
@@ -581,7 +571,7 @@ export default function Landing() {
               style={{
                 fontSize: "clamp(28px, 6vw, 64px)",
                 letterSpacing: "-0.03em",
-                textShadow: `0 0 40px ${C.cyan}44`,
+                
               }}
             >
               Create Better Content,{" "}
@@ -594,7 +584,7 @@ export default function Landing() {
             <motion.button
               whileHover={{
                 scale: 1.06,
-                boxShadow: `0 0 80px ${C.cyan}bb`,
+                boxShadow: `0 0 0px transparent`,
               }}
               whileTap={{ scale: 0.95 }}
               onClick={() => {
@@ -604,7 +594,7 @@ export default function Landing() {
               className="inline-block px-12 sm:px-20 py-5 md:py-6 text-base sm:text-xl font-black uppercase tracking-widest rounded-full relative overflow-hidden group"
               style={{
                 background: `linear-gradient(135deg, ${C.teal}, ${C.cyan})`,
-                boxShadow: `0 0 60px ${C.cyan}88`,
+                boxShadow: `0 0 0px transparent`,
                 color: C.bg,
               }}
             >
