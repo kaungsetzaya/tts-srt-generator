@@ -117,7 +117,7 @@ export async function handleTelegramUpdate(update: any) {
                 `🔑 သင့် login code:\n\n` +
                 `<code>${code}</code>\n\n` +
                 `⏰ Code သက်တမ်း: <b>၁၀ မိနစ်</b>\n` +
-                `ဒီ code ကို https://choco.de5.net မှာ login ဝင်ဖို့ သုံးပါ။\n\n` +
+                `ဒီ code ကို https://lumix-studio.vercel.app မှာ login ဝင်ဖို့ သုံးပါ။\n\n` +
                 `⚠️ Code သက်တမ်းကုန်ရင် /code ကို ထပ်နှိပ်ပါ!`
               );
               return;
@@ -144,7 +144,7 @@ export async function handleTelegramUpdate(update: any) {
             `🔑 သင့် login code:\n\n` +
             `<code>${code}</code>\n\n` +
             `⏰ Code သက်တမ်း: <b>၁၀ မိနစ်</b>\n` +
-            `ဒီ code ကို https://choco.de5.net မှာ login ဝင်ဖို့ သုံးပါ။\n\n` +
+            `ဒီ code ကို https://lumix-studio.vercel.app မှာ login ဝင်ဖို့ သုံးပါ။\n\n` +
             `⚠️ Code သက်တမ်းကုန်ရင် /code ကို ထပ်နှိပ်ပါ!`
           );
           return;
@@ -155,7 +155,7 @@ export async function handleTelegramUpdate(update: any) {
         `🔑 သင့် login code:\n\n` +
         `<code>${code}</code>\n\n` +
         `⏰ Code သက်တမ်း: <b>၁၀ မိနစ်</b>\n` +
-        `ဒီ code ကို https://choco.de5.net မှာ login ဝင်ဖို့ သုံးပါ။\n\n` +
+        `ဒီ code ကို https://lumix-studio.vercel.app မှာ login ဝင်ဖို့ သုံးပါ။\n\n` +
         `⚠️ Code သက်တမ်းကုန်ရင် /code ကို ထပ်နှိပ်ပါ!`
       );
     } else {
@@ -221,7 +221,7 @@ export async function handleTelegramUpdate(update: any) {
         `🔑 သင့် login code:\n\n` +
         `<code>${code}</code>\n\n` +
         `⏰ Code သက်တမ်း: <b>၁၀ မိနစ်</b>\n` +
-        `ဒီ code ကို https://choco.de5.net မှာ login ဝင်ဖို့ သုံးပါ။\n\n` +
+        `ဒီ code ကို https://lumix-studio.vercel.app မှာ login ဝင်ဖို့ သုံးပါ။\n\n` +
         `⚠️ Code သက်တမ်းကုန်ရင် /code ကို ထပ်နှိပ်ပါ!`
       );
     }
@@ -232,7 +232,7 @@ export async function handleTelegramUpdate(update: any) {
       `/code - Code အသစ်ရယူပါ\n` +
       `/help - အကူအညီ\n\n` +
       `⏰ Code သက်တမ်း: ၁၀ မိနစ်\n` +
-      `🌐 Website: https://choco.de5.net`
+      `🌐 Website: https://lumix-studio.vercel.app`
     );
   } else {
     await sendMessage(chatId,
