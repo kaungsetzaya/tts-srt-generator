@@ -1,21 +1,6 @@
-/* Myanmar Fonts - must be first */
-
-/* Teko - headings */
-@font-face {
-  font-family: 'Teko';
-  src: url('/fonts/Teko-Regular.ttf') format('truetype');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Teko';
-  src: url('/fonts/Teko-Medium.ttf') format('truetype');
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-@import url('https://fonts.googleapis.com/css2?family=Pyidaungsu:wght@400;700&family=Padauk:wght@400;700&display=swap');
+/* Myanmar Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Padauk:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
 
 @import "tailwindcss";
 @import "tw-animate-css";
@@ -62,76 +47,75 @@
 }
 
 :root {
-  /* Premium Warm Palette - Light Theme */
-  --primary: #C06F30;
-  --primary-foreground: #ffffff;
-  --sidebar-primary: #C06F30;
-  --sidebar-primary-foreground: #ffffff;
-  --chart-1: #C06F30;
-  --chart-2: #F4B34F;
-  --chart-3: #861C1C;
-  --chart-4: #ECCEB6;
-  --chart-5: #2B1D1C;
-  --radius: 0.25rem;
+  /* Glassmorphism Light Theme */
   --background: #E8E3CF;
   --foreground: #2B1D1C;
-  --card: #ffffff;
+  --card: rgba(255, 255, 255, 0.7);
   --card-foreground: #2B1D1C;
-  --popover: #ffffff;
+  --popover: rgba(255, 255, 255, 0.8);
   --popover-foreground: #2B1D1C;
+  --primary: #C06F30;
+  --primary-foreground: #ffffff;
   --secondary: #861C1C;
   --secondary-foreground: #ffffff;
-  --muted: #f0ebe0;
+  --muted: rgba(0, 0, 0, 0.06);
   --muted-foreground: #6b5c50;
   --accent: #F4B34F;
   --accent-foreground: #2B1D1C;
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  --border: rgba(0,0,0,0.1);
-  --input: #ffffff;
+  --border: rgba(192, 111, 48, 0.15);
+  --input: rgba(255, 255, 255, 0.5);
   --ring: #C06F30;
-  --sidebar: #f5f0e5;
+  --sidebar: rgba(232, 227, 207, 0.85);
   --sidebar-foreground: #2B1D1C;
-  --sidebar-accent: #C06F30;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: rgba(0,0,0,0.08);
-  --sidebar-ring: #C06F30;
+  --sidebar-primary: #C06F30;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(192, 111, 48, 0.15);
+  --sidebar-accent-foreground: #C06F30;
+  --sidebar-border: rgba(192, 111, 48, 0.2);
+  --chart-1: #C06F30;
+  --chart-2: #F4B34F;
+  --chart-3: #861C1C;
+  --chart-4: #ECCEB6;
+  --chart-5: #2B1D1C;
+  --radius: 0.75rem;
 }
 
 .dark {
-  /* Premium Warm Palette - Dark Theme */
-  --primary: #C06F30;
-  --primary-foreground: #EBE6D8;
-  --sidebar-primary: #C06F30;
-  --sidebar-primary-foreground: #EBE6D8;
+  /* Glassmorphism Dark Theme */
   --background: #0f0f0f;
   --foreground: #EBE6D8;
-  --card: rgba(255,255,255,0.06);
+  --card: rgba(255, 255, 255, 0.05);
   --card-foreground: #EBE6D8;
-  --popover: rgba(255,255,255,0.06);
+  --popover: rgba(30, 25, 24, 0.9);
   --popover-foreground: #EBE6D8;
+  --primary: #C06F30;
+  --primary-foreground: #ffffff;
   --secondary: #861C1C;
   --secondary-foreground: #EBE6D8;
-  --muted: rgba(255,255,255,0.08);
+  --muted: rgba(255, 255, 255, 0.05);
   --muted-foreground: #ECCEB6;
   --accent: #F4B34F;
   --accent-foreground: #1a1a1a;
   --destructive: #dc2626;
-  --destructive-foreground: #EBE6D8;
-  --border: rgba(255,255,255,0.12);
-  --input: rgba(255,255,255,0.06);
+  --destructive-foreground: #ffffff;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.08);
   --ring: #F4B34F;
+  --sidebar: rgba(15, 15, 15, 0.92);
+  --sidebar-foreground: #EBE6D8;
+  --sidebar-primary: #C06F30;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(244, 179, 79, 0.15);
+  --sidebar-accent-foreground: #F4B34F;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
   --chart-1: #F4B34F;
   --chart-2: #C06F30;
   --chart-3: #861C1C;
   --chart-4: #ECCEB6;
   --chart-5: #E8E3CF;
-  --sidebar: #0a0a0a;
-  --sidebar-foreground: #EBE6D8;
-  --sidebar-accent: #F4B34F;
-  --sidebar-accent-foreground: #1a1a1a;
-  --sidebar-border: rgba(255,255,255,0.12);
-  --sidebar-ring: #F4B34F;
+  --radius: 0.75rem;
 }
 
 @layer base {
@@ -271,16 +255,102 @@
     @apply active:scale-95;
   }
 
-  /* Myanmar Typography Improvements */
-  .myanmar-text {
-    font-family: 'Pyidaungsu', 'Padauk', sans-serif;
-    line-height: 1.7;
+  /* Glassmorphism Utilities */
+  .glass {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
   }
 
-  .myanmar-text-lg {
-    font-family: 'Pyidaungsu', 'Padauk', sans-serif;
-    font-size: 1.125rem;
-    line-height: 1.75;
+  .dark .glass {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .glass-strong {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .glass-card {
+    background: var(--card);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+
+  .glass-sidebar {
+    background: var(--sidebar);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border-right: 1px solid var(--sidebar-border);
+    transition: width 0.2s ease, min-width 0.2s ease;
+  }
+
+  .glass-sidebar[data-state="collapsed"],
+  .glass-sidebar[data-collapsed="true"] {
+    width: 3rem !important;
+    min-width: 3rem !important;
+  }
+
+  .glass-sidebar[data-state="expanded"],
+  .glass-sidebar[data-collapsed="false"] {
+    width: 16rem !important;
+    min-width: 16rem !important;
+  }
+
+  .glass-button {
+    background: rgba(192, 111, 48, 0.15);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(192, 111, 48, 0.25);
+    transition: all 0.2s ease;
+  }
+
+  .glass-button:hover {
+    background: rgba(192, 111, 48, 0.25);
+    border-color: rgba(192, 111, 48, 0.4);
+    box-shadow: 0 0 20px rgba(192, 111, 48, 0.2);
+  }
+
+  .glass-input {
+    background: var(--input);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    transition: all 0.2s ease;
+  }
+
+  .glass-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(192, 111, 48, 0.15);
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    background: linear-gradient(135deg, #C06F30, #F4B34F);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Soft glow */
+  .glow {
+    box-shadow: 0 0 20px rgba(192, 111, 48, 0.3);
+  }
+
+  .glow-accent {
+    box-shadow: 0 0 20px rgba(244, 179, 79, 0.3);
+  }
+
+  /* Myanmar Typography */
+  .myanmar-text {
+    font-family: 'Padauk', 'Inter', sans-serif;
+    line-height: 1.8;
   }
 
   /* Better readability for all text */

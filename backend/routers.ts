@@ -14,6 +14,7 @@ import { eq, desc, and, gte, sql } from "drizzle-orm";
 import { SignJWT } from "jose";
 import { nanoid } from "nanoid";
 import { checkRateLimit, clearRateLimit } from "./_core/rateLimit";
+import { checkVideoApiRateLimit, checkIpRateLimit } from "./_core/apiRateLimit";
 import { auditLog, isAllowedVideoUrl, isValidVideoBuffer, isValidCharacterId, isValidVoiceId, validateBase64VideoPrefix, sanitizeForAI } from "./_core/security";
 
 // 🔐 JWT Secret - .env မှာ မသတ်မှတ်ရင် production တွင် crash ဖြစ်မည်
@@ -51,7 +52,7 @@ function getPlanLimits(plan: string | null): PlanLimits {
     return { charLimitStandard: 0, charLimitCharacter: 0, dailyTtsSrt: 0, dailyCharacterUse: 0, dailyAiVideo: 0, dailyVideoTranslate: 0 };
   }
   if (plan === PLANS.trial) {
-    return { charLimitStandard: 20000, charLimitCharacter: 1600, dailyTtsSrt: 999, dailyCharacterUse: 999, dailyAiVideo: 999, dailyVideoTranslate: 999 };
+    return { charLimitStandard: 20000, charLimitCharacter: 2000, dailyTtsSrt: 999, dailyCharacterUse: 999, dailyAiVideo: 999, dailyVideoTranslate: 999 };
   }
   return { charLimitStandard: PAID_PLAN_LIMITS.charLimitStandard, charLimitCharacter: PAID_PLAN_LIMITS.charLimitCharacter, dailyTtsSrt: PAID_PLAN_LIMITS.dailyTtsSrt, dailyCharacterUse: PAID_PLAN_LIMITS.dailyCharacterUse, dailyAiVideo: PAID_PLAN_LIMITS.dailyAiVideo, dailyVideoTranslate: PAID_PLAN_LIMITS.dailyVideoTranslate };
 }
@@ -398,42 +399,26 @@ export const appRouter = router({
         if (!ctx.user) throw new Error("Please login first.");
         if (!isAllowedVideoUrl(input.url)) throw new Error("Invalid URL.");
 
-        const { execFile } = await import("child_process");
-        const { promisify } = await import("util");
-        const execFileAsync = promisify(execFile);
         const { promises: fs } = await import("fs");
-        const { existsSync } = await import("fs");
         const path = await import("path");
         const { tmpdir } = await import("os");
         const { randomUUID } = await import("crypto");
+        const { downloadVideo } = await import("./_core/multiDownloader");
 
         const id = randomUUID();
         const tempPath = path.join(tmpdir(), `preview_${id}.mp4`);
 
-        const cookiePath = path.join(process.cwd(), 'cookies.txt');
-        const hasCookies = existsSync(cookiePath);
-        const proxyUrl = process.env.YTDLP_PROXY || "";
-        const proxyArgs = proxyUrl ? ["--proxy", proxyUrl] : [];
-        const cookieArgs = hasCookies ? ["--cookies", cookiePath] : [];
-
         console.log(`[Preview] Starting: ${input.url}`);
         try {
-          await execFileAsync("yt-dlp", [
-            "--no-check-certificates",
-            "--no-playlist",
-            "--no-warnings",
-            "--max-filesize", "15M",
-            "--download-sections", "*0-30",
-            ...cookieArgs,
-            ...proxyArgs,
-            "-f", "18/93/91/best[height<=360][ext=mp4]",
-            "-o", tempPath,
-            input.url
-          ], { timeout: 120000 });
+          const result = await downloadVideo(input.url, tempPath, { timeout: 120000 });
+          
+          if (!result.success) {
+            throw new Error(result.error || "Preview download failed");
+          }
 
           const stat = await fs.stat(tempPath).catch(() => null);
           console.log(`[Preview] Size: ${stat?.size ?? 0} bytes`);
-          if (!stat || stat.size < 1000) throw new Error("Download failed");
+          if (!stat || stat.size < 1000) throw new Error("Preview file too small");
 
           const buffer = await fs.readFile(tempPath);
           console.log(`[Preview] ✅ Done: ${Math.round(buffer.length/1024)}KB`);
@@ -451,6 +436,15 @@ export const appRouter = router({
       }),
     translateLink: publicProcedure.input(z.object({ url: z.string() })).mutation(async ({ input, ctx }) => {
       if (!ctx.user) throw new Error("Please login first.");
+      
+      // Rate limit check
+      const ip = ctx.req?.headers?.["x-forwarded-for"] as string || ctx.req?.ip || "";
+      const ipLimit = checkIpRateLimit(ip, "default");
+      if (!ipLimit.allowed) throw new Error(`Rate limit exceeded. Try again in ${Math.ceil(ipLimit.resetIn/60)} minutes.`);
+      
+      const userLimit = checkVideoApiRateLimit(ctx.user.userId, "translateLink");
+      if (!userLimit.allowed) throw new Error(`Video translate limit reached (${userLimit.resetIn > 60 ? Math.ceil(userLimit.resetIn/60) + ' min' : userLimit.resetIn + ' sec'} cooldown).`);
+      
       // 🔐 yt-dlp Domain Whitelist
       if (!isAllowedVideoUrl(input.url)) {
         throw new Error("ခွင့်ပြုထားသော Link များသာ သုံးနိုင်ပါသည်။ YouTube, TikTok, Facebook Link သာ ထည့်ပါ။");
@@ -502,6 +496,15 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user) throw new Error("Please login first.");
+        
+        // Rate limit check
+        const ip = ctx.req?.headers?.["x-forwarded-for"] as string || ctx.req?.ip || "";
+        const ipLimit = checkIpRateLimit(ip, "default");
+        if (!ipLimit.allowed) throw new Error(`Rate limit exceeded. Try again in ${Math.ceil(ipLimit.resetIn/60)} minutes.`);
+        
+        const userLimit = checkVideoApiRateLimit(ctx.user.userId, "translateFile");
+        if (!userLimit.allowed) throw new Error(`Video translate limit reached (${userLimit.resetIn > 60 ? Math.ceil(userLimit.resetIn/60) + ' min' : userLimit.resetIn + ' sec'} cooldown).`);
+        
         // 🔐 Base64 prefix validation
         if (!validateBase64VideoPrefix(input.videoBase64)) {
           throw new Error("Invalid video format.");
@@ -570,6 +573,15 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user) throw new Error("Please login first.");
+        
+        // Rate limit check
+        const ip = ctx.req?.headers?.["x-forwarded-for"] as string || ctx.req?.ip || "";
+        const ipLimit = checkIpRateLimit(ip, "default");
+        if (!ipLimit.allowed) throw new Error(`Rate limit exceeded. Try again in ${Math.ceil(ipLimit.resetIn/60)} minutes.`);
+        
+        const userLimit = checkVideoApiRateLimit(ctx.user.userId, "dubFile");
+        if (!userLimit.allowed) throw new Error(`AI Video limit reached (${userLimit.resetIn > 60 ? Math.ceil(userLimit.resetIn/60) + ' min' : userLimit.resetIn + ' sec'} cooldown).`);
+        
         // 🔐 Voice ID whitelist
         if (input.character && !isValidCharacterId(input.character)) throw new Error("Invalid character voice.");
         if (!validateBase64VideoPrefix(input.videoBase64)) throw new Error("Invalid video format.");
@@ -650,6 +662,15 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user) throw new Error("Please login first.");
+        
+        // Rate limit check
+        const ip = ctx.req?.headers?.["x-forwarded-for"] as string || ctx.req?.ip || "";
+        const ipLimit = checkIpRateLimit(ip, "default");
+        if (!ipLimit.allowed) throw new Error(`Rate limit exceeded. Try again in ${Math.ceil(ipLimit.resetIn/60)} minutes.`);
+        
+        const userLimit = checkVideoApiRateLimit(ctx.user.userId, "dubLink");
+        if (!userLimit.allowed) throw new Error(`AI Video limit reached (${userLimit.resetIn > 60 ? Math.ceil(userLimit.resetIn/60) + ' min' : userLimit.resetIn + ' sec'} cooldown).`);
+        
         if (!isAllowedVideoUrl(input.url)) throw new Error("ခွင့်ပြုထားသော Link များသာ သုံးနိုင်ပါသည်။ YouTube, TikTok, Facebook Link သာ ထည့်ပါ။");
         if (input.character && !isValidCharacterId(input.character)) throw new Error("Invalid character voice.");
         const db = await getDb();

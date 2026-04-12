@@ -349,7 +349,7 @@ export default function TTSGenerator() {
   const cardBorder = isDark ? "rgba(192,111,48,0.2)" : "rgba(244,179,79,0.12)";
   const textColor = isDark ? "#EBE6D8" : "#2B1D1C";
   const subtextColor = isDark ? "rgba(236,206,182,0.7)" : "#6b5c50";
-  const labelBg = isDark ? "rgba(192,111,48,0.15)" : "rgba(192,111,48,0.08)";
+  const labelBg = isDark ? "rgba(192,111,48,0.15)" : "rgba(192,111,48,0.15)";
   const inputBg = isDark ? "rgba(15,15,15,0.6)" : "rgba(255,255,255,0.95)";
   const inputBorder = isDark ? "rgba(192,111,48,0.2)" : "rgba(192,111,48,0.18)";
 
@@ -447,6 +447,9 @@ export default function TTSGenerator() {
     setDubVideoFile(f);
     setDubVideoUrl("");
     setDubResult(null);
+    // Create preview URL from uploaded file
+    const url = URL.createObjectURL(f);
+    setDubPreviewUrl(url);
   };
 
   const handleDubGenerate = async () => {
@@ -612,7 +615,7 @@ export default function TTSGenerator() {
 
   return (
     <TTSGeneratorLayout currentSecondaryTab={secondaryTab} onTabChange={setSecondaryTab} backgroundStyle={{ background: bgGradient }} mainTab={mainTab} setMainTab={setMainTab} isDark={isDark}>
-      <div className="h-full relative overflow-hidden transition-colors duration-500 font-sans" style={{ color: textColor }}>
+      <div className="h-full relative transition-colors duration-500 font-sans" style={{ color: textColor }}>
       {/* Error Toast */}
       {errorToast && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-top-4 duration-300 max-w-[90vw]">
@@ -647,7 +650,7 @@ export default function TTSGenerator() {
 
       {/* Subtle Grid Background */}
       <div className="absolute inset-0 pointer-events-none" style={{ opacity: isDark ? 0.05 : 0.04 }}>
-        <div className="absolute inset-0" style={{ backgroundImage: `linear-gradient(0deg, transparent 24%, ${isDark ? 'rgba(192,111,48,0.07)' : 'rgba(192,111,48,0.08)'} 25%, ${isDark ? 'rgba(192,111,48,0.07)' : 'rgba(192,111,48,0.08)'} 26%, transparent 27%, transparent 74%, ${isDark ? 'rgba(192,111,48,0.07)' : 'rgba(192,111,48,0.08)'} 75%, ${isDark ? 'rgba(192,111,48,0.07)' : 'rgba(192,111,48,0.08)'} 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, ${isDark ? 'rgba(192,111,48,0.07)' : 'rgba(192,111,48,0.08)'} 25%, ${isDark ? 'rgba(192,111,48,0.07)' : 'rgba(192,111,48,0.08)'} 26%, transparent 27%, transparent 74%, ${isDark ? 'rgba(192,111,48,0.07)' : 'rgba(192,111,48,0.08)'} 75%, ${isDark ? 'rgba(192,111,48,0.07)' : 'rgba(192,111,48,0.08)'} 76%, transparent 77%, transparent)`, backgroundSize: '50px 50px' }} />
+        <div className="absolute inset-0" style={{ backgroundImage: `linear-gradient(0deg, transparent 24%, ${isDark ? 'rgba(192,111,48,0.12)' : 'rgba(192,111,48,0.15)'} 25%, ${isDark ? 'rgba(192,111,48,0.12)' : 'rgba(192,111,48,0.15)'} 26%, transparent 27%, transparent 74%, ${isDark ? 'rgba(192,111,48,0.12)' : 'rgba(192,111,48,0.15)'} 75%, ${isDark ? 'rgba(192,111,48,0.12)' : 'rgba(192,111,48,0.15)'} 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, ${isDark ? 'rgba(192,111,48,0.12)' : 'rgba(192,111,48,0.15)'} 25%, ${isDark ? 'rgba(192,111,48,0.12)' : 'rgba(192,111,48,0.15)'} 26%, transparent 27%, transparent 74%, ${isDark ? 'rgba(192,111,48,0.12)' : 'rgba(192,111,48,0.15)'} 75%, ${isDark ? 'rgba(192,111,48,0.12)' : 'rgba(192,111,48,0.15)'} 76%, transparent 77%, transparent)`, backgroundSize: '50px 50px' }} />
       </div>
 
       {/* ═══ TOP CONTROLS BAR ═══ */}
@@ -746,7 +749,7 @@ export default function TTSGenerator() {
               <h1 className="text-2xl sm:text-3xl md:text-5xl font-black uppercase tracking-wider sm:tracking-widest mb-2" style={{ textShadow: "none", color: accent }}>TTS Generator</h1>
               <p className="text-xs sm:text-sm font-bold uppercase tracking-wider opacity-80 mt-1" style={{ color: subtextColor }}>Convert Text to Speech</p>
               {/* No Plan Banner */}
-              {!isAdmin && !hasPlan && me && (
+              {!isAdmin && !hasPlan && me && !subLoading && (
                 <div className="mt-3 mx-auto max-w-lg flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold" style={{ background: isDark ? 'rgba(220,38,38,0.15)' : '#fef2f2', border: '1px solid rgba(220,38,38,0.3)', color: '#dc2626' }}>
                   <AlertCircle className="w-4 h-4" />
                   {lang === 'mm' ? 'Subscription မရှိသေးပါ။ Admin ကို ဆက်သွယ်ပါ။' : 'No active subscription. Contact Admin.'}
@@ -834,7 +837,7 @@ export default function TTSGenerator() {
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-black uppercase tracking-wider sm:tracking-widest mb-2 leading-normal" style={{ textShadow: "none", color: accent }}>{t.videoTitle}</h2>
               <p className="font-bold tracking-wider text-xs sm:text-sm mt-1" style={{ color: subtextColor }}>{t.videoDesc}</p>
               <p className="text-xs mt-1" style={{ color: subtextColor }}>{t.videoLimit}</p>
-              {!isAdmin && !hasPlan && me && (
+              {!isAdmin && !hasPlan && me && !subLoading && (
                 <div className="mt-3 mx-auto max-w-md flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold" style={{ background: isDark ? 'rgba(220,38,38,0.15)' : '#fef2f2', border: '1px solid rgba(220,38,38,0.3)', color: '#dc2626' }}>
                   <AlertCircle className="w-4 h-4" />
                   {lang === 'mm' ? 'Subscription မရှိသေးပါ။ Admin ကို ဆက်သွယ်ပါ။' : 'No subscription. Contact Admin.'}
@@ -930,7 +933,7 @@ export default function TTSGenerator() {
 
         {/* === DUBBING TAB — AI Auto Video Maker === */}
         {mainTab === "dubbing" && (
-          <div className="max-w-2xl mx-auto animate-in fade-in zoom-in-95 duration-300 space-y-4">
+          <div className="max-w-2xl mx-auto animate-in fade-in zoom-in-95 duration-300">
             <div className="text-center mb-4 sm:mb-6">
               <h2 className="text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-wider sm:tracking-widest mb-2 leading-normal" style={{ textShadow: "none", color: accent }}>
                 {lang === "mm" ? "AI Auto Video Maker" : "AI Auto Video Maker"}
@@ -938,7 +941,7 @@ export default function TTSGenerator() {
               <p className="font-bold tracking-wider text-xs sm:text-sm mt-1" style={{ color: subtextColor }}>
                 {lang === "mm" ? "AI ဖြင့် Video ဖန်တီးခြင်း" : "Create dubbed videos with AI"}
               </p>
-              {!isAdmin && !hasPlan && me && (
+              {!isAdmin && !hasPlan && me && !subLoading && (
                 <div className="mt-3 mx-auto max-w-md flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold" style={{ background: isDark ? 'rgba(220,38,38,0.15)' : '#fef2f2', border: '1px solid rgba(220,38,38,0.3)', color: '#dc2626' }}>
                   <AlertCircle className="w-4 h-4" />
                   {lang === 'mm' ? 'Subscription မရှိသေးပါ။ Admin ကို ဆက်သွယ်ပါ။' : 'No subscription. Contact Admin.'}
@@ -948,7 +951,7 @@ export default function TTSGenerator() {
 
             {/* ── STEP: Video Input ── */}
             {!dubPreviewUrl && !dubResult && (
-              <>
+              <div className="space-y-4">
                 <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
                   <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>
                     {t.linkInputLabel}
@@ -990,14 +993,14 @@ export default function TTSGenerator() {
                     {dubVideoFile ? (<><FileVideo className="w-8 h-8 mx-auto mb-2 text-green-600" /><p className="font-bold text-green-600 text-sm">{dubVideoFile.name}</p><p className="text-xs font-semibold mt-1" style={{ color: subtextColor }}>{(dubVideoFile.size / 1024 / 1024).toFixed(1)} MB</p></>) : (<><Upload className="w-8 h-8 mx-auto mb-2" style={{ color: subtextColor }} /><p className="font-bold text-sm" style={{ color: subtextColor }}>{t.dropVideo}</p><p className="text-xs font-semibold mt-2" style={{ color: subtextColor }}>MP4, MOV, AVI, MKV</p></>)}
                   </div>
                 </div>
-              </>
+              </div>
             )}
 
             {/* ── STEP: Video Preview + Settings ── */}
             {dubPreviewUrl && !dubResult && (
-              <>
-                {/* Video Preview — STICKY on desktop when preview is available */}
-                <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow, position: "sticky", top: "4px", zIndex: 50 }}>
+              <div className="space-y-4">
+                {/* Video Preview — Sticky at top */}
+                <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow, position: "sticky", top: "70px", zIndex: 40 }}>
                   <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{lang === "mm" ? "ဗီဒီယိုကြိုကြည့်" : "Video Preview"}</div>
                   <div className="flex justify-center mt-2">
                     {/* Preview: spinner → blob video → info card → HTML5 video */}
@@ -1395,7 +1398,7 @@ export default function TTSGenerator() {
                 <button onClick={handleDubReset} className="w-full py-2.5 rounded-xl border font-bold text-xs uppercase tracking-wider opacity-50 hover:opacity-100 transition-all" style={{ borderColor: cardBorder, color: subtextColor }}>
                   ← {lang === "mm" ? "ဗီဒီယိုပြောင်းမည်" : "Change Video"}
                 </button>
-              </>
+              </div>
             )}
 
             {/* Dubbing Result — Final Video + Download */}
@@ -1596,7 +1599,7 @@ export default function TTSGenerator() {
             </div>
 
             {/* Current Plan Card */}
-            <div className="rounded-2xl border-2 p-6 sm:p-8 mb-6" style={{ background: `linear-gradient(135deg, ${isDark ? 'rgba(192,111,48,0.08)' : 'rgba(192,111,48,0.05)'}, ${cardBg})`, borderColor: accent40, boxShadow: boxShadow }}>
+            <div className="rounded-2xl border-2 p-6 sm:p-8 mb-6" style={{ background: `linear-gradient(135deg, ${isDark ? 'rgba(192,111,48,0.15)' : 'rgba(192,111,48,0.05)'}, ${cardBg})`, borderColor: accent40, boxShadow: boxShadow }}>
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-3">
                   <Star className="w-6 h-6" style={{ color: currentPlan === 'trial' ? '#f59e0b' : accent }} />
@@ -1801,3 +1804,4 @@ export default function TTSGenerator() {
     </TTSGeneratorLayout>
   );
 }
+// rebuild trigger 1776026701

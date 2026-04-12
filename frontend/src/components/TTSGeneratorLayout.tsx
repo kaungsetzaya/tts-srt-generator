@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import React from "react";
 import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 import {
   Sidebar,
   SidebarContent,
@@ -19,12 +20,13 @@ import { History, BookOpen, Settings, PanelLeft, Mic, FileVideo, Wand2 } from "l
 
 interface TTSGeneratorLayoutProps {
   children: ReactNode;
-  currentSecondaryTab: string | null;
+  currentSecondaryTabs: string | null;
   onTabChange: (tab: "history" | "plan" | "guide" | "settings" | null) => void;
   backgroundStyle?: React.CSSProperties;
   mainTab: "tts" | "video" | "dubbing";
   setMainTab: (tab: "tts" | "video" | "dubbing") => void;
   logoUrl?: string;
+  isDark?: boolean;
   miniLogoUrl?: string;
 }
 
@@ -37,10 +39,11 @@ export function TTSGeneratorLayout({
   setMainTab,
   logoUrl,
   miniLogoUrl,
+  isDark,
 }: TTSGeneratorLayoutProps) {
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full" style={backgroundStyle}>
+      <div className="flex min-h-screen w-full">
         <TTSGeneratorSidebar
           currentTab={currentSecondaryTab}
           onTabChange={onTabChange}
@@ -48,16 +51,20 @@ export function TTSGeneratorLayout({
           setMainTab={setMainTab}
           logoUrl={logoUrl}
           miniLogoUrl={miniLogoUrl}
+          isDark={isDark}
         />
-        <SidebarInset className="bg-transparent border-none">
-          <main className="flex-1 overflow-auto pb-16 md:pb-0">
-            {children}
+        <SidebarInset className="flex-1 flex flex-col min-h-screen">
+          <main className="flex-1 overflow-auto pb-20 md:pb-0 p-4 md:p-6">
+            <div className="max-w-6xl mx-auto">
+              {children}
+            </div>
           </main>
           <MobileBottomNavigation
             mainTab={mainTab}
             setMainTab={setMainTab}
             currentSecondaryTab={currentSecondaryTab}
             onTabChange={onTabChange}
+            isDark={isDark}
           />
         </SidebarInset>
       </div>
@@ -85,6 +92,7 @@ function TTSGeneratorSidebar({
   isDark = true,
 }: TTSGeneratorSidebarProps) {
   const sidebar = useSidebar();
+  console.log("[Sidebar] isDark:", isDark);
   const isCollapsed = !sidebar.open;
 
   const accent = "#C06F30";
@@ -110,17 +118,19 @@ function TTSGeneratorSidebar({
   };
 
   return (
-    <Sidebar
-      collapsible="icon"
-      className="border-r transition-all duration-300 ease-out"
-      style={{ borderColor: "rgba(192,111,48,0.15)", background: isDark ? "rgba(15,15,15,0.98)" : "rgba(245,240,230,0.98)" }}
+    <Sidebar 
+      className={`glass-sidebar ${isDark ? 'dark' : 'light'}`}
+      style={{ 
+        backgroundColor: isDark ? 'rgba(15, 15, 15, 0.95)' : 'rgba(232, 227, 207, 0.95)',
+        borderRight: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+      }}
     >
-      <SidebarHeader
-        className="border-b px-3 py-3 transition-all duration-300 ease-out"
-        style={{ borderColor: "rgba(192,111,48,0.15)" }}
+      <SidebarHeader 
+        className="border-b py-4 px-4"
+        style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}
       >
         <div className="flex items-center justify-between gap-2 w-full">
-          {/* Logo - only shown inside sidebar, hidden outside */}
+          {/* Logo */}
           {isCollapsed ? (
             <motion.div
               key="mini-logo"
@@ -128,7 +138,10 @@ function TTSGeneratorSidebar({
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.2 }}
               className="flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0"
-              style={{ background: "rgba(192,111,48,0.15)", border: "1px solid rgba(192,111,48,0.3)" }}
+              style={{ 
+                background: isDark ? 'rgba(192,111,48,0.2)' : 'rgba(192,111,48,0.15)', 
+                border: `1px solid ${isDark ? 'rgba(192,111,48,0.4)' : 'rgba(192,111,48,0.3)'}` 
+              }}
             >
               {miniLogoUrl ? (
                 <img src={miniLogoUrl} alt="Logo" className="w-5 h-5 object-contain" />
@@ -165,7 +178,13 @@ function TTSGeneratorSidebar({
 
           <SidebarTrigger
             className="flex items-center justify-center rounded-xl transition-all duration-200 hover:scale-110 flex-shrink-0"
-            style={{ width: 36, height: 36, background: "rgba(192,111,48,0.12)", border: "1px solid rgba(192,111,48,0.25)", color: "#C06F30" }}
+            style={{ 
+              width: 36, 
+              height: 36, 
+              background: isDark ? 'rgba(192,111,48,0.15)' : 'rgba(192,111,48,0.12)', 
+              border: `1px solid ${isDark ? 'rgba(192,111,48,0.3)' : 'rgba(192,111,48,0.25)'}`, 
+              color: "#C06F30" 
+            }}
           >
             <PanelLeft className="h-4 w-4" />
           </SidebarTrigger>
@@ -197,8 +216,16 @@ function TTSGeneratorSidebar({
                         className="w-full relative overflow-hidden rounded-xl h-11 transition-all duration-200"
                         style={
                           isActive
-                            ? { background: `linear-gradient(135deg, ${accent}40, ${accentSecondary}30)`, color: "#ECCEB6", borderLeft: `3px solid ${accent}`, boxShadow: `0 0 16px ${accent}33` }
-                            : { color: "rgba(192,111,48,0.6)", borderLeft: "3px solid transparent" }
+                            ? { 
+                                background: `linear-gradient(135deg, ${accent}40, ${accentSecondary}30)`, 
+                                color: isDark ? "#ECCEB6" : "#2B1D1C", 
+                                borderLeft: `3px solid ${accent}`, 
+                                boxShadow: `0 0 16px ${accent}33` 
+                              }
+                            : { 
+                                color: isDark ? "rgba(236,206,182,0.6)" : "rgba(43,29,28,0.6)", 
+                                borderLeft: "3px solid transparent" 
+                              }
                         }
                       >
                         {isActive && (
@@ -229,11 +256,13 @@ function MobileBottomNavigation({
   setMainTab,
   currentSecondaryTab,
   onTabChange,
+  isDark = true,
 }: {
   mainTab: "tts" | "video" | "dubbing";
   setMainTab: (tab: "tts" | "video" | "dubbing") => void;
   currentSecondaryTab: string | null;
   onTabChange: (tab: any) => void;
+  isDark?: boolean;
 }) {
   const mainNavItems = [
     { id: "tts" as const,     icon: Mic,       label: "TTS" },
@@ -248,7 +277,11 @@ function MobileBottomNavigation({
   return (
     <div
       className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t backdrop-blur-xl"
-      style={{ background: "rgba(15,15,15,0.97)", borderColor: "rgba(192,111,48,0.25)", boxShadow: "0 -4px 30px rgba(192,111,48,0.15)" }}
+      style={{ 
+        background: isDark ? "rgba(15,15,15,0.97)" : "rgba(232,227,207,0.97)", 
+        borderColor: isDark ? "rgba(192,111,48,0.25)" : "rgba(192,111,48,0.15)", 
+        boxShadow: isDark ? "0 -4px 30px rgba(192,111,48,0.15)" : "0 -4px 30px rgba(0,0,0,0.1)" 
+      }}
     >
       <div className="flex items-center justify-around py-2 px-2 gap-1">
         {mainNavItems.map(({ id, icon: Icon, label }) => {
@@ -259,7 +292,7 @@ function MobileBottomNavigation({
               onClick={() => { setMainTab(id); onTabChange(null); }}
               whileTap={{ scale: 0.9 }}
               className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl min-h-[44px] relative flex-1 transition-all duration-200"
-              style={{ color: isActive ? "#C06F30" : "rgba(255,255,255,0.4)" }}
+              style={{ color: isActive ? "#C06F30" : isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)" }}
             >
               {isActive && (
                 <motion.div layoutId="mobileMainTab" className="absolute inset-0 rounded-xl"
@@ -280,7 +313,7 @@ function MobileBottomNavigation({
               onClick={() => onTabChange(isActive ? null : id)}
               whileTap={{ scale: 0.9 }}
               className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl min-h-[44px] relative flex-1 transition-all duration-200"
-              style={{ color: isActive ? "#C06F30" : "rgba(255,255,255,0.4)" }}
+              style={{ color: isActive ? "#C06F30" : isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)" }}
             >
               {isActive && (
                 <motion.div layoutId={"mobileTab-" + id} className="absolute inset-0 rounded-xl"

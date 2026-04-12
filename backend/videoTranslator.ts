@@ -7,6 +7,7 @@ import ffmpeg from 'fluent-ffmpeg';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { geminiTranslate } from "./geminiTranslator";
+import { downloadVideo } from "./_core/multiDownloader";
 import { isAllowedVideoUrl, isPathWithinDir, sanitizeForAI } from "./_core/security";
 
 const execFileAsync = promisify(execFile);
@@ -122,55 +123,16 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
           throw new Error("cookies.txt not found. Please upload cookies.txt to the server.");
         }
 
-        // ── Download with yt-dlp using cookies and player client strategies ──
-        console.log("[Video Translator] Downloading with yt-dlp (using cookies)...");
+        // ── Download with unified multi-platform downloader ──
+        console.log(`[Video Translator] Downloading: ${url}`);
 
-        const strategies = [
-          // WITH COOKIES - tv client
-          ["--cookies", cookiePath, "--extractor-args", "youtube:player_client=tv", "-f", "bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b", "--merge-output-format", "mp4"],
-          // WITH COOKIES - web_creator client
-          ["--cookies", cookiePath, "--extractor-args", "youtube:player_client=web_creator", "-f", "bv*+ba/b", "--merge-output-format", "mp4"],
-          // WITH COOKIES - generic
-          ["--cookies", cookiePath, "-f", "b", "--recode-video", "mp4"],
-          // WITHOUT COOKIES - tv client
-          ["--extractor-args", "youtube:player_client=tv", "-f", "b[ext=mp4]/b", "--merge-output-format", "mp4"],
-          // WITHOUT COOKIES - mweb client
-          ["--extractor-args", "youtube:player_client=mweb", "-f", "b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4"],
-          // WITHOUT COOKIES - generic fallback
-          ["-f", "bv*+ba/b", "--merge-output-format", "mp4"],
-        ];
+        const dlResult = await downloadVideo(url, tempVideoPath, {
+          cookiesPath: hasCookies ? cookiePath : undefined,
+          timeout: 300000
+        });
 
-        let dlSuccess = false;
-        for (let i = 0; i < strategies.length; i++) {
-          await fs.unlink(tempVideoPath).catch(() => {});
-          try {
-            const isCookie = strategies[i].includes("--cookies");
-            const label = isCookie ? "WithCookies" : "NoCookies";
-            console.log(`[Video Translator] Strategy ${i + 1}/${strategies.length} [${label}]...`);
-
-            await execFileAsync("yt-dlp", [
-              "--no-check-certificates",
-              "--no-playlist",
-              "--no-warnings",
-              "--max-filesize", "50M",
-              ...strategies[i],
-              "-o", tempVideoPath,
-              url
-            ], { timeout: 300000 });
-
-            const stat = await fs.stat(tempVideoPath).catch(() => null);
-            if (stat && stat.size > 10000) {
-              dlSuccess = true;
-              console.log(`[Video Translator] ✅ Strategy ${i + 1} [${label}] success (${Math.round(stat.size / 1024)}KB)`);
-              break;
-            }
-          } catch (e: any) {
-            console.warn(`[Video Translator] Strategy ${i + 1} failed: ${e.message?.slice(0, 100)}`);
-          }
-        }
-
-        if (!dlSuccess) {
-          throw new Error("ဗီဒီယိုကို ဒေါင်းလုတ်မရပါ။ YouTube bot detection ကြောင့် ဖြစ်နိုင်ပါသည်။");
+        if (!dlResult.success) {
+          throw new Error(`Download failed: ${dlResult.error}`);
         }
 
         const fileStat = await fs.stat(tempVideoPath).catch(() => null);

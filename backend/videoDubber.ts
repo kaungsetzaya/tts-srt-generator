@@ -8,6 +8,7 @@ import ffmpeg from 'fluent-ffmpeg';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { geminiTranslate } from "./geminiTranslator";
+import { downloadVideo } from "./_core/multiDownloader";
 import { generateSpeech, generateSpeechWithCharacter, type VoiceKey, type CharacterKey, CHARACTER_VOICES } from "./tts";
 import { isAllowedVideoUrl, isPathWithinDir, sanitizeForAI } from "./_core/security";
 import type { DubOptions, DubResult } from "@shared/types";
@@ -308,72 +309,27 @@ export async function dubVideoFromLink(url: string, options: DubOptions): Promis
     const cookiePath = path.join(process.cwd(), 'cookies.txt');
     const hasCookies = existsSync(cookiePath);
 
-    // 🌐 Proxy support — reads YTDLP_PROXY from .env
-    const proxyUrl = process.env.YTDLP_PROXY || "";
-    const proxyArgs = proxyUrl ? ["--proxy", proxyUrl] : [];
-
+    // 🌐 Proxy support — builds from separate credentials
+    const proxyHost = process.env.YTDLP_PROXY_HOST;
+    const proxyPort = process.env.YTDLP_PROXY_PORT;
+    const proxyUser = process.env.YTDLP_PROXY_USER;
+    const proxyPass = process.env.YTDLP_PROXY_PASS;
+    const proxyUrl = (proxyHost && proxyPort && proxyUser && proxyPass)
+      ? `http://${proxyUser}:${proxyPass}@${proxyHost}:${proxyPort}`
+      : "";
     if (proxyUrl) {
-      console.log(`[Dubber] Using proxy: ${proxyUrl.replace(/:[^:@]+@/, ':***@')}`);
+      console.log(`[Dubber] Using proxy: ${proxyHost}:${proxyPort}`);
     }
 
-    console.log("[Dubber] Downloading with yt-dlp...");
+    console.log(`[Dubber] Downloading: ${url}`);
 
-    const strategies = [
-      // ✅ WITH COOKIES + PROXY - default best
-      ...(hasCookies ? [
-        ["--cookies", cookiePath, ...proxyArgs, "-f", "18/mp4[height<=480]/worst[ext=mp4]"],
-        ["--cookies", cookiePath, ...proxyArgs, "--extractor-args", "youtube:player_client=tv", "-f", "18/mp4[height<=480]/worst[ext=mp4]"],
-        ["--cookies", cookiePath, ...proxyArgs, "-f", "b", "--recode-video", "mp4"],
-      ] : []),
-      // ✅ PROXY ONLY - no cookies
-      ...(proxyUrl ? [
-        [...proxyArgs, "-f", "18/mp4[height<=480]/worst[ext=mp4]"],
-        [...proxyArgs, "--extractor-args", "youtube:player_client=tv", "-f", "b[ext=mp4]/b", "--merge-output-format", "mp4"],
-      ] : []),
-      // ✅ NO PROXY NO COOKIES - last resort
-      ["-f", "18/mp4[height<=480]/worst[ext=mp4]"],
-      ["--extractor-args", "youtube:player_client=tv", "-f", "b[ext=mp4]/b", "--merge-output-format", "mp4"],
-    ];
+    const dlResult = await downloadVideo(url, tempVideoPath, {
+      cookiesPath: hasCookies ? cookiePath : undefined,
+      timeout: 300000
+    });
 
-    let dlSuccess = false;
-    for (let i = 0; i < strategies.length; i++) {
-      await fs.unlink(tempVideoPath).catch(() => {});
-      try {
-        const hasCookie = strategies[i].includes("--cookies");
-        const hasProxy = strategies[i].includes("--proxy");
-        const label = `${hasCookie ? "Cookies" : "NoCookies"}+${hasProxy ? "Proxy" : "NoProxy"}`;
-        console.log(`[Dubber] Strategy ${i + 1}/${strategies.length} [${label}]...`);
-
-        await execFileAsync("yt-dlp", [
-          "--no-check-certificates",
-          "--socket-timeout", "30",
-          "--no-part",
-          "--socket-timeout", "30",
-          "--no-part",
-          "--no-playlist",
-          "--no-warnings",
-          "--retries", "3",
-          "--fragment-retries", "3",
-          "--http-chunk-size", "10M",
-          "--max-filesize", "50M",
-          ...strategies[i],
-          "-o", tempVideoPath,
-          url
-        ], { timeout: 300000 });
-
-        const stat = await fs.stat(tempVideoPath).catch(() => null);
-        if (stat && stat.size > 10000) {
-          dlSuccess = true;
-          console.log(`[Dubber] ✅ Strategy ${i + 1} [${label}] success (${Math.round(stat.size / 1024)}KB)`);
-          break;
-        }
-      } catch (e: any) {
-        console.warn(`[Dubber] Strategy ${i + 1} failed: ${e.message?.slice(0, 100)}`);
-      }
-    }
-
-    if (!dlSuccess) {
-      throw new Error("ဗီဒီယိုကို ဒေါင်းလုတ်မရပါ။ Link ကို စစ်ပြီး ထပ်ကြိုးစားပါ။");
+    if (!dlResult.success) {
+      throw new Error(`Download failed: ${dlResult.error}`);
     }
 
     const videoBuffer = await fs.readFile(tempVideoPath);
