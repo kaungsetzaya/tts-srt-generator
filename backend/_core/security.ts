@@ -20,9 +20,20 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "")
 const DEFAULT_ORIGIN = process.env.SITE_URL || "https://choco.de5.net";
 if (ALLOWED_ORIGINS.length === 0) ALLOWED_ORIGINS.push(DEFAULT_ORIGIN);
 
+// ✅ Vercel preview domains (*.vercel.app) အတွက် pattern-based allow
+const EXTRA_ALLOWED_PATTERNS: RegExp[] = [
+  /^https:\/\/[a-z0-9-]+\.vercel\.app$/,       // *.vercel.app
+  /^https:\/\/[a-z0-9-]+-[a-z0-9-]+\.vercel\.app$/, // double-hash vercel urls
+];
+
+function isOriginAllowed(origin: string): boolean {
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
+  return EXTRA_ALLOWED_PATTERNS.some(p => p.test(origin));
+}
+
 export function corsMiddleware(req: Request, res: Response, next: NextFunction) {
   const origin = req.headers.origin;
-  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+  if (origin && isOriginAllowed(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
   } else if (!origin) {
