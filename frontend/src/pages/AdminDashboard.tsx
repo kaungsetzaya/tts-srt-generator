@@ -276,7 +276,7 @@ export default function AdminDashboard() {
   const totalErrors = (errorData?.failedGenerations?.length ?? 0) + (errorData?.systemLogs?.filter((l: any) => !l.resolved).length ?? 0);
 
   return (
-    <div className="min-h-screen text-foreground" style={{ background: "linear-gradient(135deg, #0F0C29 0%, #302B63 50%, #24243E 100%)" }}>
+    <div className="min-h-screen text-foreground" style={{ background: "linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%)" }}>
       {/* User Detail Drawer */}
       {userDrawer && <UserDetailDrawer userId={userDrawer.id} userName={userDrawer.name} onClose={() => setUserDrawer(null)} />}
 
