@@ -615,7 +615,7 @@ export default function TTSGenerator() {
 
   return (
     <TTSGeneratorLayout currentSecondaryTab={secondaryTab} onTabChange={setSecondaryTab} backgroundStyle={{ background: bgGradient }} mainTab={mainTab} setMainTab={setMainTab} isDark={isDark}>
-      <div className="h-full relative overflow-y-auto transition-colors duration-500 font-sans" style={{ color: textColor }}>
+      <div className="h-full relative transition-colors duration-500 font-sans" style={{ color: textColor }}>
       {/* Error Toast */}
       {errorToast && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-top-4 duration-300 max-w-[90vw]">
