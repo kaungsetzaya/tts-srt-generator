@@ -84,7 +84,7 @@ export default function TrialInfo() {
 
   const accent = "oklch(0.65 0.25 310)";
   const cardBg = "rgba(15, 12, 41, 0.6)";
-  const cardBorder = "rgba(167, 139, 250, 0.2)";
+  const cardBorder = "rgba(192,111,48,0.2)";
   const textColor = "#F0EEFF";
   const subtextColor = "rgba(240,238,255,0.6)";
 
