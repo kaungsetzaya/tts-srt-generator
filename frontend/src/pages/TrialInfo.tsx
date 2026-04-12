@@ -112,7 +112,7 @@ export default function TrialInfo() {
       desc: t.features.ttsDesc,
       used: trialUsage.tts,
       total: trialLimits.totalTtsSrt,
-      color: "#a78bfa",
+      color: "#C06F30",
     },
     {
       icon: <Sparkles className="w-5 h-5" />,

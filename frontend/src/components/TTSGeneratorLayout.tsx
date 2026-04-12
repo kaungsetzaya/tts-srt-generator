@@ -85,8 +85,8 @@ function TTSGeneratorSidebar({
   const sidebar = useSidebar();
   const isCollapsed = !sidebar.open;
 
-  const accent = "#7c3aed";
-  const accentSecondary = "#6366f1";
+  const accent = "#C06F30";
+  const accentSecondary = "#F4B34F";
 
   const allMenuItems = [
     { id: "tts",      label: "စာမှအသံ",         labelEn: "Text to Speech",   icon: Mic,      type: "main" as const },
@@ -195,7 +195,7 @@ function TTSGeneratorSidebar({
                         className="w-full relative overflow-hidden rounded-xl h-11 transition-all duration-200"
                         style={
                           isActive
-                            ? { background: `linear-gradient(135deg, ${accent}40, ${accentSecondary}30)`, color: "#c4b5fd", borderLeft: `3px solid ${accent}`, boxShadow: `0 0 16px ${accent}33` }
+                            ? { background: `linear-gradient(135deg, ${accent}40, ${accentSecondary}30)`, color: "#ECCEB6", borderLeft: `3px solid ${accent}`, boxShadow: `0 0 16px ${accent}33` }
                             : { color: "rgba(167,139,250,0.6)", borderLeft: "3px solid transparent" }
                         }
                       >
