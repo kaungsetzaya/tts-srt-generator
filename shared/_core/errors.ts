@@ -1,11 +1,12 @@
 /**
- * Base HTTP error class with status code.
- * Throw this from route handlers to send specific HTTP errors.
+ * Shared error types for LUMIX.
+ * Used by backend route handlers and can be imported by frontend error boundaries.
  */
+
 export class HttpError extends Error {
   constructor(
     public statusCode: number,
-    message: string
+    message: string,
   ) {
     super(message);
     this.name = "HttpError";

@@ -1,7 +1,8 @@
 import { translateVideo, translateVideoLink } from "./videoTranslator";
 import { dubVideoFromBuffer, dubVideoFromLink, type DubOptions } from "./videoDubber";
 import { getQuotaStatus } from "./geminiTranslator";
-import { COOKIE_NAME } from "@shared/const";
+import { COOKIE_NAME, UNAUTHED_ERR_MSG, NOT_ADMIN_ERR_MSG, FEATURES, PLANS, TRIAL_DEFAULTS, PAID_PLAN_LIMITS } from "@shared/const";
+import type { TrialLimits, PlanLimits, TrialUsage, SubscriptionStatus } from "@shared/types";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
@@ -15,7 +16,7 @@ import { nanoid } from "nanoid";
 import { checkRateLimit, clearRateLimit } from "./_core/rateLimit";
 import { auditLog, isAllowedVideoUrl, isValidVideoBuffer, isValidCharacterId, isValidVoiceId, validateBase64VideoPrefix, sanitizeForAI } from "./_core/security";
 
-// 🔐 JWT Secret — .env မှာ မသတ်မှတ်ရင် production တွင် crash ဖြစ်မည်
+// 🔐 JWT Secret - .env မှာ မသတ်မှတ်ရင် production တွင် crash ဖြစ်မည်
 if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
   console.error("[SECURITY] FATAL: JWT_SECRET is not set in environment variables!");
   process.exit(1);
@@ -40,58 +41,19 @@ function sanitizeText(text: string): string {
   return text.replace(/\0/g, "").replace(/[<>]/g, "").trim();
 }
 
-// ─── TRIAL-BASED USAGE LIMITS (total, not daily) ───────────────────────────
-type TrialLimits = {
-  charLimitStandard: number;   // Thiha/Nilar char limit per generation
-  charLimitCharacter: number;  // Other characters char limit per generation
-  totalTtsSrt: number;         // Total TTS+SRT generations (trial period)
-  totalCharacterUse: number;   // Total character voice uses
-  totalAiVideo: number;        // Total AI Video uses (thiha/nilar)
-  totalAiVideoChar: number;    // Total AI Video uses (character)
-  totalVideoTranslate: number; // Total video translation uses
-  maxVideoSizeMB: number;
-  maxVideoDurationSec: number; // Max video duration for translate
-  maxAiVideoDurationSecStd: number; // Max duration for AI video standard voice
-  maxAiVideoDurationSecChar: number; // Max duration for AI video character voice
-};
-
-// ─── PLAN-BASED USAGE LIMITS ───────────────────────────
-type PlanLimits = {
-  charLimitStandard: number;
-  charLimitCharacter: number;
-  dailyTtsSrt: number;
-  dailyCharacterUse: number;
-  dailyAiVideo: number;
-  dailyVideoTranslate: number;
-};
-
+// ─── Trial & Plan Limits (imported from shared) ────────────────────────────
 function getTrialLimits(): TrialLimits {
-  return {
-    charLimitStandard: 20000,    // Thiha/Nilar: 20,000 chars
-    charLimitCharacter: 1600,    // Other characters: 1,600 chars
-    totalTtsSrt: 7,              // 7 total TTS uses
-    totalCharacterUse: 2,        // 2 total character uses
-    totalAiVideo: 2,             // AI Video: 2 uses (thiha/nilar) or 1 + 1 char
-    totalAiVideoChar: 1,         // AI Video character: 1 use  
-    totalVideoTranslate: 2,      // Video translate: 2 total
-    maxVideoSizeMB: 25,
-    maxVideoDurationSec: 150,    // 2min 30sec
-    maxAiVideoDurationSecStd: 180, // 3min for thiha/nilar
-    maxAiVideoDurationSecChar: 90, // 1min 30sec for character
-  };
+  return { ...TRIAL_DEFAULTS };
 }
 
 function getPlanLimits(plan: string | null): PlanLimits {
   if (!plan) {
     return { charLimitStandard: 0, charLimitCharacter: 0, dailyTtsSrt: 0, dailyCharacterUse: 0, dailyAiVideo: 0, dailyVideoTranslate: 0 };
   }
-  if (plan === "trial") {
-    // Trial uses TOTAL limits (not daily) — handled separately
-    // These daily values are high enough to not block within the total limits
+  if (plan === PLANS.trial) {
     return { charLimitStandard: 20000, charLimitCharacter: 1600, dailyTtsSrt: 999, dailyCharacterUse: 999, dailyAiVideo: 999, dailyVideoTranslate: 999 };
   }
-  // All paid plans (1month, 3month, 6month, lifetime)
-  return { charLimitStandard: 10000, charLimitCharacter: 2000, dailyTtsSrt: 999, dailyCharacterUse: 999, dailyAiVideo: 999, dailyVideoTranslate: 999 };
+  return { charLimitStandard: PAID_PLAN_LIMITS.charLimitStandard, charLimitCharacter: PAID_PLAN_LIMITS.charLimitCharacter, dailyTtsSrt: PAID_PLAN_LIMITS.dailyTtsSrt, dailyCharacterUse: PAID_PLAN_LIMITS.dailyCharacterUse, dailyAiVideo: PAID_PLAN_LIMITS.dailyAiVideo, dailyVideoTranslate: PAID_PLAN_LIMITS.dailyVideoTranslate };
 }
 
 // Get TOTAL usage for trial users (entire trial period)
@@ -435,7 +397,7 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user) throw new Error("Please login first.");
         if (!isAllowedVideoUrl(input.url)) throw new Error("Invalid URL.");
-        
+
         const { execFile } = await import("child_process");
         const { promisify } = await import("util");
         const execFileAsync = promisify(execFile);
@@ -447,7 +409,7 @@ export const appRouter = router({
 
         const id = randomUUID();
         const tempPath = path.join(tmpdir(), `preview_${id}.mp4`);
-        
+
         const cookiePath = path.join(process.cwd(), 'cookies.txt');
         const hasCookies = existsSync(cookiePath);
         const proxyUrl = process.env.YTDLP_PROXY || "";
@@ -752,7 +714,7 @@ export const appRouter = router({
       const plan = result.length > 0 ? result[0].plan : null;
       const limits = getPlanLimits(plan);
       const usage = await getDailyUsage(ctx.user.userId);
-      
+
       // For trial users, also return total usage
       let trialUsage = null;
       let trialLimitsData = null;
@@ -760,7 +722,7 @@ export const appRouter = router({
         trialUsage = await getTrialTotalUsage(ctx.user.userId);
         trialLimitsData = getTrialLimits();
       }
-      
+
       if (result.length === 0) return { active: false, plan: null, expiresAt: null, limits, usage, trialUsage: null, trialLimits: null };
       return { active: true, plan: result[0].plan, expiresAt: result[0].expiresAt, limits, usage, trialUsage, trialLimits: trialLimitsData };
     }),
@@ -1203,4 +1165,4 @@ export const appRouter = router({
 export type AppRouter = typeof appRouter;
 
 // ───── VIDEO PREVIEW DOWNLOAD (for dubbing tab live preview) ─────
-// This is appended before the closing brace — add inside appRouter manually
+// This is appended before the closing brace - add inside appRouter manually

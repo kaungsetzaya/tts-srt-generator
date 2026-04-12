@@ -10,33 +10,12 @@ import { promisify } from 'util';
 import { geminiTranslate } from "./geminiTranslator";
 import { generateSpeech, generateSpeechWithCharacter, type VoiceKey, type CharacterKey, CHARACTER_VOICES } from "./tts";
 import { isAllowedVideoUrl, isPathWithinDir, sanitizeForAI } from "./_core/security";
+import type { DubOptions, DubResult } from "@shared/types";
 
 const execFileAsync = promisify(execFile);
 
-// ───── Types ─────
-export interface DubOptions {
-  voice: VoiceKey;
-  character?: string;
-  speed: number;
-  pitch: number;
-  srtEnabled: boolean;
-  srtFontSize?: number;
-  srtColor?: string;
-  srtDropShadow?: boolean;
-  srtBlurBg?: boolean;
-  srtMarginV?: number;
-  srtBlurSize?: number;
-  srtBlurColor?: "black" | "white";
-  srtFullWidth?: boolean;
-  srtBorderRadius?: "rounded" | "square";
-}
-
-export interface DubResult {
-  videoBase64: string;
-  myanmarText: string;
-  srtContent: string;
-  durationMs: number;
-}
+// Re-export for routers.ts which imports from here
+export type { DubOptions, DubResult } from "@shared/types";
 
 // ───── Get video duration in seconds ─────
 function getVideoDuration(filePath: string): Promise<number> {
