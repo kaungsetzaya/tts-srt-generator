@@ -60,7 +60,7 @@ export default function History() {
   const isDark = true; // match main app
   const accent = "oklch(0.65 0.25 310)";
   const cardBg = "rgba(15, 12, 41, 0.6)";
-  const cardBorder = "rgba(167, 139, 250, 0.2)";
+  const cardBorder = "rgba(192,111,48,0.2)";
   const textColor = "#F0EEFF";
   const subtextColor = "rgba(240,238,255,0.6)";
 
@@ -118,7 +118,7 @@ export default function History() {
           <div className="space-y-3">
             {history.map((item) => (
               <div key={item.id} className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-2xl border backdrop-blur-xl transition-all" style={{ background: cardBg, borderColor: cardBorder }}>
-                <div className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: item.status === "fail" ? "rgba(220,38,38,0.2)" : "rgba(167,139,250,0.15)", color: item.status === "fail" ? "#ef4444" : accent }}>
+                <div className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: item.status === "fail" ? "rgba(220,38,38,0.2)" : "rgba(192,111,48,0.15)", color: item.status === "fail" ? "#ef4444" : accent }}>
                   {featureIcon(item.feature || "tts")}
                 </div>
                 <div className="flex-1 min-w-0">

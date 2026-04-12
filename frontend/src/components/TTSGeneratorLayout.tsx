@@ -111,11 +111,11 @@ function TTSGeneratorSidebar({
     <Sidebar
       collapsible="icon"
       className="border-r transition-all duration-300 ease-out"
-      style={{ borderColor: "rgba(139,92,246,0.15)", background: "rgba(9,7,28,0.98)" }}
+      style={{ borderColor: "rgba(192,111,48,0.15)", background: "rgba(9,7,28,0.98)" }}
     >
       <SidebarHeader
         className="border-b px-3 py-3 transition-all duration-300 ease-out"
-        style={{ borderColor: "rgba(139,92,246,0.15)" }}
+        style={{ borderColor: "rgba(192,111,48,0.15)" }}
       >
         <div className="flex items-center justify-between gap-2 w-full">
           {/* Logo - only shown inside sidebar, hidden outside */}
@@ -163,7 +163,7 @@ function TTSGeneratorSidebar({
 
           <SidebarTrigger
             className="flex items-center justify-center rounded-xl transition-all duration-200 hover:scale-110 flex-shrink-0"
-            style={{ width: 36, height: 36, background: "rgba(124,58,237,0.12)", border: "1px solid rgba(124,58,237,0.25)", color: "#C06F30" }}
+            style={{ width: 36, height: 36, background: "rgba(192,111,48,0.12)", border: "1px solid rgba(192,111,48,0.25)", color: "#C06F30" }}
           >
             <PanelLeft className="h-4 w-4" />
           </SidebarTrigger>
@@ -196,7 +196,7 @@ function TTSGeneratorSidebar({
                         style={
                           isActive
                             ? { background: `linear-gradient(135deg, ${accent}40, ${accentSecondary}30)`, color: "#ECCEB6", borderLeft: `3px solid ${accent}`, boxShadow: `0 0 16px ${accent}33` }
-                            : { color: "rgba(167,139,250,0.6)", borderLeft: "3px solid transparent" }
+                            : { color: "rgba(192,111,48,0.6)", borderLeft: "3px solid transparent" }
                         }
                       >
                         {isActive && (

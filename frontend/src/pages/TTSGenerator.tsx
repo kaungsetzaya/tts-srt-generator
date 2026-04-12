@@ -350,15 +350,15 @@ export default function TTSGenerator() {
 
   // Card backgrounds — light uses soft white glass on Canvas Cloud
   const cardBg = isDark ? "rgba(15, 12, 41, 0.6)" : "rgba(255, 255, 255, 0.82)";
-  const cardBorder = isDark ? "rgba(167, 139, 250, 0.2)" : "rgba(99, 102, 241, 0.12)";
+  const cardBorder = isDark ? "rgba(192,111,48,0.2)" : "rgba(244,179,79,0.12)";
   const textColor = isDark ? "#F0EEFF" : "#1e1b4b";
   const subtextColor = isDark ? "rgba(240,238,255,0.6)" : "#64748b";
   const labelBg = isDark ? "#1f1b3e" : "#ffffff";
   const inputBg = isDark ? "rgba(0, 0, 0, 0.3)" : "rgba(255, 255, 255, 0.95)";
-  const inputBorder = isDark ? "rgba(167,139,250,0.2)" : "rgba(99, 102, 241, 0.18)";
+  const inputBorder = isDark ? "rgba(192,111,48,0.2)" : "rgba(192,111,48,0.18)";
 
   const box = "relative border p-4 md:p-5 pt-8 backdrop-blur-xl transition-all duration-300 rounded-2xl mt-6";
-  const boxShadow = isDark ? "0 8px 32px rgba(0,0,0,0.2)" : "0 2px 20px rgba(99, 102, 241, 0.06), 0 1px 6px rgba(0,0,0,0.04)";
+  const boxShadow = isDark ? "0 8px 32px rgba(0,0,0,0.2)" : "0 2px 20px rgba(192,111,48,0.06), 0 1px 6px rgba(0,0,0,0.04)";
   const labelStyle = "absolute -top-3.5 left-4 px-3 py-1 text-xs uppercase tracking-widest font-black rounded-lg z-10 shadow-sm border";
 
   const handleGenerate = async () => {
@@ -651,16 +651,16 @@ export default function TTSGenerator() {
 
       {/* Subtle Grid Background */}
       <div className="absolute inset-0 pointer-events-none" style={{ opacity: isDark ? 0.05 : 0.04 }}>
-        <div className="absolute inset-0" style={{ backgroundImage: `linear-gradient(0deg, transparent 24%, ${isDark ? '#C06F3012' : '#C06F3015'} 25%, ${isDark ? '#C06F3012' : '#C06F3015'} 26%, transparent 27%, transparent 74%, ${isDark ? '#C06F3012' : '#C06F3015'} 75%, ${isDark ? '#C06F3012' : '#C06F3015'} 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, ${isDark ? '#C06F3012' : '#C06F3015'} 25%, ${isDark ? '#C06F3012' : '#C06F3015'} 26%, transparent 27%, transparent 74%, ${isDark ? '#C06F3012' : '#C06F3015'} 75%, ${isDark ? '#C06F3012' : '#C06F3015'} 76%, transparent 77%, transparent)`, backgroundSize: '50px 50px' }} />
+        <div className="absolute inset-0" style={{ backgroundImage: `linear-gradient(0deg, transparent 24%, ${isDark ? 'rgba(192,111,48,0.07)' : 'rgba(192,111,48,0.08)'} 25%, ${isDark ? 'rgba(192,111,48,0.07)' : 'rgba(192,111,48,0.08)'} 26%, transparent 27%, transparent 74%, ${isDark ? 'rgba(192,111,48,0.07)' : 'rgba(192,111,48,0.08)'} 75%, ${isDark ? 'rgba(192,111,48,0.07)' : 'rgba(192,111,48,0.08)'} 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, ${isDark ? 'rgba(192,111,48,0.07)' : 'rgba(192,111,48,0.08)'} 25%, ${isDark ? 'rgba(192,111,48,0.07)' : 'rgba(192,111,48,0.08)'} 26%, transparent 27%, transparent 74%, ${isDark ? 'rgba(192,111,48,0.07)' : 'rgba(192,111,48,0.08)'} 75%, ${isDark ? 'rgba(192,111,48,0.07)' : 'rgba(192,111,48,0.08)'} 76%, transparent 77%, transparent)`, backgroundSize: '50px 50px' }} />
       </div>
 
       {/* ═══ TOP CONTROLS BAR ═══ */}
       <div
         className={`${shouldNavStick ? 'sticky top-0' : ''} z-50 backdrop-blur-2xl border-b flex items-center justify-end px-3 sm:px-5 py-2`}
         style={{
-          borderColor: isDark ? 'rgba(139,92,246,0.15)' : 'rgba(99,102,241,0.08)',
+          borderColor: isDark ? 'rgba(192,111,48,0.15)' : 'rgba(244,179,79,0.08)',
           background: isDark ? 'rgba(9,7,28,0.97)' : 'rgba(237,241,245,0.95)',
-          boxShadow: isDark ? '0 4px 30px rgba(109,40,217,0.12)' : '0 1px 12px rgba(99,102,241,0.06)',
+          boxShadow: isDark ? '0 4px 30px rgba(192,111,48,0.12)' : '0 1px 12px rgba(244,179,79,0.06)',
         }}
       >
           <div className="flex items-center gap-1.5 sm:gap-2">
@@ -668,7 +668,7 @@ export default function TTSGenerator() {
             <div
               className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
               style={{
-                background: isDark ? 'rgba(124,58,237,0.12)' : 'rgba(99,102,241,0.06)',
+                background: isDark ? 'rgba(192,111,48,0.12)' : 'rgba(244,179,79,0.06)',
                 border: `1px solid ${subColor}30`,
                 color: subColor,
               }}
@@ -685,14 +685,14 @@ export default function TTSGenerator() {
             <span
               className="hidden md:inline text-xs font-bold px-2.5 py-1 rounded-full"
               style={{
-                background: isDark ? 'rgba(124,58,237,0.1)' : 'rgba(99,102,241,0.06)',
+                background: isDark ? 'rgba(192,111,48,0.1)' : 'rgba(244,179,79,0.06)',
                 color: accent,
               }}
             >
               @{(me as any)?.username || me?.name}
             </span>
             {/* Divider */}
-            <div className="w-px h-5 mx-0.5" style={{ background: isDark ? 'rgba(124,58,237,0.3)' : 'rgba(99,102,241,0.12)' }} />
+            <div className="w-px h-5 mx-0.5" style={{ background: isDark ? 'rgba(192,111,48,0.3)' : 'rgba(192,111,48,0.12)' }} />
             {/* Lang toggle */}
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -700,8 +700,8 @@ export default function TTSGenerator() {
               onClick={() => setLang(lang === 'mm' ? 'en' : 'mm')}
               className="px-2.5 py-1 text-xs font-black rounded-lg uppercase tracking-widest transition-all"
               style={{
-                border: `1px solid ${isDark ? 'rgba(124,58,237,0.35)' : 'rgba(99,102,241,0.15)'}`,
-                background: isDark ? 'rgba(124,58,237,0.1)' : 'rgba(255,255,255,0.7)',
+                border: `1px solid ${isDark ? 'rgba(192,111,48,0.35)' : 'rgba(192,111,48,0.15)'}`,
+                background: isDark ? 'rgba(192,111,48,0.1)' : 'rgba(255,255,255,0.7)',
                 color: textColor,
               }}
             >
@@ -714,8 +714,8 @@ export default function TTSGenerator() {
               onClick={() => setTheme(isDark ? 'light' : 'dark')}
               className="p-1.5 rounded-lg transition-all flex items-center justify-center"
               style={{
-                border: `1px solid ${isDark ? 'rgba(124,58,237,0.35)' : 'rgba(99,102,241,0.15)'}`,
-                background: isDark ? 'rgba(124,58,237,0.1)' : 'rgba(255,255,255,0.7)',
+                border: `1px solid ${isDark ? 'rgba(192,111,48,0.35)' : 'rgba(192,111,48,0.15)'}`,
+                background: isDark ? 'rgba(192,111,48,0.1)' : 'rgba(255,255,255,0.7)',
                 color: textColor,
               }}
             >
@@ -805,7 +805,7 @@ export default function TTSGenerator() {
                   <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{t.voiceSelection}</div>
                   <div className="space-y-4 sm:space-y-5">
                     {[{ label: t.male, voices: [{ id: "thiha", name: "သီဟ", isStd: true }, { id: "ryan", name: "ရဲရင့်", isStd: false }, { id: "ronnie", name: "ရောင်နီ", isStd: false }, { id: "lucas", name: "လင်းခန့်", isStd: false }, { id: "daniel", name: "ဒေဝ", isStd: false }, { id: "evander", name: "အဂ္ဂ", isStd: false }]}, { label: t.female, voices: [{ id: "nilar", name: "နီလာ", isStd: true }, { id: "michelle", name: "မေချို", isStd: false }, { id: "iris", name: "အိန္ဒြာ", isStd: false }, { id: "charlotte", name: "သီရိ", isStd: false }, { id: "amara", name: "အမရာ", isStd: false }]}].map(({ label: grpLabel, voices }) => (
-                      <div key={grpLabel}><p className="text-xs font-bold uppercase tracking-wider mb-2 sm:mb-3" style={{ color: subtextColor }}>{grpLabel}</p><div className="grid grid-cols-3 sm:grid-cols-3 gap-2 sm:gap-3">{voices.map(v => { const isSelected = v.isStd ? voiceMode === "standard" && voice === (v.id === "thiha" ? "thiha" : "nilar") : voiceMode === "character" && character === v.id; return (<button key={v.id} disabled={!hasPlan} onClick={() => { if (v.isStd) { setVoiceMode("standard"); setVoice(v.id as any); setCharacter(""); } else { setVoiceMode("character"); setCharacter(v.id); } }} className="py-2 sm:py-2.5 px-2 sm:px-3 border rounded-xl text-xs sm:text-sm font-bold transition-all disabled:opacity-40" style={{ borderColor: isSelected ? accent : cardBorder, background: isSelected ? (isDark ? 'rgba(167,139,250,0.2)' : 'rgba(109,40,217,0.08)') : 'transparent', color: isSelected ? accent : textColor, boxShadow: isSelected && isDark ? `0 0 15px rgba(167,139,250,0.3)` : (isSelected && !isDark ? '0 4px 12px rgba(109,40,217,0.15)' : 'none') }}>{v.name}</button>); })}</div></div>
+                      <div key={grpLabel}><p className="text-xs font-bold uppercase tracking-wider mb-2 sm:mb-3" style={{ color: subtextColor }}>{grpLabel}</p><div className="grid grid-cols-3 sm:grid-cols-3 gap-2 sm:gap-3">{voices.map(v => { const isSelected = v.isStd ? voiceMode === "standard" && voice === (v.id === "thiha" ? "thiha" : "nilar") : voiceMode === "character" && character === v.id; return (<button key={v.id} disabled={!hasPlan} onClick={() => { if (v.isStd) { setVoiceMode("standard"); setVoice(v.id as any); setCharacter(""); } else { setVoiceMode("character"); setCharacter(v.id); } }} className="py-2 sm:py-2.5 px-2 sm:px-3 border rounded-xl text-xs sm:text-sm font-bold transition-all disabled:opacity-40" style={{ borderColor: isSelected ? accent : cardBorder, background: isSelected ? (isDark ? 'rgba(192,111,48,0.2)' : 'rgba(244,179,79,0.08)') : 'transparent', color: isSelected ? accent : textColor, boxShadow: isSelected && isDark ? `0 0 15px rgba(192,111,48,0.3)` : (isSelected && !isDark ? '0 4px 12px rgba(192,111,48,0.15)' : 'none') }}>{v.name}</button>); })}</div></div>
                     ))}
                   </div>
                 </div>
@@ -820,11 +820,11 @@ export default function TTSGenerator() {
               <div className="space-y-4 sm:space-y-6">
                 <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow, position: "sticky", top: "20px" }}>
                   <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{t.aspectRatio}</div>
-                  <div className="grid grid-cols-2 gap-3 mb-5 sm:mb-6 mt-1">{(['9:16', '16:9'] as const).map(ratio => (<button key={ratio} onClick={() => setAspectRatio(ratio)} disabled={!hasPlan} className="py-2.5 sm:py-3 border rounded-xl font-black uppercase transition-all disabled:opacity-40" style={{ borderColor: aspectRatio === ratio ? accent : cardBorder, background: aspectRatio === ratio ? (isDark ? 'rgba(167,139,250,0.15)' : 'rgba(109,40,217,0.06)') : 'transparent', color: aspectRatio === ratio ? accent : textColor, boxShadow: aspectRatio === ratio && !isDark ? '0 4px 12px rgba(109,40,217,0.15)' : 'none' }}>{ratio}</button>))}</div>
+                  <div className="grid grid-cols-2 gap-3 mb-5 sm:mb-6 mt-1">{(['9:16', '16:9'] as const).map(ratio => (<button key={ratio} onClick={() => setAspectRatio(ratio)} disabled={!hasPlan} className="py-2.5 sm:py-3 border rounded-xl font-black uppercase transition-all disabled:opacity-40" style={{ borderColor: aspectRatio === ratio ? accent : cardBorder, background: aspectRatio === ratio ? (isDark ? 'rgba(192,111,48,0.15)' : 'rgba(244,179,79,0.06)') : 'transparent', color: aspectRatio === ratio ? accent : textColor, boxShadow: aspectRatio === ratio && !isDark ? '0 4px 12px rgba(192,111,48,0.15)' : 'none' }}>{ratio}</button>))}</div>
                   
-                  <button onClick={handleGenerate} disabled={generateMutation.isPending || !text.trim() || !hasPlan || (!isAdmin && text.length > currentCharLimit)} className="w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 rounded-2xl text-white font-black uppercase tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] shadow-lg text-sm sm:text-base" style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, boxShadow: isDark ? `0 0 20px ${accent}` : `0 8px 20px rgba(109,40,217,0.25)` }}>{generateMutation.isPending ? <><Loader2 className="w-5 h-5 animate-spin" />{t.generating}</> : <><Volume2 className="w-5 h-5" />{t.generate}</>}</button>
+                  <button onClick={handleGenerate} disabled={generateMutation.isPending || !text.trim() || !hasPlan || (!isAdmin && text.length > currentCharLimit)} className="w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 rounded-2xl text-white font-black uppercase tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] shadow-lg text-sm sm:text-base" style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, boxShadow: isDark ? `0 0 20px ${accent}` : `0 8px 20px rgba(192,111,48,0.25)` }}>{generateMutation.isPending ? <><Loader2 className="w-5 h-5 animate-spin" />{t.generating}</> : <><Volume2 className="w-5 h-5" />{t.generate}</>}</button>
                   
-                  {generatedFiles && (<div className="mt-5 sm:mt-6 pt-5 sm:pt-6 border-t" style={{ borderColor: cardBorder }}><p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: subtextColor }}>{t.preview} {generatedFiles.durationMs > 0 && `(${Math.floor(generatedFiles.durationMs / 1000 / 60)}:${String(Math.floor(generatedFiles.durationMs / 1000) % 60).padStart(2, "0")})`}</p><audio ref={audioRef} controls className="w-full mb-4 rounded-xl" style={{ accentColor: accent }} /><div className="space-y-3"><button onClick={() => { const a = document.createElement("a"); a.href = generatedFiles.audioObjectUrl; a.download = `Myanmar_TTS_${Date.now()}.mp3`; a.click(); }} className="w-full flex items-center justify-center gap-2 py-2.5 sm:py-3 rounded-xl border font-bold text-sm transition-colors" style={{ borderColor: accent, color: accent, background: isDark ? 'rgba(167,139,250,0.1)' : 'rgba(109,40,217,0.05)' }}><Download className="w-4 h-4" /> MP3 Audio</button><button onClick={() => downloadFile(generatedFiles.srtContent, `Myanmar_TTS_${aspectRatio.replace(":", "x")}_${Date.now()}.srt`)} className="w-full flex items-center justify-center gap-2 py-2.5 sm:py-3 rounded-xl border font-bold text-sm transition-colors" style={{ borderColor: accentSecondary, color: accentSecondary, background: isDark ? 'rgba(99,102,241,0.1)' : 'rgba(76,29,149,0.05)' }}><Download className="w-4 h-4" /> SRT ({aspectRatio})</button></div></div>)}
+                  {generatedFiles && (<div className="mt-5 sm:mt-6 pt-5 sm:pt-6 border-t" style={{ borderColor: cardBorder }}><p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: subtextColor }}>{t.preview} {generatedFiles.durationMs > 0 && `(${Math.floor(generatedFiles.durationMs / 1000 / 60)}:${String(Math.floor(generatedFiles.durationMs / 1000) % 60).padStart(2, "0")})`}</p><audio ref={audioRef} controls className="w-full mb-4 rounded-xl" style={{ accentColor: accent }} /><div className="space-y-3"><button onClick={() => { const a = document.createElement("a"); a.href = generatedFiles.audioObjectUrl; a.download = `Myanmar_TTS_${Date.now()}.mp3`; a.click(); }} className="w-full flex items-center justify-center gap-2 py-2.5 sm:py-3 rounded-xl border font-bold text-sm transition-colors" style={{ borderColor: accent, color: accent, background: isDark ? 'rgba(192,111,48,0.1)' : 'rgba(244,179,79,0.05)' }}><Download className="w-4 h-4" /> MP3 Audio</button><button onClick={() => downloadFile(generatedFiles.srtContent, `Myanmar_TTS_${aspectRatio.replace(":", "x")}_${Date.now()}.srt`)} className="w-full flex items-center justify-center gap-2 py-2.5 sm:py-3 rounded-xl border font-bold text-sm transition-colors" style={{ borderColor: accentSecondary, color: accentSecondary, background: isDark ? 'rgba(244,179,79,0.1)' : 'rgba(244,179,79,0.05)' }}><Download className="w-4 h-4" /> SRT ({aspectRatio})</button></div></div>)}
                 </div>
               </div>
             </div>
@@ -879,7 +879,7 @@ export default function TTSGenerator() {
 
                 <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
                   <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>Upload</div>
-                  <div onDragOver={e => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)} onDrop={e => { e.preventDefault(); setDragOver(false); if (e.dataTransfer.files[0]) handleVideoFile(e.dataTransfer.files[0]); }} onClick={() => fileRef.current?.click()} className="border-2 border-dashed py-6 sm:py-8 px-4 rounded-xl text-center cursor-pointer transition-all mt-1" style={{ borderColor: dragOver ? accent : videoFile ? "#16a34a" : inputBorder, background: dragOver ? (isDark ? 'rgba(167,139,250,0.1)' : 'rgba(109,40,217,0.05)') : inputBg, opacity: videoUrl ? 0.4 : 1 }}>
+                  <div onDragOver={e => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)} onDrop={e => { e.preventDefault(); setDragOver(false); if (e.dataTransfer.files[0]) handleVideoFile(e.dataTransfer.files[0]); }} onClick={() => fileRef.current?.click()} className="border-2 border-dashed py-6 sm:py-8 px-4 rounded-xl text-center cursor-pointer transition-all mt-1" style={{ borderColor: dragOver ? accent : videoFile ? "#16a34a" : inputBorder, background: dragOver ? (isDark ? 'rgba(192,111,48,0.1)' : 'rgba(244,179,79,0.05)') : inputBg, opacity: videoUrl ? 0.4 : 1 }}>
                     <input ref={fileRef} type="file" accept="video/*" className="hidden" onChange={e => { if (e.target.files?.[0]) handleVideoFile(e.target.files[0]); }} />
                     {videoFile ? (<><FileVideo className="w-8 h-8 mx-auto mb-2 text-green-600" /><p className="font-bold text-green-600 text-sm">{videoFile.name}</p><p className="text-xs font-semibold mt-1" style={{ color: subtextColor }}>{(videoFile.size / 1024 / 1024).toFixed(1)} MB</p></>) : (<><Upload className="w-8 h-8 mx-auto mb-2" style={{ color: subtextColor }} /><p className="font-bold text-sm" style={{ color: subtextColor }}>{t.dropVideo}</p><p className="text-xs font-semibold mt-2" style={{ color: subtextColor }}>MP4, MOV, AVI, MKV</p></>)}
                   </div>
@@ -888,7 +888,7 @@ export default function TTSGenerator() {
                 {/* Video Preview removed from translate tab — not needed */}
 
                 {(videoFile || videoUrl) && (
-                  <button onClick={handleTranslate} disabled={translateMutation.isPending || translateLinkMutation.isPending} className="w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 rounded-2xl text-white font-black uppercase tracking-widest transition-all disabled:opacity-50 hover:scale-[1.02] mt-4 shadow-lg text-sm sm:text-base" style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, boxShadow: isDark ? `0 0 20px ${accent}` : `0 8px 20px rgba(109,40,217,0.25)` }}>
+                  <button onClick={handleTranslate} disabled={translateMutation.isPending || translateLinkMutation.isPending} className="w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 rounded-2xl text-white font-black uppercase tracking-widest transition-all disabled:opacity-50 hover:scale-[1.02] mt-4 shadow-lg text-sm sm:text-base" style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, boxShadow: isDark ? `0 0 20px ${accent}` : `0 8px 20px rgba(192,111,48,0.25)` }}>
                     {(translateMutation.isPending || translateLinkMutation.isPending) ? <><Loader2 className="w-5 h-5 animate-spin" />{t.translating}</> : <><Sparkles className="w-5 h-5" />{t.translateBtn}</>}
                   </button>
                 )}
@@ -989,7 +989,7 @@ export default function TTSGenerator() {
 
                 <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
                   <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>Upload</div>
-                  <div onDragOver={e => { e.preventDefault(); setDubDragOver(true); }} onDragLeave={() => setDubDragOver(false)} onDrop={e => { e.preventDefault(); setDubDragOver(false); if (e.dataTransfer.files[0]) handleDubVideoFile(e.dataTransfer.files[0]); }} onClick={() => dubFileRef.current?.click()} className="border-2 border-dashed py-6 sm:py-8 px-4 rounded-xl text-center cursor-pointer transition-all mt-1" style={{ borderColor: dubDragOver ? accent : dubVideoFile ? "#16a34a" : inputBorder, background: dubDragOver ? (isDark ? 'rgba(167,139,250,0.1)' : 'rgba(109,40,217,0.05)') : inputBg, opacity: dubVideoUrl ? 0.4 : 1 }}>
+                  <div onDragOver={e => { e.preventDefault(); setDubDragOver(true); }} onDragLeave={() => setDubDragOver(false)} onDrop={e => { e.preventDefault(); setDubDragOver(false); if (e.dataTransfer.files[0]) handleDubVideoFile(e.dataTransfer.files[0]); }} onClick={() => dubFileRef.current?.click()} className="border-2 border-dashed py-6 sm:py-8 px-4 rounded-xl text-center cursor-pointer transition-all mt-1" style={{ borderColor: dubDragOver ? accent : dubVideoFile ? "#16a34a" : inputBorder, background: dubDragOver ? (isDark ? 'rgba(192,111,48,0.1)' : 'rgba(244,179,79,0.05)') : inputBg, opacity: dubVideoUrl ? 0.4 : 1 }}>
                     <input ref={dubFileRef} type="file" accept="video/*" className="hidden" onChange={e => { if (e.target.files?.[0]) handleDubVideoFile(e.target.files[0]); }} />
                     {dubVideoFile ? (<><FileVideo className="w-8 h-8 mx-auto mb-2 text-green-600" /><p className="font-bold text-green-600 text-sm">{dubVideoFile.name}</p><p className="text-xs font-semibold mt-1" style={{ color: subtextColor }}>{(dubVideoFile.size / 1024 / 1024).toFixed(1)} MB</p></>) : (<><Upload className="w-8 h-8 mx-auto mb-2" style={{ color: subtextColor }} /><p className="font-bold text-sm" style={{ color: subtextColor }}>{t.dropVideo}</p><p className="text-xs font-semibold mt-2" style={{ color: subtextColor }}>MP4, MOV, AVI, MKV</p></>)}
                   </div>
@@ -1199,7 +1199,7 @@ export default function TTSGenerator() {
                   {voiceAccordionOpen && (
                     <div className="space-y-4 mt-2 animate-in fade-in slide-in-from-top-2 duration-200">
                       {[{ label: t.male, voices: [{ id: "thiha", name: "သီဟ", isStd: true }, { id: "ryan", name: "ရဲရင့်", isStd: false }, { id: "ronnie", name: "ရောင်နီ", isStd: false }, { id: "lucas", name: "လင်းခန့်", isStd: false }, { id: "daniel", name: "ဒေဝ", isStd: false }, { id: "evander", name: "အဂ္ဂ", isStd: false }]}, { label: t.female, voices: [{ id: "nilar", name: "နီလာ", isStd: true }, { id: "michelle", name: "မေချို", isStd: false }, { id: "iris", name: "အိန္ဒြာ", isStd: false }, { id: "charlotte", name: "သီရိ", isStd: false }, { id: "amara", name: "အမရာ", isStd: false }]}].map(({ label: grpLabel, voices }) => (
-                        <div key={grpLabel}><p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: subtextColor }}>{grpLabel}</p><div className="grid grid-cols-3 gap-2">{voices.map(v => { const isSelected = v.isStd ? dubVoiceMode === "standard" && dubVoice === (v.id === "thiha" ? "thiha" : "nilar") : dubVoiceMode === "character" && dubCharacter === v.id; return (<button key={v.id} onClick={() => { if (v.isStd) { setDubVoiceMode("standard"); setDubVoice(v.id as any); setDubCharacter(""); } else { setDubVoiceMode("character"); setDubCharacter(v.id); } }} className="py-2 px-2 border rounded-xl text-xs font-bold transition-all" style={{ borderColor: isSelected ? accent : cardBorder, background: isSelected ? (isDark ? 'rgba(167,139,250,0.2)' : 'rgba(109,40,217,0.08)') : 'transparent', color: isSelected ? accent : textColor, boxShadow: isSelected && isDark ? `0 0 12px rgba(167,139,250,0.3)` : 'none' }}>{v.name}</button>); })}</div></div>
+                        <div key={grpLabel}><p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: subtextColor }}>{grpLabel}</p><div className="grid grid-cols-3 gap-2">{voices.map(v => { const isSelected = v.isStd ? dubVoiceMode === "standard" && dubVoice === (v.id === "thiha" ? "thiha" : "nilar") : dubVoiceMode === "character" && dubCharacter === v.id; return (<button key={v.id} onClick={() => { if (v.isStd) { setDubVoiceMode("standard"); setDubVoice(v.id as any); setDubCharacter(""); } else { setDubVoiceMode("character"); setDubCharacter(v.id); } }} className="py-2 px-2 border rounded-xl text-xs font-bold transition-all" style={{ borderColor: isSelected ? accent : cardBorder, background: isSelected ? (isDark ? 'rgba(192,111,48,0.2)' : 'rgba(244,179,79,0.08)') : 'transparent', color: isSelected ? accent : textColor, boxShadow: isSelected && isDark ? `0 0 12px rgba(192,111,48,0.3)` : 'none' }}>{v.name}</button>); })}</div></div>
                       ))}
                     </div>
                   )}
@@ -1297,12 +1297,12 @@ export default function TTSGenerator() {
                               <div className="flex gap-2">
                                 <button onClick={() => setSrtBlurColor("black")}
                                   className="flex-1 py-2 px-3 rounded-xl border-2 text-xs font-bold transition-all"
-                                  style={{ borderColor: srtBlurColor === "black" ? accent : cardBorder, background: srtBlurColor === "black" ? (isDark ? "rgba(167,139,250,0.15)" : "rgba(109,40,217,0.08)") : "transparent", color: textColor }}>
+                                  style={{ borderColor: srtBlurColor === "black" ? accent : cardBorder, background: srtBlurColor === "black" ? (isDark ? "rgba(192,111,48,0.15)" : "rgba(244,179,79,0.08)") : "transparent", color: textColor }}>
                                   ⬛ {lang === "mm" ? "အမဲ" : "Black"}
                                 </button>
                                 <button onClick={() => setSrtBlurColor("white")}
                                   className="flex-1 py-2 px-3 rounded-xl border-2 text-xs font-bold transition-all"
-                                  style={{ borderColor: srtBlurColor === "white" ? accent : cardBorder, background: srtBlurColor === "white" ? (isDark ? "rgba(167,139,250,0.15)" : "rgba(109,40,217,0.08)") : "transparent", color: textColor }}>
+                                  style={{ borderColor: srtBlurColor === "white" ? accent : cardBorder, background: srtBlurColor === "white" ? (isDark ? "rgba(192,111,48,0.15)" : "rgba(244,179,79,0.08)") : "transparent", color: textColor }}>
                                   ⬜ {lang === "mm" ? "အဖြူ" : "White"}
                                 </button>
                               </div>
@@ -1342,12 +1342,12 @@ export default function TTSGenerator() {
                                 <div className="flex gap-2">
                                   <button onClick={() => setSrtBorderRadius("rounded")}
                                     className="flex-1 py-2 px-3 rounded-xl border-2 text-xs font-bold transition-all"
-                                    style={{ borderColor: srtBorderRadius === "rounded" ? accent : cardBorder, background: srtBorderRadius === "rounded" ? (isDark ? "rgba(167,139,250,0.15)" : "rgba(109,40,217,0.08)") : "transparent", color: textColor }}>
+                                    style={{ borderColor: srtBorderRadius === "rounded" ? accent : cardBorder, background: srtBorderRadius === "rounded" ? (isDark ? "rgba(192,111,48,0.15)" : "rgba(244,179,79,0.08)") : "transparent", color: textColor }}>
                                     ◉ {lang === "mm" ? "အဝိုင်း" : "Rounded"}
                                   </button>
                                   <button onClick={() => setSrtBorderRadius("square")}
                                     className="flex-1 py-2 px-3 rounded-xl border-2 text-xs font-bold transition-all"
-                                    style={{ borderColor: srtBorderRadius === "square" ? accent : cardBorder, background: srtBorderRadius === "square" ? (isDark ? "rgba(167,139,250,0.15)" : "rgba(109,40,217,0.08)") : "transparent", color: textColor }}>
+                                    style={{ borderColor: srtBorderRadius === "square" ? accent : cardBorder, background: srtBorderRadius === "square" ? (isDark ? "rgba(192,111,48,0.15)" : "rgba(244,179,79,0.08)") : "transparent", color: textColor }}>
                                     ◻ {lang === "mm" ? "လေးထောင့်" : "Square"}
                                   </button>
                                 </div>
@@ -1372,7 +1372,7 @@ export default function TTSGenerator() {
                 </div>
 
                 {/* Generate Dubbing Button */}
-                <button onClick={handleDubGenerate} disabled={dubFileMutation.isPending || dubLinkMutation.isPending || dubPreviewUrl === 'loading' || dubPreviewMutation.isPending} className="w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 rounded-2xl text-white font-black uppercase tracking-widest transition-all disabled:opacity-50 hover:scale-[1.02] mt-2 shadow-lg text-sm sm:text-base" style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, boxShadow: isDark ? `0 0 20px ${accent}` : `0 8px 20px rgba(109,40,217,0.25)` }}>
+                <button onClick={handleDubGenerate} disabled={dubFileMutation.isPending || dubLinkMutation.isPending || dubPreviewUrl === 'loading' || dubPreviewMutation.isPending} className="w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 rounded-2xl text-white font-black uppercase tracking-widest transition-all disabled:opacity-50 hover:scale-[1.02] mt-2 shadow-lg text-sm sm:text-base" style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, boxShadow: isDark ? `0 0 20px ${accent}` : `0 8px 20px rgba(192,111,48,0.25)` }}>
                   {(dubFileMutation.isPending || dubLinkMutation.isPending) ? <><Loader2 className="w-5 h-5 animate-spin" /><span className="text-xs sm:text-sm">{lang === "mm" ? "ဖန်တီးနေသည်... (၃-၅ မိနစ်)" : "Generating... (3-5 min)"}</span></> : <><Wand2 className="w-5 h-5" />{lang === "mm" ? "AI ဖြင့် ဖန်တီးမည်" : "Generate with AI"}</>}
                 </button>
 
@@ -1420,7 +1420,7 @@ export default function TTSGenerator() {
                   <div className="flex items-center justify-center gap-3 mt-4">
                     <button onClick={handleDubDownload}
                       className="flex items-center gap-2 px-5 sm:px-6 py-3 rounded-xl font-black text-sm uppercase tracking-wider transition-all hover:scale-105 shadow-lg text-white"
-                      style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, boxShadow: isDark ? `0 0 20px ${accent}` : `0 8px 20px rgba(109,40,217,0.25)` }}>
+                      style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, boxShadow: isDark ? `0 0 20px ${accent}` : `0 8px 20px rgba(192,111,48,0.25)` }}>
                       <Download className="w-5 h-5" /> {lang === "mm" ? "MP4 ဒေါင်းလုတ်" : "Download MP4"}
                     </button>
                   </div>
@@ -1600,7 +1600,7 @@ export default function TTSGenerator() {
             </div>
 
             {/* Current Plan Card */}
-            <div className="rounded-2xl border-2 p-6 sm:p-8 mb-6" style={{ background: `linear-gradient(135deg, ${isDark ? 'rgba(139,92,246,0.08)' : 'rgba(139,92,246,0.05)'}, ${cardBg})`, borderColor: accent40, boxShadow: `0 0 30px ${accent15}` }}>
+            <div className="rounded-2xl border-2 p-6 sm:p-8 mb-6" style={{ background: `linear-gradient(135deg, ${isDark ? 'rgba(192,111,48,0.08)' : 'rgba(192,111,48,0.05)'}, ${cardBg})`, borderColor: accent40, boxShadow: `0 0 30px ${accent15}` }}>
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-3">
                   <Star className="w-6 h-6" style={{ color: currentPlan === 'trial' ? '#f59e0b' : accent }} />
