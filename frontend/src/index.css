@@ -288,6 +288,19 @@
     backdrop-filter: blur(25px);
     -webkit-backdrop-filter: blur(25px);
     border-right: 1px solid var(--sidebar-border);
+    transition: width 0.2s ease, min-width 0.2s ease;
+  }
+
+  .glass-sidebar[data-state="collapsed"],
+  .glass-sidebar[data-collapsed="true"] {
+    width: 3rem !important;
+    min-width: 3rem !important;
+  }
+
+  .glass-sidebar[data-state="expanded"],
+  .glass-sidebar[data-collapsed="false"] {
+    width: 16rem !important;
+    min-width: 16rem !important;
   }
 
   .glass-button {
