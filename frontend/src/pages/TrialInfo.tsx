@@ -82,7 +82,7 @@ export default function TrialInfo() {
   const [, navigate] = useLocation();
   const { data: subStatus } = trpc.subscription.myStatus.useQuery();
 
-  const accent = "oklch(0.65 0.25 310)";
+  const accent = "#C06F30";
   const cardBg = "rgba(15, 12, 41, 0.6)";
   const cardBorder = "rgba(192,111,48,0.2)";
   const textColor = "#F0EEFF";
@@ -271,7 +271,7 @@ export default function TrialInfo() {
             <p className="text-sm font-bold mb-4" style={{ color: subtextColor }}>{t.contactAdmin}</p>
             <a href="https://t.me/LumixOfficialBot" target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-white font-bold text-sm uppercase tracking-wider transition-all hover:scale-105"
-              style={{ background: `linear-gradient(135deg, ${accent}, oklch(0.6 0.28 280))` }}>
+              style={{ background: `linear-gradient(135deg, ${accent}, #F4B34F)` }}>
               Telegram Bot
             </a>
           </div>
