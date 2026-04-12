@@ -126,26 +126,37 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
         console.log("[Video Translator] Downloading with yt-dlp (using cookies)...");
 
         const strategies = [
-          // WITH COOKIES - tv client
-          ["--cookies", cookiePath, "--extractor-args", "youtube:player_client=tv", "-f", "bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b", "--merge-output-format", "mp4"],
-          // WITH COOKIES - web_creator client
-          ["--cookies", cookiePath, "--extractor-args", "youtube:player_client=web_creator", "-f", "bv*+ba/b", "--merge-output-format", "mp4"],
-          // WITH COOKIES - generic
-          ["--cookies", cookiePath, "-f", "b", "--recode-video", "mp4"],
+          // WITH COOKIES - tv client with user-agent
+          ["--cookies", cookiePath, "--extractor-args", "youtube:player_client=tv", "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36", "--add-header", "Referer:https://www.youtube.com/", "-f", "bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b", "--merge-output-format", "mp4"],
+          // WITH COOKIES - web client
+          ["--cookies", cookiePath, "--extractor-args", "youtube:player_client=web", "--user-agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36", "-f", "bv*+ba/b", "--merge-output-format", "mp4"],
+          // WITH COOKIES - android client
+          ["--cookies", cookiePath, "--extractor-args", "youtube:player_client=android", "-f", "b", "--recode-video", "mp4"],
           // WITHOUT COOKIES - tv client
-          ["--extractor-args", "youtube:player_client=tv", "-f", "b[ext=mp4]/b", "--merge-output-format", "mp4"],
-          // WITHOUT COOKIES - mweb client
-          ["--extractor-args", "youtube:player_client=mweb", "-f", "b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4"],
-          // WITHOUT COOKIES - generic fallback
-          ["-f", "bv*+ba/b", "--merge-output-format", "mp4"],
+          ["--extractor-args", "youtube:player_client=tv", "--user-agent", "Mozilla/5.0 (SMART-TV; Linux; Tizen 5.0)", "-f", "b[ext=mp4]/b", "--merge-output-format", "mp4"],
+          // WITHOUT COOKIES - ios client
+          ["--extractor-args", "youtube:player_client=ios", "--user-agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)", "-f", "b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4"],
+          // Fallback - lowest quality
+          ["-f", "worst[ext=mp4]/worst", "--recode-video", "mp4"],
         ];
 
         let dlSuccess = false;
+        let lastError = "";
+        
         for (let i = 0; i < strategies.length; i++) {
           await fs.unlink(tempVideoPath).catch(() => {});
+          
+          // Delay between retries to avoid rate limiting
+          if (i > 0) {
+            const delayMs = 2000 * i; // 2s, 4s, 6s, 8s, 10s
+            console.log(`[Video Translator] Waiting ${delayMs}ms before retry...`);
+            await new Promise(r => setTimeout(r, delayMs));
+          }
+          
           try {
             const isCookie = strategies[i].includes("--cookies");
-            const label = isCookie ? "WithCookies" : "NoCookies";
+            const hasUA = strategies[i].includes("--user-agent");
+            const label = isCookie ? "WithCookies" : (hasUA ? "WithUA" : "Fallback");
             console.log(`[Video Translator] Strategy ${i + 1}/${strategies.length} [${label}]...`);
 
             await execFileAsync("yt-dlp", [
@@ -153,10 +164,13 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
               "--no-playlist",
               "--no-warnings",
               "--max-filesize", "50M",
+              "--socket-timeout", "30",
+              "--retries", "3",
+              "--fragment-retries", "3",
               ...strategies[i],
               "-o", tempVideoPath,
               url
-            ], { timeout: 300000 });
+            ], { timeout: 180000 }); // Reduced to 3 min per strategy
 
             const stat = await fs.stat(tempVideoPath).catch(() => null);
             if (stat && stat.size > 10000) {
@@ -165,12 +179,28 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
               break;
             }
           } catch (e: any) {
-            console.warn(`[Video Translator] Strategy ${i + 1} failed: ${e.message?.slice(0, 100)}`);
+            lastError = e.message || "Unknown error";
+            const errorShort = lastError.slice(0, 150);
+            console.warn(`[Video Translator] Strategy ${i + 1} failed: ${errorShort}`);
+            
+            // If error contains "Sign in", skip remaining strategies
+            if (lastError.includes("Sign in") || lastError.includes("age-restricted")) {
+              console.error("[Video Translator] Video requires login or is age-restricted");
+              break;
+            }
           }
         }
 
         if (!dlSuccess) {
-          throw new Error("ဗီဒီယိုကို ဒေါင်းလုတ်မရပါ။ YouTube bot detection ကြောင့် ဖြစ်နိုင်ပါသည်။");
+          // Provide detailed error for debugging
+          const errorDetail = lastError.includes("bot") ? "Bot detection" : 
+                             lastError.includes("age") ? "Age restricted" :
+                             lastError.includes("private") ? "Private video" :
+                             lastError.includes("not available") ? "Video unavailable" : "Unknown";
+          console.error(`[Video Translator] All strategies failed. Last error type: ${errorDetail}`);
+          console.error(`[Video Translator] Full error: ${lastError.slice(0, 500)}`);
+          
+          throw new Error(`ဗီဒီယိုကို ဒေါင်းလုတ်မရပါ။ (${errorDetail}) YouTube က bot detection လုပ်နေတာ ဖြစ်နိုင်ပါသည်။ နောက်မှ ထပ်ကြိုးစားပါ သို့မဟုတ် တခြား link သုံးပါ။`);
         }
 
         const fileStat = await fs.stat(tempVideoPath).catch(() => null);

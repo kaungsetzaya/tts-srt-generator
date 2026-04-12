@@ -318,26 +318,47 @@ export async function dubVideoFromLink(url: string, options: DubOptions): Promis
 
     console.log("[Dubber] Downloading with yt-dlp...");
 
+    const userAgents = [
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
+      "Mozilla/5.0 (SMART-TV; Linux; Tizen 6.0) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/4.0 Chrome/76.0.3809.146 TV Safari/537.36"
+    ];
+    
     const strategies = [
-      // ✅ WITH COOKIES + PROXY - default best
+      // ✅ WITH COOKIES + PROXY + UA - default best
       ...(hasCookies ? [
-        ["--cookies", cookiePath, ...proxyArgs, "-f", "18/mp4[height<=480]/worst[ext=mp4]"],
-        ["--cookies", cookiePath, ...proxyArgs, "--extractor-args", "youtube:player_client=tv", "-f", "18/mp4[height<=480]/worst[ext=mp4]"],
-        ["--cookies", cookiePath, ...proxyArgs, "-f", "b", "--recode-video", "mp4"],
+        ["--cookies", cookiePath, "--user-agent", userAgents[0], ...proxyArgs, "-f", "18/mp4[height<=480]/worst[ext=mp4]"],
+        ["--cookies", cookiePath, "--user-agent", userAgents[1], ...proxyArgs, "--extractor-args", "youtube:player_client=tv", "-f", "18/mp4[height<=480]/worst[ext=mp4]"],
+        ["--cookies", cookiePath, "--user-agent", userAgents[2], ...proxyArgs, "-f", "b", "--recode-video", "mp4"],
       ] : []),
-      // ✅ PROXY ONLY - no cookies
+      // ✅ PROXY ONLY + UA - no cookies
       ...(proxyUrl ? [
-        [...proxyArgs, "-f", "18/mp4[height<=480]/worst[ext=mp4]"],
-        [...proxyArgs, "--extractor-args", "youtube:player_client=tv", "-f", "b[ext=mp4]/b", "--merge-output-format", "mp4"],
+        ["--user-agent", userAgents[0], ...proxyArgs, "-f", "18/mp4[height<=480]/worst[ext=mp4]"],
+        ["--user-agent", userAgents[1], ...proxyArgs, "--extractor-args", "youtube:player_client=tv", "-f", "b[ext=mp4]/b", "--merge-output-format", "mp4"],
       ] : []),
-      // ✅ NO PROXY NO COOKIES - last resort
-      ["-f", "18/mp4[height<=480]/worst[ext=mp4]"],
-      ["--extractor-args", "youtube:player_client=tv", "-f", "b[ext=mp4]/b", "--merge-output-format", "mp4"],
+      // ✅ WITH COOKIES ONLY + UA
+      ...(hasCookies ? [
+        ["--cookies", cookiePath, "--user-agent", userAgents[3], "-f", "worst[ext=mp4]/worst"],
+      ] : []),
+      // ✅ NO PROXY NO COOKIES + UA - last resort
+      ["--user-agent", userAgents[0], "-f", "18/mp4[height<=480]/worst[ext=mp4]"],
+      ["--user-agent", userAgents[2], "--extractor-args", "youtube:player_client=tv", "-f", "worst[ext=mp4]/worst"],
     ];
 
     let dlSuccess = false;
+    let lastError = "";
+    
     for (let i = 0; i < strategies.length; i++) {
       await fs.unlink(tempVideoPath).catch(() => {});
+      
+      // Delay between retries
+      if (i > 0) {
+        const delayMs = 1500 * i;
+        console.log(`[Dubber] Waiting ${delayMs}ms before retry...`);
+        await new Promise(r => setTimeout(r, delayMs));
+      }
+      
       try {
         const hasCookie = strategies[i].includes("--cookies");
         const hasProxy = strategies[i].includes("--proxy");
@@ -348,18 +369,16 @@ export async function dubVideoFromLink(url: string, options: DubOptions): Promis
           "--no-check-certificates",
           "--socket-timeout", "30",
           "--no-part",
-          "--socket-timeout", "30",
-          "--no-part",
           "--no-playlist",
           "--no-warnings",
-          "--retries", "3",
-          "--fragment-retries", "3",
+          "--retries", "2",
+          "--fragment-retries", "2",
           "--http-chunk-size", "10M",
           "--max-filesize", "50M",
           ...strategies[i],
           "-o", tempVideoPath,
           url
-        ], { timeout: 300000 });
+        ], { timeout: 180000 });
 
         const stat = await fs.stat(tempVideoPath).catch(() => null);
         if (stat && stat.size > 10000) {
@@ -368,12 +387,23 @@ export async function dubVideoFromLink(url: string, options: DubOptions): Promis
           break;
         }
       } catch (e: any) {
-        console.warn(`[Dubber] Strategy ${i + 1} failed: ${e.message?.slice(0, 100)}`);
+        lastError = e.message || "Unknown error";
+        console.warn(`[Dubber] Strategy ${i + 1} failed: ${lastError.slice(0, 150)}`);
+        
+        // Check for specific errors
+        if (lastError.includes("Sign in") || lastError.includes("age")) {
+          console.error("[Dubber] Video requires login or is age-restricted");
+          break;
+        }
       }
     }
 
     if (!dlSuccess) {
-      throw new Error("ဗီဒီယိုကို ဒေါင်းလုတ်မရပါ။ Link ကို စစ်ပြီး ထပ်ကြိုးစားပါ။");
+      const errorType = lastError.includes("bot") ? "Bot detection" : 
+                       lastError.includes("not available") ? "Video unavailable" : 
+                       lastError.includes("private") ? "Private video" : "Download failed";
+      console.error(`[Dubber] All strategies failed: ${errorType}`);
+      throw new Error(`ဗီဒီယိုကို ဒေါင်းလုတ်မရပါ။ (${errorType}) YouTube bot detection သို့မဟုတ် video မရရှိနိုင်ပါ။ နောက်မှ ထပ်ကြိုးစားပါ။`);
     }
 
     const videoBuffer = await fs.readFile(tempVideoPath);
