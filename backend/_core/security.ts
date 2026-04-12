@@ -51,32 +51,71 @@ export function corsMiddleware(req: Request, res: Response, next: NextFunction) 
 }
 
 // ────────────────────────────────────────────────────
-// ✅ 2. Admin IP Whitelist — REQUIRED in production
+// ✅ 2. Admin IP Whitelist — supports IPv4 and IPv6
 // ────────────────────────────────────────────────────
-const ADMIN_IPS = (process.env.ADMIN_WHITELIST_IPS || "")
-  .split(",")
-  .map(ip => ip.trim())
-  .filter(Boolean);
+function parseAdminIps(): Set<string> {
+  const ips = new Set<string>();
+  
+  // Always allow localhost for development
+  ips.add("127.0.0.1");
+  ips.add("::1");
+  ips.add("localhost");
+  
+  const envIps = process.env.ADMIN_WHITELIST_IPS || "";
+  if (envIps) {
+    envIps.split(",").forEach(ip => {
+      const trimmed = ip.trim();
+      if (trimmed) {
+        // Normalize: remove protocol if present
+        const normalized = trimmed
+          .replace(/^https?:\/\//, '')
+          .replace(/\/.*$/, '')
+          .split(':')[0]; // Remove port
+        ips.add(normalized);
+        // Also add with ::1 suffix for IPv6
+        if (normalized.includes('.')) {
+          ips.add(normalized.replace('.', ':'));
+        }
+      }
+    });
+  }
+  
+  return ips;
+}
+
+const ADMIN_IPS = parseAdminIps();
 
 export function adminIpWhitelist(req: Request, res: Response, next: NextFunction) {
-  // 🔐 Production mode: IP whitelist ရှိရမည်
-  if (process.env.NODE_ENV === "production" && ADMIN_IPS.length === 0) {
+  // Dev mode: no whitelist = allow localhost only
+  if (process.env.NODE_ENV !== "production") {
+    return next();
+  }
+
+  // Production mode: require IP whitelist
+  if (ADMIN_IPS.size <= 3) { // Only localhost entries
     console.error("[SECURITY] FATAL: ADMIN_WHITELIST_IPS is not set in production! Admin access blocked.");
     res.status(403).json({ error: "Access denied." });
     return;
   }
 
-  // Dev mode: no whitelist = allow all
-  if (ADMIN_IPS.length === 0) return next();
+  // Get client IP from various headers
+  const forwardedFor = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim();
+  const realIp = req.headers["x-real-ip"] as string;
+  const clientIp = forwardedFor || realIp || req.ip || "";
 
-  const clientIp = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim()
-    || req.ip || "";
+  // Check if IP is allowed
+  const normalizedIp = clientIp.split(':')[0]; // Handle IPv6 with port
+  
+  let isAllowed = ADMIN_IPS.has(clientIp) || 
+                  ADMIN_IPS.has(normalizedIp) ||
+                  ADMIN_IPS.has(clientIp.replace(/\./g, ':'));
 
-  if (!ADMIN_IPS.includes(clientIp)) {
+  if (!isAllowed) {
     console.warn(`[SECURITY] Admin access blocked: ${clientIp} at ${new Date().toISOString()}`);
     res.status(403).json({ error: "Access denied." });
     return;
   }
+
   next();
 }
 

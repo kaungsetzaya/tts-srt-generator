@@ -122,7 +122,7 @@ export async function generateSpeech(
       "--write-media", audioPath,
       "--write-subtitles", srtPath,
     ], {
-      env: { ...process.env, PATH: process.env.PATH, HTTPS_PROXY: process.env.EDGE_TTS_PROXY ?? "", HTTP_PROXY: process.env.EDGE_TTS_PROXY ?? "" },
+      env: { ...process.env, PATH: process.env.PATH, HTTPS_PROXY: (() => { const h=process.env.EDGE_TTS_PROXY_HOST,p=process.env.EDGE_TTS_PROXY_PORT,u=process.env.EDGE_TTS_PROXY_USER,s=process.env.EDGE_TTS_PROXY_PASS; return (h&&p&&u&&s) ? `http://${u}:${s}@${h}:${p}` : ""; })(), HTTP_PROXY: (() => { const h=process.env.EDGE_TTS_PROXY_HOST,p=process.env.EDGE_TTS_PROXY_PORT,u=process.env.EDGE_TTS_PROXY_USER,s=process.env.EDGE_TTS_PROXY_PASS; return (h&&p&&u&&s) ? `http://${u}:${s}@${h}:${p}` : ""; })() },
     });
 
     const audioBuffer = await fs.readFile(audioPath);

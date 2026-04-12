@@ -14,6 +14,7 @@ import { eq, desc, and, gte, sql } from "drizzle-orm";
 import { SignJWT } from "jose";
 import { nanoid } from "nanoid";
 import { checkRateLimit, clearRateLimit } from "./_core/rateLimit";
+import { checkVideoApiRateLimit, checkIpRateLimit } from "./_core/apiRateLimit";
 import { auditLog, isAllowedVideoUrl, isValidVideoBuffer, isValidCharacterId, isValidVoiceId, validateBase64VideoPrefix, sanitizeForAI } from "./_core/security";
 
 // 🔐 JWT Secret - .env မှာ မသတ်မှတ်ရင် production တွင် crash ဖြစ်မည်
@@ -451,6 +452,15 @@ export const appRouter = router({
       }),
     translateLink: publicProcedure.input(z.object({ url: z.string() })).mutation(async ({ input, ctx }) => {
       if (!ctx.user) throw new Error("Please login first.");
+      
+      // Rate limit check
+      const ip = ctx.req?.headers?.["x-forwarded-for"] as string || ctx.req?.ip || "";
+      const ipLimit = checkIpRateLimit(ip, "default");
+      if (!ipLimit.allowed) throw new Error(`Rate limit exceeded. Try again in ${Math.ceil(ipLimit.resetIn/60)} minutes.`);
+      
+      const userLimit = checkVideoApiRateLimit(ctx.user.userId, "translateLink");
+      if (!userLimit.allowed) throw new Error(`Video translate limit reached (${userLimit.resetIn > 60 ? Math.ceil(userLimit.resetIn/60) + ' min' : userLimit.resetIn + ' sec'} cooldown).`);
+      
       // 🔐 yt-dlp Domain Whitelist
       if (!isAllowedVideoUrl(input.url)) {
         throw new Error("ခွင့်ပြုထားသော Link များသာ သုံးနိုင်ပါသည်။ YouTube, TikTok, Facebook Link သာ ထည့်ပါ။");
@@ -502,6 +512,15 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user) throw new Error("Please login first.");
+        
+        // Rate limit check
+        const ip = ctx.req?.headers?.["x-forwarded-for"] as string || ctx.req?.ip || "";
+        const ipLimit = checkIpRateLimit(ip, "default");
+        if (!ipLimit.allowed) throw new Error(`Rate limit exceeded. Try again in ${Math.ceil(ipLimit.resetIn/60)} minutes.`);
+        
+        const userLimit = checkVideoApiRateLimit(ctx.user.userId, "translateFile");
+        if (!userLimit.allowed) throw new Error(`Video translate limit reached (${userLimit.resetIn > 60 ? Math.ceil(userLimit.resetIn/60) + ' min' : userLimit.resetIn + ' sec'} cooldown).`);
+        
         // 🔐 Base64 prefix validation
         if (!validateBase64VideoPrefix(input.videoBase64)) {
           throw new Error("Invalid video format.");
@@ -570,6 +589,15 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user) throw new Error("Please login first.");
+        
+        // Rate limit check
+        const ip = ctx.req?.headers?.["x-forwarded-for"] as string || ctx.req?.ip || "";
+        const ipLimit = checkIpRateLimit(ip, "default");
+        if (!ipLimit.allowed) throw new Error(`Rate limit exceeded. Try again in ${Math.ceil(ipLimit.resetIn/60)} minutes.`);
+        
+        const userLimit = checkVideoApiRateLimit(ctx.user.userId, "dubFile");
+        if (!userLimit.allowed) throw new Error(`AI Video limit reached (${userLimit.resetIn > 60 ? Math.ceil(userLimit.resetIn/60) + ' min' : userLimit.resetIn + ' sec'} cooldown).`);
+        
         // 🔐 Voice ID whitelist
         if (input.character && !isValidCharacterId(input.character)) throw new Error("Invalid character voice.");
         if (!validateBase64VideoPrefix(input.videoBase64)) throw new Error("Invalid video format.");
@@ -650,6 +678,15 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user) throw new Error("Please login first.");
+        
+        // Rate limit check
+        const ip = ctx.req?.headers?.["x-forwarded-for"] as string || ctx.req?.ip || "";
+        const ipLimit = checkIpRateLimit(ip, "default");
+        if (!ipLimit.allowed) throw new Error(`Rate limit exceeded. Try again in ${Math.ceil(ipLimit.resetIn/60)} minutes.`);
+        
+        const userLimit = checkVideoApiRateLimit(ctx.user.userId, "dubLink");
+        if (!userLimit.allowed) throw new Error(`AI Video limit reached (${userLimit.resetIn > 60 ? Math.ceil(userLimit.resetIn/60) + ' min' : userLimit.resetIn + ' sec'} cooldown).`);
+        
         if (!isAllowedVideoUrl(input.url)) throw new Error("ခွင့်ပြုထားသော Link များသာ သုံးနိုင်ပါသည်။ YouTube, TikTok, Facebook Link သာ ထည့်ပါ။");
         if (input.character && !isValidCharacterId(input.character)) throw new Error("Invalid character voice.");
         const db = await getDb();

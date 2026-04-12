@@ -309,10 +309,16 @@ export async function dubVideoFromLink(url: string, options: DubOptions): Promis
     const cookiePath = path.join(process.cwd(), 'cookies.txt');
     const hasCookies = existsSync(cookiePath);
 
-    // 🌐 Proxy support — reads YTDLP_PROXY from .env
-    const proxyUrl = process.env.YTDLP_PROXY || "";
+    // 🌐 Proxy support — builds from separate credentials
+    const proxyHost = process.env.YTDLP_PROXY_HOST;
+    const proxyPort = process.env.YTDLP_PROXY_PORT;
+    const proxyUser = process.env.YTDLP_PROXY_USER;
+    const proxyPass = process.env.YTDLP_PROXY_PASS;
+    const proxyUrl = (proxyHost && proxyPort && proxyUser && proxyPass)
+      ? `http://${proxyUser}:${proxyPass}@${proxyHost}:${proxyPort}`
+      : "";
     if (proxyUrl) {
-      console.log(`[Dubber] Using proxy: ${proxyUrl.replace(/:[^:@]+@/, ':***@')}`);
+      console.log(`[Dubber] Using proxy: ${proxyHost}:${proxyPort}`);
     }
 
     console.log(`[Dubber] Downloading: ${url}`);
