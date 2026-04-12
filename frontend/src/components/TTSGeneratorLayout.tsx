@@ -72,6 +72,7 @@ interface TTSGeneratorSidebarProps {
   setMainTab: (tab: "tts" | "video" | "dubbing") => void;
   logoUrl?: string;
   miniLogoUrl?: string;
+  isDark?: boolean;
 }
 
 function TTSGeneratorSidebar({
@@ -81,6 +82,7 @@ function TTSGeneratorSidebar({
   setMainTab,
   logoUrl,
   miniLogoUrl,
+  isDark = true,
 }: TTSGeneratorSidebarProps) {
   const sidebar = useSidebar();
   const isCollapsed = !sidebar.open;
@@ -111,7 +113,7 @@ function TTSGeneratorSidebar({
     <Sidebar
       collapsible="icon"
       className="border-r transition-all duration-300 ease-out"
-      style={{ borderColor: "rgba(192,111,48,0.15)", background: "rgba(15,15,15,0.98)" }}
+      style={{ borderColor: "rgba(192,111,48,0.15)", background: isDark ? "rgba(15,15,15,0.98)" : "rgba(245,240,230,0.98)" }}
     >
       <SidebarHeader
         className="border-b px-3 py-3 transition-all duration-300 ease-out"
