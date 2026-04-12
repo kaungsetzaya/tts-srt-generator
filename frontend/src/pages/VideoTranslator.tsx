@@ -56,7 +56,7 @@ export default function VideoTranslator() {
     } catch { /* fallback */ }
   };
 
-  const C = "oklch(0.65 0.25 310)";
+  const C = "#C06F30";
   const isLoading = translateMutation.isPending;
 
   return (
@@ -96,7 +96,7 @@ export default function VideoTranslator() {
           onDrop={handleDrop}
           onClick={() => fileRef.current?.click()}
           className={`border-2 border-dashed p-12 text-center cursor-pointer transition-all ${
-            dragOver ? "border-[oklch(0.65_0.25_310)] bg-[oklch(0.65_0.25_310_/_10%)]" :
+            dragOver ? "border-[oklch(0.65_0.25_310)] bg-[rgba(192,111,48,0.1)]" :
             file ? "border-green-500/50 bg-green-500/5" :
             "border-[oklch(0.2_0.02_280_/_60%)] hover:border-[oklch(0.65_0.25_310_/_50%)]"
           }`}>
@@ -121,7 +121,7 @@ export default function VideoTranslator() {
         {file && (
           <button onClick={handleTranslate} disabled={isLoading}
             className="w-full py-4 font-black uppercase tracking-widest text-black flex items-center justify-center gap-3 disabled:opacity-50 transition-all rounded-xl"
-            style={{ background: isLoading ? "oklch(0.4 0.15 310)" : C }}>
+            style={{ background: isLoading ? "rgba(192,111,48,0.4)" : C }}>
             {isLoading ? (
               <><Loader2 className="w-5 h-5 animate-spin" /> Processing... (1-3 minutes)</>
             ) : (

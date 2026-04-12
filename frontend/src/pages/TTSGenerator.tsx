@@ -274,8 +274,8 @@ export default function TTSGenerator() {
   const isDark = theme === "dark";
 
   // Premium colors - light theme uses indigo/violet palette matching Canvas Cloud
-  const accent = isDark ? "oklch(0.65 0.25 310)" : "#6366f1";
-  const accentSecondary = isDark ? "oklch(0.6 0.28 280)" : "#4f46e5";
+  const accent = isDark ? "#C06F30" : "#C06F30";
+  const accentSecondary = isDark ? "#F4B34F" : "#F4B34F";
   const subColor = isAdmin ? accent : daysLeft === null ? accent : daysLeft > 14 ? "#16a34a" : daysLeft > 4 ? "#ea580c" : "#dc2626";
 
   // Helper functions for color opacity (works with both OKLCH and hex)
