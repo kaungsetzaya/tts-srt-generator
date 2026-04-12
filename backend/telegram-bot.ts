@@ -99,6 +99,7 @@ export async function handleTelegramUpdate(update: any) {
 
             // Only give trial if today is within the trial period
             if (startDate && endDate && today >= startDate && today <= endDate) {
+              const trialDaysRow = await db.select().from(settings).where(eq(settings.keyName, "auto_trial_days")).limit(1);
               const trialDays = parseInt(trialDaysRow[0]?.value ?? "7");
               const subId = nanoid(36);
               const trialExpiry = new Date(endDate); // Trial ends on period end date
@@ -185,6 +186,7 @@ export async function handleTelegramUpdate(update: any) {
 
           // Only give trial if today is within the trial period
           if (startDate && endDate && today >= startDate && today <= endDate) {
+            const trialDaysRow = await db.select().from(settings).where(eq(settings.keyName, "auto_trial_days")).limit(1);
             const trialDays = parseInt(trialDaysRow[0]?.value ?? "7");
             const subId = nanoid(36);
             const trialExpiry = new Date(endDate); // Trial ends on period end date
