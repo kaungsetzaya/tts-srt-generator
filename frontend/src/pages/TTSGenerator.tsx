@@ -339,15 +339,15 @@ export default function TTSGenerator() {
   }, [dubVideoUrl, dubVideoFile]);
 
 
-  // Light theme: Canvas Cloud #EDF1F5, Dark: cyberpunk gradient
+  // Light theme: Warm Cream, Dark: Deep Dark
   const bgGradient = isDark
-    ? "linear-gradient(135deg, #0F0C29 0%, #302B63 50%, #24243E 100%)"
-    : "linear-gradient(135deg, #EDF1F5 0%, #E3E9F0 50%, #EDF1F5 100%)";
+    ? "linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%)"
+    : "linear-gradient(135deg, #E8E3CF 0%, #f5f0e5 50%, #E8E3CF 100%)";
 
   // Card backgrounds — light uses soft white glass on Canvas Cloud
-  const cardBg = isDark ? "rgba(15, 12, 41, 0.6)" : "rgba(255, 255, 255, 0.82)";
+  const cardBg = isDark ? "rgba(15,15,15,0.85)" : "rgba(255,255,255,0.95)";
   const cardBorder = isDark ? "rgba(192,111,48,0.2)" : "rgba(244,179,79,0.12)";
-  const textColor = isDark ? "#F0EEFF" : "#1e1b4b";
+  const textColor = isDark ? "#EBE6D8" : "#2B1D1C";
   const subtextColor = isDark ? "rgba(240,238,255,0.6)" : "#64748b";
   const labelBg = isDark ? "#1f1b3e" : "#ffffff";
   const inputBg = isDark ? "rgba(0, 0, 0, 0.3)" : "rgba(255, 255, 255, 0.95)";

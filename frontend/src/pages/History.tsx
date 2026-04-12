@@ -61,7 +61,7 @@ export default function History() {
   const accent = "#C06F30";
   const cardBg = "rgba(15, 12, 41, 0.6)";
   const cardBorder = "rgba(192,111,48,0.2)";
-  const textColor = "#F0EEFF";
+  const textColor = "#EBE6D8";
   const subtextColor = "rgba(240,238,255,0.6)";
 
   // Format time in user timezone
@@ -86,7 +86,7 @@ export default function History() {
 
   return (
     <div className="min-h-screen font-sans" style={{
-      background: "linear-gradient(135deg, #0F0C29 0%, #302B63 50%, #24243E 100%)",
+      background: "linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%)",
       color: textColor
     }}>
       {/* Header */}
