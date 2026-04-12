@@ -1000,7 +1000,7 @@ export default function TTSGenerator() {
             {dubPreviewUrl && !dubResult && (
               <>
                 {/* Video Preview — Sticky so it stays visible when scrolling settings */}
-                <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow, position: "sticky", top: "8px", zIndex: 50 }}>
+                <div className={`${box} backdrop-blur-md`} style={{ background: cardBg, borderColor: cardBorder, boxShadow, position: "sticky", top: "20px", zIndex: 50 }}>
                   <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{lang === "mm" ? "ဗီဒီယိုကြိုကြည့်" : "Video Preview"}</div>
                   <div className="flex justify-center mt-2">
                     {/* Preview: spinner → blob video → info card → HTML5 video */}
