@@ -17,14 +17,25 @@ function isSecureRequest(req: Request) {
   return protoList.some(proto => proto.trim().toLowerCase() === "https");
 }
 
+// Check if request is coming through a known proxy (Vercel, Cloudflare, nginx)
+function isProxiedRequest(req: Request): boolean {
+  const forwardedFor = req.headers["x-forwarded-for"];
+  const forwardedProto = req.headers["x-forwarded-proto"];
+  const forwardedHost = req.headers["x-forwarded-host"];
+  return !!(forwardedFor || forwardedProto || forwardedHost);
+}
+
 export function getSessionCookieOptions(
   req: Request
 ): Pick<CookieOptions, "domain" | "httpOnly" | "path" | "sameSite" | "secure"> {
   const secure = isSecureRequest(req);
+  // When proxied (Vercel/nginx), use "none" to allow cross-site cookies
+  // Direct access uses "strict" for HTTPS, "lax" for HTTP
+  const sameSite = isProxiedRequest(req) ? "none" : (secure ? "strict" : "lax");
   return {
-    httpOnly: true,                   // ✅ JavaScript ကနေ ခိုးလို့မရ
+    httpOnly: true,
     path: "/",
-    sameSite: secure ? "strict" : "lax", // ✅ CSRF ကာကွယ် — "none" သုံးရင် CSRF attack ခံရနိုင်
-    secure,                           // ✅ HTTPS ရှိမှ Cookie ပေးပို့
+    sameSite,
+    secure,
   };
 }

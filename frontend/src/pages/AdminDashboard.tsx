@@ -456,7 +456,7 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="border rounded-xl p-6" style={{ background: cardBg, borderColor: border }}>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold uppercase tracking-wider flex items-center gap-2 text-purple-400">
+                  <h3 className="font-bold uppercase tracking-wider flex items-center gap-2 text-amber-600">
                     <Banknote className="w-4 h-4" /> Revenue (Active Subs)
                   </h3>
                   <div className="flex items-center gap-1">
@@ -468,12 +468,12 @@ export default function AdminDashboard() {
                 {analytics?.planCounts?.map((p: any) => (
                   <div key={p.plan} className="flex justify-between items-center border-b py-2" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
                     <div><span className="text-sm font-bold">{PLAN_LABELS[p.plan as Plan] ?? p.plan}</span><span className="text-xs opacity-40 ml-2">× {p.count}</span></div>
-                    <span className="font-bold text-purple-400">{fmtMMK((PLAN_PRICE[p.plan as Plan] ?? 0) * p.count)}</span>
+                    <span className="font-bold text-amber-600">{fmtMMK((PLAN_PRICE[p.plan as Plan] ?? 0) * p.count)}</span>
                   </div>
                 ))}
                 <div className="flex justify-between items-center pt-3">
                   <span className="font-bold uppercase text-xs opacity-60">Total Estimated</span>
-                  <span className="font-black text-purple-400 text-lg">{fmtMMK(totalRevenue)}</span>
+                  <span className="font-black text-amber-600 text-lg">{fmtMMK(totalRevenue)}</span>
                 </div>
               </div>
 
@@ -681,7 +681,7 @@ export default function AdminDashboard() {
                       <span className="text-xs font-mono opacity-50">{log.errorCode}</span>
                       {/* Show source: browser errors vs app errors */}
                       {log.feature?.startsWith("browser:") ? (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 font-bold uppercase">🌐 Browser</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-600 font-bold uppercase">🌐 Browser</span>
                       ) : (
                         <span className="text-xs opacity-30">{FEATURE_LABELS[log.feature ?? ""] ?? log.feature}</span>
                       )}
@@ -849,7 +849,7 @@ export default function AdminDashboard() {
               {/* Character Voice Usage */}
               <div>
                 <p className="text-xs uppercase tracking-wider opacity-50 mb-3 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-purple-400" />
+                  <span className="w-2 h-2 rounded-full bg-amber-600" />
                   Voice Change — Character Usage
                 </p>
                 {(voiceStats as any)?.characters?.length > 0 ? (
@@ -858,7 +858,7 @@ export default function AdminDashboard() {
                       const maxChar = Math.max(...((voiceStats as any)?.characters?.map((c: any) => c.count) ?? [1]));
                       const pct = maxChar > 0 ? Math.round((ch.count / maxChar) * 100) : 0;
                       const isMale = ch.base === "thiha";
-                      const color = isMale ? "#818cf8" : "#f9a8d4";
+                      const color = isMale ? "#C06F30" : "#F4B34F";
                       return (
                         <div key={ch.key} className="border rounded-lg p-3 hover:bg-white/5 transition-all" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
                           <div className="flex items-center gap-3 mb-2">

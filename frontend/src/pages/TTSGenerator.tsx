@@ -270,13 +270,16 @@ export default function TTSGenerator() {
     ? Math.max(0, Math.ceil((new Date(subStatus.expiresAt).getTime() - Date.now()) / 86400000))
     : null;
 
-  // --- PREMIUM UI COLORS ---
+  // --- PREMIUM UI COLORS (Spiced Palette) ---
   const isDark = theme === "dark";
 
-  // Premium colors - light theme uses indigo/violet palette matching Canvas Cloud
-  const accent = isDark ? "oklch(0.65 0.25 310)" : "#6366f1";
-  const accentSecondary = isDark ? "oklch(0.6 0.28 280)" : "#4f46e5";
-  const subColor = isAdmin ? accent : daysLeft === null ? accent : daysLeft > 14 ? "#16a34a" : daysLeft > 4 ? "#ea580c" : "#dc2626";
+  const accent = "#C06F30";
+  const accentSecondary = "#F4B34F";
+  const deepRed = "#861C1C";
+  const peach = "#ECCEB6";
+  const cream = "#E8E3CF";
+  const darkBrown = "#2B1D1C";
+  const subColor = isAdmin ? accent : daysLeft === null ? accent : daysLeft > 14 ? "#16a34a" : daysLeft > 4 ? "#ea580c" : deepRed;
 
   // Helper functions for color opacity (works with both OKLCH and hex)
   const withOpacity = (color: string, opacity: number) => {
@@ -648,7 +651,7 @@ export default function TTSGenerator() {
 
       {/* Subtle Grid Background */}
       <div className="absolute inset-0 pointer-events-none" style={{ opacity: isDark ? 0.05 : 0.04 }}>
-        <div className="absolute inset-0" style={{ backgroundImage: `linear-gradient(0deg, transparent 24%, ${isDark ? '#66ccff' : '#6366f1'} 25%, ${isDark ? '#66ccff' : '#6366f1'} 26%, transparent 27%, transparent 74%, ${isDark ? '#66ccff' : '#6366f1'} 75%, ${isDark ? '#66ccff' : '#6366f1'} 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, ${isDark ? '#66ccff' : '#6366f1'} 25%, ${isDark ? '#66ccff' : '#6366f1'} 26%, transparent 27%, transparent 74%, ${isDark ? '#66ccff' : '#6366f1'} 75%, ${isDark ? '#66ccff' : '#6366f1'} 76%, transparent 77%, transparent)`, backgroundSize: '50px 50px' }} />
+        <div className="absolute inset-0" style={{ backgroundImage: `linear-gradient(0deg, transparent 24%, ${isDark ? '#C06F3012' : '#C06F3015'} 25%, ${isDark ? '#C06F3012' : '#C06F3015'} 26%, transparent 27%, transparent 74%, ${isDark ? '#C06F3012' : '#C06F3015'} 75%, ${isDark ? '#C06F3012' : '#C06F3015'} 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, ${isDark ? '#C06F3012' : '#C06F3015'} 25%, ${isDark ? '#C06F3012' : '#C06F3015'} 26%, transparent 27%, transparent 74%, ${isDark ? '#C06F3012' : '#C06F3015'} 75%, ${isDark ? '#C06F3012' : '#C06F3015'} 76%, transparent 77%, transparent)`, backgroundSize: '50px 50px' }} />
       </div>
 
       {/* ═══ TOP CONTROLS BAR ═══ */}

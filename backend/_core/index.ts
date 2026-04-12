@@ -134,6 +134,23 @@ async function startServer() {
   });
 
   // ──────────────────────────────────────────
+  // Global Error Handler (URIError, JSON parse, etc.)
+  // ──────────────────────────────────────────
+  app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    if (err instanceof URIError) {
+      console.warn("[URIError]", err.message);
+      res.status(400).json({ error: { message: "Invalid URL encoding" } });
+      return;
+    }
+    if (err.type === "entity.parse.failed") {
+      res.status(400).json({ error: { message: "Invalid JSON" } });
+      return;
+    }
+    console.error("[Unhandled Error]", err.message || err);
+    res.status(500).json({ error: { message: "Internal server error" } });
+  });
+
+  // ──────────────────────────────────────────
   // Startup
   // ──────────────────────────────────────────
   const port = parseInt(process.env.PORT || "3000");

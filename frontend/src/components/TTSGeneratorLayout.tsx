@@ -85,8 +85,8 @@ function TTSGeneratorSidebar({
   const sidebar = useSidebar();
   const isCollapsed = !sidebar.open;
 
-  const accent = "#7c3aed";
-  const accentSecondary = "#6366f1";
+  const accent = "#C06F30";
+  const accentSecondary = "#F4B34F";
 
   const allMenuItems = [
     { id: "tts",      label: "စာမှအသံ",         labelEn: "Text to Speech",   icon: Mic,      type: "main" as const },
@@ -126,12 +126,12 @@ function TTSGeneratorSidebar({
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.2 }}
               className="flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0"
-              style={{ background: "rgba(124,58,237,0.15)", border: "1px solid rgba(124,58,237,0.3)" }}
+              style={{ background: "rgba(192,111,48,0.15)", border: "1px solid rgba(192,111,48,0.3)" }}
             >
               {miniLogoUrl ? (
                 <img src={miniLogoUrl} alt="Logo" className="w-5 h-5 object-contain" />
               ) : (
-                <span className="text-[10px] font-black" style={{ color: "#a78bfa" }}>L</span>
+                <span className="text-[10px] font-black" style={{ color: "#C06F30" }}>L</span>
               )}
             </motion.div>
           ) : (
@@ -148,7 +148,7 @@ function TTSGeneratorSidebar({
                 <span
                   className="text-xl font-black tracking-widest"
                   style={{
-                    background: "linear-gradient(135deg, #a78bfa, #818cf8)",
+                    background: "linear-gradient(135deg, #C06F30, #F4B34F)",
                     WebkitBackgroundClip: "text",
                     WebkitTextFillColor: "transparent",
                     backgroundClip: "text",
@@ -163,7 +163,7 @@ function TTSGeneratorSidebar({
 
           <SidebarTrigger
             className="flex items-center justify-center rounded-xl transition-all duration-200 hover:scale-110 flex-shrink-0"
-            style={{ width: 36, height: 36, background: "rgba(124,58,237,0.12)", border: "1px solid rgba(124,58,237,0.25)", color: "#a78bfa" }}
+            style={{ width: 36, height: 36, background: "rgba(124,58,237,0.12)", border: "1px solid rgba(124,58,237,0.25)", color: "#C06F30" }}
           >
             <PanelLeft className="h-4 w-4" />
           </SidebarTrigger>
@@ -195,7 +195,7 @@ function TTSGeneratorSidebar({
                         className="w-full relative overflow-hidden rounded-xl h-11 transition-all duration-200"
                         style={
                           isActive
-                            ? { background: `linear-gradient(135deg, ${accent}40, ${accentSecondary}30)`, color: "#c4b5fd", borderLeft: `3px solid ${accent}`, boxShadow: `0 0 16px ${accent}33` }
+                            ? { background: `linear-gradient(135deg, ${accent}40, ${accentSecondary}30)`, color: "#ECCEB6", borderLeft: `3px solid ${accent}`, boxShadow: `0 0 16px ${accent}33` }
                             : { color: "rgba(167,139,250,0.6)", borderLeft: "3px solid transparent" }
                         }
                       >
@@ -257,7 +257,7 @@ function MobileBottomNavigation({
               onClick={() => { setMainTab(id); onTabChange(null); }}
               whileTap={{ scale: 0.9 }}
               className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl min-h-[44px] relative flex-1 transition-all duration-200"
-              style={{ color: isActive ? "#a78bfa" : "rgba(255,255,255,0.4)" }}
+              style={{ color: isActive ? "#C06F30" : "rgba(255,255,255,0.4)" }}
             >
               {isActive && (
                 <motion.div layoutId="mobileMainTab" className="absolute inset-0 rounded-xl"
@@ -278,7 +278,7 @@ function MobileBottomNavigation({
               onClick={() => onTabChange(isActive ? null : id)}
               whileTap={{ scale: 0.9 }}
               className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl min-h-[44px] relative flex-1 transition-all duration-200"
-              style={{ color: isActive ? "#a78bfa" : "rgba(255,255,255,0.4)" }}
+              style={{ color: isActive ? "#C06F30" : "rgba(255,255,255,0.4)" }}
             >
               {isActive && (
                 <motion.div layoutId={"mobileTab-" + id} className="absolute inset-0 rounded-xl"

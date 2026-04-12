@@ -19,5 +19,6 @@ export default defineConfig({
   },
   server: {
     host: true,
+    allowedHosts: ["choco.de5.net"],
   },
 });

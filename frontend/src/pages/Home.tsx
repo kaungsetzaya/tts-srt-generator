@@ -21,11 +21,11 @@ export default function Home() {
       </div>
 
       {/* Header Navigation */}
-      <header className="relative z-20 border-b border-[oklch(0.2_0.02_280_/_60%)] backdrop-blur-sm">
+      <header className="relative z-20 border-b border-border backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="text-2xl font-black uppercase tracking-widest" style={{
-            textShadow: '0 0 15px oklch(0.65 0.25 310)',
-            color: 'oklch(0.65 0.25 310)'
+            textShadow: '0 0 15px #C06F30',
+            color: '#C06F30'
           }}>
             TTS Generator
           </div>
@@ -35,7 +35,7 @@ export default function Home() {
                 <span className="text-sm opacity-70">{user.name || user.email}</span>
                 <button
                   onClick={() => logout()}
-                  className="text-sm px-4 py-2 border border-[oklch(0.6_0.28_280)] text-[oklch(0.6_0.28_280)] hover:bg-[oklch(0.6_0.28_280_/_10%)] transition-all"
+                  className="text-sm px-4 py-2 border border-accent text-accent hover:bg-accent/10 transition-all"
                 >
                   Logout
                 </button>
@@ -52,20 +52,20 @@ export default function Home() {
           <div className="text-center space-y-8">
             {/* Main Title */}
             <div className="relative">
-              <div className="absolute -top-8 -left-8 w-16 h-16 border-2 border-[oklch(0.65_0.25_310)] opacity-50"></div>
-              <div className="absolute -bottom-8 -right-8 w-16 h-16 border-2 border-[oklch(0.65_0.25_310)] opacity-50"></div>
+              <div className="absolute -top-8 -left-8 w-16 h-16 border-2 border-primary opacity-50"></div>
+              <div className="absolute -bottom-8 -right-8 w-16 h-16 border-2 border-primary opacity-50"></div>
 
               <h1 className="text-6xl md:text-7xl font-black uppercase tracking-widest mb-4"
                 style={{
-                  textShadow: '0 0 30px oklch(0.65 0.25 310), 0 0 60px oklch(0.65 0.25 310), 0 0 90px oklch(0.65 0.25 310)',
-                  color: 'oklch(0.65 0.25 310)'
+                  textShadow: '0 0 30px #C06F30, 0 0 60px #C06F30, 0 0 90px #C06F30',
+                  color: '#C06F30'
                 }}>
                 Text to Speech
               </h1>
               <h2 className="text-4xl md:text-5xl font-black uppercase tracking-widest"
                 style={{
-                  textShadow: '0 0 20px oklch(0.6 0.28 280)',
-                  color: 'oklch(0.6 0.28 280)'
+                  textShadow: '0 0 20px #F4B34F',
+                  color: '#F4B34F'
                 }}>
                 Meets SRT Magic
               </h2>
@@ -92,17 +92,17 @@ export default function Home() {
         {/* Features Section */}
         <div className="max-w-5xl mx-auto mb-20">
           <h3 className="text-3xl font-black uppercase tracking-widest mb-12 text-center"
-            style={{ color: 'oklch(0.6 0.28 280)' }}>
+            style={{ color: '#F4B34F' }}>
             Powerful Features
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Feature 1 */}
-            <div className="relative border-2 border-[oklch(0.2_0.02_280_/_60%)] p-8 bg-[oklch(0.08_0.01_280_/_50%)] backdrop-blur hover:border-[oklch(0.65_0.25_310)] transition-all duration-300">
-              <div className="absolute -top-4 -left-4 w-8 h-8 border-2 border-[oklch(0.65_0.25_310)] opacity-50"></div>
-              <Volume2 className="w-12 h-12 mb-4" style={{ color: 'oklch(0.65 0.25 310)' }} />
+            <div className="relative border-2 border-border p-8 bg-card backdrop-blur hover:border-primary transition-all duration-300">
+              <div className="absolute -top-4 -left-4 w-8 h-8 border-2 border-primary opacity-50"></div>
+              <Volume2 className="w-12 h-12 mb-4" style={{ color: '#C06F30' }} />
               <h4 className="text-xl font-bold uppercase tracking-wider mb-3"
-                style={{ color: 'oklch(0.65 0.25 310)' }}>
+                style={{ color: '#C06F30' }}>
                 Multiple Voices
               </h4>
               <p className="opacity-70 text-sm">
@@ -111,11 +111,11 @@ export default function Home() {
             </div>
 
             {/* Feature 2 */}
-            <div className="relative border-2 border-[oklch(0.2_0.02_280_/_60%)] p-8 bg-[oklch(0.08_0.01_280_/_50%)] backdrop-blur hover:border-[oklch(0.65_0.25_310)] transition-all duration-300">
-              <div className="absolute -top-4 -left-4 w-8 h-8 border-2 border-[oklch(0.65_0.25_310)] opacity-50"></div>
-              <Zap className="w-12 h-12 mb-4" style={{ color: 'oklch(0.6 0.28 280)' }} />
+            <div className="relative border-2 border-border p-8 bg-card backdrop-blur hover:border-primary transition-all duration-300">
+              <div className="absolute -top-4 -left-4 w-8 h-8 border-2 border-primary opacity-50"></div>
+              <Zap className="w-12 h-12 mb-4" style={{ color: '#F4B34F' }} />
               <h4 className="text-xl font-bold uppercase tracking-wider mb-3"
-                style={{ color: 'oklch(0.6 0.28 280)' }}>
+                style={{ color: '#F4B34F' }}>
                 Audio Preview
               </h4>
               <p className="opacity-70 text-sm">
@@ -124,11 +124,11 @@ export default function Home() {
             </div>
 
             {/* Feature 3 */}
-            <div className="relative border-2 border-[oklch(0.2_0.02_280_/_60%)] p-8 bg-[oklch(0.08_0.01_280_/_50%)] backdrop-blur hover:border-[oklch(0.65_0.25_310)] transition-all duration-300">
-              <div className="absolute -top-4 -left-4 w-8 h-8 border-2 border-[oklch(0.65_0.25_310)] opacity-50"></div>
-              <Layers className="w-12 h-12 mb-4" style={{ color: 'oklch(0.65 0.25 310)' }} />
+            <div className="relative border-2 border-border p-8 bg-card backdrop-blur hover:border-primary transition-all duration-300">
+              <div className="absolute -top-4 -left-4 w-8 h-8 border-2 border-primary opacity-50"></div>
+              <Layers className="w-12 h-12 mb-4" style={{ color: '#C06F30' }} />
               <h4 className="text-xl font-bold uppercase tracking-wider mb-3"
-                style={{ color: 'oklch(0.65 0.25 310)' }}>
+                style={{ color: '#C06F30' }}>
                 SRT Generation
               </h4>
               <p className="opacity-70 text-sm">
@@ -141,7 +141,7 @@ export default function Home() {
         {/* How It Works Section */}
         <div className="max-w-4xl mx-auto">
           <h3 className="text-3xl font-black uppercase tracking-widest mb-12 text-center"
-            style={{ color: 'oklch(0.6 0.28 280)' }}>
+            style={{ color: '#F4B34F' }}>
             How It Works
           </h3>
 
@@ -153,13 +153,13 @@ export default function Home() {
               { step: 4, title: "Download Files", desc: "Get your MP3 audio and SRT subtitle files ready for use" }
             ].map((item) => (
               <div key={item.step} className="flex gap-6 items-start">
-                <div className="flex-shrink-0 w-12 h-12 rounded-full border-2 border-[oklch(0.65_0.25_310)] flex items-center justify-center font-black text-lg"
-                  style={{ color: 'oklch(0.65 0.25 310)' }}>
+                <div className="flex-shrink-0 w-12 h-12 rounded-full border-2 border-primary flex items-center justify-center font-black text-lg"
+                  style={{ color: '#C06F30' }}>
                   {item.step}
                 </div>
                 <div className="pt-2">
                   <h4 className="text-xl font-bold uppercase tracking-wider mb-2"
-                    style={{ color: 'oklch(0.6 0.28 280)' }}>
+                    style={{ color: '#F4B34F' }}>
                     {item.title}
                   </h4>
                   <p className="opacity-70">{item.desc}</p>
@@ -171,7 +171,7 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-[oklch(0.2_0.02_280_/_60%)] mt-20 py-8 backdrop-blur-sm">
+      <footer className="relative z-10 border-t border-border mt-20 py-8 backdrop-blur-sm">
         <div className="container mx-auto px-4 text-center opacity-60 text-sm">
           <p>© 2026 LUMIX TTS Generator.</p>
         </div>

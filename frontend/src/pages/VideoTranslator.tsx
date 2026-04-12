@@ -56,21 +56,21 @@ export default function VideoTranslator() {
     } catch { /* fallback */ }
   };
 
-  const C = "oklch(0.65 0.25 310)";
+  const C = "#C06F30";
   const isLoading = translateMutation.isPending;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-[oklch(0.2_0.02_280_/_60%)] bg-[oklch(0.05_0.01_280_/_80%)]">
+      <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-background/80">
         <div className="flex items-center gap-2">
           <Languages className="w-5 h-5" style={{ color: C }} />
           <span className="font-black uppercase tracking-widest text-sm" style={{ color: C }}>Video Translator</span>
         </div>
         <div className="flex items-center gap-3">
-          <a href="/lumix" className="text-xs px-3 py-1 border border-[oklch(0.2_0.02_280_/_60%)] opacity-60 hover:opacity-100 transition-all uppercase tracking-wider">TTS Page</a>
+          <a href="/lumix" className="text-xs px-3 py-1 border border-border opacity-60 hover:opacity-100 transition-all uppercase tracking-wider">TTS Page</a>
           {me?.role === "admin" && (
-            <a href="/admin" className="text-xs px-3 py-1 border border-[oklch(0.2_0.02_280_/_60%)] opacity-60 hover:opacity-100 transition-all uppercase tracking-wider">Admin</a>
+            <a href="/admin" className="text-xs px-3 py-1 border border-border opacity-60 hover:opacity-100 transition-all uppercase tracking-wider">Admin</a>
           )}
         </div>
       </div>
@@ -96,9 +96,9 @@ export default function VideoTranslator() {
           onDrop={handleDrop}
           onClick={() => fileRef.current?.click()}
           className={`border-2 border-dashed p-12 text-center cursor-pointer transition-all ${
-            dragOver ? "border-[oklch(0.65_0.25_310)] bg-[oklch(0.65_0.25_310_/_10%)]" :
+            dragOver ? "border-primary bg-[rgba(192,111,48,0.1)]" :
             file ? "border-green-500/50 bg-green-500/5" :
-            "border-[oklch(0.2_0.02_280_/_60%)] hover:border-[oklch(0.65_0.25_310_/_50%)]"
+            "border-border hover:border-primary/50"
           }`}>
           <input ref={fileRef} type="file" accept="video/*" className="hidden" onChange={e => { if (e.target.files?.[0]) handleFile(e.target.files[0]); }} />
           {file ? (
@@ -121,7 +121,7 @@ export default function VideoTranslator() {
         {file && (
           <button onClick={handleTranslate} disabled={isLoading}
             className="w-full py-4 font-black uppercase tracking-widest text-black flex items-center justify-center gap-3 disabled:opacity-50 transition-all rounded-xl"
-            style={{ background: isLoading ? "oklch(0.4 0.15 310)" : C }}>
+            style={{ background: isLoading ? "rgba(192,111,48,0.4)" : C }}>
             {isLoading ? (
               <><Loader2 className="w-5 h-5 animate-spin" /> Processing... (1-3 minutes)</>
             ) : (
@@ -132,7 +132,7 @@ export default function VideoTranslator() {
 
         {/* Processing animation — no tech details */}
         {isLoading && (
-          <div className="border border-[oklch(0.2_0.02_280_/_60%)] bg-[oklch(0.08_0.01_280_/_50%)] p-8 rounded-xl text-center">
+          <div className="border border-border bg-card p-8 rounded-xl text-center">
             <div className="flex items-center justify-center gap-3 mb-4">
               <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: C }} />
               <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: C, animationDelay: "0.3s" }} />
@@ -155,7 +155,7 @@ export default function VideoTranslator() {
               </button>
             </div>
 
-            <div className="border border-[oklch(0.2_0.02_280_/_60%)] bg-[oklch(0.08_0.01_280_/_50%)] rounded-xl overflow-hidden">
+            <div className="border border-border bg-card rounded-xl overflow-hidden">
               <textarea
                 value={editedText}
                 onChange={e => setEditedText(e.target.value)}
@@ -166,7 +166,7 @@ export default function VideoTranslator() {
 
             {/* New Translation */}
             <button onClick={() => { setFile(null); setResult(null); setEditedText(""); }}
-              className="w-full py-3 border border-[oklch(0.2_0.02_280_/_60%)] font-bold uppercase text-sm hover:opacity-70 transition-all rounded-xl">
+              className="w-full py-3 border border-border font-bold uppercase text-sm hover:opacity-70 transition-all rounded-xl">
               Translate Another Video
             </button>
           </div>
