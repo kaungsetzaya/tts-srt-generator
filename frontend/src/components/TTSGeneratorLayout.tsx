@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import React from "react";
 import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 import {
   Sidebar,
   SidebarContent,
