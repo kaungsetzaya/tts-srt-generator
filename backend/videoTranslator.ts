@@ -7,6 +7,7 @@ import ffmpeg from 'fluent-ffmpeg';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { geminiTranslate } from "./geminiTranslator";
+import { downloadWithCobalt } from "./_core/cobaltDownloader";
 import { isAllowedVideoUrl, isPathWithinDir, sanitizeForAI } from "./_core/security";
 
 const execFileAsync = promisify(execFile);
@@ -191,16 +192,30 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
           }
         }
 
+        // 🔄 Fallback: Try Cobalt API when yt-dlp fails
         if (!dlSuccess) {
-          // Provide detailed error for debugging
-          const errorDetail = lastError.includes("bot") ? "Bot detection" : 
-                             lastError.includes("age") ? "Age restricted" :
-                             lastError.includes("private") ? "Private video" :
-                             lastError.includes("not available") ? "Video unavailable" : "Unknown";
-          console.error(`[Video Translator] All strategies failed. Last error type: ${errorDetail}`);
-          console.error(`[Video Translator] Full error: ${lastError.slice(0, 500)}`);
+          console.log("[Video Translator] yt-dlp failed, trying Cobalt API fallback...");
           
-          throw new Error(`ဗီဒီယိုကို ဒေါင်းလုတ်မရပါ။ (${errorDetail}) YouTube က bot detection လုပ်နေတာ ဖြစ်နိုင်ပါသည်။ နောက်မှ ထပ်ကြိုးစားပါ သို့မဟုတ် တခြား link သုံးပါ။`);
+          const cobaltResult = await downloadWithCobalt(url, { 
+            audioOnly: false, 
+            maxSizeMB: 50 
+          });
+          
+          if (cobaltResult && cobaltResult.buffer) {
+            console.log(`[Video Translator] ✅ Cobalt fallback success!`);
+            await fs.writeFile(tempVideoPath, cobaltResult.buffer);
+            dlSuccess = true;
+          } else {
+            // Provide detailed error for debugging
+            const errorDetail = lastError.includes("bot") ? "Bot detection" : 
+                               lastError.includes("age") ? "Age restricted" :
+                               lastError.includes("private") ? "Private video" :
+                               lastError.includes("not available") ? "Video unavailable" : "Unknown";
+            console.error(`[Video Translator] All strategies failed. Last error type: ${errorDetail}`);
+            console.error(`[Video Translator] Full error: ${lastError.slice(0, 500)}`);
+            
+            throw new Error(`ဗီဒီယိုကို ဒေါင်းလုတ်မရပါ။ (${errorDetail}) YouTube က bot detection လုပ်နေတာ ဖြစ်နိုင်ပါသည်။ နောက်မှ ထပ်ကြိုးစားပါ သို့မဟုတ် တခြား link သုံးပါ။`);
+          }
         }
 
         const fileStat = await fs.stat(tempVideoPath).catch(() => null);

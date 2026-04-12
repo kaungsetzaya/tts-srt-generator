@@ -8,6 +8,7 @@ import ffmpeg from 'fluent-ffmpeg';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { geminiTranslate } from "./geminiTranslator";
+import { downloadWithCobalt } from "./_core/cobaltDownloader";
 import { generateSpeech, generateSpeechWithCharacter, type VoiceKey, type CharacterKey, CHARACTER_VOICES } from "./tts";
 import { isAllowedVideoUrl, isPathWithinDir, sanitizeForAI } from "./_core/security";
 import type { DubOptions, DubResult } from "@shared/types";
@@ -398,12 +399,26 @@ export async function dubVideoFromLink(url: string, options: DubOptions): Promis
       }
     }
 
+    // 🔄 Fallback: Try Cobalt API when yt-dlp fails
     if (!dlSuccess) {
-      const errorType = lastError.includes("bot") ? "Bot detection" : 
-                       lastError.includes("not available") ? "Video unavailable" : 
-                       lastError.includes("private") ? "Private video" : "Download failed";
-      console.error(`[Dubber] All strategies failed: ${errorType}`);
-      throw new Error(`ဗီဒီယိုကို ဒေါင်းလုတ်မရပါ။ (${errorType}) YouTube bot detection သို့မဟုတ် video မရရှိနိုင်ပါ။ နောက်မှ ထပ်ကြိုးစားပါ။`);
+      console.log("[Dubber] yt-dlp failed, trying Cobalt API fallback...");
+      
+      const cobaltResult = await downloadWithCobalt(url, { 
+        audioOnly: false, 
+        maxSizeMB: 50 
+      });
+      
+      if (cobaltResult && cobaltResult.buffer) {
+        console.log(`[Dubber] ✅ Cobalt fallback success!`);
+        await fs.writeFile(tempVideoPath, cobaltResult.buffer);
+        dlSuccess = true;
+      } else {
+        const errorType = lastError.includes("bot") ? "Bot detection" : 
+                         lastError.includes("not available") ? "Video unavailable" : 
+                         lastError.includes("private") ? "Private video" : "Download failed";
+        console.error(`[Dubber] All strategies failed: ${errorType}`);
+        throw new Error(`ဗီဒီယိုကို ဒေါင်းလုတ်မရပါ။ (${errorType}) YouTube bot detection သို့မဟုတ် video မရရှိနိုင်ပါ။ နောက်မှ ထပ်ကြိုးစားပါ။`);
+      }
     }
 
     const videoBuffer = await fs.readFile(tempVideoPath);
