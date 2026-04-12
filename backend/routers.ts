@@ -52,7 +52,7 @@ function getPlanLimits(plan: string | null): PlanLimits {
     return { charLimitStandard: 0, charLimitCharacter: 0, dailyTtsSrt: 0, dailyCharacterUse: 0, dailyAiVideo: 0, dailyVideoTranslate: 0 };
   }
   if (plan === PLANS.trial) {
-    return { charLimitStandard: 20000, charLimitCharacter: 1600, dailyTtsSrt: 999, dailyCharacterUse: 999, dailyAiVideo: 999, dailyVideoTranslate: 999 };
+    return { charLimitStandard: 20000, charLimitCharacter: 2000, dailyTtsSrt: 999, dailyCharacterUse: 999, dailyAiVideo: 999, dailyVideoTranslate: 999 };
   }
   return { charLimitStandard: PAID_PLAN_LIMITS.charLimitStandard, charLimitCharacter: PAID_PLAN_LIMITS.charLimitCharacter, dailyTtsSrt: PAID_PLAN_LIMITS.dailyTtsSrt, dailyCharacterUse: PAID_PLAN_LIMITS.dailyCharacterUse, dailyAiVideo: PAID_PLAN_LIMITS.dailyAiVideo, dailyVideoTranslate: PAID_PLAN_LIMITS.dailyVideoTranslate };
 }
