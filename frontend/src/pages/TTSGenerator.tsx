@@ -933,7 +933,7 @@ export default function TTSGenerator() {
 
         {/* === DUBBING TAB — AI Auto Video Maker === */}
         {mainTab === "dubbing" && (
-          <div className="max-w-2xl mx-auto animate-in fade-in zoom-in-95 duration-300 space-y-4">
+          <div className="max-w-2xl mx-auto animate-in fade-in zoom-in-95 duration-300">
             <div className="text-center mb-4 sm:mb-6">
               <h2 className="text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-wider sm:tracking-widest mb-2 leading-normal" style={{ textShadow: "none", color: accent }}>
                 {lang === "mm" ? "AI Auto Video Maker" : "AI Auto Video Maker"}
@@ -951,7 +951,7 @@ export default function TTSGenerator() {
 
             {/* ── STEP: Video Input ── */}
             {!dubPreviewUrl && !dubResult && (
-              <>
+              <div className="space-y-4">
                 <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
                   <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>
                     {t.linkInputLabel}
@@ -998,9 +998,9 @@ export default function TTSGenerator() {
 
             {/* ── STEP: Video Preview + Settings ── */}
             {dubPreviewUrl && !dubResult && (
-              <>
+              <div className="space-y-4">
                 {/* Video Preview — Sticky at top */}
-                <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow, position: "sticky", top: "20px", zIndex: 50 }}>
+                <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow, position: "sticky", top: "20px", zIndex: 50 }}
                   <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{lang === "mm" ? "ဗီဒီယိုကြိုကြည့်" : "Video Preview"}</div>
                   <div className="flex justify-center mt-2">
                     {/* Preview: spinner → blob video → info card → HTML5 video */}
@@ -1398,7 +1398,7 @@ export default function TTSGenerator() {
                 <button onClick={handleDubReset} className="w-full py-2.5 rounded-xl border font-bold text-xs uppercase tracking-wider opacity-50 hover:opacity-100 transition-all" style={{ borderColor: cardBorder, color: subtextColor }}>
                   ← {lang === "mm" ? "ဗီဒီယိုပြောင်းမည်" : "Change Video"}
                 </button>
-              </>
+              </div>
             )}
 
             {/* Dubbing Result — Final Video + Download */}
