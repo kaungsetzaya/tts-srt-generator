@@ -112,8 +112,8 @@ function TTSGeneratorSidebar({
   return (
     <Sidebar
       collapsible="icon"
-      className="border-r transition-all duration-300 ease-out"
-      className={isDark ? "bg-[rgba(15,15,15,0.98)]" : "bg-[rgba(245,240,230,0.98)]"} style={{ borderColor: "rgba(192,111,48,0.15)" }}
+      className={cn("border-r transition-all duration-300 ease-out", isDark ? "bg-[rgba(15,15,15,0.98)]" : "bg-[rgba(245,240,230,0.98)]")}
+      style={{ borderColor: "rgba(192,111,48,0.15)" }}
     >
       <SidebarHeader
         className="border-b px-3 py-3 transition-all duration-300 ease-out"

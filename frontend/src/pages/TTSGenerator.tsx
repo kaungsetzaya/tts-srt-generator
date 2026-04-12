@@ -349,7 +349,7 @@ export default function TTSGenerator() {
   const cardBorder = isDark ? "rgba(192,111,48,0.2)" : "rgba(244,179,79,0.12)";
   const textColor = isDark ? "#EBE6D8" : "#2B1D1C";
   const subtextColor = isDark ? "rgba(236,206,182,0.7)" : "#6b5c50";
-  const labelBg = isDark ? "rgba(192,111,48,0.15)" : "rgba(192,111,48,0.08)";
+  const labelBg = isDark ? "rgba(192,111,48,0.15)" : "rgba(192,111,48,0.15)";
   const inputBg = isDark ? "rgba(15,15,15,0.6)" : "rgba(255,255,255,0.95)";
   const inputBorder = isDark ? "rgba(192,111,48,0.2)" : "rgba(192,111,48,0.18)";
 
@@ -647,7 +647,7 @@ export default function TTSGenerator() {
 
       {/* Subtle Grid Background */}
       <div className="absolute inset-0 pointer-events-none" style={{ opacity: isDark ? 0.05 : 0.04 }}>
-        <div className="absolute inset-0" style={{ backgroundImage: `linear-gradient(0deg, transparent 24%, ${isDark ? 'rgba(192,111,48,0.07)' : 'rgba(192,111,48,0.08)'} 25%, ${isDark ? 'rgba(192,111,48,0.07)' : 'rgba(192,111,48,0.08)'} 26%, transparent 27%, transparent 74%, ${isDark ? 'rgba(192,111,48,0.07)' : 'rgba(192,111,48,0.08)'} 75%, ${isDark ? 'rgba(192,111,48,0.07)' : 'rgba(192,111,48,0.08)'} 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, ${isDark ? 'rgba(192,111,48,0.07)' : 'rgba(192,111,48,0.08)'} 25%, ${isDark ? 'rgba(192,111,48,0.07)' : 'rgba(192,111,48,0.08)'} 26%, transparent 27%, transparent 74%, ${isDark ? 'rgba(192,111,48,0.07)' : 'rgba(192,111,48,0.08)'} 75%, ${isDark ? 'rgba(192,111,48,0.07)' : 'rgba(192,111,48,0.08)'} 76%, transparent 77%, transparent)`, backgroundSize: '50px 50px' }} />
+        <div className="absolute inset-0" style={{ backgroundImage: `linear-gradient(0deg, transparent 24%, ${isDark ? 'rgba(192,111,48,0.12)' : 'rgba(192,111,48,0.15)'} 25%, ${isDark ? 'rgba(192,111,48,0.12)' : 'rgba(192,111,48,0.15)'} 26%, transparent 27%, transparent 74%, ${isDark ? 'rgba(192,111,48,0.12)' : 'rgba(192,111,48,0.15)'} 75%, ${isDark ? 'rgba(192,111,48,0.12)' : 'rgba(192,111,48,0.15)'} 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, ${isDark ? 'rgba(192,111,48,0.12)' : 'rgba(192,111,48,0.15)'} 25%, ${isDark ? 'rgba(192,111,48,0.12)' : 'rgba(192,111,48,0.15)'} 26%, transparent 27%, transparent 74%, ${isDark ? 'rgba(192,111,48,0.12)' : 'rgba(192,111,48,0.15)'} 75%, ${isDark ? 'rgba(192,111,48,0.12)' : 'rgba(192,111,48,0.15)'} 76%, transparent 77%, transparent)`, backgroundSize: '50px 50px' }} />
       </div>
 
       {/* ═══ TOP CONTROLS BAR ═══ */}
@@ -1596,7 +1596,7 @@ export default function TTSGenerator() {
             </div>
 
             {/* Current Plan Card */}
-            <div className="rounded-2xl border-2 p-6 sm:p-8 mb-6" style={{ background: `linear-gradient(135deg, ${isDark ? 'rgba(192,111,48,0.08)' : 'rgba(192,111,48,0.05)'}, ${cardBg})`, borderColor: accent40, boxShadow: boxShadow }}>
+            <div className="rounded-2xl border-2 p-6 sm:p-8 mb-6" style={{ background: `linear-gradient(135deg, ${isDark ? 'rgba(192,111,48,0.15)' : 'rgba(192,111,48,0.05)'}, ${cardBg})`, borderColor: accent40, boxShadow: boxShadow }}>
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-3">
                   <Star className="w-6 h-6" style={{ color: currentPlan === 'trial' ? '#f59e0b' : accent }} />
