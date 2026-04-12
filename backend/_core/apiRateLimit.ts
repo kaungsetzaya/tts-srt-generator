@@ -9,20 +9,20 @@ interface RateLimitEntry {
   firstAttempt: number;
 }
 
-// Per-user rate limits for heavy operations
+// Per-user rate limits for heavy operations (DISABLED - unlimited usage)
 const videoProcessingLimits = new Map<string, RateLimitEntry>();
 
 // Cleanup old entries every 5 minutes
 const CLEANUP_INTERVAL = 5 * 60 * 1000;
 const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour
 
-// Limits per user per hour
+// Limits per user per hour (UNLIMITED - set to very high value)
 const LIMITS = {
-  dubLink: 20,        // AI dub from link
-  dubFile: 20,        // AI dub from file
-  translateLink: 30,  // Video translate from link
-  translateFile: 30,   // Video translate from file
-  tts: 100,          // TTS requests
+  dubLink: 999999,        // Unlimited
+  dubFile: 999999,        // Unlimited
+  translateLink: 999999,  // Unlimited
+  translateFile: 999999,   // Unlimited
+  tts: 999999,          // Unlimited
 };
 
 function cleanupOldEntries() {
