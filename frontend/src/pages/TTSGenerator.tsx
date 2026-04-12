@@ -348,14 +348,14 @@ export default function TTSGenerator() {
   const cardBg = isDark ? "rgba(15,15,15,0.85)" : "rgba(255,255,255,0.95)";
   const cardBorder = isDark ? "rgba(192,111,48,0.2)" : "rgba(244,179,79,0.12)";
   const textColor = isDark ? "#EBE6D8" : "#2B1D1C";
-  const subtextColor = isDark ? "rgba(240,238,255,0.6)" : "#64748b";
-  const labelBg = isDark ? "#1f1b3e" : "#ffffff";
-  const inputBg = isDark ? "rgba(0, 0, 0, 0.3)" : "rgba(255, 255, 255, 0.95)";
+  const subtextColor = isDark ? "rgba(236,206,182,0.7)" : "#6b5c50";
+  const labelBg = isDark ? "rgba(192,111,48,0.15)" : "rgba(192,111,48,0.08)";
+  const inputBg = isDark ? "rgba(15,15,15,0.6)" : "rgba(255,255,255,0.95)";
   const inputBorder = isDark ? "rgba(192,111,48,0.2)" : "rgba(192,111,48,0.18)";
 
   const box = "relative border p-4 md:p-5 pt-8 backdrop-blur-xl transition-all duration-300 rounded-2xl mt-6";
-  const boxShadow = isDark ? "0 8px 32px rgba(0,0,0,0.2)" : "0 2px 20px rgba(192,111,48,0.06), 0 1px 6px rgba(0,0,0,0.04)";
-  const labelStyle = "absolute -top-3.5 left-4 px-3 py-1 text-xs uppercase tracking-widest font-black rounded-lg z-10 shadow-sm border";
+  const boxShadow = isDark ? "0 4px 20px rgba(0,0,0,0.3)" : "0 2px 12px rgba(0,0,0,0.05)";
+  const labelStyle = "absolute -top-3.5 left-4 px-3 py-1 text-xs uppercase tracking-widest font-black rounded-lg z-10 border";
 
   const handleGenerate = async () => {
     if (!text.trim()) return;
@@ -743,7 +743,7 @@ export default function TTSGenerator() {
         {mainTab === "tts" && (
           <div className="animate-in fade-in zoom-in-95 duration-300">
             <div className="mb-4 sm:mb-6 relative text-center py-2">
-              <h1 className="text-2xl sm:text-3xl md:text-5xl font-black uppercase tracking-wider sm:tracking-widest mb-2" style={{ textShadow: isDark ? `0 0 20px ${accent}, 0 0 40px ${accent}` : 'none', color: accent }}>TTS Generator</h1>
+              <h1 className="text-2xl sm:text-3xl md:text-5xl font-black uppercase tracking-wider sm:tracking-widest mb-2" style={{ textShadow: "none", color: accent }}>TTS Generator</h1>
               <p className="text-xs sm:text-sm font-bold uppercase tracking-wider opacity-80 mt-1" style={{ color: subtextColor }}>Convert Text to Speech</p>
               {/* No Plan Banner */}
               {!isAdmin && !hasPlan && me && (
@@ -801,7 +801,7 @@ export default function TTSGenerator() {
                   <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{t.voiceSelection}</div>
                   <div className="space-y-4 sm:space-y-5">
                     {[{ label: t.male, voices: [{ id: "thiha", name: "သီဟ", isStd: true }, { id: "ryan", name: "ရဲရင့်", isStd: false }, { id: "ronnie", name: "ရောင်နီ", isStd: false }, { id: "lucas", name: "လင်းခန့်", isStd: false }, { id: "daniel", name: "ဒေဝ", isStd: false }, { id: "evander", name: "အဂ္ဂ", isStd: false }]}, { label: t.female, voices: [{ id: "nilar", name: "နီလာ", isStd: true }, { id: "michelle", name: "မေချို", isStd: false }, { id: "iris", name: "အိန္ဒြာ", isStd: false }, { id: "charlotte", name: "သီရိ", isStd: false }, { id: "amara", name: "အမရာ", isStd: false }]}].map(({ label: grpLabel, voices }) => (
-                      <div key={grpLabel}><p className="text-xs font-bold uppercase tracking-wider mb-2 sm:mb-3" style={{ color: subtextColor }}>{grpLabel}</p><div className="grid grid-cols-3 sm:grid-cols-3 gap-2 sm:gap-3">{voices.map(v => { const isSelected = v.isStd ? voiceMode === "standard" && voice === (v.id === "thiha" ? "thiha" : "nilar") : voiceMode === "character" && character === v.id; return (<button key={v.id} disabled={!hasPlan} onClick={() => { if (v.isStd) { setVoiceMode("standard"); setVoice(v.id as any); setCharacter(""); } else { setVoiceMode("character"); setCharacter(v.id); } }} className="py-2 sm:py-2.5 px-2 sm:px-3 border rounded-xl text-xs sm:text-sm font-bold transition-all disabled:opacity-40" style={{ borderColor: isSelected ? accent : cardBorder, background: isSelected ? (isDark ? 'rgba(192,111,48,0.2)' : 'rgba(244,179,79,0.08)') : 'transparent', color: isSelected ? accent : textColor, boxShadow: isSelected && isDark ? `0 0 15px rgba(192,111,48,0.3)` : (isSelected && !isDark ? '0 4px 12px rgba(192,111,48,0.15)' : 'none') }}>{v.name}</button>); })}</div></div>
+                      <div key={grpLabel}><p className="text-xs font-bold uppercase tracking-wider mb-2 sm:mb-3" style={{ color: subtextColor }}>{grpLabel}</p><div className="grid grid-cols-3 sm:grid-cols-3 gap-2 sm:gap-3">{voices.map(v => { const isSelected = v.isStd ? voiceMode === "standard" && voice === (v.id === "thiha" ? "thiha" : "nilar") : voiceMode === "character" && character === v.id; return (<button key={v.id} disabled={!hasPlan} onClick={() => { if (v.isStd) { setVoiceMode("standard"); setVoice(v.id as any); setCharacter(""); } else { setVoiceMode("character"); setCharacter(v.id); } }} className="py-2 sm:py-2.5 px-2 sm:px-3 border rounded-xl text-xs sm:text-sm font-bold transition-all disabled:opacity-40" style={{ borderColor: isSelected ? accent : cardBorder, background: isSelected ? (isDark ? 'rgba(192,111,48,0.2)' : 'rgba(244,179,79,0.08)') : 'transparent', color: isSelected ? accent : textColor, boxShadow: "none" }}>{v.name}</button>); })}</div></div>
                     ))}
                   </div>
                 </div>
@@ -818,7 +818,7 @@ export default function TTSGenerator() {
                   <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{t.aspectRatio}</div>
                   <div className="grid grid-cols-2 gap-3 mb-5 sm:mb-6 mt-1">{(['9:16', '16:9'] as const).map(ratio => (<button key={ratio} onClick={() => setAspectRatio(ratio)} disabled={!hasPlan} className="py-2.5 sm:py-3 border rounded-xl font-black uppercase transition-all disabled:opacity-40" style={{ borderColor: aspectRatio === ratio ? accent : cardBorder, background: aspectRatio === ratio ? (isDark ? 'rgba(192,111,48,0.15)' : 'rgba(244,179,79,0.06)') : 'transparent', color: aspectRatio === ratio ? accent : textColor, boxShadow: aspectRatio === ratio && !isDark ? '0 4px 12px rgba(192,111,48,0.15)' : 'none' }}>{ratio}</button>))}</div>
                   
-                  <button onClick={handleGenerate} disabled={generateMutation.isPending || !text.trim() || !hasPlan || (!isAdmin && text.length > currentCharLimit)} className="w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 rounded-2xl text-white font-black uppercase tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] shadow-lg text-sm sm:text-base" style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, boxShadow: isDark ? `0 0 20px ${accent}` : `0 8px 20px rgba(192,111,48,0.25)` }}>{generateMutation.isPending ? <><Loader2 className="w-5 h-5 animate-spin" />{t.generating}</> : <><Volume2 className="w-5 h-5" />{t.generate}</>}</button>
+                  <button onClick={handleGenerate} disabled={generateMutation.isPending || !text.trim() || !hasPlan || (!isAdmin && text.length > currentCharLimit)} className="w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 rounded-2xl text-white font-black uppercase tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] shadow-lg text-sm sm:text-base" style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, boxShadow: `0 4px 12px rgba(0,0,0,0.15)` }}>{generateMutation.isPending ? <><Loader2 className="w-5 h-5 animate-spin" />{t.generating}</> : <><Volume2 className="w-5 h-5" />{t.generate}</>}</button>
                   
                   {generatedFiles && (<div className="mt-5 sm:mt-6 pt-5 sm:pt-6 border-t" style={{ borderColor: cardBorder }}><p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: subtextColor }}>{t.preview} {generatedFiles.durationMs > 0 && `(${Math.floor(generatedFiles.durationMs / 1000 / 60)}:${String(Math.floor(generatedFiles.durationMs / 1000) % 60).padStart(2, "0")})`}</p><audio ref={audioRef} controls className="w-full mb-4 rounded-xl" style={{ accentColor: accent }} /><div className="space-y-3"><button onClick={() => { const a = document.createElement("a"); a.href = generatedFiles.audioObjectUrl; a.download = `Myanmar_TTS_${Date.now()}.mp3`; a.click(); }} className="w-full flex items-center justify-center gap-2 py-2.5 sm:py-3 rounded-xl border font-bold text-sm transition-colors" style={{ borderColor: accent, color: accent, background: isDark ? 'rgba(192,111,48,0.1)' : 'rgba(244,179,79,0.05)' }}><Download className="w-4 h-4" /> MP3 Audio</button><button onClick={() => downloadFile(generatedFiles.srtContent, `Myanmar_TTS_${aspectRatio.replace(":", "x")}_${Date.now()}.srt`)} className="w-full flex items-center justify-center gap-2 py-2.5 sm:py-3 rounded-xl border font-bold text-sm transition-colors" style={{ borderColor: accentSecondary, color: accentSecondary, background: isDark ? 'rgba(244,179,79,0.1)' : 'rgba(244,179,79,0.05)' }}><Download className="w-4 h-4" /> SRT ({aspectRatio})</button></div></div>)}
                 </div>
@@ -831,7 +831,7 @@ export default function TTSGenerator() {
         {mainTab === "video" && (
           <div className="max-w-xl mx-auto animate-in fade-in zoom-in-95 duration-300 space-y-4">
             <div className="text-center mb-4 sm:mb-6">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black uppercase tracking-wider sm:tracking-widest mb-2 leading-normal" style={{ textShadow: isDark ? `0 0 20px ${accent}` : 'none', color: accent }}>{t.videoTitle}</h2>
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black uppercase tracking-wider sm:tracking-widest mb-2 leading-normal" style={{ textShadow: "none", color: accent }}>{t.videoTitle}</h2>
               <p className="font-bold tracking-wider text-xs sm:text-sm mt-1" style={{ color: subtextColor }}>{t.videoDesc}</p>
               <p className="text-xs mt-1" style={{ color: subtextColor }}>{t.videoLimit}</p>
               {!isAdmin && !hasPlan && me && (
@@ -884,7 +884,7 @@ export default function TTSGenerator() {
                 {/* Video Preview removed from translate tab — not needed */}
 
                 {(videoFile || videoUrl) && (
-                  <button onClick={handleTranslate} disabled={translateMutation.isPending || translateLinkMutation.isPending} className="w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 rounded-2xl text-white font-black uppercase tracking-widest transition-all disabled:opacity-50 hover:scale-[1.02] mt-4 shadow-lg text-sm sm:text-base" style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, boxShadow: isDark ? `0 0 20px ${accent}` : `0 8px 20px rgba(192,111,48,0.25)` }}>
+                  <button onClick={handleTranslate} disabled={translateMutation.isPending || translateLinkMutation.isPending} className="w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 rounded-2xl text-white font-black uppercase tracking-widest transition-all disabled:opacity-50 hover:scale-[1.02] mt-4 shadow-lg text-sm sm:text-base" style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, boxShadow: `0 4px 12px rgba(0,0,0,0.15)` }}>
                     {(translateMutation.isPending || translateLinkMutation.isPending) ? <><Loader2 className="w-5 h-5 animate-spin" />{t.translating}</> : <><Sparkles className="w-5 h-5" />{t.translateBtn}</>}
                   </button>
                 )}
@@ -932,7 +932,7 @@ export default function TTSGenerator() {
         {mainTab === "dubbing" && (
           <div className="max-w-2xl mx-auto animate-in fade-in zoom-in-95 duration-300 space-y-4">
             <div className="text-center mb-4 sm:mb-6">
-              <h2 className="text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-wider sm:tracking-widest mb-2 leading-normal" style={{ textShadow: isDark ? `0 0 20px ${accent}` : 'none', color: accent }}>
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-wider sm:tracking-widest mb-2 leading-normal" style={{ textShadow: "none", color: accent }}>
                 {lang === "mm" ? "AI Auto Video Maker" : "AI Auto Video Maker"}
               </h2>
               <p className="font-bold tracking-wider text-xs sm:text-sm mt-1" style={{ color: subtextColor }}>
@@ -1195,7 +1195,7 @@ export default function TTSGenerator() {
                   {voiceAccordionOpen && (
                     <div className="space-y-4 mt-2 animate-in fade-in slide-in-from-top-2 duration-200">
                       {[{ label: t.male, voices: [{ id: "thiha", name: "သီဟ", isStd: true }, { id: "ryan", name: "ရဲရင့်", isStd: false }, { id: "ronnie", name: "ရောင်နီ", isStd: false }, { id: "lucas", name: "လင်းခန့်", isStd: false }, { id: "daniel", name: "ဒေဝ", isStd: false }, { id: "evander", name: "အဂ္ဂ", isStd: false }]}, { label: t.female, voices: [{ id: "nilar", name: "နီလာ", isStd: true }, { id: "michelle", name: "မေချို", isStd: false }, { id: "iris", name: "အိန္ဒြာ", isStd: false }, { id: "charlotte", name: "သီရိ", isStd: false }, { id: "amara", name: "အမရာ", isStd: false }]}].map(({ label: grpLabel, voices }) => (
-                        <div key={grpLabel}><p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: subtextColor }}>{grpLabel}</p><div className="grid grid-cols-3 gap-2">{voices.map(v => { const isSelected = v.isStd ? dubVoiceMode === "standard" && dubVoice === (v.id === "thiha" ? "thiha" : "nilar") : dubVoiceMode === "character" && dubCharacter === v.id; return (<button key={v.id} onClick={() => { if (v.isStd) { setDubVoiceMode("standard"); setDubVoice(v.id as any); setDubCharacter(""); } else { setDubVoiceMode("character"); setDubCharacter(v.id); } }} className="py-2 px-2 border rounded-xl text-xs font-bold transition-all" style={{ borderColor: isSelected ? accent : cardBorder, background: isSelected ? (isDark ? 'rgba(192,111,48,0.2)' : 'rgba(244,179,79,0.08)') : 'transparent', color: isSelected ? accent : textColor, boxShadow: isSelected && isDark ? `0 0 12px rgba(192,111,48,0.3)` : 'none' }}>{v.name}</button>); })}</div></div>
+                        <div key={grpLabel}><p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: subtextColor }}>{grpLabel}</p><div className="grid grid-cols-3 gap-2">{voices.map(v => { const isSelected = v.isStd ? dubVoiceMode === "standard" && dubVoice === (v.id === "thiha" ? "thiha" : "nilar") : dubVoiceMode === "character" && dubCharacter === v.id; return (<button key={v.id} onClick={() => { if (v.isStd) { setDubVoiceMode("standard"); setDubVoice(v.id as any); setDubCharacter(""); } else { setDubVoiceMode("character"); setDubCharacter(v.id); } }} className="py-2 px-2 border rounded-xl text-xs font-bold transition-all" style={{ borderColor: isSelected ? accent : cardBorder, background: isSelected ? (isDark ? 'rgba(192,111,48,0.2)' : 'rgba(244,179,79,0.08)') : 'transparent', color: isSelected ? accent : textColor, boxShadow: "none" }}>{v.name}</button>); })}</div></div>
                       ))}
                     </div>
                   )}
@@ -1368,7 +1368,7 @@ export default function TTSGenerator() {
                 </div>
 
                 {/* Generate Dubbing Button */}
-                <button onClick={handleDubGenerate} disabled={dubFileMutation.isPending || dubLinkMutation.isPending || dubPreviewUrl === 'loading' || dubPreviewMutation.isPending} className="w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 rounded-2xl text-white font-black uppercase tracking-widest transition-all disabled:opacity-50 hover:scale-[1.02] mt-2 shadow-lg text-sm sm:text-base" style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, boxShadow: isDark ? `0 0 20px ${accent}` : `0 8px 20px rgba(192,111,48,0.25)` }}>
+                <button onClick={handleDubGenerate} disabled={dubFileMutation.isPending || dubLinkMutation.isPending || dubPreviewUrl === 'loading' || dubPreviewMutation.isPending} className="w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 rounded-2xl text-white font-black uppercase tracking-widest transition-all disabled:opacity-50 hover:scale-[1.02] mt-2 shadow-lg text-sm sm:text-base" style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, boxShadow: `0 4px 12px rgba(0,0,0,0.15)` }}>
                   {(dubFileMutation.isPending || dubLinkMutation.isPending) ? <><Loader2 className="w-5 h-5 animate-spin" /><span className="text-xs sm:text-sm">{lang === "mm" ? "ဖန်တီးနေသည်... (၃-၅ မိနစ်)" : "Generating... (3-5 min)"}</span></> : <><Wand2 className="w-5 h-5" />{lang === "mm" ? "AI ဖြင့် ဖန်တီးမည်" : "Generate with AI"}</>}
                 </button>
 
@@ -1416,7 +1416,7 @@ export default function TTSGenerator() {
                   <div className="flex items-center justify-center gap-3 mt-4">
                     <button onClick={handleDubDownload}
                       className="flex items-center gap-2 px-5 sm:px-6 py-3 rounded-xl font-black text-sm uppercase tracking-wider transition-all hover:scale-105 shadow-lg text-white"
-                      style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, boxShadow: isDark ? `0 0 20px ${accent}` : `0 8px 20px rgba(192,111,48,0.25)` }}>
+                      style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, boxShadow: `0 4px 12px rgba(0,0,0,0.15)` }}>
                       <Download className="w-5 h-5" /> {lang === "mm" ? "MP4 ဒေါင်းလုတ်" : "Download MP4"}
                     </button>
                   </div>
@@ -1596,7 +1596,7 @@ export default function TTSGenerator() {
             </div>
 
             {/* Current Plan Card */}
-            <div className="rounded-2xl border-2 p-6 sm:p-8 mb-6" style={{ background: `linear-gradient(135deg, ${isDark ? 'rgba(192,111,48,0.08)' : 'rgba(192,111,48,0.05)'}, ${cardBg})`, borderColor: accent40, boxShadow: `0 0 30px ${accent15}` }}>
+            <div className="rounded-2xl border-2 p-6 sm:p-8 mb-6" style={{ background: `linear-gradient(135deg, ${isDark ? 'rgba(192,111,48,0.08)' : 'rgba(192,111,48,0.05)'}, ${cardBg})`, borderColor: accent40, boxShadow: boxShadow }}>
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-3">
                   <Star className="w-6 h-6" style={{ color: currentPlan === 'trial' ? '#f59e0b' : accent }} />
@@ -1650,7 +1650,7 @@ export default function TTSGenerator() {
                   { name: "Business", price: "30,000 Ks", period: lang === "mm" ? "/ လ" : "/ mo", features: [lang === "mm" ? "အကန့်အသတ်မဲ့" : "Unlimited", lang === "mm" ? "စာလုံး ၁၀၀,၀၀၀" : "100,000 chars", lang === "mm" ? "ဗီဒီယို ၂၀/ရက်" : "20 videos/day", "Priority Support"], color: "#f59e0b", popular: false },
                   { name: "Enterprise", price: lang === "mm" ? "ညှိနှိုင်း" : "Custom", period: "", features: [lang === "mm" ? "အကုန်အကန့်အသတ်မဲ့" : "Everything unlimited", "API Access", "24/7 Support", lang === "mm" ? "စနစ်ချိတ်ဆက်မှု" : "Custom integration"], color: "#c084fc", popular: false },
                 ].map(plan => (
-                  <div key={plan.name} className="rounded-2xl border p-5 sm:p-6 relative transition-all hover:scale-[1.02]" style={{ background: `linear-gradient(145deg, ${cardBg}, ${isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)'})`, borderColor: plan.popular ? accent : cardBorder, boxShadow: plan.popular ? `0 0 25px ${accent30}` : boxShadow }}>
+                  <div key={plan.name} className="rounded-2xl border p-5 sm:p-6 relative transition-all hover:scale-[1.02]" style={{ background: `linear-gradient(145deg, ${cardBg}, ${isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)'})`, borderColor: plan.popular ? accent : cardBorder, boxShadow: plan.popular ? `0 4px 16px rgba(0,0,0,0.1)` : boxShadow }}>
                     {plan.popular && <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-wider" style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, color: "#fff" }}>{lang === "mm" ? "လူကြိုက်များ" : "Popular"}</div>}
                     <h4 className="text-lg font-black uppercase mt-1" style={{ color: plan.color }}>{plan.name}</h4>
                     <div className="flex items-baseline gap-1 mt-2 mb-4">
