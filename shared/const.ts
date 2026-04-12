@@ -42,7 +42,7 @@ export type FeatureKey = (typeof FEATURES)[keyof typeof FEATURES];
 // ─── Default Limits ─────────────────────────────────────────────────────
 export const TRIAL_DEFAULTS: Omit<import("./types").TrialLimits, never> = {
   charLimitStandard: 20000,
-  charLimitCharacter: 1600,
+  charLimitCharacter: 2000,
   totalTtsSrt: 7,
   totalCharacterUse: 2,
   totalAiVideo: 2,
