@@ -998,9 +998,9 @@ export default function TTSGenerator() {
 
             {/* ── STEP: Video Preview + Settings ── */}
             {dubPreviewUrl && !dubResult && (
-              <div className="flex flex-col md:flex-row gap-4">
-                {/* Video Preview — Sticky on left */}
-                <div className={`${box} backdrop-blur-md flex-shrink-0`} style={{ background: cardBg, borderColor: cardBorder, boxShadow, position: "sticky", top: "20px", zIndex: 50, width: "100%", alignSelf: "flex-start" }}>
+              <>
+                {/* Video Preview — Sticky at top */}
+                <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow, position: "sticky", top: "20px", zIndex: 50 }}>
                   <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{lang === "mm" ? "ဗီဒီယိုကြိုကြည့်" : "Video Preview"}</div>
                   <div className="flex justify-center mt-2">
                     {/* Preview: spinner → blob video → info card → HTML5 video */}
@@ -1188,10 +1188,6 @@ export default function TTSGenerator() {
                     </div>
                   )}
                 </div>
-                {/* End Preview */}
-
-                {/* Settings — Scrollable */}
-                <div className="flex-1 space-y-4 overflow-y-auto">
 
                 {/* ── ACCORDION: Voice Selection ── */}
                 <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
@@ -1402,9 +1398,7 @@ export default function TTSGenerator() {
                 <button onClick={handleDubReset} className="w-full py-2.5 rounded-xl border font-bold text-xs uppercase tracking-wider opacity-50 hover:opacity-100 transition-all" style={{ borderColor: cardBorder, color: subtextColor }}>
                   ← {lang === "mm" ? "ဗီဒီယိုပြောင်းမည်" : "Change Video"}
                 </button>
-                </div>
-                {/* End Settings wrapper */}
-              </div>
+              </>
             )}
 
             {/* Dubbing Result — Final Video + Download */}
