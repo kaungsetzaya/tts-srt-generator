@@ -29,15 +29,20 @@ const FEATURE_ICONS: Record<string, any> = {
 
 // ── Accent colors ──────────────────────────────────────────────
 const C = "#C06F30";
-const cardBg = "rgba(10,8,30,0.7)";
-const border = "rgba(192,111,48,0.6)";
+const GOLD = "#F4B34F";
+const CREAM = "#EBE6D8";
+const cardBg = "rgba(15,15,15,0.85)";
+const cardBg2 = "rgba(20,18,16,0.75)";
+const border = "rgba(192,111,48,0.2)";
+const borderBright = "rgba(192,111,48,0.4)";
+const glassTopBar = "rgba(10,10,10,0.92)";
 
 function StatBox({ label, value, color = C, sub }: { label: string; value: any; color?: string; sub?: string }) {
   return (
-    <div style={{ background: cardBg, borderColor: border }} className="border p-4 rounded-xl">
-      <p className="text-xs uppercase tracking-wider opacity-50 mb-1">{label}</p>
+    <div style={{ background: cardBg, borderColor: border }} className="border p-4 rounded-2xl" onClick={() => {}}>
+      <p className="text-xs uppercase tracking-wider mb-1" style={{ color: "rgba(236,206,182,0.5)" }}>{label}</p>
       <p className="text-2xl font-black" style={{ color }}>{value}</p>
-      {sub && <p className="text-xs opacity-40 mt-0.5">{sub}</p>}
+      {sub && <p className="text-xs mt-0.5" style={{ color: "rgba(236,206,182,0.35)" }}>{sub}</p>}
     </div>
   );
 }
@@ -46,12 +51,12 @@ function MiniBar({ label, count, max, color = C }: { label: string; count: numbe
   const pct = max > 0 ? Math.round((count / max) * 100) : 0;
   return (
     <div className="flex items-center gap-3 py-1.5">
-      <div className="w-28 text-xs font-bold truncate opacity-80">{label}</div>
-      <div className="flex-1 h-2 rounded-full bg-white/5">
-        <div className="h-2 rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
+      <div className="w-28 text-xs font-bold truncate" style={{ color: "rgba(236,206,182,0.6)" }}>{label}</div>
+      <div className="flex-1 h-1.5 rounded-full" style={{ background: "rgba(192,111,48,0.1)" }}>
+        <div className="h-1.5 rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
       </div>
       <div className="text-xs font-black w-10 text-right" style={{ color }}>{count}</div>
-      <div className="text-xs opacity-30 w-8 text-right">{pct}%</div>
+      <div className="text-xs w-8 text-right" style={{ color: "rgba(236,206,182,0.25)" }}>{pct}%</div>
     </div>
   );
 }
@@ -75,9 +80,9 @@ function UserDetailDrawer({ userId, userName, onClose }: { userId: string; userN
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end" style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
-      <div className="relative w-full max-w-2xl h-full overflow-y-auto" style={{ background: "#0f0f0f", borderLeft: `1px solid ${border}` }} onClick={e => e.stopPropagation()}>
+      <div className="relative w-full max-w-2xl h-full overflow-y-auto" style={{ background: "linear-gradient(180deg, #0f0f0f 0%, #141210 100%)", borderLeft: `1px solid ${border}` }} onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: border, background: "#0f0f0f" }}>
+        <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b backdrop-blur-xl" style={{ borderColor: border, background: glassTopBar }}>
           <div>
             <p className="font-black text-lg" style={{ color: C }}>{userName}</p>
             <p className="text-xs opacity-40">30-day activity breakdown</p>
@@ -276,12 +281,12 @@ export default function AdminDashboard() {
   const totalErrors = (errorData?.failedGenerations?.length ?? 0) + (errorData?.systemLogs?.filter((l: any) => !l.resolved).length ?? 0);
 
   return (
-    <div className="min-h-screen text-foreground" style={{ background: "linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%)" }}>
+    <div className="min-h-screen text-foreground" style={{ background: "linear-gradient(135deg, #0f0f0f 0%, #1a1815 50%, #0f0f0f 100%)" }}>
       {/* User Detail Drawer */}
       {userDrawer && <UserDetailDrawer userId={userDrawer.id} userName={userDrawer.name} onClose={() => setUserDrawer(null)} />}
 
       {/* Top Bar */}
-      <div className="sticky top-0 z-40 flex items-center justify-between px-6 py-3 border-b backdrop-blur-xl" style={{ borderColor: border, background: "rgba(15,12,41,0.9)" }}>
+      <div className="sticky top-0 z-40 flex items-center justify-between px-6 py-3 border-b backdrop-blur-2xl" style={{ borderColor: border, background: glassTopBar }}>
         <div className="flex items-center gap-2">
           <Shield className="w-5 h-5" style={{ color: C }} />
           <span className="font-black uppercase tracking-widest text-sm" style={{ color: C }}>LUMIX Admin</span>
@@ -298,21 +303,22 @@ export default function AdminDashboard() {
         {/* Top KPI Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {[
-            { label: "🟢 Online Now", value: onlineStats?.onlineCount ?? 0, color: "#4ade80", sub: "Active in 15min" },
-            { label: "🎙️ TTS (Month)", value: analytics?.featureBreakdown?.tts ?? 0, color: C, sub: `${analytics?.generations?.today ?? 0} today` },
-            { label: "🎬 Video (Month)", value: (analytics?.featureBreakdown?.videoUpload ?? 0) + (analytics?.featureBreakdown?.videoLink ?? 0), color: "#60a5fa", sub: `${analytics?.featureBreakdown?.translation ?? 0} translated` },
-            { label: "Total Users", value: normalUsers.length, color: "#c084fc", sub: `${activeSubs} active subs` },
-          ].map(({ label, value, color, sub }) => (
-            <div key={label} className="border rounded-xl p-4" style={{ background: cardBg, borderColor: border }}>
-              <p className="text-xs uppercase tracking-wider opacity-50 mb-1">{label}</p>
+            { label: "Online Now", value: onlineStats?.onlineCount ?? 0, color: "#4ade80", sub: "Active in 15min", icon: "🟢" },
+            { label: "TTS (Month)", value: analytics?.featureBreakdown?.tts ?? 0, color: C, sub: `${analytics?.generations?.today ?? 0} today`, icon: "🎙️" },
+            { label: "Video (Month)", value: (analytics?.featureBreakdown?.videoUpload ?? 0) + (analytics?.featureBreakdown?.videoLink ?? 0), color: GOLD, sub: `${analytics?.featureBreakdown?.translation ?? 0} translated`, icon: "🎬" },
+            { label: "Total Users", value: normalUsers.length, color: "#c084fc", sub: `${activeSubs} active subs`, icon: "👥" },
+          ].map(({ label, value, color, sub, icon }) => (
+            <div key={label} className="border rounded-2xl p-4 relative overflow-hidden" style={{ background: cardBg, borderColor: border }}>
+              <div className="absolute top-0 right-0 w-20 h-20 rounded-bl-full opacity-5" style={{ background: color }} />
+              <p className="text-xs uppercase tracking-wider mb-1" style={{ color: "rgba(236,206,182,0.5)" }}>{icon} {label}</p>
               <p className="text-3xl font-black" style={{ color }}>{value}</p>
-              <p className="text-xs opacity-40 mt-0.5">{sub}</p>
+              <p className="text-xs mt-0.5" style={{ color: "rgba(236,206,182,0.35)" }}>{sub}</p>
             </div>
           ))}
         </div>
 
         {/* Main Tabs */}
-        <div className="flex gap-1 mb-6 border-b" style={{ borderColor: border }}>
+        <div className="flex gap-1 mb-6 border-b rounded-xl" style={{ borderColor: border, background: cardBg }}>
           {([
             { id: "analytics", label: "Analytics", icon: BarChart3 },
             { id: "users", label: "Users", icon: Users },
@@ -320,7 +326,7 @@ export default function AdminDashboard() {
             { id: "settings", label: "Settings", icon: Settings },
           ] as const).map(({ id, label, icon: Icon }) => (
             <button key={id} onClick={() => setTab(id)}
-              className={`flex items-center gap-2 px-5 py-2.5 text-sm font-bold uppercase tracking-wider border-b-2 transition-all -mb-px ${tab === id ? "border-[#C06F30] text-[#C06F30]" : "border-transparent opacity-50 hover:opacity-80"}`}>
+              className={`flex items-center gap-2 px-5 py-2.5 text-sm font-bold uppercase tracking-wider border-b-2 transition-all -mb-px ${tab === id ? "border-[#C06F30] text-[#C06F30]" : "border-transparent opacity-40 hover:opacity-70"}`}>
               <Icon className="w-4 h-4" /> {label}
               {id === "reports" && totalErrors > 0 && (
                 <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">{totalErrors}</span>
@@ -333,7 +339,7 @@ export default function AdminDashboard() {
         {tab === "analytics" && (
           <div className="space-y-5">
             {/* Generation Overview */}
-            <div className="border rounded-xl p-6" style={{ background: cardBg, borderColor: border }}>
+            <div className="border rounded-2xl p-6 backdrop-blur-md" style={{ background: cardBg, borderColor: border }}>
               <h3 className="font-bold uppercase tracking-wider mb-4 flex items-center gap-2" style={{ color: C }}>
                 <Activity className="w-4 h-4" /> Generation Overview
               </h3>
@@ -344,16 +350,17 @@ export default function AdminDashboard() {
                   { label: "This Month", value: analytics?.generations?.month ?? 0 },
                   { label: "All Time", value: analytics?.generations?.total ?? 0 },
                 ].map(({ label, value }) => (
-                  <div key={label} className="border rounded-xl p-4 text-center" style={{ borderColor: border }}>
-                    <p className="text-xs opacity-40 uppercase tracking-wider mb-2">{label}</p>
-                    <p className="text-2xl font-black" style={{ color: C }}>{value}</p>
+                  <div key={label} className="border rounded-xl p-4 text-center relative overflow-hidden" style={{ borderColor: border }}>
+                    <div className="absolute inset-0 opacity-5" style={{ background: `linear-gradient(135deg, ${C} 0%, transparent 60%)` }} />
+                    <p className="text-xs uppercase tracking-wider mb-2 relative z-10" style={{ color: "rgba(236,206,182,0.4)" }}>{label}</p>
+                    <p className="text-2xl font-black relative z-10" style={{ color: C }}>{value}</p>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Voice / Character Stats with Timeframe */}
-            <div className="border rounded-xl p-6" style={{ background: cardBg, borderColor: border }}>
+            <div className="border rounded-2xl p-6 backdrop-blur-md" style={{ background: cardBg, borderColor: border }}>
               <div className="flex items-center justify-between mb-5">
                 <h3 className="font-bold uppercase tracking-wider flex items-center gap-2" style={{ color: C }}>
                   <Mic className="w-4 h-4" /> Voice & Character Usage
@@ -408,25 +415,25 @@ export default function AdminDashboard() {
 
             {/* Churn Rate + Active/Inactive */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="border rounded-xl p-6" style={{ background: cardBg, borderColor: border }}>
-                <h3 className="font-bold uppercase tracking-wider mb-4 flex items-center gap-2 text-orange-400">
+              <div className="border rounded-2xl p-6 backdrop-blur-md" style={{ background: cardBg, borderColor: border }}>
+                <h3 className="font-bold uppercase tracking-wider mb-4 flex items-center gap-2" style={{ color: "#f97316" }}>
                   <TrendingDown className="w-4 h-4" /> Churn Rate
                 </h3>
-                <p className="text-5xl font-black text-orange-400">{churnData?.churnRate ?? 0}%</p>
-                <p className="text-xs opacity-40 mt-2">Users inactive 14+ days</p>
+                <p className="text-5xl font-black" style={{ color: "#f97316" }}>{churnData?.churnRate ?? 0}%</p>
+                <p className="text-xs mt-2" style={{ color: "rgba(236,206,182,0.4)" }}>Users inactive 14+ days</p>
                 <div className="mt-4 grid grid-cols-2 gap-2">
-                  <div className="text-center">
+                  <div className="text-center border rounded-xl p-3" style={{ borderColor: "rgba(74,222,128,0.2)", background: "rgba(74,222,128,0.05)" }}>
                     <p className="text-xl font-black text-green-400">{churnData?.activeCount ?? 0}</p>
-                    <p className="text-xs opacity-40">Active</p>
+                    <p className="text-xs" style={{ color: "rgba(236,206,182,0.4)" }}>Active</p>
                   </div>
-                  <div className="text-center">
+                  <div className="text-center border rounded-xl p-3" style={{ borderColor: "rgba(248,113,113,0.2)", background: "rgba(248,113,113,0.05)" }}>
                     <p className="text-xl font-black text-red-400">{churnData?.inactiveCount ?? 0}</p>
-                    <p className="text-xs opacity-40">Inactive</p>
+                    <p className="text-xs" style={{ color: "rgba(236,206,182,0.4)" }}>Inactive</p>
                   </div>
                 </div>
               </div>
 
-              <div className="md:col-span-2 border rounded-xl p-6" style={{ background: cardBg, borderColor: border }}>
+              <div className="md:col-span-2 border rounded-2xl p-6 backdrop-blur-md" style={{ background: cardBg, borderColor: border }}>
                 <div className="flex items-center gap-2 mb-4">
                   <button onClick={() => setChurnTab("active")} className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border transition-all ${churnTab === "active" ? "border-green-500 text-green-400 bg-green-500/10" : "border-white/10 opacity-50"}`}>
                     <UserCheck className="w-3 h-3" /> Active Users ({churnData?.activeCount ?? 0})
@@ -454,9 +461,9 @@ export default function AdminDashboard() {
 
             {/* Revenue + Server Health */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="border rounded-xl p-6" style={{ background: cardBg, borderColor: border }}>
+              <div className="border rounded-2xl p-6 backdrop-blur-md" style={{ background: cardBg, borderColor: border }}>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold uppercase tracking-wider flex items-center gap-2 text-amber-600">
+                  <h3 className="font-bold uppercase tracking-wider flex items-center gap-2" style={{ color: GOLD }}>
                     <Banknote className="w-4 h-4" /> Revenue (Active Subs)
                   </h3>
                   <div className="flex items-center gap-1">
@@ -466,18 +473,18 @@ export default function AdminDashboard() {
                   </div>
                 </div>
                 {analytics?.planCounts?.map((p: any) => (
-                  <div key={p.plan} className="flex justify-between items-center border-b py-2" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-                    <div><span className="text-sm font-bold">{PLAN_LABELS[p.plan as Plan] ?? p.plan}</span><span className="text-xs opacity-40 ml-2">× {p.count}</span></div>
-                    <span className="font-bold text-amber-600">{fmtMMK((PLAN_PRICE[p.plan as Plan] ?? 0) * p.count)}</span>
+                  <div key={p.plan} className="flex justify-between items-center border-b py-2" style={{ borderColor: "rgba(192,111,48,0.08)" }}>
+                    <div><span className="text-sm font-bold">{PLAN_LABELS[p.plan as Plan] ?? p.plan}</span><span className="text-xs ml-2" style={{ color: "rgba(236,206,182,0.35)" }}>× {p.count}</span></div>
+                    <span className="font-bold" style={{ color: GOLD }}>{fmtMMK((PLAN_PRICE[p.plan as Plan] ?? 0) * p.count)}</span>
                   </div>
                 ))}
                 <div className="flex justify-between items-center pt-3">
-                  <span className="font-bold uppercase text-xs opacity-60">Total Estimated</span>
-                  <span className="font-black text-amber-600 text-lg">{fmtMMK(totalRevenue)}</span>
+                  <span className="font-bold uppercase text-xs" style={{ color: "rgba(236,206,182,0.5)" }}>Total Estimated</span>
+                  <span className="font-black text-lg" style={{ color: GOLD }}>{fmtMMK(totalRevenue)}</span>
                 </div>
               </div>
 
-              <div className="border rounded-xl p-6" style={{ background: cardBg, borderColor: border }}>
+              <div className="border rounded-2xl p-6 backdrop-blur-md" style={{ background: cardBg, borderColor: border }}>
                 <h3 className="font-bold uppercase tracking-wider mb-4 flex items-center gap-2 text-green-400">
                   <Server className="w-4 h-4" /> Server Health <span className="text-xs font-normal opacity-40">(auto 30s)</span>
                 </h3>
@@ -488,7 +495,7 @@ export default function AdminDashboard() {
                     { label: "Disk", value: health?.disk ?? "—", color: "text-blue-400" },
                     { label: "Uptime", value: fmtUptime(health?.uptime ?? 0), color: "text-green-400" },
                   ].map(({ label, value, color }) => (
-                    <div key={label} className="border rounded-lg p-3 text-center" style={{ borderColor: border }}>
+                    <div key={label} className="border rounded-xl p-3 text-center" style={{ borderColor: border }}>
                       <p className="text-xs opacity-40 mb-1">{label}</p>
                       <p className={`text-base font-black ${color}`}>{value}</p>
                     </div>
@@ -511,7 +518,7 @@ export default function AdminDashboard() {
             <div className="border rounded-xl overflow-hidden" style={{ background: cardBg, borderColor: border }}>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b text-xs uppercase tracking-wider opacity-50" style={{ borderColor: border }}>
+                  <tr className="border-b text-xs uppercase tracking-wider" style={{ borderColor: border, color: "rgba(236,206,182,0.4)" }}>
                     <th className="text-left p-3">User</th>
                     <th className="text-left p-3">Plan</th>
                     <th className="text-center p-3">Days</th>
@@ -529,7 +536,7 @@ export default function AdminDashboard() {
                     const displayName = user.telegramFirstName ?? "—";
                     const username = user.telegramUsername ?? "—";
                     return (
-                      <tr key={user.id} className={`border-b transition-colors hover:bg-white/5 ${isBanned ? "opacity-40" : ""}`} style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+                      <tr key={user.id} className={`border-b transition-colors hover:bg-white/5 ${isBanned ? "opacity-40" : ""}`} style={{ borderColor: "rgba(192,111,48,0.08)" }}>
                         <td className="p-3">
                           {/* Clickable name to open detail drawer */}
                           <button onClick={() => setUserDrawer({ id: user.id, name: displayName })}
@@ -581,8 +588,8 @@ export default function AdminDashboard() {
             </div>
 
             {/* Admins Section */}
-            <div className="border rounded-xl p-5" style={{ background: cardBg, borderColor: border }}>
-              <h3 className="font-bold uppercase tracking-wider mb-4 flex items-center gap-2 text-yellow-400">
+            <div className="border rounded-2xl p-5 backdrop-blur-md" style={{ background: cardBg, borderColor: border }}>
+              <h3 className="font-bold uppercase tracking-wider mb-4 flex items-center gap-2" style={{ color: GOLD }}>
                 <Shield className="w-4 h-4" /> Admin Accounts
               </h3>
               <div className="space-y-2">
@@ -607,7 +614,7 @@ export default function AdminDashboard() {
         {tab === "reports" && (
           <div className="space-y-5">
             <div className="flex items-center justify-between">
-              <h2 className="font-black uppercase tracking-widest text-lg flex items-center gap-2" style={{ color: C }}>
+              <h2 className="font-black uppercase tracking-widest text-lg flex items-center gap-2" style={{ color: "#f87171" }}>
                 <Bug className="w-5 h-5" /> Error & Bug Reports
               </h2>
               <button onClick={() => refetchErrors()} className="flex items-center gap-1.5 text-xs px-3 py-1.5 border rounded-lg opacity-60 hover:opacity-100 transition-all" style={{ borderColor: border }}>
@@ -623,15 +630,15 @@ export default function AdminDashboard() {
             </div>
 
             {/* Failed Generations */}
-            <div className="border rounded-xl p-6" style={{ background: cardBg, borderColor: border }}>
+            <div className="border rounded-2xl p-6 backdrop-blur-md" style={{ background: cardBg, borderColor: border }}>
               <h3 className="font-bold uppercase tracking-wider mb-4 flex items-center gap-2 text-red-400">
                 <AlertTriangle className="w-4 h-4" /> Failed Generations
-                <span className="text-xs font-normal opacity-40 ml-1">({errorData?.failedGenerations?.length ?? 0} total)</span>
+                <span className="text-xs font-normal ml-1" style={{ color: "rgba(236,206,182,0.4)" }}>({errorData?.failedGenerations?.length ?? 0} total)</span>
               </h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="border-b opacity-40 uppercase tracking-wider" style={{ borderColor: border }}>
+                    <tr className="border-b uppercase tracking-wider" style={{ borderColor: border, color: "rgba(236,206,182,0.4)" }}>
                       <th className="text-left p-2">Time</th>
                       <th className="text-left p-2">User ID</th>
                       <th className="text-left p-2">Feature</th>
@@ -667,8 +674,8 @@ export default function AdminDashboard() {
             </div>
 
             {/* System Error Logs */}
-            <div className="border rounded-xl p-6" style={{ background: cardBg, borderColor: border }}>
-              <h3 className="font-bold uppercase tracking-wider mb-4 flex items-center gap-2 text-orange-400">
+            <div className="border rounded-2xl p-6 backdrop-blur-md" style={{ background: cardBg, borderColor: border }}>
+              <h3 className="font-bold uppercase tracking-wider mb-4 flex items-center gap-2" style={{ color: "#fb923c" }}>
                 <Info className="w-4 h-4" /> System Error Logs
               </h3>
               {errorData?.systemLogs?.length === 0 ? (
@@ -713,7 +720,7 @@ export default function AdminDashboard() {
         {tab === "settings" && (
           <div className="space-y-5">
             {/* Auto Trial Settings */}
-            <div className="border rounded-xl p-6 space-y-6 max-w-xl" style={{ background: cardBg, borderColor: border }}>
+            <div className="border rounded-2xl p-6 space-y-6 max-w-xl backdrop-blur-md" style={{ background: cardBg, borderColor: border }}>
               <h2 className="font-black uppercase tracking-widest" style={{ color: C }}>Settings</h2>
               <div className="flex items-center justify-between py-4 border-b" style={{ borderColor: border }}>
                 <div>
@@ -730,13 +737,13 @@ export default function AdminDashboard() {
                 <p className="font-bold mb-3">Trial Duration</p>
                 <div className="flex items-center gap-3">
                   <input type="number" min={1} max={365} value={autoTrialDays} onChange={e => setAutoTrialDays(Number(e.target.value))}
-                    className="w-20 border p-2 text-center font-bold focus:outline-none rounded-lg" style={{ background: "rgba(0,0,0,0.3)", borderColor: border, color: C }} />
-                  <span className="text-sm opacity-60">days</span>
+                    className="w-20 border p-2 text-center font-bold focus:outline-none rounded-xl" style={{ background: "rgba(0,0,0,0.4)", borderColor: border, color: C }} />
+                  <span className="text-sm" style={{ color: "rgba(236,206,182,0.5)" }}>days</span>
                   <div className="flex gap-2">
                     {[1, 3, 7, 14, 30].map(d => (
                       <button key={d} onClick={() => setAutoTrialDays(d)}
-                        className="px-3 py-1 text-xs font-bold border rounded-lg transition-all"
-                        style={{ background: autoTrialDays === d ? C : "transparent", color: autoTrialDays === d ? "#000" : "#fff", borderColor: autoTrialDays === d ? C : border, opacity: autoTrialDays === d ? 1 : 0.5 }}>
+                        className="px-3 py-1 text-xs font-bold border rounded-xl transition-all"
+                        style={{ background: autoTrialDays === d ? C : "transparent", color: autoTrialDays === d ? "#000" : CREAM, borderColor: autoTrialDays === d ? C : border, opacity: autoTrialDays === d ? 1 : 0.5 }}>
                         {d}d
                       </button>
                     ))}
@@ -747,21 +754,21 @@ export default function AdminDashboard() {
                 <p className="font-bold mb-3">Trial ကာလ သတ်မှတ်ချက် (Trial Period)</p>
                 <div className="flex items-center gap-2 mb-3">
                   <input type="checkbox" id="trialEnabled" checked={trialEnabled} onChange={e => setTrialEnabled(e.target.checked)}
-                    className="w-4 h-4 rounded" />
-                  <label htmlFor="trialEnabled" className="text-sm">Trial ကာလ ဖွင့်ထားမည် (Enable trial period)</label>
+                    className="w-4 h-4 rounded" style={{ accentColor: C }} />
+                  <label htmlFor="trialEnabled" className="text-sm" style={{ color: CREAM }}>Trial ကာလ ဖွင့်ထားမည် (Enable trial period)</label>
                 </div>
                 {trialEnabled && (
                   <div className="space-y-3">
                     <div className="flex items-center gap-3">
                       <div className="flex-1">
-                        <label className="text-xs opacity-60 mb-1 block">စတင် ရက် (Start Date)</label>
+                        <label className="text-xs mb-1 block" style={{ color: "rgba(236,206,182,0.5)" }}>စတင် ရက် (Start Date)</label>
                         <input type="date" value={trialStartDate} onChange={e => setTrialStartDate(e.target.value)}
-                          className="w-full border p-2 text-sm font-bold rounded-lg" style={{ background: "rgba(0,0,0,0.3)", borderColor: border, color: C }} />
+                          className="w-full border p-2 text-sm font-bold rounded-xl" style={{ background: "rgba(0,0,0,0.4)", borderColor: border, color: C }} />
                       </div>
                       <div className="flex-1">
-                        <label className="text-xs opacity-60 mb-1 block">အဆုံး ရက် (End Date)</label>
+                        <label className="text-xs mb-1 block" style={{ color: "rgba(236,206,182,0.5)" }}>အဆုံး ရက် (End Date)</label>
                         <input type="date" value={trialEndDate} onChange={e => setTrialEndDate(e.target.value)}
-                          className="w-full border p-2 text-sm font-bold rounded-lg" style={{ background: "rgba(0,0,0,0.3)", borderColor: border, color: C }} />
+                          className="w-full border p-2 text-sm font-bold rounded-xl" style={{ background: "rgba(0,0,0,0.4)", borderColor: border, color: C }} />
                       </div>
                     </div>
                     <p className="text-xs opacity-50">💡 ဒီကာလအတွင်း ဝင်သော user တိုင်း auto trial ရမည် (All users joining in this period get auto trial)</p>
@@ -775,7 +782,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* ── Voice & Character Usage Per Generation ─── */}
-            <div className="border rounded-xl p-6" style={{ background: cardBg, borderColor: border }}>
+            <div className="border rounded-2xl p-6 backdrop-blur-md" style={{ background: cardBg, borderColor: border }}>
               <div className="flex items-center justify-between mb-5">
                 <h3 className="font-black uppercase tracking-widest flex items-center gap-2" style={{ color: C }}>
                   <Mic className="w-5 h-5" /> Voice & Character Usage
@@ -909,7 +916,7 @@ export default function AdminDashboard() {
       {/* Give Subscription Modal */}
       {showSubModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={() => setShowSubModal(false)}>
-          <div className="border rounded-xl p-6 w-full max-w-md m-4 max-h-[90vh] overflow-y-auto" style={{ background: "#1a1a1a", borderColor: border }} onClick={e => e.stopPropagation()}>
+          <div className="border rounded-2xl p-6 w-full max-w-md m-4 max-h-[90vh] overflow-y-auto backdrop-blur-xl" style={{ background: "rgba(15,15,15,0.95)", borderColor: border }} onClick={e => e.stopPropagation()}>
             <h3 className="font-bold uppercase tracking-wider mb-4" style={{ color: C }}>Give Subscription</h3>
             <div className="space-y-4">
               <div>
