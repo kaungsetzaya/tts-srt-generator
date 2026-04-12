@@ -749,7 +749,7 @@ export default function TTSGenerator() {
               <h1 className="text-2xl sm:text-3xl md:text-5xl font-black uppercase tracking-wider sm:tracking-widest mb-2" style={{ textShadow: "none", color: accent }}>TTS Generator</h1>
               <p className="text-xs sm:text-sm font-bold uppercase tracking-wider opacity-80 mt-1" style={{ color: subtextColor }}>Convert Text to Speech</p>
               {/* No Plan Banner */}
-              {!isAdmin && !hasPlan && me && (
+              {!isAdmin && !hasPlan && me && !subLoading && (
                 <div className="mt-3 mx-auto max-w-lg flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold" style={{ background: isDark ? 'rgba(220,38,38,0.15)' : '#fef2f2', border: '1px solid rgba(220,38,38,0.3)', color: '#dc2626' }}>
                   <AlertCircle className="w-4 h-4" />
                   {lang === 'mm' ? 'Subscription မရှိသေးပါ။ Admin ကို ဆက်သွယ်ပါ။' : 'No active subscription. Contact Admin.'}
@@ -837,7 +837,7 @@ export default function TTSGenerator() {
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-black uppercase tracking-wider sm:tracking-widest mb-2 leading-normal" style={{ textShadow: "none", color: accent }}>{t.videoTitle}</h2>
               <p className="font-bold tracking-wider text-xs sm:text-sm mt-1" style={{ color: subtextColor }}>{t.videoDesc}</p>
               <p className="text-xs mt-1" style={{ color: subtextColor }}>{t.videoLimit}</p>
-              {!isAdmin && !hasPlan && me && (
+              {!isAdmin && !hasPlan && me && !subLoading && (
                 <div className="mt-3 mx-auto max-w-md flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold" style={{ background: isDark ? 'rgba(220,38,38,0.15)' : '#fef2f2', border: '1px solid rgba(220,38,38,0.3)', color: '#dc2626' }}>
                   <AlertCircle className="w-4 h-4" />
                   {lang === 'mm' ? 'Subscription မရှိသေးပါ။ Admin ကို ဆက်သွယ်ပါ။' : 'No subscription. Contact Admin.'}
@@ -941,7 +941,7 @@ export default function TTSGenerator() {
               <p className="font-bold tracking-wider text-xs sm:text-sm mt-1" style={{ color: subtextColor }}>
                 {lang === "mm" ? "AI ဖြင့် Video ဖန်တီးခြင်း" : "Create dubbed videos with AI"}
               </p>
-              {!isAdmin && !hasPlan && me && (
+              {!isAdmin && !hasPlan && me && !subLoading && (
                 <div className="mt-3 mx-auto max-w-md flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold" style={{ background: isDark ? 'rgba(220,38,38,0.15)' : '#fef2f2', border: '1px solid rgba(220,38,38,0.3)', color: '#dc2626' }}>
                   <AlertCircle className="w-4 h-4" />
                   {lang === 'mm' ? 'Subscription မရှိသေးပါ။ Admin ကို ဆက်သွယ်ပါ။' : 'No subscription. Contact Admin.'}
