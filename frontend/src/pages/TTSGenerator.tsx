@@ -281,12 +281,8 @@ export default function TTSGenerator() {
   const darkBrown = "#2B1D1C";
   const subColor = isAdmin ? accent : daysLeft === null ? accent : daysLeft > 14 ? "#16a34a" : daysLeft > 4 ? "#ea580c" : deepRed;
 
-  // Helper functions for color opacity (works with both OKLCH and hex)
+  // Helper: hex color + opacity → 8-digit hex
   const withOpacity = (color: string, opacity: number) => {
-    if (color.startsWith('oklch')) {
-      return color.replace(')', ` / ${opacity})`);
-    }
-    // Hex color: convert to rgba or use 8-digit hex
     if (color.startsWith('#') && color.length === 7) {
       const hex = color.slice(1);
       const alpha = Math.round(opacity * 255).toString(16).padStart(2, '0');
@@ -659,7 +655,7 @@ export default function TTSGenerator() {
         className={`${shouldNavStick ? 'sticky top-0' : ''} z-50 backdrop-blur-2xl border-b flex items-center justify-end px-3 sm:px-5 py-2`}
         style={{
           borderColor: isDark ? 'rgba(192,111,48,0.15)' : 'rgba(244,179,79,0.08)',
-          background: isDark ? 'rgba(9,7,28,0.97)' : 'rgba(237,241,245,0.95)',
+          background: isDark ? 'rgba(15,15,15,0.97)' : 'rgba(245,240,230,0.95)',
           boxShadow: isDark ? '0 4px 30px rgba(192,111,48,0.12)' : '0 1px 12px rgba(244,179,79,0.06)',
         }}
       >

@@ -58,7 +58,7 @@ export default function History() {
   const { data: history, isLoading } = trpc.history.getMyHistory.useQuery({ limit: 100 });
 
   const isDark = true; // match main app
-  const accent = "oklch(0.65 0.25 310)";
+  const accent = "#C06F30";
   const cardBg = "rgba(15, 12, 41, 0.6)";
   const cardBorder = "rgba(192,111,48,0.2)";
   const textColor = "#F0EEFF";

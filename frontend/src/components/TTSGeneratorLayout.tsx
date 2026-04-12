@@ -111,7 +111,7 @@ function TTSGeneratorSidebar({
     <Sidebar
       collapsible="icon"
       className="border-r transition-all duration-300 ease-out"
-      style={{ borderColor: "rgba(192,111,48,0.15)", background: "rgba(9,7,28,0.98)" }}
+      style={{ borderColor: "rgba(192,111,48,0.15)", background: "rgba(15,15,15,0.98)" }}
     >
       <SidebarHeader
         className="border-b px-3 py-3 transition-all duration-300 ease-out"

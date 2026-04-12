@@ -28,9 +28,9 @@ const FEATURE_ICONS: Record<string, any> = {
 };
 
 // ── Accent colors ──────────────────────────────────────────────
-const C = "oklch(0.65 0.25 310)";
+const C = "#C06F30";
 const cardBg = "rgba(10,8,30,0.7)";
-const border = "oklch(0.2 0.02 280 / 60%)";
+const border = "rgba(192,111,48,0.6)";
 
 function StatBox({ label, value, color = C, sub }: { label: string; value: any; color?: string; sub?: string }) {
   return (
@@ -75,9 +75,9 @@ function UserDetailDrawer({ userId, userName, onClose }: { userId: string; userN
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end" style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
-      <div className="relative w-full max-w-2xl h-full overflow-y-auto" style={{ background: "oklch(0.06 0.01 280)", borderLeft: `1px solid ${border}` }} onClick={e => e.stopPropagation()}>
+      <div className="relative w-full max-w-2xl h-full overflow-y-auto" style={{ background: "#0f0f0f", borderLeft: `1px solid ${border}` }} onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: border, background: "oklch(0.06 0.01 280)" }}>
+        <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: border, background: "#0f0f0f" }}>
           <div>
             <p className="font-black text-lg" style={{ color: C }}>{userName}</p>
             <p className="text-xs opacity-40">30-day activity breakdown</p>
@@ -148,7 +148,7 @@ function UserDetailDrawer({ userId, userName, onClose }: { userId: string; userN
                   const intensity = maxHour > 0 ? cnt / maxHour : 0;
                   return (
                     <div key={h} title={`${h}:00 — ${cnt} gens`} className="flex flex-col items-center gap-1">
-                      <div className="w-full h-8 rounded" style={{ background: `oklch(0.65 0.25 310 / ${Math.max(0.05, intensity)})` }} />
+                      <div className="w-full h-8 rounded" style={{ background: `rgba(192,111,48,${Math.max(0.05, intensity)})` }} />
                       {h % 6 === 0 && <span className="text-[9px] opacity-40">{h}h</span>}
                     </div>
                   );
@@ -320,7 +320,7 @@ export default function AdminDashboard() {
             { id: "settings", label: "Settings", icon: Settings },
           ] as const).map(({ id, label, icon: Icon }) => (
             <button key={id} onClick={() => setTab(id)}
-              className={`flex items-center gap-2 px-5 py-2.5 text-sm font-bold uppercase tracking-wider border-b-2 transition-all -mb-px ${tab === id ? "border-[oklch(0.65_0.25_310)] text-[oklch(0.65_0.25_310)]" : "border-transparent opacity-50 hover:opacity-80"}`}>
+              className={`flex items-center gap-2 px-5 py-2.5 text-sm font-bold uppercase tracking-wider border-b-2 transition-all -mb-px ${tab === id ? "border-[#C06F30] text-[#C06F30]" : "border-transparent opacity-50 hover:opacity-80"}`}>
               <Icon className="w-4 h-4" /> {label}
               {id === "reports" && totalErrors > 0 && (
                 <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">{totalErrors}</span>
@@ -534,7 +534,7 @@ export default function AdminDashboard() {
                           {/* Clickable name to open detail drawer */}
                           <button onClick={() => setUserDrawer({ id: user.id, name: displayName })}
                             className="text-left hover:underline group">
-                            <p className="font-bold group-hover:text-[oklch(0.65_0.25_310)] transition-colors">{displayName}</p>
+                            <p className="font-bold group-hover:text-[#C06F30] transition-colors">{displayName}</p>
                             <p className="text-xs opacity-40">@{username}</p>
                           </button>
                         </td>
@@ -909,7 +909,7 @@ export default function AdminDashboard() {
       {/* Give Subscription Modal */}
       {showSubModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={() => setShowSubModal(false)}>
-          <div className="border rounded-xl p-6 w-full max-w-md m-4 max-h-[90vh] overflow-y-auto" style={{ background: "oklch(0.08 0.01 280)", borderColor: border }} onClick={e => e.stopPropagation()}>
+          <div className="border rounded-xl p-6 w-full max-w-md m-4 max-h-[90vh] overflow-y-auto" style={{ background: "#1a1a1a", borderColor: border }} onClick={e => e.stopPropagation()}>
             <h3 className="font-bold uppercase tracking-wider mb-4" style={{ color: C }}>Give Subscription</h3>
             <div className="space-y-4">
               <div>
@@ -918,7 +918,7 @@ export default function AdminDashboard() {
                   {(Object.keys(PLAN_LABELS) as Plan[]).map(plan => (
                     <button key={plan} onClick={() => setSelectedPlan(plan)}
                       className="py-2 px-3 border text-sm font-bold uppercase rounded-lg transition-all"
-                      style={{ borderColor: selectedPlan === plan ? C : border, background: selectedPlan === plan ? `oklch(0.65 0.25 310 / 20%)` : "transparent", color: selectedPlan === plan ? C : "#fff", opacity: selectedPlan === plan ? 1 : 0.6 }}>
+                      style={{ borderColor: selectedPlan === plan ? C : border, background: selectedPlan === plan ? `rgba(192,111,48,0.2)` : "transparent", color: selectedPlan === plan ? C : "#fff", opacity: selectedPlan === plan ? 1 : 0.6 }}>
                       {PLAN_LABELS[plan]} {PLAN_PRICE[plan] > 0 ? `(${PLAN_PRICE[plan].toLocaleString()} MMK)` : ""}
                     </button>
                   ))}
