@@ -86,6 +86,7 @@ function TTSGeneratorSidebar({
   isDark = true,
 }: TTSGeneratorSidebarProps) {
   const sidebar = useSidebar();
+  console.log("[Sidebar] isDark:", isDark);
   const isCollapsed = !sidebar.open;
 
   const accent = "#C06F30";
