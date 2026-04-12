@@ -611,7 +611,7 @@ export default function TTSGenerator() {
   }, [mainTab, text, dubPreviewUrl, dubResult]);
 
   return (
-    <TTSGeneratorLayout currentSecondaryTab={secondaryTab} onTabChange={setSecondaryTab} backgroundStyle={{ background: bgGradient }} mainTab={mainTab} setMainTab={setMainTab}>
+    <TTSGeneratorLayout currentSecondaryTab={secondaryTab} onTabChange={setSecondaryTab} backgroundStyle={{ background: bgGradient }} mainTab={mainTab} setMainTab={setMainTab} isDark={isDark}>
       <div className="h-full relative overflow-hidden transition-colors duration-500 font-sans" style={{ color: textColor }}>
       {/* Error Toast */}
       {errorToast && (
