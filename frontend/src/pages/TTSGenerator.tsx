@@ -447,6 +447,9 @@ export default function TTSGenerator() {
     setDubVideoFile(f);
     setDubVideoUrl("");
     setDubResult(null);
+    // Create preview URL from uploaded file
+    const url = URL.createObjectURL(f);
+    setDubPreviewUrl(url);
   };
 
   const handleDubGenerate = async () => {
