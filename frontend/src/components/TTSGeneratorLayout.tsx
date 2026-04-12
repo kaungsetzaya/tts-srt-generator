@@ -246,7 +246,7 @@ function MobileBottomNavigation({
   return (
     <div
       className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t backdrop-blur-xl"
-      style={{ background: "rgba(9, 7, 28, 0.97)", borderColor: "rgba(139, 92, 246, 0.25)", boxShadow: "0 -4px 30px rgba(109, 40, 217, 0.15)" }}
+      style={{ background: "rgba(15,15,15,0.97)", borderColor: "rgba(192,111,48,0.25)", boxShadow: "0 -4px 30px rgba(192,111,48,0.15)" }}
     >
       <div className="flex items-center justify-around py-2 px-2 gap-1">
         {mainNavItems.map(({ id, icon: Icon, label }) => {
@@ -261,7 +261,7 @@ function MobileBottomNavigation({
             >
               {isActive && (
                 <motion.div layoutId="mobileMainTab" className="absolute inset-0 rounded-xl"
-                  style={{ background: "rgba(139, 92, 246, 0.15)" }}
+                  style={{ background: "rgba(192,111,48,0.15)" }}
                   transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
                 />
               )}
@@ -282,7 +282,7 @@ function MobileBottomNavigation({
             >
               {isActive && (
                 <motion.div layoutId={"mobileTab-" + id} className="absolute inset-0 rounded-xl"
-                  style={{ background: "rgba(139, 92, 246, 0.15)" }}
+                  style={{ background: "rgba(192,111,48,0.15)" }}
                   transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
                 />
               )}
