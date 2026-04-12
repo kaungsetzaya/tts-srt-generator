@@ -43,7 +43,7 @@ export function TTSGeneratorLayout({
 }: TTSGeneratorLayoutProps) {
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full" style={backgroundStyle}>
+      <div className="flex min-h-screen w-full">
         <TTSGeneratorSidebar
           currentTab={currentSecondaryTab}
           onTabChange={onTabChange}
@@ -53,9 +53,11 @@ export function TTSGeneratorLayout({
           miniLogoUrl={miniLogoUrl}
           isDark={isDark}
         />
-        <SidebarInset className="bg-transparent border-none">
-          <main className="flex-1 overflow-auto pb-16 md:pb-0">
-            {children}
+        <SidebarInset className="flex-1 flex flex-col min-h-screen">
+          <main className="flex-1 overflow-auto pb-20 md:pb-0 p-4 md:p-6">
+            <div className="max-w-6xl mx-auto">
+              {children}
+            </div>
           </main>
           <MobileBottomNavigation
             mainTab={mainTab}
@@ -115,13 +117,8 @@ function TTSGeneratorSidebar({
   };
 
   return (
-    <Sidebar
-      style={{ borderColor: "rgba(192,111,48,0.15)", backgroundColor: isDark ? "rgba(15,15,15,0.98)" : "rgba(245,240,230,0.98)" }}
-    >
-      <SidebarHeader
-        className="border-b px-3 py-3 transition-all duration-300 ease-out"
-        style={{ borderColor: "rgba(192,111,48,0.15)" }}
-      >
+    <Sidebar className="glass-sidebar">
+      <SidebarHeader className="border-b py-4 px-4">
         <div className="flex items-center justify-between gap-2 w-full">
           {/* Logo - only shown inside sidebar, hidden outside */}
           {isCollapsed ? (
