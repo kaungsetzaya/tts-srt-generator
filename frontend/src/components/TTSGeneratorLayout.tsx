@@ -20,12 +20,13 @@ import { History, BookOpen, Settings, PanelLeft, Mic, FileVideo, Wand2 } from "l
 
 interface TTSGeneratorLayoutProps {
   children: ReactNode;
-  currentSecondaryTab: string | null;
+  currentSecondaryTabs: string | null;
   onTabChange: (tab: "history" | "plan" | "guide" | "settings" | null) => void;
   backgroundStyle?: React.CSSProperties;
   mainTab: "tts" | "video" | "dubbing";
   setMainTab: (tab: "tts" | "video" | "dubbing") => void;
   logoUrl?: string;
+  isDark?: boolean;
   miniLogoUrl?: string;
 }
 
@@ -38,6 +39,7 @@ export function TTSGeneratorLayout({
   setMainTab,
   logoUrl,
   miniLogoUrl,
+  isDark,
 }: TTSGeneratorLayoutProps) {
   return (
     <SidebarProvider>
@@ -49,6 +51,7 @@ export function TTSGeneratorLayout({
           setMainTab={setMainTab}
           logoUrl={logoUrl}
           miniLogoUrl={miniLogoUrl}
+          isDark={isDark}
         />
         <SidebarInset className="bg-transparent border-none">
           <main className="flex-1 overflow-auto pb-16 md:pb-0">
