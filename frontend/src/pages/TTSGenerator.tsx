@@ -204,7 +204,7 @@ export default function TTSGenerator() {
   const [dubVideoFile, setDubVideoFile] = useState<File | null>(null);
   const [dubVideoUrl, setDubVideoUrl] = useState<string>("");
   const [dubDragOver, setDubDragOver] = useState(false);
-  const [dubResult, setDubResult] = useState<{ videoBase64: string; myanmarText: string; srtContent: string; durationMs: number } | null>(null);
+  const [dubResult, setDubResult] = useState<{ videoUrl?: string; videoBase64?: string; myanmarText: string; srtContent: string; durationMs: number } | null>(null);
 
   const dubFileRef = useRef<HTMLInputElement>(null);
   const dubResultVideoRef = useRef<HTMLVideoElement>(null);
@@ -473,7 +473,7 @@ export default function TTSGenerator() {
       try {
         const res = await dubLinkMutation.mutateAsync({ url: dubVideoUrl.trim(), ...dubOpts });
         if (res.success) {
-          setDubResult({ videoBase64: res.videoBase64, myanmarText: res.myanmarText, srtContent: res.srtContent, durationMs: res.durationMs });
+          setDubResult({ videoUrl: res.videoUrl, videoBase64: res.videoBase64, myanmarText: res.myanmarText, srtContent: res.srtContent, durationMs: res.durationMs });
           utils.subscription.myStatus.invalidate();
         }
       } catch (e: any) { 
@@ -490,7 +490,7 @@ export default function TTSGenerator() {
       try {
         const res = await dubFileMutation.mutateAsync({ videoBase64: base64, filename: dubVideoFile.name, ...dubOpts });
         if (res.success) {
-          setDubResult({ videoBase64: res.videoBase64, myanmarText: res.myanmarText, srtContent: res.srtContent, durationMs: res.durationMs });
+          setDubResult({ videoUrl: res.videoUrl, videoBase64: res.videoBase64, myanmarText: res.myanmarText, srtContent: res.srtContent, durationMs: res.durationMs });
           utils.subscription.myStatus.invalidate();
         }
       } catch (e: any) { 
@@ -502,17 +502,25 @@ export default function TTSGenerator() {
   };
 
   const handleDubDownload = () => {
-    if (!dubResult?.videoBase64) return;
-    const binary = atob(dubResult.videoBase64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    const blob = new Blob([bytes], { type: "video/mp4" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Dubbed_Myanmar_${Date.now()}.mp4`;
-    a.click();
-    URL.revokeObjectURL(url);
+    if (dubResult?.videoUrl) {
+      // Direct download from URL
+      const a = document.createElement("a");
+      a.href = dubResult.videoUrl;
+      a.download = `Dubbed_Myanmar_${Date.now()}.mp4`;
+      a.click();
+    } else if (dubResult?.videoBase64) {
+      // Fallback to base64
+      const binary = atob(dubResult.videoBase64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: "video/mp4" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Dubbed_Myanmar_${Date.now()}.mp4`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
   };
 
   // Detect if a URL is an external platform link (YouTube, TikTok, Facebook)
@@ -1407,7 +1415,7 @@ export default function TTSGenerator() {
                         controls
                         className="w-full h-full rounded-xl"
                         style={{ objectFit: "cover", background: "var(--background)" }}
-                        src={(() => { try { const b = atob(dubResult.videoBase64); const arr = new Uint8Array(b.length); for(let i=0;i<b.length;i++) arr[i]=b.charCodeAt(i); return URL.createObjectURL(new Blob([arr], {type:'video/mp4'})); } catch { return `data:video/mp4;base64,${dubResult.videoBase64}`; } })()}
+                        src={dubResult.videoUrl || (() => { try { const b = atob(dubResult.videoBase64 || ''); const arr = new Uint8Array(b.length); for(let i=0;i<b.length;i++) arr[i]=b.charCodeAt(i); return URL.createObjectURL(new Blob([arr], {type:'video/mp4'})); } catch { return ''; } })()}
                       />
                     </div>
                   </div>
