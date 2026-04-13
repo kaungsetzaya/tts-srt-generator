@@ -52,19 +52,19 @@ function applyBurmesePhonetics(text: string): string {
 }
 
 // Return string[] on success, or null on failure
-// Batch translation with JSON response schema - uses configurable model
+// Batch translation with JSON response schema - for VIDEO DUB (cinematic style)
 async function translateBatch(lines: string[], apiKey: string, modelId: string): Promise<string[] | null> {
   const url = `https://generativelanguage.googleapis.com/v1beta/${modelId}:generateContent?key=${apiKey}`;
   
-  const systemPrompt = `TASK: Translate English script into cinematic Myanmar storytelling.
-VIBE: Professional Movie Recap Narrator (Emotional, Tense, Fast-paced).
+  const systemPrompt = `TASK: Translate English script into cinematic Myanmar storytelling (Zack D. Films style).
+VIBE: Professional Movie Recap Narrator.
 
-STRICT RULES:
-1. NO "ပါတယ်" REPETITION: Use endings like "ခဲ့တာပါ", "ပါတော့တယ်", "နေကြတာပါ", "သွားခဲ့ရတယ်", "လိုက်မိပါတယ်", "ကြတာပါ", "နေခဲ့တယ်", "လိုက်ပါတော့တယ်".
-2. CINEMATIC FLOW: Use conjunctions to connect actions ("ကြောင့်...", "အဲဒီအချိန်မှာပဲ...", "မြင်လိုက်ရတဲ့အခါ...").
-3. SPOKEN STYLE: Natural spoken Burmese. NEVER formal literary style.
+RULES:
+1. NO "ပါတယ်" REPETITION: Mix endings "ခဲ့တာပါ","ပါတော့တယ်","နေကြတာပါ","သွားခဲ့ရတယ်","လိုက်မိပါတယ်","ကြတာပါ".
+2. CINEMATIC FLOW: Connect actions smoothly.
+3. SPOKEN STYLE: Natural conversational Burmese.
 4. NO INTRO/OUTRO: Output ONLY raw JSON array.
-5. STRICT JSON INTEGRITY: EXACT SAME LENGTH as input.`;
+5. STRICT JSON: EXACT SAME LENGTH as input.`;
 
   try {
     const res = await fetch(url, {
@@ -144,7 +144,7 @@ export async function geminiTranslate(
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: `You are a professional Myanmar Voiceover Artist. Translate to engaging Myanmar narration. RULES: No "ဗျ","ရှင်","လေ","နော်". Use "ပါပဲ","တော့တယ်","ပါတယ်". Short subtitle lines (~22 graphemes).\n${text}` }] }]
+            contents: [{ parts: [{ text: `Translate English to Myanmar. Use engaging storytelling style with narrative endings (ခဲ့တယ်, ပါတော့တယ်, ကြတာပါ). No "ဗျ","ရှင်","လေ","နော်". Short subtitle lines (~22 graphemes).\n${text}` }] }]
           })
         });
         
