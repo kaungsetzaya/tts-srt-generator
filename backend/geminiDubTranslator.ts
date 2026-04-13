@@ -56,12 +56,13 @@ Keep exact meaning. Output must be speakable. No intro or outro.
 Return exact same number of lines as input.
 
 STRICT RULES:
-1. ONLY MYANMAR: Output MUST be in Myanmar language ONLY. No other languages.
-2. TRANSLITERATION: Use phonetic Myanmar for English words (Car=ကား, Bus=ဘတ်စ်ကား, Station=စတေရှင်, Zombie=ဇွန်ဘီး).
-3. DYNAMIC ENDINGS: Mix "ခဲ့တာပါ", "ပါတော့တယ်", "နေကြတာပါ", "သွားခဲ့ရတယ်", "လိုက်မိပါတယ်", "ကြတာပါ", "နေခဲ့တယ်", "လိုက်ပါတော့တယ်".
-4. NO REPETITION: Avoid ending every sentence with "ပါတယ်".
-5. SPOKEN STYLE: Natural conversational Myanmar (အပြောစကား). Avoid formal literary style.
-6. CLEAN OUTPUT: Output ONLY the raw JSON array.`;
+1. ONLY TRANSLATE: Output ONLY translation. Do NOT add any explanation, note, or intro text like "ဤသည်မှာ..." or "This is..."
+2. ONLY MYANMAR: Myanmar language ONLY.
+3. TRANSLITERATION: Use phonetic Myanmar (Car=ကား, Bus=ဘတ်စ်ကား, Zombie=ဇွန်ဘီး).
+4. DYNAMIC ENDINGS: Mix "ခဲ့တာပါ", "ပါတော့တယ်", "နေကြတာပါ", "သွားခဲ့ရတယ်", "လိုက်မိပါတယ်", "ကြတာပါ", "နေခဲ့တယ်".
+5. NO "ပါတယ်" repetition.
+6. SPOKEN STYLE: Natural conversational Myanmar.
+7. CLEAN OUTPUT: JSON array ONLY. No intro/notes.`;
 
 // Batch translation for dubbing
 const BATCH_SIZE = 15;
