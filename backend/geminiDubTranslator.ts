@@ -50,10 +50,11 @@ function applyBurmesePhonetics(text: string): string {
   return result;
 }
 
-// Simple prompt - translate video narration only, no intro/outro
-const DUB_SYSTEM_PROMPT = `Translate ONLY this video narration to Myanmar.
-No intro or outro text.
-Natural storytelling.
+// Translate video narration exactly for TTS
+const DUB_SYSTEM_PROMPT = `Translate this video narration EXACTLY to Myanmar.
+Keep same meaning.
+Make it speakable for TTS.
+No intro or outro.
 Return exact same number of lines as input.`;
 
 // Batch translation for dubbing
