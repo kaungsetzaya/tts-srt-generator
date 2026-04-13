@@ -52,8 +52,9 @@ function applyBurmesePhonetics(text: string): string {
 }
 
 // Return string[] on success, or null on failure
-async function translateBatch(lines: string[], apiKey: string): Promise<string[] | null> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+// Batch translation with JSON response schema - uses configurable model
+async function translateBatch(lines: string[], apiKey: string, modelId: string): Promise<string[] | null> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/${modelId}:generateContent?key=${apiKey}`;
   
   const systemPrompt = `You are a professional Myanmar Voiceover Artist and Video Translator. 
 Translate this JSON array of English strings into an engaging, natural Myanmar narration style suitable for YouTube shorts, fascinating facts (like Zack D. Films), and movie recaps.
@@ -201,20 +202,27 @@ export async function geminiTranslateBatch(
     
     console.log(`[Gemini] Batch ${i + 1}/${chunks.length} (${chunk.length} lines)...`);
     
-    // Try to translate this batch
+    // Try models and keys
     let success = false;
     
-    for (const apiKey of allKeys) {
-      const result = await translateBatch(chunk, apiKey);
+    for (const model of MODELS) {
+      if (getDailyCount(model.id) >= model.rpd) continue;
       
-      if (result && result.length === chunk.length) {
-        // Success! Copy results
-        for (let j = 0; j < result.length; j++) {
-          translatedTexts[startIdx + j] = applyBurmesePhonetics(result[j]);
+      for (const apiKey of allKeys) {
+        const result = await translateBatch(chunk, apiKey, model.id);
+        
+        if (result && result.length === chunk.length) {
+          // Success! Copy results
+          for (let j = 0; j < result.length; j++) {
+            translatedTexts[startIdx + j] = applyBurmesePhonetics(result[j]);
+          }
+          incrementQuota(model.id);
+          success = true;
+          console.log(`[Gemini] ✅ ${model.name}`);
+          break;
         }
-        success = true;
-        break;
       }
+      if (success) break;
     }
     
     if (!success) {
