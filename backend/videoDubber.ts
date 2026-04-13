@@ -354,9 +354,11 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
       const videoLabel = needSpeedAdjust ? "[vspeed]" : "[0:v]";
 
       if (options.srtEnabled && existsSync(tempSrtPath)) {
-        const fontSize = options.srtFontSize || 24;
+        // Use exact values from frontend (no defaults)
+        const fontSize = options.srtFontSize ?? 24;
         const fontColor = hexToASS(options.srtColor || "#ffffff");
-        const marginV = options.srtMarginV ?? 30;
+        // srtMarginV 0-200 from frontend maps to FFmpeg MarginV 0-720 (for 720p video)
+        const marginV = Math.round((options.srtMarginV ?? 30) * 3.6);
         const shadowStr = options.srtDropShadow !== false ? ",Shadow=2,BackColour=&H80000000" : ",Shadow=0";
 
         const blurColor = options.srtBlurColor === "white" ? "FFFFFF" : "000000";
