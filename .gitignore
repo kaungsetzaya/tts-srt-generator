@@ -127,3 +127,4 @@ output/
 # 🔐 Sensitive files — GitHub မှ ဘယ်တော့မှ မတင်ရ
 cookies.txt
 tmp_video/
+.env
