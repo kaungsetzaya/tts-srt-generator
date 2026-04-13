@@ -16,30 +16,30 @@ def transcribe_with_stable_ts(audio_path: str, output_json_path: str) -> dict:
     Returns segments with accurate timestamps.
     """
     try:
-        from stable_whisper import WhisperMLLM
+        from stable_whisper import load_model, result_to_word_timings
     except ImportError:
         print("[ERROR] stable-ts not installed. Run: pip install stable-ts")
         sys.exit(1)
     
     print(f"[Transcriber] Loading Whisper base model...")
-    model = WhisperMLLM("base")
+    model = load_model("base", device="cpu")
     
     print(f"[Transcriber] Transcribing {audio_path}...")
+    # Transcribe with word timestamps
     result = model.transcribe(
         audio_path,
         word_timestamps=True,
-        ts_num=16,
-        ts_delta=0.1,
-        punct_ms=50,
-        non_speech_thresh=0.1,
+        suppress_non_speech=True,
     )
     
-    # Stitch slots for gapless subtitles
-    print(f"[Transcriber] Stitching segments for gapless subtitles...")
-    result.stitch_slots(gap_threshold=0.2)
+    # Stabilize for better timing
+    from stable_whisper import stabilize_whisper_timestamps
+    result = stabilize_whisper_timestamps(result)
     
     # Get all segments with timing
     all_segments = []
+    text_parts = []
+    
     for i, seg in enumerate(result.segments):
         seg_data = {
             "index": i,
@@ -48,12 +48,17 @@ def transcribe_with_stable_ts(audio_path: str, output_json_path: str) -> dict:
             "text": seg.text.strip()
         }
         all_segments.append(seg_data)
+        text_parts.append(seg.text.strip())
         print(f"[Transcriber] Segment {i}: {seg.start:.2f}s - {seg.end:.2f}s | {seg.text[:50]}...")
+    
+    # Stitch segments for gapless subtitles (set end = next start)
+    for i in range(len(all_segments) - 1):
+        all_segments[i]["end"] = all_segments[i + 1]["start"]
     
     # Save to JSON
     output_data = {
         "segments": all_segments,
-        "text": " ".join([s["text"] for s in all_segments])
+        "text": " ".join(text_parts)
     }
     
     with open(output_json_path, "w", encoding="utf-8") as f:
