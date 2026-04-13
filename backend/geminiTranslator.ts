@@ -4,6 +4,7 @@ import path from "path";
 // ✅ Models - use high quota first, fallback only if exhausted
 const MODELS = [
   { id: "models/gemini-3.1-flash-lite-preview", name: "Gemini 3.1 Flash Lite", rpd: 500, rpm: 15, primary: true },
+  { id: "models/gemini-3-flash-preview", name: "Gemini 3 Flash", rpd: 20, rpm: 5, primary: false },
   { id: "models/gemini-2.5-flash-lite", name: "Gemini 2.5 Flash Lite", rpd: 20, rpm: 10, primary: false },
   { id: "models/gemini-2.5-flash", name: "Gemini 2.5 Flash", rpd: 20, rpm: 5, primary: false }
 ];
@@ -39,7 +40,6 @@ export const phoneticDictionary: Record<string, string> = {
   "FBI": "အက်ဖ်ဘီအိုင်",
   "Zombies": "ဇွန်ဘီး",
   "Zombie": "ဇွန်ဘီး",
-  "CEO": "စီအီးအို",
 };
 
 function applyBurmesePhonetics(text: string): string {
