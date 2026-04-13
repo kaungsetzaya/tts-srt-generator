@@ -110,6 +110,7 @@ function DashboardLayoutContent({
   const [location, setLocation] = useLocation();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
+  console.log('[Sidebar] state:', state, 'isCollapsed:', isCollapsed, 'isMobile:', isMobile);
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const activeMenuItem = menuItems.find(item => item.path === location);
@@ -259,6 +260,9 @@ function DashboardLayoutContent({
                   {activeMenuItem?.label ?? "Menu"}
                 </span>
               </div>
+            </div>
+            <div className="flex items-center gap-2 pr-2">
+              <span className="text-xs text-muted-foreground">collapsed</span>
             </div>
           </div>
         )}
