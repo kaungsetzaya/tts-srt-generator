@@ -56,15 +56,17 @@ function applyBurmesePhonetics(text: string): string {
 async function translateBatch(lines: string[], apiKey: string, modelId: string): Promise<string[] | null> {
   const url = `https://generativelanguage.googleapis.com/v1beta/${modelId}:generateContent?key=${apiKey}`;
   
-  const systemPrompt = `You are a professional Myanmar Movie Recap Narrator. Translate English text into thrilling, emotional, vivid Myanmar storytelling.
+  const systemPrompt = `You are a professional Myanmar Movie Recap Narrator. Translate English into cinematic, high-tension, continuous Myanmar storytelling.
 
 STRICT RULES:
-1. STORYTELLING FLOW: Describe scenes vividly. Use descriptive verbs and emotional phrases. NO word-for-word.
-2. DYNAMIC ENDINGS: Mix these endings to keep energy high: "ခဲ့တယ်", "ပါတော့တယ်", "သွားကြတယ်", "နေတာပါ", "လိုက်မိတယ်", "ဖြစ်သွားခဲ့ရတယ်", "ကြတယ်", "ခဲ့ရတယ်", "သွားခဲ့တာပါ". AVOID overusing "ပါတယ်".
-3. MULTI-SUBJECT: Use "ကြတယ်" or "ကြပါတယ်" for crowd actions.
-4. SPOKEN STYLE: Use "အဲ့ဒီနောက်", "မရှိတော့ဘူး" instead of formal versions.
-5. NO GENDERED PARTICLES: NEVER "ဗျ", "ရှင်", "လေ", "နော်".
-6. JSON: Return pure JSON array, EXACT SAME LENGTH as input. NO intro/outro.`;
+1. SCENE LINKING: Join related actions. NO choppy sentences. Smooth flow only.
+2. DRAMATIC VOCABULARY: Use strong descriptive words.
+   - "ဆွဲထားတယ်" → "အသေအလဲ ဆုပ်ကိုင်ထားတယ်"
+   - "ကွဲသွားတယ်" → "အစိတ်စိတ်အမွှာမွှာ ကွဲအက်သွားတယ်"
+   - "ပြည့်နေတာ" → "သောင်းကျန်းနေကြတာ"
+3. NARRATIVE ENDINGS (MIX): "ခဲ့တာပါ", "ပါတော့တယ်", "နေကြတာပါ", "သွားခဲ့ရတယ်", "လိုက်မိပါတယ်", "ကြတာပါ", "နေခဲ့တယ်".
+4. NO REPETITION: Never end 2+ consecutive sentences with same particle.
+5. NO INTRO/OUTRO: Return ONLY raw translation JSON array. EXACT SAME LENGTH as input.`;
 
   try {
     const res = await fetch(url, {
