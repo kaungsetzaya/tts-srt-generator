@@ -356,13 +356,13 @@ export default function AdminDashboard() {
             <div className="border rounded-xl p-6" style={{ background: cardBg, borderColor: border }}>
               <div className="flex items-center justify-between mb-5">
                 <h3 className="font-bold uppercase tracking-wider flex items-center gap-2" style={{ color: C }}>
-                  <Mic className="w-4 h-4" /> Voice & Character Usage
+                  <Mic className="w-4 h-4" /> Voice &amp; Character Usage
                 </h3>
                 <div className="flex gap-1">
                   {(["week", "month", "year", "all"] as TimeFrame[]).map(tf => (
                     <button key={tf} onClick={() => setTimeframe(tf)}
-                      className={`px-3 py-1 text-xs font-bold uppercase rounded-lg border transition-all ${timeframe === tf ? "text-black" : "border-transparent opacity-50 hover:opacity-100"}`}
-                      style={{ background: timeframe === tf ? C : "transparent", borderColor: timeframe === tf ? C : border }}>
+                      className={`px-3 py-1 text-xs font-bold uppercase rounded-lg border transition-all ${timeframe === tf ? "" : "border-transparent opacity-50 hover:opacity-100"}`}
+                      style={{ background: timeframe === tf ? C : "transparent", borderColor: timeframe === tf ? C : border, color: "var(--foreground)" }}>
                       {tf === "all" ? "All Time" : `1 ${tf.charAt(0).toUpperCase() + tf.slice(1)}`}
                     </button>
                   ))}
@@ -769,7 +769,7 @@ export default function AdminDashboard() {
                 )}
               </div>
               <button onClick={() => updateSettings.mutate({ autoTrialEnabled, autoTrialDays, trialStartDate, trialEndDate, trialEnabled })} disabled={updateSettings.isPending}
-                className="px-6 py-2.5 font-bold uppercase text-sm text-black rounded-xl disabled:opacity-50 flex items-center gap-2" style={{ background: C }}>
+                className="px-6 py-2.5 font-bold uppercase text-sm rounded-xl disabled:opacity-50 flex items-center gap-2" style={{ background: C, color: "var(--foreground)" }}>
                 {updateSettings.isPending && <Loader2 className="w-4 h-4 animate-spin" />} Save Settings
               </button>
             </div>
@@ -783,8 +783,8 @@ export default function AdminDashboard() {
                 <div className="flex gap-1">
                   {(["week", "month", "year", "all"] as TimeFrame[]).map(tf => (
                     <button key={tf} onClick={() => setTimeframe(tf)}
-                      className={`px-3 py-1 text-xs font-bold uppercase rounded-lg border transition-all ${timeframe === tf ? "text-black" : "border-transparent opacity-50 hover:opacity-100"}`}
-                      style={{ background: timeframe === tf ? C : "transparent", borderColor: timeframe === tf ? C : border }}>
+                      className={`px-3 py-1 text-xs font-bold uppercase rounded-lg border transition-all ${timeframe === tf ? "" : "border-transparent opacity-50 hover:opacity-100"}`}
+                      style={{ background: timeframe === tf ? C : "transparent", borderColor: timeframe === tf ? C : border, color: "var(--foreground)" }}>
                       {tf === "all" ? "All" : tf === "week" ? "1W" : tf === "month" ? "1M" : "1Y"}
                     </button>
                   ))}
@@ -918,7 +918,7 @@ export default function AdminDashboard() {
                   {(Object.keys(PLAN_LABELS) as Plan[]).map(plan => (
                     <button key={plan} onClick={() => setSelectedPlan(plan)}
                       className="py-2 px-3 border text-sm font-bold uppercase rounded-lg transition-all"
-                      style={{ borderColor: selectedPlan === plan ? C : border, background: selectedPlan === plan ? `rgba(192,111,48,0.2)` : "transparent", color: selectedPlan === plan ? C : "#fff", opacity: selectedPlan === plan ? 1 : 0.6 }}>
+                      style={{ borderColor: selectedPlan === plan ? C : border, background: selectedPlan === plan ? `rgba(192,111,48,0.2)` : "transparent", color: selectedPlan === plan ? C : "var(--foreground)", opacity: selectedPlan === plan ? 1 : 0.6 }}>
                       {PLAN_LABELS[plan]} {PLAN_PRICE[plan] > 0 ? `(${PLAN_PRICE[plan].toLocaleString()} MMK)` : ""}
                     </button>
                   ))}
@@ -939,7 +939,7 @@ export default function AdminDashboard() {
                   {(Object.keys(PAYMENT_METHODS) as PaymentMethod[]).map(pm => (
                     <button key={pm} onClick={() => setPaymentMethod(pm)}
                       className="py-2 px-3 border text-xs font-bold rounded-lg transition-all text-left"
-                      style={{ borderColor: paymentMethod === pm ? "#4ade80" : border, background: paymentMethod === pm ? "rgba(74,222,128,0.15)" : "transparent", color: paymentMethod === pm ? "#4ade80" : "#fff", opacity: paymentMethod === pm ? 1 : 0.6 }}>
+                      style={{ borderColor: paymentMethod === pm ? "#4ade80" : border, background: paymentMethod === pm ? "rgba(74,222,128,0.15)" : "transparent", color: paymentMethod === pm ? "#4ade80" : "var(--foreground)", opacity: paymentMethod === pm ? 1 : 0.6 }}>
                       {PAYMENT_METHODS[pm]}
                     </button>
                   ))}
@@ -951,7 +951,7 @@ export default function AdminDashboard() {
                     <Banknote className="w-3 h-3" /> Transaction ID <span className="text-red-400">*</span>
                   </label>
                   <input value={transactionId} onChange={e => setTransactionId(e.target.value)} placeholder="e.g. TXN123456789"
-                    className="w-full border p-2.5 text-sm focus:outline-none rounded-lg font-mono" style={{ background: "rgba(0,0,0,0.4)", borderColor: transactionId ? "#4ade80" : border, color: "#fff" }} />
+                    className="w-full border p-2.5 text-sm focus:outline-none rounded-lg font-mono" style={{ background: "rgba(0,0,0,0.4)", borderColor: transactionId ? "#4ade80" : border, color: "var(--foreground)" }} />
                 </div>
               )}
               {/* Payment Slip Upload */}
@@ -1016,7 +1016,7 @@ export default function AdminDashboard() {
                     paymentSlip: paymentSlipBase64 || undefined,
                   });
                 }}
-                  disabled={giveSub.isPending} className="flex-1 py-2.5 font-bold uppercase text-sm text-black flex items-center justify-center gap-2 disabled:opacity-50 rounded-xl" style={{ background: C }}>
+                  disabled={giveSub.isPending} className="flex-1 py-2.5 font-bold uppercase text-sm flex items-center justify-center gap-2 disabled:opacity-50 rounded-xl" style={{ background: C, color: "var(--foreground)" }}>
                   {giveSub.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null} Confirm
                 </button>
                 <button onClick={() => setShowSubModal(false)} className="flex-1 py-2.5 border font-bold uppercase text-sm hover:opacity-70 rounded-xl" style={{ borderColor: border }}>Cancel</button>

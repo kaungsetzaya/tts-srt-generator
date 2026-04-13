@@ -920,7 +920,7 @@ export default function TTSGenerator() {
                   <div className="flex justify-center">
                     <button onClick={handleVideoCopy}
                       className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all hover:scale-105"
-                      style={{ background: videoCopied ? "#4ade80" : accent, color: videoCopied ? "#000" : "#fff" }}>
+                      style={{ background: videoCopied ? "#4ade80" : accent, color: "var(--foreground)" }}>
                       {videoCopied ? <><Check className="w-4 h-4" /> {t.copied}</> : <><Copy className="w-4 h-4" /> {t.copyText}</>}
                     </button>
                   </div>
@@ -1438,7 +1438,7 @@ export default function TTSGenerator() {
                     <div className="flex justify-end">
                       <button onClick={handleDubCopy}
                         className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all hover:scale-105"
-                        style={{ background: dubCopied ? "#4ade80" : accent, color: dubCopied ? "#000" : "#fff" }}>
+                        style={{ background: dubCopied ? "#4ade80" : accent, color: "var(--foreground)" }}>
                         {dubCopied ? <><Check className="w-4 h-4" /> {t.copied}</> : <><Copy className="w-4 h-4" /> {t.copyText}</>}
                       </button>
                     </div>
@@ -1545,7 +1545,7 @@ export default function TTSGenerator() {
                   <button
                     onClick={() => setSecondaryTab(null)}
                     className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all hover:scale-105 hover:shadow-lg"
-                    style={{ background: accent, color: "#fff", border: `2px solid ${accent}` }}
+                    style={{ background: accent, border: `2px solid ${accent}`, color: "var(--foreground)" }}
                   >
                     <Wand2 className="w-4 h-4" />
                     {lang === "mm" ? "စတင်ဖန်တီးရန်" : "Start Generating"}
