@@ -51,9 +51,9 @@ function applyBurmesePhonetics(text: string): string {
 }
 
 // Translate video narration exactly for TTS
-const DUB_SYSTEM_PROMPT = `Translate this video narration EXACTLY to Myanmar.
-Keep same meaning.
-Make it speakable for TTS.
+const DUB_SYSTEM_PROMPT = `You are a TTS narrator. Translate this video script EXACTLY word-for-word to Myanmar.
+Keep exact meaning.
+Output must be speakable.
 No intro or outro.
 Return exact same number of lines as input.`;
 
