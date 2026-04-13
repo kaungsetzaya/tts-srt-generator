@@ -24,6 +24,8 @@ if (ALLOWED_ORIGINS.length === 0) ALLOWED_ORIGINS.push(DEFAULT_ORIGIN);
 const EXTRA_ALLOWED_PATTERNS: RegExp[] = [
   /^https:\/\/[a-z0-9-]+\.vercel\.app$/,       // *.vercel.app
   /^https:\/\/[a-z0-9-]+-[a-z0-9-]+\.vercel\.app$/, // double-hash vercel urls
+  /^https:\/\/[a-z0-9-]+\.projects\.vercel\.app$/, // *.projects.vercel.app
+  /^https:\/\/[a-z0-9-]+-[a-z0-9-]+\.projects\.vercel\.app$/, // double-hash *.projects.vercel.app
 ];
 
 function isOriginAllowed(origin: string): boolean {
