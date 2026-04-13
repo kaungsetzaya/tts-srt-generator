@@ -37,7 +37,7 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
-const BACKEND_URL = "https://217.76.48.32:443";
+const BACKEND_URL = "https://choco.de5.net";
 
 const trpcClient = trpc.createClient({
   links: [
