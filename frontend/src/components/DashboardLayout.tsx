@@ -243,6 +243,25 @@ function DashboardLayoutContent({
       </div>
 
       <SidebarInset>
+        {/* Show toggle when sidebar is collapsed (desktop) */}
+        {!isMobile && isCollapsed && (
+          <div className="flex border-b h-14 items-center justify-between bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={toggleSidebar}
+                className="h-9 w-9 flex items-center justify-center hover:bg-accent rounded-lg transition-colors"
+                aria-label="Expand sidebar"
+              >
+                <PanelLeft className="h-4 w-4" />
+              </button>
+              <div className="flex flex-col gap-1">
+                <span className="tracking-tight text-foreground">
+                  {activeMenuItem?.label ?? "Menu"}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
         {isMobile && (
           <div className="flex border-b h-14 items-center justify-between bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
             <div className="flex items-center gap-2">
