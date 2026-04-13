@@ -56,15 +56,11 @@ function applyBurmesePhonetics(text: string): string {
 async function translateBatch(lines: string[], apiKey: string, modelId: string): Promise<string[] | null> {
   const url = `https://generativelanguage.googleapis.com/v1beta/${modelId}:generateContent?key=${apiKey}`;
   
-  const systemPrompt = `TASK: Translate English script into cinematic Myanmar storytelling (Zack D. Films style).
-VIBE: Professional Movie Recap Narrator.
-
-RULES:
-1. NO "ပါတယ်" REPETITION: Mix endings "ခဲ့တာပါ","ပါတော့တယ်","နေကြတာပါ","သွားခဲ့ရတယ်","လိုက်မိပါတယ်","ကြတာပါ".
-2. CINEMATIC FLOW: Connect actions smoothly.
-3. SPOKEN STYLE: Natural conversational Burmese.
-4. NO INTRO/OUTRO: Output ONLY raw JSON array.
-5. STRICT JSON: EXACT SAME LENGTH as input.`;
+  const systemPrompt = `You are a TTS narrator. Translate video script EXACTLY word-for-word to Myanmar.
+Keep exact meaning.
+Output must be speakable.
+No intro or outro.
+Return exact same number of lines as input.`;
 
   try {
     const res = await fetch(url, {
