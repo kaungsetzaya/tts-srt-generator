@@ -45,10 +45,13 @@ const trpcClient = trpc.createClient({
       url: `${BACKEND_URL}/api/trpc`,
       transformer: superjson,
       fetch(input, init) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 600000); // 10 min
         return globalThis.fetch(input, {
           ...(init ?? {}),
           credentials: "include",
-        });
+          signal: controller.signal,
+        }).finally(() => clearTimeout(timeout));
       },
     }),
   ],
