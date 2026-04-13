@@ -49,7 +49,7 @@ async function transcribeLocalWhisper(audioPath: string): Promise<{ text: string
     throw new Error("Invalid path detected.");
   }
 
-  // Run Python stable-ts transcription
+  // Run Python faster-whisper transcription
   await execFileAsync("python3", [scriptPath, audioPath, outputJson]);
 
   // Read the JSON output from Python
@@ -263,9 +263,9 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
 
   try {
     await fs.writeFile(tempVideoPath, videoBuffer);
-    console.log(`[Dubber] Video saved: ${Math.round(videoBuffer.length / 1024)}KB`);
+    console.log(`[Dubber 5%] Video saved: ${Math.round(videoBuffer.length / 1024)}KB`);
 
-    console.log(`[Dubber] Extracting audio...`);
+    console.log(`[Dubber 10%] Extracting audio...`);
     await new Promise<void>((resolve, reject) => {
       ffmpeg(tempVideoPath)
         .noVideo()
@@ -275,14 +275,16 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
         .save(tempAudioExtract);
     });
 
-    console.log(`[Dubber] Transcribing with stable-ts...`);
+    console.log(`[Dubber 20%] Transcribing with whisper base...`);
     const whisperResult = await transcribeLocalWhisper(tempAudioExtract);
     const englishText = whisperResult.text;
     const whisperSegments = whisperResult.segments;
     if (!englishText?.trim()) throw new Error("Whisper could not detect any speech.");
+    console.log(`[Dubber 30%] Transcribed ${whisperSegments.length} segments`);
 
-    console.log(`[Dubber] Translating ${whisperSegments.length} segments...`);
+    console.log(`[Dubber 35%] Translating ${whisperSegments.length} segments...`);
     const { translated: translatedSegments } = await geminiTranslateBatch(whisperSegments, options.userApiKey);
+    console.log(`[Dubber 50%] Translation complete`);
     
     // Apply gapless timing: current.end = next.start
     for (let i = 0; i < translatedSegments.length - 1; i++) {
@@ -291,7 +293,7 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
     
     const myanmarText = translatedSegments.map(s => s.text).join(" ");
 
-    console.log(`[Dubber] Generating TTS (voice=${options.character || options.voice}, speed=${options.speed}, pitch=${options.pitch})...`);
+    console.log(`[Dubber 55%] Generating TTS (voice=${options.character || options.voice}, speed=${options.speed}, pitch=${options.pitch})...`);
     let ttsResult;
     if (options.character && options.character.trim()) {
       ttsResult = await generateSpeechWithCharacter(myanmarText, options.character as CharacterKey, options.speed, "16:9", options.pitch);
@@ -299,13 +301,15 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
       ttsResult = await generateSpeech(myanmarText, options.voice, options.speed, options.pitch, "16:9");
     }
     await fs.writeFile(tempTTSAudio, ttsResult.audioBuffer);
+    console.log(`[Dubber 70%] TTS generated (${Math.round(ttsResult.durationMs/1000)}s)`);
 
     const videoDuration = await getVideoDuration(tempVideoPath);
     const audioDuration = await getAudioDuration(tempTTSAudio);
-    console.log(`[Dubber] Video duration: ${videoDuration.toFixed(1)}s, TTS duration: ${audioDuration.toFixed(1)}s`);
+    console.log(`[Dubber 75%] Video: ${videoDuration.toFixed(1)}s, Audio: ${audioDuration.toFixed(1)}s`);
 
     const speedRatio = videoDuration / audioDuration;
     const needSpeedAdjust = Math.abs(speedRatio - 1.0) > 0.05;
+    console.log(`[Dubber 80%] Combining video + audio + SRT...`);
 
     let srtContent = "";
     if (options.srtEnabled) {
@@ -386,7 +390,7 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
     });
 
     const outputBuffer = await fs.readFile(tempOutputPath);
-    console.log(`[Dubber] ✅ Done! Output: ${Math.round(outputBuffer.length / 1024 / 1024 * 10) / 10}MB`);
+    console.log(`[Dubber 100%] ✅ Done! Output: ${Math.round(outputBuffer.length / 1024 / 1024 * 10) / 10}MB`);
 
     return {
       videoBase64: outputBuffer.toString('base64'),
