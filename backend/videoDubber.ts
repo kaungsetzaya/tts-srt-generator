@@ -286,12 +286,16 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
     const { translated: translatedSegments } = await geminiTranslateBatch(whisperSegments, options.userApiKey);
     console.log(`[Dubber 50%] Translation complete`);
     
+    // Verify translation worked - check if we got Burmese text
+    const myanmarText = translatedSegments.map(s => s.text).join(" ");
+    if (myanmarText.length < englishText.length * 0.5) {
+      throw new Error("Translation failed: Gemini returned empty or invalid response. Please try again.");
+    }
+    
     // Apply gapless timing: current.end = next.start
     for (let i = 0; i < translatedSegments.length - 1; i++) {
       translatedSegments[i].end = translatedSegments[i + 1].start;
     }
-    
-    const myanmarText = translatedSegments.map(s => s.text).join(" ");
 
     console.log(`[Dubber 55%] Generating TTS (voice=${options.character || options.voice}, speed=${options.speed}, pitch=${options.pitch})... | RAM: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB used`);
     let ttsResult;

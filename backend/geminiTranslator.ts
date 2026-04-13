@@ -170,7 +170,7 @@ export async function geminiTranslate(
 }
 
 // Batch translation for video dubbing
-const BATCH_SIZE = 30;
+const BATCH_SIZE = 15; // Smaller batch = less chance of length mismatch
 
 export async function geminiTranslateBatch(
   segments: { index: number; start: number; end: number; text: string }[],
@@ -194,7 +194,8 @@ export async function geminiTranslateBatch(
 
   console.log(`[Gemini] Translating ${texts.length} segments in ${chunks.length} batches...`);
 
-  const translatedTexts: string[] = new Array(texts.length).fill("");
+  const translatedTexts: string[] = [];
+  let failedBatches = 0;
 
   for (let i = 0; i < chunks.length; i++) {
     const chunk = chunks[i];
@@ -214,7 +215,7 @@ export async function geminiTranslateBatch(
         if (result && result.length === chunk.length) {
           // Success! Copy results
           for (let j = 0; j < result.length; j++) {
-            translatedTexts[startIdx + j] = applyBurmesePhonetics(result[j]);
+            translatedTexts.push(applyBurmesePhonetics(result[j]));
           }
           incrementQuota(model.id);
           success = true;
@@ -226,12 +227,19 @@ export async function geminiTranslateBatch(
     }
     
     if (!success) {
-      // Fallback: use original text
-      console.log(`[Gemini] Batch ${i + 1} failed, using original text`);
+      // Mark batch as failed - don't add anything
+      console.log(`[Gemini] Batch ${i + 1} failed - will retry with smaller batch`);
+      failedBatches++;
+      // Add empty strings for this batch
       for (let j = 0; j < chunk.length; j++) {
-        translatedTexts[startIdx + j] = chunk[j];
+        translatedTexts.push("");
       }
     }
+  }
+
+  // If too many batches failed, throw error
+  if (failedBatches > chunks.length / 2) {
+    throw new Error("Translation failed: too many batches failed. Please try again.");
   }
 
   // Reconstruct translated segments
@@ -240,7 +248,9 @@ export async function geminiTranslateBatch(
     text: translatedTexts[idx] || seg.text
   }));
 
-  console.log(`[Gemini] ✅ Translation complete!`);
+  console.log(`[Gemini] ✅ Translation complete! (${failedBatches} batches failed)`);
+  
+  return { translated };
   
   return { translated };
 }
