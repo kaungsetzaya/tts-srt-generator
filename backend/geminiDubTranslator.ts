@@ -50,9 +50,9 @@ function applyBurmesePhonetics(text: string): string {
   return result;
 }
 
-// Dub prompt - simple movie recap style
+// Simple prompt for both
 const DUB_SYSTEM_PROMPT = `Translate English to Myanmar movie recap narration.
-Keep translations natural and engaging.
+Keep it natural and engaging.
 Return exact same number of lines as input.`;
 
 // Batch translation for dubbing
