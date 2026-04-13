@@ -20,7 +20,7 @@ import { History, BookOpen, Settings, PanelLeft, Mic, FileVideo, Wand2 } from "l
 
 interface TTSGeneratorLayoutProps {
   children: ReactNode;
-  currentSecondaryTabs: string | null;
+  currentSecondaryTab: string | null;
   onTabChange: (tab: "history" | "plan" | "guide" | "settings" | null) => void;
   backgroundStyle?: React.CSSProperties;
   mainTab: "tts" | "video" | "dubbing";

@@ -10,7 +10,7 @@ import { z } from "zod";
 import { generateSpeech, generateSpeechWithCharacter, SUPPORTED_VOICES, CHARACTER_VOICES, CharacterKey } from "./tts";
 import { getDb } from "./db";
 import { users, subscriptions, settings, ttsConversions, errorLogs } from "../drizzle/schema";
-import { eq, desc, and, gte, sql } from "drizzle-orm";
+import { eq, desc, and, gte, sql, isNull, isNotNull, or } from "drizzle-orm";
 import { SignJWT } from "jose";
 import { nanoid } from "nanoid";
 import { checkRateLimit, clearRateLimit } from "./_core/rateLimit";
@@ -19,8 +19,7 @@ import { auditLog, isAllowedVideoUrl, isValidVideoBuffer, isValidCharacterId, is
 
 // 🔐 JWT Secret - .env မှာ မသတ်မှတ်ရင် production တွင် crash ဖြစ်မည်
 if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
-  console.error("[SECURITY] FATAL: JWT_SECRET is not set in environment variables!");
-  process.exit(1);
+  throw new Error("[SECURITY] FATAL: JWT_SECRET is not set in environment variables!");
 }
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "dev-only-secret-do-not-use-in-production"
@@ -61,29 +60,30 @@ function getPlanLimits(plan: string | null): PlanLimits {
 async function getTrialTotalUsage(userId: string) {
   const db = await getDb();
   if (!db) return { tts: 0, characterUse: 0, aiVideo: 0, aiVideoChar: 0, videoTranslate: 0 };
-  const allGens = await db.select().from(ttsConversions)
-    .where(eq(ttsConversions.userId, userId));
-  let tts = 0, characterUse = 0, aiVideo = 0, aiVideoChar = 0, videoTranslate = 0;
-  for (const g of allGens) {
-    if (g.status === "fail") continue;
-    const feat = g.feature ?? "tts";
-    if (feat === "tts") {
-      if (g.character && g.character.trim() !== "") {
-        characterUse++;
-      } else {
-        tts++;
-      }
-    } else if (feat === "dub_file" || feat === "dub_link") {
-      if (g.character && g.character.trim() !== "") {
-        aiVideoChar++;
-      } else {
-        aiVideo++;
-      }
-    } else if (feat === "translate_file" || feat === "translate_link") {
-      videoTranslate++;
-    }
-  }
-  return { tts, characterUse, aiVideo, aiVideoChar, videoTranslate };
+  
+  // Use SQL count instead of fetching all records
+  const [totalTts] = await db.select({ count: sql<number>`count(*)` }).from(ttsConversions)
+    .where(and(eq(ttsConversions.userId, userId), eq(ttsConversions.status, "success"), eq(ttsConversions.feature, "tts"), isNull(ttsConversions.character)));
+  
+  const [totalChar] = await db.select({ count: sql<number>`count(*)` }).from(ttsConversions)
+    .where(and(eq(ttsConversions.userId, userId), eq(ttsConversions.status, "success"), eq(ttsConversions.feature, "tts"), isNotNull(ttsConversions.character)));
+  
+  const [totalDub] = await db.select({ count: sql<number>`count(*)` }).from(ttsConversions)
+    .where(and(eq(ttsConversions.userId, userId), eq(ttsConversions.status, "success"), or(eq(ttsConversions.feature, "dub_file"), eq(ttsConversions.feature, "dub_link")), isNull(ttsConversions.character)));
+  
+  const [totalDubChar] = await db.select({ count: sql<number>`count(*)` }).from(ttsConversions)
+    .where(and(eq(ttsConversions.userId, userId), eq(ttsConversions.status, "success"), or(eq(ttsConversions.feature, "dub_file"), eq(ttsConversions.feature, "dub_link")), isNotNull(ttsConversions.character)));
+  
+  const [totalTranslate] = await db.select({ count: sql<number>`count(*)` }).from(ttsConversions)
+    .where(and(eq(ttsConversions.userId, userId), eq(ttsConversions.status, "success"), or(eq(ttsConversions.feature, "translate_file"), eq(ttsConversions.feature, "translate_link"))));
+  
+  return {
+    tts: totalTts?.count ?? 0,
+    characterUse: totalChar?.count ?? 0,
+    aiVideo: totalDub?.count ?? 0,
+    aiVideoChar: totalDubChar?.count ?? 0,
+    videoTranslate: totalTranslate?.count ?? 0
+  };
 }
 
 async function getDailyUsage(userId: string) {

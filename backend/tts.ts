@@ -97,10 +97,11 @@ export async function generateSpeech(
   const voiceConfig = SUPPORTED_VOICES[voice];
   if (!voiceConfig) throw new Error(`Unsupported voice: ${voice}`);
 
-  // Myanmar TTS voices (ThihaNeural/NilarNeural) naturally speak slowly at +0%
-  // Add +25% baseline boost so user's "1.0x" (normal) feels like natural conversation speed
-  const MYANMAR_SPEED_BOOST = 25;
-  const ratePercent = Math.round((rate - 1.0) * 100) + MYANMAR_SPEED_BOOST;
+  // Myanmar TTS voices (ThihaNeural/NilarNeural) naturally speak slowly
+  // Apply boost as multiplier so all speeds work correctly
+  const MYANMAR_SPEED_MULTIPLIER = 1.25; // 25% faster baseline
+  const actualRate = rate * MYANMAR_SPEED_MULTIPLIER;
+  const ratePercent = Math.round((actualRate - 1.0) * 100);
   const rateStr = ratePercent >= 0 ? `+${ratePercent}%` : `${ratePercent}%`;
   const clampedPitch = Math.max(-20, Math.min(20, pitch));
   const pitchStr = clampedPitch >= 0 ? `+${clampedPitch}Hz` : `${clampedPitch}Hz`;

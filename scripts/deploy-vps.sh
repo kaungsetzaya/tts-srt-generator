@@ -52,7 +52,7 @@ cd /home
 if [ -d "tts-generator" ]; then
     rm -rf tts-generator
 fi
-git clone https://github.com/YOUR_GITHUB_USERNAME/tts-srt-generator.git tts-generator
+git clone https://github.com/kaungsetzaya/tts-srt-generator.git tts-generator
 cd tts-generator
 
 # Step 9: Install dependencies and build
