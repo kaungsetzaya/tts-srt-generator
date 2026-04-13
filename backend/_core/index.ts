@@ -154,8 +154,8 @@ async function startServer() {
   // Startup
   // ──────────────────────────────────────────
   const port = parseInt(process.env.PORT || "3000");
-  server.listen(port, "127.0.0.1", () => {
-    console.log(`[LUMIX] Server running on http://localhost:${port}/`);
+  server.listen(port, "0.0.0.0", () => {
+    console.log(`[LUMIX] Server running on http://0.0.0.0:${port}/`);
     console.log(`[LUMIX] Environment: ${process.env.NODE_ENV || "development"}`);
     const webhookUrl = `https://choco.de5.net/webhook/telegram`;
     setWebhook(webhookUrl).catch(console.error);
