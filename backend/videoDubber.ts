@@ -263,7 +263,7 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
 
   try {
     await fs.writeFile(tempVideoPath, videoBuffer);
-    console.log(`[Dubber 5%] Video saved: ${Math.round(videoBuffer.length / 1024)}KB`);
+    console.log(`[Dubber 5%] Video saved: ${Math.round(videoBuffer.length / 1024)}KB | RAM: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB used`);
 
     console.log(`[Dubber 10%] Extracting audio...`);
     await new Promise<void>((resolve, reject) => {
@@ -275,14 +275,14 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
         .save(tempAudioExtract);
     });
 
-    console.log(`[Dubber 20%] Transcribing with whisper base...`);
+    console.log(`[Dubber 20%] Transcribing with whisper base... | RAM: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB used`);
     const whisperResult = await transcribeLocalWhisper(tempAudioExtract);
     const englishText = whisperResult.text;
     const whisperSegments = whisperResult.segments;
     if (!englishText?.trim()) throw new Error("Whisper could not detect any speech.");
     console.log(`[Dubber 30%] Transcribed ${whisperSegments.length} segments`);
 
-    console.log(`[Dubber 35%] Translating ${whisperSegments.length} segments...`);
+    console.log(`[Dubber 35%] Translating ${whisperSegments.length} segments... | RAM: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB used`);
     const { translated: translatedSegments } = await geminiTranslateBatch(whisperSegments, options.userApiKey);
     console.log(`[Dubber 50%] Translation complete`);
     
@@ -293,7 +293,7 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
     
     const myanmarText = translatedSegments.map(s => s.text).join(" ");
 
-    console.log(`[Dubber 55%] Generating TTS (voice=${options.character || options.voice}, speed=${options.speed}, pitch=${options.pitch})...`);
+    console.log(`[Dubber 55%] Generating TTS (voice=${options.character || options.voice}, speed=${options.speed}, pitch=${options.pitch})... | RAM: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB used`);
     let ttsResult;
     if (options.character && options.character.trim()) {
       ttsResult = await generateSpeechWithCharacter(myanmarText, options.character as CharacterKey, options.speed, "16:9", options.pitch);
@@ -309,7 +309,7 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
 
     const speedRatio = videoDuration / audioDuration;
     const needSpeedAdjust = Math.abs(speedRatio - 1.0) > 0.05;
-    console.log(`[Dubber 80%] Combining video + audio + SRT...`);
+    console.log(`[Dubber 80%] Combining video + audio + SRT... | RAM: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB used`);
 
     let srtContent = "";
     if (options.srtEnabled) {
