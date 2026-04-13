@@ -51,53 +51,71 @@ function applyBurmesePhonetics(text: string): string {
   return result;
 }
 
-// Batch translation with JSON response schema
-async function translateBatch(lines: string[], apiKey: string): Promise<string[]> {
+// Return string[] on success, or null on failure
+async function translateBatch(lines: string[], apiKey: string): Promise<string[] | null> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
   
-  const systemPrompt = `You are a professional Myanmar Voiceover Artist. Translate each English string into engaging Myanmar storytelling style.
-RULES:
-1. Use engaging Burmese. NO formal literary style.
-2. End sentences with narrative particles (ပါပဲ, တော့တယ်, ပါတယ်, ခဲ့တယ်). NEVER use (ဗျ, ရှင်, လေ, နော်).
-3. Transliterate: Zombies→ဇွန်ဘီး, CEO→စီအီးအို, FBI→အက်ဖ်ဘီအိုင်.
-4. Return JSON array of strings with EXACT SAME LENGTH as input.`;
+  const systemPrompt = `You are a professional Myanmar Voiceover Artist and Video Translator. 
+Translate this JSON array of English strings into an engaging, natural Myanmar narration style suitable for YouTube shorts, fascinating facts (like Zack D. Films), and movie recaps.
+
+ABSOLUTE STRICT RULES:
+1. TONE (အပြောစကား): Use an engaging, fast-paced storytelling style. STRICTLY AVOID overly formal literary style (စာစကား).
+2. ALLOWED PARTICLES: End sentences naturally with narrative particles ("ပါပဲ", "တော့တယ်", "ပါတယ်", "ခဲ့တယ်", "ဖြစ်ပါတယ်", "သွားပါတယ်").
+3. PROHIBITED PARTICLES: NEVER use casual conversational or gendered ending particles ("ဗျ", "ဗျာ", "ရှင်", "ရှင့်", "လေ", "နော်", "ကွ").
+4. TRANSLITERATION: Keep specific terms like "Zombies" as "ဇွန်ဘီး", "CEO" as "စီအီးအို", "FBI" as "အက်ဖ်ဘီအိုင်". Do not translate them.
+5. CRITICAL JSON RULE: Return a pure JSON array of strings of the EXACT SAME LENGTH as the input.`;
 
   try {
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: `${systemPrompt}\n\nTranslate this JSON array:\n${JSON.stringify(lines)}` }] }],
+        systemInstruction: {
+          parts: [{ text: systemPrompt }]
+        },
+        contents: [{ 
+          parts: [{ text: `TEXT TO TRANSLATE (JSON Array):\n${JSON.stringify(lines)}` }] 
+        }],
         generationConfig: {
           responseMimeType: "application/json",
           responseSchema: {
-            type: "array",
-            items: { type: "string" }
+            type: "ARRAY",
+            items: { type: "STRING" }
           }
         }
       })
     });
 
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.log(`[Gemini] HTTP Error ${res.status}: ${errorText.substring(0, 100)}`);
+      return null;
+    }
+
     const data = await res.json();
     
-    if (res.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
+    if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
       const text = data.candidates[0].content.parts[0].text;
-      // Try to parse as JSON array
       try {
-        return JSON.parse(text);
+        const parsedArray = JSON.parse(text);
+        
+        if (Array.isArray(parsedArray) && parsedArray.length === lines.length) {
+          return parsedArray;
+        } else {
+          console.log(`[Gemini] Length mismatch. Expected ${lines.length}, got ${parsedArray.length || 0}`);
+          return null;
+        }
       } catch {
-        // If parsing fails, return original
         console.log("[Gemini] Failed to parse batch response as JSON");
-        return lines;
+        return null;
       }
     } else {
-      const errMsg = data.error?.message || `HTTP ${res.status}`;
-      console.log(`[Gemini] Batch translate failed: ${errMsg}`);
-      return lines;
+      console.log("[Gemini] API returned empty response.");
+      return null;
     }
   } catch (err: any) {
-    console.log(`[Gemini] Batch translate error: ${err.message}`);
-    return lines;
+    console.log(`[Gemini] Batch translate request error: ${err.message}`);
+    return null;
   }
 }
 
