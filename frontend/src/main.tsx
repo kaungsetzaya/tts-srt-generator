@@ -37,10 +37,12 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
+const BACKEND_URL = "http://217.76.48.32:3000";
+
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      url: "/api/trpc",
+      url: `${BACKEND_URL}/api/trpc`,
       transformer: superjson,
       fetch(input, init) {
         return globalThis.fetch(input, {
@@ -59,7 +61,7 @@ const trpcClient = trpc.createClient({
 // ────────────────────────────────────────────────────
 function sendBrowserError(errorMessage: string, source: "window.onerror" | "unhandledrejection" | "react_error_boundary", stack?: string) {
   // Use raw fetch to avoid circular dependency with trpc
-  fetch("/api/trpc/logBrowserError", {
+  fetch(`${BACKEND_URL}/api/trpc/logBrowserError`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
