@@ -296,12 +296,6 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
       throw new Error("Translation failed: Gemini returned empty or invalid response. Please try again.");
     }
     
-    // Calculate original Whisper audio duration for SRT scaling
-    const whisperEndTime = whisperSegments.length > 0 
-      ? Math.max(...whisperSegments.map(s => s.end)) 
-      : 0;
-    console.log(`[Dubber 32%] Whisper duration: ${whisperEndTime.toFixed(1)}s`);
-    
     // Apply gapless timing: current.end = next.start
     for (let i = 0; i < translatedSegments.length - 1; i++) {
       translatedSegments[i].end = translatedSegments[i + 1].start;
@@ -316,26 +310,31 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
     }
     await fs.writeFile(tempTTSAudio, ttsResult.audioBuffer);
     console.log(`[Dubber 70%] TTS generated (${Math.round(ttsResult.durationMs/1000)}s)`);
+    
+    // Get exact TTS duration for precise SRT scaling
+    const exactTtsDurationSec = ttsResult.durationMs / 1000;
+    const whisperEndTime = whisperSegments.length > 0 
+      ? Math.max(...whisperSegments.map(s => s.end)) 
+      : 0;
+    const durationRatio = whisperEndTime > 0 ? exactTtsDurationSec / whisperEndTime : 1.0;
+    console.log(`[Dubber 72%] Exact sync: TTS=${exactTtsDurationSec.toFixed(2)}s, Whisper=${whisperEndTime.toFixed(2)}s, Ratio=${durationRatio.toFixed(3)}`)
 
     const videoDuration = await getVideoDuration(tempVideoPath);
     const audioDuration = await getAudioDuration(tempTTSAudio);
     console.log(`[Dubber 75%] Video: ${videoDuration.toFixed(1)}s, Audio: ${audioDuration.toFixed(1)}s`);
 
-    const speedRatio = videoDuration / audioDuration;
-    const needSpeedAdjust = Math.abs(speedRatio - 1.0) > 0.05;
-    console.log(`[Dubber 80%] Combining video + audio + SRT... | RAM: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB used`);
-
-    // Calculate duration ratio for SRT scaling
-    const ttsDurationSec = ttsResult.durationMs / 1000;
-    const durationRatio = whisperEndTime > 0 ? ttsDurationSec / whisperEndTime : 1.0;
-    console.log(`[Dubber 78%] SRT scaling ratio: ${durationRatio.toFixed(2)} (TTS: ${ttsDurationSec.toFixed(1)}s vs Whisper: ${whisperEndTime.toFixed(1)}s)`);
+    // Use EXACT TTS duration for perfect sync
+    const speedRatio = videoDuration / exactTtsDurationSec;
+    const needSpeedAdjust = Math.abs(speedRatio - 1.0) > 0.02;
+    console.log(`[Dubber 80%] Combining video + audio + SRT (ratio: ${speedRatio.toFixed(3)})... | RAM: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB used`);
 
     let srtContent = "";
     if (options.srtEnabled) {
-      // Build SRT with scaled timestamps to match actual TTS duration
+      // Build SRT with EXACT scaled timestamps using precise TTS duration ratio
       srtContent = buildSrtFromTranslatedSegments(translatedSegments, durationRatio);
       const BOM = '\uFEFF';
       await fs.writeFile(tempSrtPath, BOM + srtContent, 'utf-8');
+      console.log(`[Dubber 78%] SRT timestamps scaled by ${durationRatio.toFixed(4)} for exact sync`);
     }
 
     console.log(`[Dubber] Combining video + TTS audio${needSpeedAdjust ? ` (speed adjust: ${speedRatio.toFixed(2)}x)` : ""}${options.srtEnabled ? " + SRT" : ""}...`);
