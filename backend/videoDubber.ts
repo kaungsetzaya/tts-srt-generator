@@ -451,11 +451,21 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
         .save(tempOutputPath);
     });
 
-    const outputBuffer = await fs.readFile(tempOutputPath);
-    console.log(`[Dubber 100%] ✅ Done! Output: ${Math.round(outputBuffer.length / 1024 / 1024 * 10) / 10}MB`);
+    // Save video to public downloads folder and return URL
+    const downloadsDir = path.join(process.cwd(), 'static', 'downloads');
+    await fs.mkdir(downloadsDir, { recursive: true }).catch(() => {});
+    
+    const downloadFilename = `dub_${id}_${Date.now()}.mp4`;
+    const downloadPath = path.join(downloadsDir, downloadFilename);
+    await fs.copyFile(tempOutputPath, downloadPath);
+    
+    const baseUrl = process.env.PUBLIC_DOWNLOAD_URL || 'https://choco.de5.net';
+    const videoUrl = `${baseUrl}/downloads/${downloadFilename}`;
+    
+    console.log(`[Dubber 100%] ✅ Done! Output: ${Math.round(outputBuffer.length / 1024 / 1024 * 10) / 10}MB | URL: ${videoUrl}`);
 
     return {
-      videoBase64: outputBuffer.toString('base64'),
+      videoUrl,
       myanmarText,
       srtContent,
       durationMs: ttsResult.durationMs,

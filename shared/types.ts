@@ -92,7 +92,8 @@ export interface DubOptions {
 }
 
 export interface DubResult {
-  videoBase64: string;
+  videoUrl?: string;  // Download URL (new)
+  videoBase64?: string;  // Keep for backward compat
   myanmarText: string;
   srtContent: string;
   durationMs: number;

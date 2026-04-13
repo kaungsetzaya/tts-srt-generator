@@ -96,6 +96,15 @@ async function startServer() {
   });
 
   // ──────────────────────────────────────────
+  // Video Downloads (public static folder)
+  // ──────────────────────────────────────────
+  const downloadsDir = path.join(process.cwd(), 'static', 'downloads');
+  app.use('/downloads', express.static(downloadsDir, {
+    maxAge: '1h',  // Short cache for downloads
+    etag: true,
+  }));
+
+  // ──────────────────────────────────────────
   // tRPC API
   // ──────────────────────────────────────────
   app.use("/api/trpc", createExpressMiddleware({
