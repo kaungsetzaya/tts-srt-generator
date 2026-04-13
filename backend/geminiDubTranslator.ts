@@ -50,9 +50,10 @@ function applyBurmesePhonetics(text: string): string {
   return result;
 }
 
-// Simple prompt for both
-const DUB_SYSTEM_PROMPT = `Translate English to Myanmar movie recap narration.
-Keep it natural and engaging.
+// Simple prompt - translate video narration only, no intro/outro
+const DUB_SYSTEM_PROMPT = `Translate ONLY this video narration to Myanmar.
+No intro or outro text.
+Natural storytelling.
 Return exact same number of lines as input.`;
 
 // Batch translation for dubbing

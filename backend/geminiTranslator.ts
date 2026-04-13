@@ -144,7 +144,7 @@ export async function geminiTranslate(
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: `Translate English to Myanmar movie recap narration. Keep it natural and engaging.\n${text}` }] }]
+            contents: [{ parts: [{ text: `Translate ONLY this video narration to Myanmar. No intro or outro. Natural storytelling.\n${text}` }] }]
           })
         });
         
