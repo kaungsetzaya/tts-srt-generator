@@ -205,8 +205,7 @@ export default function TTSGenerator() {
   const [dubVideoUrl, setDubVideoUrl] = useState<string>("");
   const [dubDragOver, setDubDragOver] = useState(false);
   const [dubResult, setDubResult] = useState<{ videoBase64: string; myanmarText: string; srtContent: string; durationMs: number } | null>(null);
-  const [dubEditedText, setDubEditedText] = useState("");
-  const [dubCopied, setDubCopied] = useState(false);
+
   const dubFileRef = useRef<HTMLInputElement>(null);
   const dubResultVideoRef = useRef<HTMLVideoElement>(null);
 
@@ -475,7 +474,6 @@ export default function TTSGenerator() {
         const res = await dubLinkMutation.mutateAsync({ url: dubVideoUrl.trim(), ...dubOpts });
         if (res.success) {
           setDubResult({ videoBase64: res.videoBase64, myanmarText: res.myanmarText, srtContent: res.srtContent, durationMs: res.durationMs });
-          setDubEditedText(res.myanmarText);
           utils.subscription.myStatus.invalidate();
         }
       } catch (e: any) { 
@@ -493,7 +491,6 @@ export default function TTSGenerator() {
         const res = await dubFileMutation.mutateAsync({ videoBase64: base64, filename: dubVideoFile.name, ...dubOpts });
         if (res.success) {
           setDubResult({ videoBase64: res.videoBase64, myanmarText: res.myanmarText, srtContent: res.srtContent, durationMs: res.durationMs });
-          setDubEditedText(res.myanmarText);
           utils.subscription.myStatus.invalidate();
         }
       } catch (e: any) { 
@@ -502,15 +499,6 @@ export default function TTSGenerator() {
       }
     };
     reader.readAsDataURL(dubVideoFile);
-  };
-
-  const handleDubCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(dubEditedText);
-      setDubCopied(true);
-      showSuccess(lang === "mm" ? "SRT ကူးယူပြီးပါပြီ!" : "SRT copied!");
-      setTimeout(() => setDubCopied(false), 2000);
-    } catch { /* fallback */ }
   };
 
   const handleDubDownload = () => {
@@ -587,7 +575,6 @@ export default function TTSGenerator() {
     setDubVideoFile(null);
     setDubVideoUrl("");
     setDubResult(null);
-    setDubEditedText("");
     setDubPreviewUrl("");
     setDubDetectedRatio("16:9");
   };
@@ -1428,26 +1415,6 @@ export default function TTSGenerator() {
                       style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, boxShadow: `0 4px 12px rgba(0,0,0,0.15)` }}>
                       <Download className="w-5 h-5" /> {lang === "mm" ? "MP4 ဒေါင်းလုတ်" : "Download MP4"}
                     </button>
-                  </div>
-                </div>
-
-                {/* Translation Text */}
-                <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
-                  <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{lang === "mm" ? "ဘာသာပြန်စာသား" : "Translation Text"}</div>
-                  <div className="space-y-3 mt-2">
-                    <div className="flex justify-end">
-                      <button onClick={handleDubCopy}
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all hover:scale-105"
-                        style={{ background: dubCopied ? "#4ade80" : accent, color: "var(--foreground)" }}>
-                        {dubCopied ? <><Check className="w-4 h-4" /> {t.copied}</> : <><Copy className="w-4 h-4" /> {t.copyText}</>}
-                      </button>
-                    </div>
-                    <textarea
-                      value={dubEditedText}
-                      onChange={e => setDubEditedText(e.target.value)}
-                      className="w-full min-h-[120px] sm:min-h-[150px] p-4 rounded-xl border focus:outline-none focus:ring-2 resize-y text-sm font-sans"
-                      style={{ background: inputBg, borderColor: inputBorder, color: textColor, lineHeight: "2.2" }}
-                    />
                   </div>
                 </div>
 
