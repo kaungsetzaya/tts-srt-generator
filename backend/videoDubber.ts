@@ -7,7 +7,7 @@ import { randomUUID } from 'crypto';
 import ffmpeg from 'fluent-ffmpeg';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { geminiTranslate } from "./geminiTranslator";
+import { geminiTranslate, geminiTranslateBatch } from "./geminiTranslator";
 import { downloadVideo } from "./_core/multiDownloader";
 import { generateSpeech, generateSpeechWithCharacter, type VoiceKey, type CharacterKey, CHARACTER_VOICES } from "./tts";
 import { isAllowedVideoUrl, isPathWithinDir, sanitizeForAI } from "./_core/security";
@@ -38,56 +38,86 @@ function getAudioDuration(filePath: string): Promise<number> {
   });
 }
 
-// ───── Whisper transcription with timestamps ─────
+// ───── Stable-ts transcription with gapless segments ─────
 async function transcribeLocalWhisper(audioPath: string): Promise<{ text: string; srt: string; segments: WhisperSegment[] }> {
   const outputDir = path.dirname(audioPath);
   const baseName = path.parse(audioPath).name;
+  const scriptPath = path.join(process.cwd(), "backend", "transcriber.py");
+  const outputJson = path.join(outputDir, `${baseName}_transcription.json`);
 
-  await execFileAsync("whisper", [
-    audioPath,
-    "--model", "base",
-    "--output_dir", outputDir,
-    "--output_format", "all",
-    "--word_timestamps", "True"
-  ]);
-
-  const textPath = path.join(outputDir, `${baseName}.txt`);
-  const srtPath = path.join(outputDir, `${baseName}.srt`);
-  const jsonPath = path.join(outputDir, `${baseName}.json`);
-
-  if (!isPathWithinDir(textPath, outputDir) || !isPathWithinDir(srtPath, outputDir)) {
-    throw new Error("Invalid file path detected.");
+  if (!isPathWithinDir(scriptPath, process.cwd()) || !isPathWithinDir(outputJson, outputDir)) {
+    throw new Error("Invalid path detected.");
   }
 
-  const text = await fs.readFile(textPath, 'utf-8');
-  const srt = await fs.readFile(srtPath, 'utf-8');
+  // Run Python stable-ts transcription
+  await execFileAsync("python3", [scriptPath, audioPath, outputJson]);
+
+  // Read the JSON output from Python
+  const data = JSON.parse(await fs.readFile(outputJson, 'utf-8'));
   
-  // Parse JSON for segment timestamps
-  let segments: WhisperSegment[] = [];
-  try {
-    if (existsSync(jsonPath)) {
-      const jsonData = JSON.parse(await fs.readFile(jsonPath, 'utf-8'));
-      segments = jsonData.segments?.map((seg: any) => ({
-        start: seg.start,
-        end: seg.end,
-        text: seg.text?.trim() || ""
-      })) || [];
-      await fs.unlink(jsonPath).catch(() => {});
-    }
-  } catch (e) {
-    console.log("[Dubber] Could not parse Whisper JSON, using SRT fallback");
-  }
+  const text = data.text || "";
+  const segments: WhisperSegment[] = data.segments?.map((seg: any) => ({
+    start: seg.start,
+    end: seg.end,
+    text: seg.text?.trim() || ""
+  })) || [];
 
-  await fs.unlink(textPath).catch(() => {});
-  await fs.unlink(srtPath).catch(() => {});
+  // Generate SRT from segments
+  const srt = buildSrtFromSegments(segments);
+
+  // Cleanup temp files
+  await fs.unlink(outputJson).catch(() => {});
 
   return { text, srt, segments };
 }
 
+// ───── Build SRT from segments ─────
+function buildSrtFromSegments(segments: WhisperSegment[]): string {
+  function msToSrtTime(ms: number): string {
+    const h = Math.floor(ms / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    const mil = Math.round(ms % 1000);
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(mil).padStart(3, '0')}`;
+  }
+
+  const lines: string[] = [];
+  for (let i = 0; i < segments.length; i++) {
+    const seg = segments[i];
+    lines.push(String(i + 1));
+    lines.push(`${msToSrtTime(seg.start * 1000)} --> ${msToSrtTime(seg.end * 1000)}`);
+    lines.push(seg.text);
+    lines.push("");
+  }
+  return lines.join("\n");
+}
+
 interface WhisperSegment {
+  index: number;
   start: number;
   end: number;
   text: string;
+}
+
+// ───── Build SRT from translated segments (gapless) ─────
+function buildSrtFromTranslatedSegments(segments: WhisperSegment[]): string {
+  function msToSrtTime(ms: number): string {
+    const h = Math.floor(ms / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    const mil = Math.round(ms % 1000);
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(mil).padStart(3, '0')}`;
+  }
+
+  const lines: string[] = [];
+  for (let i = 0; i < segments.length; i++) {
+    const seg = segments[i];
+    lines.push(String(i + 1));
+    lines.push(`${msToSrtTime(seg.start * 1000)} --> ${msToSrtTime(seg.end * 1000)}`);
+    lines.push(seg.text);
+    lines.push("");
+  }
+  return lines.join("\n");
 }
 
 // ───── Build SRT from actual Whisper timestamps ─────
@@ -245,16 +275,21 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
         .save(tempAudioExtract);
     });
 
-    console.log(`[Dubber] Transcribing with Whisper...`);
+    console.log(`[Dubber] Transcribing with stable-ts...`);
     const whisperResult = await transcribeLocalWhisper(tempAudioExtract);
     const englishText = whisperResult.text;
     const whisperSegments = whisperResult.segments;
     if (!englishText?.trim()) throw new Error("Whisper could not detect any speech.");
 
-    console.log(`[Dubber] Translating to Myanmar...`);
-    const sanitizedText = sanitizeForAI(englishText);
-    const result = await geminiTranslate(sanitizedText, options.userApiKey);
-    const myanmarText = result.myanmar;
+    console.log(`[Dubber] Translating ${whisperSegments.length} segments...`);
+    const { translated: translatedSegments } = await geminiTranslateBatch(whisperSegments, options.userApiKey);
+    
+    // Apply gapless timing: current.end = next.start
+    for (let i = 0; i < translatedSegments.length - 1; i++) {
+      translatedSegments[i].end = translatedSegments[i + 1].start;
+    }
+    
+    const myanmarText = translatedSegments.map(s => s.text).join(" ");
 
     console.log(`[Dubber] Generating TTS (voice=${options.character || options.voice}, speed=${options.speed}, pitch=${options.pitch})...`);
     let ttsResult;
@@ -274,7 +309,7 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
 
     let srtContent = "";
     if (options.srtEnabled) {
-      srtContent = buildMyanmarSRT(myanmarText, ttsResult.durationMs, 20);
+      srtContent = buildSrtFromTranslatedSegments(translatedSegments);
       const BOM = '\uFEFF';
       await fs.writeFile(tempSrtPath, BOM + srtContent, 'utf-8');
     }

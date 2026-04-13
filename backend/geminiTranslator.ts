@@ -1,8 +1,6 @@
 import fs from "fs";
 import path from "path";
 
-const QUOTA_FILE = path.join(process.cwd(), "tmp_video", "gemini_quota.json");
-
 // ✅ Models - use high quota first, fallback only if exhausted
 const MODELS = [
   { id: "models/gemini-3.1-flash-lite-preview", name: "Gemini 3.1 Flash Lite", rpd: 500, rpm: 15, primary: true },
@@ -10,80 +8,24 @@ const MODELS = [
   { id: "models/gemini-2.5-flash", name: "Gemini 2.5 Flash", rpd: 20, rpm: 5, primary: false }
 ];
 
-interface QuotaData {
-  [modelId: string]: {
-    date: string;
-    count: number;
-  };
-}
-
-// RPM tracking per key
-const rpmMap = new Map<string, { timestamp: number; count: number }>();
-const RPM_WINDOW = 60000; // 1 minute
-const MIN_DELAY = 200; // 200ms between requests
-
-function getQuota(): QuotaData {
-  try {
-    if (fs.existsSync(QUOTA_FILE)) {
-      return JSON.parse(fs.readFileSync(QUOTA_FILE, 'utf8'));
-    }
-  } catch (e) {}
-  return {};
-}
-
-function saveQuota(quota: QuotaData): void {
-  try {
-    fs.mkdirSync(path.dirname(QUOTA_FILE), { recursive: true });
-    fs.writeFileSync(QUOTA_FILE, JSON.stringify(quota, null, 2));
-  } catch (e) {}
-}
+// Fast in-memory quota tracking
+const quotaMap = new Map<string, { date: string; count: number }>();
 
 function getDailyCount(modelId: string): number {
   const today = new Date().toISOString().split("T")[0];
-  const quota = getQuota();
-  const entry = quota[modelId];
-  return (entry && entry.date === today) ? entry.count : 0;
+  const entry = quotaMap.get(modelId);
+  if (!entry || entry.date !== today) return 0;
+  return entry.count;
 }
 
-function incrementDaily(modelId: string): void {
+function incrementQuota(modelId: string): void {
   const today = new Date().toISOString().split("T")[0];
-  const quota = getQuota();
-  if (!quota[modelId] || quota[modelId].date !== today) {
-    quota[modelId] = { date: today, count: 1 };
+  const current = quotaMap.get(modelId);
+  if (!current || current.date !== today) {
+    quotaMap.set(modelId, { date: today, count: 1 });
   } else {
-    quota[modelId].count++;
+    current.count++;
   }
-  saveQuota(quota);
-}
-
-// RPM tracking
-function checkRPM(key: string, limit: number): boolean {
-  const now = Date.now();
-  const entry = rpmMap.get(key);
-  
-  if (!entry || now - entry.timestamp > RPM_WINDOW) {
-    rpmMap.set(key, { timestamp: now, count: 1 });
-    return true;
-  }
-  
-  if (entry.count >= limit) {
-    return false;
-  }
-  
-  entry.count++;
-  return true;
-}
-
-function waitRPM(key: string, limit: number): Promise<void> {
-  return new Promise((resolve) => {
-    const entry = rpmMap.get(key);
-    if (entry && entry.count >= limit) {
-      const waitTime = RPM_WINDOW - (Date.now() - entry.timestamp);
-      setTimeout(resolve, waitTime + 50);
-    } else {
-      resolve();
-    }
-  });
 }
 
 function getAllSystemKeys(): string[] {
@@ -95,37 +37,9 @@ function getAllSystemKeys(): string[] {
 export const phoneticDictionary: Record<string, string> = {
   "CEO": "စီအီးအို",
   "FBI": "အက်ဖ်ဘီအိုင်",
-  "Uric acid": "ယူရစ် အက်ဆစ်",
-  "Recap": "ရီကပ်ပ်",
   "Zombies": "ဇွန်ဘီး",
   "Zombie": "ဇွန်ဘီး",
-  "မေတ္တာ": "မြစ်တာ",
-  "ဓားပြ": "ဓမြ",
-  "ကောင်မလေး": "ကောင်မ လေး",
-  "မကြီး": "မ ကြီး",
-  "သူတောင်းစား": "သဒေါင်းဇား",
-  "သူဌေး": "သဌေး",
-  "ပါးစပ်": "ပဇပ်",
-  "ပန်းချီ": "ဘဂျီ",
-  "ပန်းကန်": "ဘဂန်",
-  "ကုတင်": "ဂဒင်",
-  "ပုဆိုး": "ပဆိုး",
-  "ပုလင်း": "ပလင်း",
-  "ဧကရာဇ်": "အေကရစ်",
-  "အဘိုး": "အဖိုး",
-  "အဘွား": "အဖွား",
-  "မုဆိုး": "မုတ်ဆိုး",
-  "ပုလ္လင်": "ပလင်",
-  "ပုဂံ": "ဘဂံ",
-  "အံ့ဩ": "အံ့အော",
-  "ဇနီးသည်": "ဇနီးသယ်",
-  "ဘီလူး": "ဘလူး",
-  "စတေး": "ဇဒေး",
-  "ချောက်ကမ်းပါး": "ဂျောက်ကမ်းပါး",
-  "ကလေးမလေး": "ခလေးမ လေး",
-  "ကုဋေကြွယ်": "ဂဒေကြွယ်",
-  "ဩဇာ": "အောဇာ",
-  "မြေးမလေး": "မြေးမ လေး",
+  "CEO": "စီအီးအို",
 };
 
 function applyBurmesePhonetics(text: string): string {
@@ -137,23 +51,54 @@ function applyBurmesePhonetics(text: string): string {
   return result;
 }
 
-function buildTranslatePrompt(fontSize?: number): string {
-  const charsPerLine = fontSize ? Math.max(12, Math.round(60 - (fontSize - 12) * 1.2)) : 22;
-  return `You are a professional Myanmar Voiceover Artist and Video Translator.
+// Batch translation with JSON response schema
+async function translateBatch(lines: string[], apiKey: string): Promise<string[]> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+  
+  const systemPrompt = `You are a professional Myanmar Voiceover Artist. Translate each English string into engaging Myanmar storytelling style.
+RULES:
+1. Use engaging Burmese. NO formal literary style.
+2. End sentences with narrative particles (ပါပဲ, တော့တယ်, ပါတယ်, ခဲ့တယ်). NEVER use (ဗျ, ရှင်, လေ, နော်).
+3. Transliterate: Zombies→ဇွန်ဘီး, CEO→စီအီးအို, FBI→အက်ဖ်ဘီအိုင်.
+4. Return JSON array of strings with EXACT SAME LENGTH as input.`;
 
-Translate the provided text into an engaging, natural Myanmar narration style suitable for YouTube shorts, fascinating facts, and movie recaps.
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: `${systemPrompt}\n\nTranslate this JSON array:\n${JSON.stringify(lines)}` }] }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "array",
+            items: { type: "string" }
+          }
+        }
+      })
+    });
 
-ABSOLUTE STRICT RULES:
-1. NARRATION STYLE: Use engaging storytelling. AVOID overly formal literary style.
-2. PRONOUNS: Use "ကျွန်တော်" or "ကျွန်မ" ONLY IF first-person.
-3. PROHIBITED PARTICLES: Never use "ဗျ", "ဗျာ", "ရှင်", "ရှင့်", "လေ", "နော်", "ကွ".
-4. ALLOWED PARTICLES: "ပါပဲ", "တော့တယ်", "ပါတယ်", "ခဲ့တယ်", "ခဲ့ပါတယ်", "ဖြစ်ပါတယ်", "သွားပါတယ်".
-5. ZERO English letters (a-z) in output.
-6. Format: Short subtitle lines (~${charsPerLine} Myanmar graphemes).`;
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+    const data = await res.json();
+    
+    if (res.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
+      const text = data.candidates[0].content.parts[0].text;
+      // Try to parse as JSON array
+      try {
+        return JSON.parse(text);
+      } catch {
+        // If parsing fails, return original
+        console.log("[Gemini] Failed to parse batch response as JSON");
+        return lines;
+      }
+    } else {
+      const errMsg = data.error?.message || `HTTP ${res.status}`;
+      console.log(`[Gemini] Batch translate failed: ${errMsg}`);
+      return lines;
+    }
+  } catch (err: any) {
+    console.log(`[Gemini] Batch translate error: ${err.message}`);
+    return lines;
+  }
 }
 
 export async function geminiTranslate(
@@ -162,32 +107,17 @@ export async function geminiTranslate(
   fontSize?: number
 ): Promise<{ myanmar: string; modelUsed: string }> {
   const systemKeys = getAllSystemKeys();
-  
-  // Build key priority: user key first, then system keys
-  const allKeys = (userApiKey?.trim()) 
-    ? [userApiKey.trim(), ...systemKeys] 
-    : systemKeys;
+  const allKeys = (userApiKey?.trim()) ? [userApiKey.trim(), ...systemKeys] : systemKeys;
 
   if (allKeys.length === 0) {
-    throw new Error("GEMINI_API_KEY not set and no user key provided.");
+    throw new Error("No API key available.");
   }
 
+  // Try models and keys in parallel-style (user key first)
   for (const model of MODELS) {
-    const dailyCount = getDailyCount(model.id);
-    if (dailyCount >= model.rpd) {
-      console.log(`[Gemini] ${model.name} daily limit (${dailyCount}/${model.rpd}). Skip.`);
-      continue;
-    }
+    if (getDailyCount(model.id) >= model.rpd) continue;
 
     for (const apiKey of allKeys) {
-      // Check RPM
-      if (!checkRPM(apiKey, model.rpm)) {
-        await waitRPM(apiKey, model.rpm);
-        if (!checkRPM(apiKey, model.rpm)) {
-          continue;
-        }
-      }
-
       const url = `https://generativelanguage.googleapis.com/v1beta/${model.id}:generateContent?key=${apiKey}`;
       
       try {
@@ -195,7 +125,7 @@ export async function geminiTranslate(
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: `${buildTranslatePrompt(fontSize)}\n${text}` }] }]
+            contents: [{ parts: [{ text: `You are a professional Myanmar Voiceover Artist. Translate to engaging Myanmar narration. RULES: No "ဗျ","ရှင်","လေ","နော်". Use "ပါပဲ","တော့တယ်","ပါတယ်". Short subtitle lines (~22 graphemes).\n${text}` }] }]
           })
         });
         
@@ -204,25 +134,89 @@ export async function geminiTranslate(
         if (res.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
           const translated = data.candidates[0].content.parts[0].text;
           const myanmar = applyBurmesePhonetics(translated.trim());
-          incrementDaily(model.id);
+          incrementQuota(model.id);
           
           const keyType = apiKey === userApiKey?.trim() ? "User" : "System";
           console.log(`[Gemini] ✅ ${model.name} (${keyType})`);
           
           return { myanmar, modelUsed: model.name };
-        } else {
-          const errMsg = data.error?.message || `HTTP ${res.status}`;
-          console.log(`[Gemini] ❌ ${model.name} key ...${apiKey.slice(-4)}: ${errMsg}`);
         }
-      } catch (err: any) {
-        console.log(`[Gemini] ❌ ${model.name} key ...${apiKey.slice(-4)}: ${err.message}`);
+      } catch (err) {
+        // Fast continue on error
       }
-
-
     }
   }
 
   throw new Error("All Gemini models and keys exhausted.");
+}
+
+// Batch translation for video dubbing
+const BATCH_SIZE = 30;
+
+export async function geminiTranslateBatch(
+  segments: { index: number; start: number; end: number; text: string }[],
+  userApiKey?: string
+): Promise<{ translated: { index: number; start: number; end: number; text: string }[] }> {
+  const systemKeys = getAllSystemKeys();
+  const allKeys = (userApiKey?.trim()) ? [userApiKey.trim(), ...systemKeys] : systemKeys;
+
+  if (allKeys.length === 0) {
+    throw new Error("No API key available.");
+  }
+
+  // Extract texts for translation
+  const texts = segments.map(s => s.text);
+  
+  // Chunk into batches of 30
+  const chunks: string[][] = [];
+  for (let i = 0; i < texts.length; i += BATCH_SIZE) {
+    chunks.push(texts.slice(i, i + BATCH_SIZE));
+  }
+
+  console.log(`[Gemini] Translating ${texts.length} segments in ${chunks.length} batches...`);
+
+  const translatedTexts: string[] = new Array(texts.length).fill("");
+
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    const startIdx = i * BATCH_SIZE;
+    
+    console.log(`[Gemini] Batch ${i + 1}/${chunks.length} (${chunk.length} lines)...`);
+    
+    // Try to translate this batch
+    let success = false;
+    
+    for (const apiKey of allKeys) {
+      const result = await translateBatch(chunk, apiKey);
+      
+      if (result && result.length === chunk.length) {
+        // Success! Copy results
+        for (let j = 0; j < result.length; j++) {
+          translatedTexts[startIdx + j] = applyBurmesePhonetics(result[j]);
+        }
+        success = true;
+        break;
+      }
+    }
+    
+    if (!success) {
+      // Fallback: use original text
+      console.log(`[Gemini] Batch ${i + 1} failed, using original text`);
+      for (let j = 0; j < chunk.length; j++) {
+        translatedTexts[startIdx + j] = chunk[j];
+      }
+    }
+  }
+
+  // Reconstruct translated segments
+  const translated = segments.map((seg, idx) => ({
+    ...seg,
+    text: translatedTexts[idx] || seg.text
+  }));
+
+  console.log(`[Gemini] ✅ Translation complete!`);
+  
+  return { translated };
 }
 
 export async function getQuotaStatus(): Promise<any> {
