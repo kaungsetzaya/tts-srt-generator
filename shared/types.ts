@@ -88,6 +88,7 @@ export interface DubOptions {
   srtBlurColor?: "black" | "white";
   srtFullWidth?: boolean;
   srtBorderRadius?: "rounded" | "square";
+  userApiKey?: string; // User's own Gemini API key
 }
 
 export interface DubResult {

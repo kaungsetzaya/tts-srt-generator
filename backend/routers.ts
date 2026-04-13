@@ -434,7 +434,7 @@ export const appRouter = router({
           await fs.unlink(tempPath).catch(() => {});
         }
       }),
-    translateLink: publicProcedure.input(z.object({ url: z.string() })).mutation(async ({ input, ctx }) => {
+    translateLink: publicProcedure.input(z.object({ url: z.string(), userApiKey: z.string().optional() })).mutation(async ({ input, ctx }) => {
       if (!ctx.user) throw new Error("Please login first.");
       
       // Rate limit check
@@ -463,7 +463,7 @@ export const appRouter = router({
         }
       }
       try {
-        const result = await translateVideoLink(input.url);
+        const result = await translateVideoLink(input.url, input.userApiKey);
         if (db && ctx.user) {
           const { nanoid: nid } = await import("nanoid");
           await db.insert(ttsConversions).values({ id: nid(10), userId: ctx.user.userId, feature: "translate_link", status: "success" }).catch(() => {});
@@ -493,6 +493,7 @@ export const appRouter = router({
       .input(z.object({
         videoBase64: z.string(),
         filename: z.string().max(255),
+        userApiKey: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user) throw new Error("Please login first.");
@@ -529,7 +530,7 @@ export const appRouter = router({
           if (videoBuffer.length > 25 * 1024 * 1024) throw new Error("ဖိုင်အကြီးလွန်ပါသည်။ အများဆုံး 25MB အထိသာ တင်နိုင်ပါသည်။");
           // 🔐 Magic bytes validation
           if (!isValidVideoBuffer(videoBuffer)) throw new Error("ဗီဒီယို ဖိုင် format မမှန်ပါ။ MP4, MOV, AVI, MKV, WebM ဖိုင်များသာ တင်နိုင်ပါသည်။");
-          const result = await translateVideo(videoBuffer, input.filename);
+          const result = await translateVideo(videoBuffer, input.filename, input.userApiKey);
           if (db && ctx.user) {
             const { nanoid: nid } = await import("nanoid");
             await db.insert(ttsConversions).values({ id: nid(10), userId: ctx.user.userId, feature: "translate_file", status: "success" }).catch(() => {});
@@ -570,6 +571,7 @@ export const appRouter = router({
         srtBlurColor: z.enum(["black", "white"]).optional(),
         srtFullWidth: z.boolean().optional(),
         srtBorderRadius: z.enum(["rounded", "square"]).optional(),
+        userApiKey: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user) throw new Error("Please login first.");
@@ -614,7 +616,7 @@ export const appRouter = router({
             srtEnabled: input.srtEnabled, srtFontSize: input.srtFontSize, srtColor: input.srtColor,
             srtDropShadow: input.srtDropShadow, srtBlurBg: input.srtBlurBg, srtMarginV: input.srtMarginV,
             srtBlurSize: input.srtBlurSize, srtBlurColor: input.srtBlurColor, srtFullWidth: input.srtFullWidth,
-            srtBorderRadius: input.srtBorderRadius,
+            srtBorderRadius: input.srtBorderRadius, userApiKey: input.userApiKey,
           };
           const result = await dubVideoFromBuffer(videoBuffer, input.filename, dubOpts);
           if (db && ctx.user) {
@@ -659,6 +661,7 @@ export const appRouter = router({
         srtBlurColor: z.enum(["black", "white"]).optional(),
         srtFullWidth: z.boolean().optional(),
         srtBorderRadius: z.enum(["rounded", "square"]).optional(),
+        userApiKey: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user) throw new Error("Please login first.");
@@ -698,7 +701,7 @@ export const appRouter = router({
             srtEnabled: input.srtEnabled, srtFontSize: input.srtFontSize, srtColor: input.srtColor,
             srtDropShadow: input.srtDropShadow, srtBlurBg: input.srtBlurBg, srtMarginV: input.srtMarginV,
             srtBlurSize: input.srtBlurSize, srtBlurColor: input.srtBlurColor, srtFullWidth: input.srtFullWidth,
-            srtBorderRadius: input.srtBorderRadius,
+            srtBorderRadius: input.srtBorderRadius, userApiKey: input.userApiKey,
           };
           const result = await dubVideoFromLink(input.url, dubOpts);
           if (db && ctx.user) {

@@ -179,7 +179,7 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
 
     console.log(`[Dubber] Translating to Myanmar...`);
     const sanitizedText = sanitizeForAI(englishText);
-    const { myanmar: myanmarText } = await geminiTranslate(sanitizedText);
+    const { myanmar: myanmarText } = await geminiTranslate(sanitizedText, options.userApiKey);
 
     console.log(`[Dubber] Generating TTS (voice=${options.character || options.voice}, speed=${options.speed}, pitch=${options.pitch})...`);
     let ttsResult;
