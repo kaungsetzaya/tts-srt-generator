@@ -101,7 +101,7 @@ interface WhisperSegment {
 }
 
 // ───── Build SRT from translated segments (gapless) ─────
-function buildSrtFromTranslatedSegments(segments: WhisperSegment[]): string {
+function buildSrtFromTranslatedSegments(segments: WhisperSegment[], durationRatio: number = 1.0): string {
   function msToSrtTime(ms: number): string {
     const h = Math.floor(ms / 3600000);
     const m = Math.floor((ms % 3600000) / 60000);
@@ -113,8 +113,11 @@ function buildSrtFromTranslatedSegments(segments: WhisperSegment[]): string {
   const lines: string[] = [];
   for (let i = 0; i < segments.length; i++) {
     const seg = segments[i];
+    // Scale timestamps by durationRatio to match actual TTS duration
+    const scaledStart = Math.round(seg.start * 1000 * durationRatio);
+    const scaledEnd = Math.round(seg.end * 1000 * durationRatio);
     lines.push(String(i + 1));
-    lines.push(`${msToSrtTime(seg.start * 1000)} --> ${msToSrtTime(seg.end * 1000)}`);
+    lines.push(`${msToSrtTime(scaledStart)} --> ${msToSrtTime(scaledEnd)}`);
     lines.push(seg.text);
     lines.push("");
   }
@@ -293,6 +296,12 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
       throw new Error("Translation failed: Gemini returned empty or invalid response. Please try again.");
     }
     
+    // Calculate original Whisper audio duration for SRT scaling
+    const whisperEndTime = whisperSegments.length > 0 
+      ? Math.max(...whisperSegments.map(s => s.end)) 
+      : 0;
+    console.log(`[Dubber 32%] Whisper duration: ${whisperEndTime.toFixed(1)}s`);
+    
     // Apply gapless timing: current.end = next.start
     for (let i = 0; i < translatedSegments.length - 1; i++) {
       translatedSegments[i].end = translatedSegments[i + 1].start;
@@ -316,9 +325,15 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
     const needSpeedAdjust = Math.abs(speedRatio - 1.0) > 0.05;
     console.log(`[Dubber 80%] Combining video + audio + SRT... | RAM: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB used`);
 
+    // Calculate duration ratio for SRT scaling
+    const ttsDurationSec = ttsResult.durationMs / 1000;
+    const durationRatio = whisperEndTime > 0 ? ttsDurationSec / whisperEndTime : 1.0;
+    console.log(`[Dubber 78%] SRT scaling ratio: ${durationRatio.toFixed(2)} (TTS: ${ttsDurationSec.toFixed(1)}s vs Whisper: ${whisperEndTime.toFixed(1)}s)`);
+
     let srtContent = "";
     if (options.srtEnabled) {
-      srtContent = buildSrtFromTranslatedSegments(translatedSegments);
+      // Build SRT with scaled timestamps to match actual TTS duration
+      srtContent = buildSrtFromTranslatedSegments(translatedSegments, durationRatio);
       const BOM = '\uFEFF';
       await fs.writeFile(tempSrtPath, BOM + srtContent, 'utf-8');
     }
