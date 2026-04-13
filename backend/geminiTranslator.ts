@@ -60,10 +60,13 @@ async function translateBatch(lines: string[], apiKey: string, modelId: string):
 Keep exact meaning. Output must be speakable. No intro or outro.
 Return exact same number of lines as input.
 
-STRICT RULES FOR ENDING PARTICLES:
-1. DYNAMIC ENDINGS: Mix "ခဲ့တာပါ", "ပါတော့တယ်", "နေကြတာပါ", "သွားခဲ့ရတယ်", "လိုက်မိပါတယ်", "ကြတာပါ", "နေခဲ့တယ်", "လိုက်ပါတော့တယ်".
-2. NO REPETITION: Do not use same particle for more than two consecutive lines.
-3. SPOKEN STYLE: Natural conversational Myanmar (အပြောစကား). Avoid formal literary style (စာစကား).`;
+STRICT RULES:
+1. ONLY MYANMAR: Output MUST be in Myanmar language ONLY. No other languages.
+2. TRANSLITERATION: Use phonetic Myanmar for English words (Car=ကား, Bus=ဘတ်စ်ကား, Station=စတေရှင်, Zombie=ဇွန်ဘီး).
+3. DYNAMIC ENDINGS: Mix "ခဲ့တာပါ", "ပါတော့တယ်", "နေကြတာပါ", "သွားခဲ့ရတယ်", "လိုက်မိပါတယ်", "ကြတာပါ", "နေခဲ့တယ်", "လိုက်ပါတော့တယ်".
+4. NO REPETITION: Avoid ending every sentence with "ပါတယ်".
+5. SPOKEN STYLE: Natural conversational Myanmar (အပြောစကား). Avoid formal literary style.
+6. CLEAN OUTPUT: Output ONLY the raw JSON array.`;
 
   try {
     const res = await fetch(url, {
