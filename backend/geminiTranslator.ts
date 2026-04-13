@@ -14,17 +14,9 @@ const MODELS = [
 interface QuotaData {
   [modelId: string]: {
     date: string;
-    dailyCount: number;
-    rpmCount: number;
-    rpmMinute: number;
-    lastRequest: number;
+    count: number;
   };
 }
-
-// Rate limiting state
-let requestHistory: Array<{ key: string; timestamp: number }> = [];
-const RPM_WINDOW_MS = 60000; // 1 minute
-const MIN_REQUEST_INTERVAL_MS = 200; // Minimum 200ms between requests
 
 function getQuotaFile(): QuotaData {
   try {
@@ -40,47 +32,14 @@ function saveQuotaFile(quota: QuotaData): void {
   try {
     fs.mkdirSync(path.dirname(QUOTA_FILE), { recursive: true });
     fs.writeFileSync(QUOTA_FILE, JSON.stringify(quota, null, 2));
-  } catch (e) {
-    console.error("[Gemini] Failed to save quota:", e);
-  }
+  } catch (e) {}
 }
 
-function cleanOldRequests(): void {
-  const now = Date.now();
-  requestHistory = requestHistory.filter(r => now - r.timestamp < RPM_WINDOW_MS);
-}
-
-function getRecentRequestCount(key: string): number {
-  const now = Date.now();
-  return requestHistory.filter(r => r.key === key && now - r.timestamp < RPM_WINDOW_MS).length;
-}
-
-function recordRequest(key: string): void {
-  cleanOldRequests();
-  requestHistory.push({ key, timestamp: Date.now() });
-}
-
-function canMakeRequest(key: string, rpmLimit: number): boolean {
-  return getRecentRequestCount(key) < rpmLimit;
-}
-
-function waitForRateLimit(key: string, rpmLimit: number): Promise<void> {
-  return new Promise((resolve) => {
-    const count = getRecentRequestCount(key);
-    if (count >= rpmLimit) {
-      // Find oldest request and wait until it expires
-      const oldest = requestHistory.filter(r => r.key === key).sort((a, b) => a.timestamp - b.timestamp)[0];
-      if (oldest) {
-        const waitTime = (oldest.timestamp + RPM_WINDOW_MS) - Date.now() + 100;
-        console.log(`[Gemini] RPM limit reached for key...${key.slice(-4)}, waiting ${Math.ceil(waitTime/1000)}s`);
-        setTimeout(resolve, waitTime);
-      } else {
-        resolve();
-      }
-    } else {
-      resolve();
-    }
-  });
+function getDailyCount(modelId: string): number {
+  const today = new Date().toISOString().split("T")[0];
+  const quota = getQuotaFile();
+  const usage = quota[modelId];
+  return (usage && usage.date === today) ? usage.count : 0;
 }
 
 function incrementQuotaSync(modelId: string): void {
@@ -88,17 +47,11 @@ function incrementQuotaSync(modelId: string): void {
   const quota = getQuotaFile();
   
   if (!quota[modelId] || quota[modelId].date !== today) {
-    quota[modelId] = { date: today, dailyCount: 0, rpmCount: 0, rpmMinute: Date.now(), lastRequest: 0 };
+    quota[modelId] = { date: today, count: 1 };
+  } else {
+    quota[modelId].count++;
   }
-  quota[modelId].dailyCount++;
   saveQuotaFile(quota);
-}
-
-function getDailyCount(modelId: string): number {
-  const today = new Date().toISOString().split("T")[0];
-  const quota = getQuotaFile();
-  const usage = quota[modelId];
-  return (usage && usage.date === today) ? usage.dailyCount : 0;
 }
 
 function getAllSystemKeys(): string[] {
@@ -169,10 +122,6 @@ ABSOLUTE STRICT RULES:
 6. Format: Short subtitle lines (~${charsPerLine} Myanmar graphemes).`;
 }
 
-async function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 export async function geminiTranslate(
   text: string, 
   userApiKey?: string, 
@@ -197,16 +146,9 @@ export async function geminiTranslate(
     }
 
     for (const apiKey of allKeys) {
-      // Check RPM limit
-      if (!canMakeRequest(apiKey, model.rpm)) {
-        await waitForRateLimit(apiKey, model.rpm);
-      }
-
       const url = `https://generativelanguage.googleapis.com/v1beta/${model.id}:generateContent?key=${apiKey}`;
       
       try {
-        recordRequest(apiKey);
-        
         const res = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -233,9 +175,6 @@ export async function geminiTranslate(
       } catch (err: any) {
         console.log(`[Gemini] ❌ ${model.name} key ...${apiKey.slice(-4)}: ${err.message}`);
       }
-
-      // Small delay between requests
-      await sleep(MIN_REQUEST_INTERVAL_MS);
     }
   }
 
