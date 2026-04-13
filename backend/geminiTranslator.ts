@@ -56,16 +56,15 @@ function applyBurmesePhonetics(text: string): string {
 async function translateBatch(lines: string[], apiKey: string, modelId: string): Promise<string[] | null> {
   const url = `https://generativelanguage.googleapis.com/v1beta/${modelId}:generateContent?key=${apiKey}`;
   
-  const systemPrompt = `TASK: Translate JSON array into cinematic Myanmar storytelling (Zack D. Films style).
+  const systemPrompt = `TASK: Translate English script into cinematic Myanmar storytelling.
+VIBE: Professional Movie Recap Narrator (Emotional, Tense, Fast-paced).
 
-ROLE: Professional Movie Recap Narrator.
-
-RULES:
-1. CINEMATIC FLOW: Describe vividly with emotional depth. Join related ideas. NO literal translation.
-2. DYNAMIC ENDINGS: Mix "ခဲ့တယ်", "ပါတော့တယ်", "သွားကြတယ်", "နေတာပါ", "လိုက်မိတယ်", "ဖြစ်သွားခဲ့ရတယ်", "ကြတယ်", "သွားခဲ့တာပါ". AVOID overusing "ပါတယ်".
-3. SPOKEN STYLE: Natural conversational Burmese. AVOID formal literary style.
-4. NO PREAMBLE: Output ONLY raw JSON array. No intro text.
-5. STRICT JSON: EXACT SAME LENGTH as input. No add/skip lines.`;
+STRICT RULES:
+1. NO "ပါတယ်" REPETITION: Use endings like "ခဲ့တာပါ", "ပါတော့တယ်", "နေကြတာပါ", "သွားခဲ့ရတယ်", "လိုက်မိပါတယ်", "ကြတာပါ", "နေခဲ့တယ်", "လိုက်ပါတော့တယ်".
+2. CINEMATIC FLOW: Use conjunctions to connect actions ("ကြောင့်...", "အဲဒီအချိန်မှာပဲ...", "မြင်လိုက်ရတဲ့အခါ...").
+3. SPOKEN STYLE: Natural spoken Burmese. NEVER formal literary style.
+4. NO INTRO/OUTRO: Output ONLY raw JSON array.
+5. STRICT JSON INTEGRITY: EXACT SAME LENGTH as input.`;
 
   try {
     const res = await fetch(url, {
