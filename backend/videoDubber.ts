@@ -253,29 +253,8 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
 
     console.log(`[Dubber] Translating to Myanmar...`);
     const sanitizedText = sanitizeForAI(englishText);
-    
-    // Translate segments with timestamps if available
-    let myanmarText: string;
-    let myanmarSegments: string[] = [];
-    
-    if (whisperSegments && whisperSegments.length > 0) {
-      // Translate each segment separately to preserve timing
-      console.log(`[Dubber] Translating ${whisperSegments.length} segments...`);
-      for (let i = 0; i < whisperSegments.length; i++) {
-        const segText = whisperSegments[i].text.trim();
-        if (segText) {
-          const result = await geminiTranslate(sanitizeForAI(segText), options.userApiKey);
-          myanmarSegments.push(result.myanmar);
-        } else {
-          myanmarSegments.push("");
-        }
-      }
-      myanmarText = myanmarSegments.join(" ");
-    } else {
-      // Fallback to full text translation
-      const result = await geminiTranslate(sanitizedText, options.userApiKey);
-      myanmarText = result.myanmar;
-    }
+    const result = await geminiTranslate(sanitizedText, options.userApiKey);
+    const myanmarText = result.myanmar;
 
     console.log(`[Dubber] Generating TTS (voice=${options.character || options.voice}, speed=${options.speed}, pitch=${options.pitch})...`);
     let ttsResult;
@@ -295,12 +274,7 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
 
     let srtContent = "";
     if (options.srtEnabled) {
-      // Use actual Whisper timestamps if available
-      if (whisperSegments && whisperSegments.length > 0 && myanmarSegments.length > 0) {
-        srtContent = buildMyanmarSRTFromSegments(whisperSegments, myanmarSegments, 22);
-      } else {
-        srtContent = buildMyanmarSRT(myanmarText, ttsResult.durationMs, 20);
-      }
+      srtContent = buildMyanmarSRT(myanmarText, ttsResult.durationMs, 20);
       const BOM = '\uFEFF';
       await fs.writeFile(tempSrtPath, BOM + srtContent, 'utf-8');
     }
