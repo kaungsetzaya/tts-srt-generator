@@ -50,16 +50,10 @@ function applyBurmesePhonetics(text: string): string {
   return result;
 }
 
-// Dub cinematic prompt
-const DUB_SYSTEM_PROMPT = `TASK: Translate English script into cinematic Myanmar storytelling (Zack D. Films style).
-VIBE: Professional Movie Recap Narrator.
-
-STRICT RULES:
-1. NO "ပါတယ်" REPETITION: Mix endings "ခဲ့တာပါ","ပါတော့တယ်","နေကြတာပါ","သွားခဲ့ရတယ်","လိုက်မိပါတယ်","ကြတာပါ","နေခဲ့တယ်","လိုက်ပါတော့တယ်".
-2. CINEMATIC FLOW: Connect actions smoothly. Join related ideas.
-3. SPOKEN STYLE: Natural conversational Burmese.
-4. NO INTRO/OUTRO: Output ONLY raw JSON array.
-5. STRICT JSON: EXACT SAME LENGTH as input.`;
+// Dub prompt - simple movie recap style
+const DUB_SYSTEM_PROMPT = `Translate English to Myanmar movie recap narration.
+Keep translations natural and engaging.
+Return exact same number of lines as input.`;
 
 // Batch translation for dubbing
 const BATCH_SIZE = 15;
