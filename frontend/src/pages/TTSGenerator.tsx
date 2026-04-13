@@ -1233,9 +1233,9 @@ export default function TTSGenerator() {
                         <p className="text-xs mt-0.5" style={{ color: subtextColor }}>{lang === "mm" ? "SRT စာတန်းထိုး ဖွင့်/ပိတ်" : "Toggle subtitle on/off"}</p>
                       </div>
                       <button onClick={() => setSrtEnabled(!srtEnabled)}
-                        className="relative w-11 h-6 rounded-full transition-all"
+                        className="relative w-14 h-7 sm:w-11 sm:h-6 rounded-full transition-all"
                         style={{ background: srtEnabled ? accent : (isDark ? "rgba(255,255,255,0.15)" : "#d1d5db") }}>
-                        <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all shadow-md ${srtEnabled ? "left-6" : "left-0.5"}`} />
+                        <span className={`absolute top-0.5 sm:top-0.5 w-6 h-6 sm:w-5 sm:h-5 rounded-full bg-white transition-all shadow-md ${srtEnabled ? "left-8 sm:left-6" : "left-0.5"}`} />
                       </button>
                     </div>
 
