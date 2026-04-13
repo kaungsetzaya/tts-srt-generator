@@ -301,41 +301,82 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
       translatedSegments[i].end = translatedSegments[i + 1].start;
     }
 
-    console.log(`[Dubber 55%] Generating TTS (voice=${options.character || options.voice}, speed=${options.speed}, pitch=${options.pitch})... | RAM: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB used`);
-    let ttsResult;
-    if (options.character && options.character.trim()) {
-      ttsResult = await generateSpeechWithCharacter(myanmarText, options.character as CharacterKey, options.speed, "16:9", options.pitch);
-    } else {
-      ttsResult = await generateSpeech(myanmarText, options.voice, options.speed, options.pitch, "16:9");
+    // Helper to format milliseconds to SRT timestamp
+    function msToSrtTime(ms: number): string {
+      const h = Math.floor(ms / 3600000);
+      const m = Math.floor((ms % 3600000) / 60000);
+      const s = Math.floor((ms % 60000) / 1000);
+      const mil = Math.round(ms % 1000);
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(mil).padStart(3, '0')}`;
     }
-    await fs.writeFile(tempTTSAudio, ttsResult.audioBuffer);
-    console.log(`[Dubber 70%] TTS generated (${Math.round(ttsResult.durationMs/1000)}s)`);
-    
-    // Get exact TTS duration for precise SRT scaling
-    const exactTtsDurationSec = ttsResult.durationMs / 1000;
-    const whisperEndTime = whisperSegments.length > 0 
-      ? Math.max(...whisperSegments.map(s => s.end)) 
-      : 0;
-    const durationRatio = whisperEndTime > 0 ? exactTtsDurationSec / whisperEndTime : 1.0;
-    console.log(`[Dubber 72%] Exact sync: TTS=${exactTtsDurationSec.toFixed(2)}s, Whisper=${whisperEndTime.toFixed(2)}s, Ratio=${durationRatio.toFixed(3)}`)
 
-    const videoDuration = await getVideoDuration(tempVideoPath);
-    const audioDuration = await getAudioDuration(tempTTSAudio);
-    console.log(`[Dubber 75%] Video: ${videoDuration.toFixed(1)}s, Audio: ${audioDuration.toFixed(1)}s`);
+    console.log(`[Dubber 55%] Generating TTS Segment by Segment for EXACT Sync... | RAM: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB used`);
 
-    // Use EXACT TTS duration for perfect sync
-    const speedRatio = videoDuration / exactTtsDurationSec;
-    const needSpeedAdjust = Math.abs(speedRatio - 1.0) > 0.02;
-    console.log(`[Dubber 80%] Combining video + audio + SRT (ratio: ${speedRatio.toFixed(3)})... | RAM: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB used`);
-
+    const concatLines: string[] = [];
+    const concatListPath = path.join(tempDir, `concat_list_${id}.txt`);
+    let currentAudioMs = 0;
     let srtContent = "";
+
+    // 1. Generate TTS segment-by-segment and build SRT with exact timestamps
+    for (let i = 0; i < translatedSegments.length; i++) {
+      const seg = translatedSegments[i];
+      if (!seg.text.trim()) continue;
+
+      console.log(`[Dubber 57%] Generating TTS segment ${i + 1}/${translatedSegments.length}... | RAM: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB used`);
+
+      let ttsResult;
+      if (options.character && options.character.trim()) {
+        ttsResult = await generateSpeechWithCharacter(seg.text, options.character as CharacterKey, options.speed, "16:9", options.pitch);
+      } else {
+        ttsResult = await generateSpeech(seg.text, options.voice, options.speed, options.pitch, "16:9");
+      }
+
+      const segAudioPath = path.join(tempDir, `tts_seg_${i}.mp3`);
+      await fs.writeFile(segAudioPath, ttsResult.audioBuffer);
+
+      // FFmpeg concat list entry
+      concatLines.push(`file '${segAudioPath}'`);
+
+      // Build SRT with EXACT timestamps from actual TTS audio
+      const startMs = currentAudioMs;
+      const endMs = currentAudioMs + ttsResult.durationMs;
+
+      srtContent += `${i + 1}\n`;
+      srtContent += `${msToSrtTime(startMs)} --> ${msToSrtTime(endMs)}\n`;
+      srtContent += `${seg.text}\n\n`;
+
+      currentAudioMs = endMs;
+    }
+
+    // 2. Save SRT file and concat list
     if (options.srtEnabled) {
-      // Build SRT with EXACT scaled timestamps using precise TTS duration ratio
-      srtContent = buildSrtFromTranslatedSegments(translatedSegments, durationRatio);
       const BOM = '\uFEFF';
       await fs.writeFile(tempSrtPath, BOM + srtContent, 'utf-8');
-      console.log(`[Dubber 78%] SRT timestamps scaled by ${durationRatio.toFixed(4)} for exact sync`);
+      console.log(`[Dubber 70%] SRT generated with EXACT timestamps for ${translatedSegments.length} segments`);
     }
+
+    // 3. Merge all TTS segments into continuous audio using FFmpeg concat demuxer
+    console.log(`[Dubber 72%] Merging all TTS segments into continuous audio... | RAM: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB used`);
+    await fs.writeFile(concatListPath, concatLines.join('\n'));
+
+    await new Promise<void>((resolve, reject) => {
+      ffmpeg()
+        .input(concatListPath)
+        .inputOptions(['-f', 'concat', '-safe', '0'])
+        .outputOptions(['-c', 'copy'])
+        .on('end', () => resolve())
+        .on('error', (err: Error) => reject(err))
+        .save(tempTTSAudio);
+    });
+
+    // 4. Calculate video speed adjustment to match exact audio duration
+    const totalAudioDurationSec = currentAudioMs / 1000;
+    const videoDuration = await getVideoDuration(tempVideoPath);
+
+    const speedRatio = videoDuration / totalAudioDurationSec;
+    const needSpeedAdjust = Math.abs(speedRatio - 1.0) > 0.02;
+
+    console.log(`[Dubber 80%] Video: ${videoDuration.toFixed(1)}s, Audio: ${totalAudioDurationSec.toFixed(1)}s (Speed Ratio: ${speedRatio.toFixed(3)}x) | RAM: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB used`)
 
     console.log(`[Dubber] Combining video + TTS audio${needSpeedAdjust ? ` (speed adjust: ${speedRatio.toFixed(2)}x)` : ""}${options.srtEnabled ? " + SRT" : ""}...`);
 
