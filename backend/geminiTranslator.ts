@@ -219,8 +219,7 @@ export async function geminiTranslate(
         console.log(`[Gemini] ❌ ${model.name} key ...${apiKey.slice(-4)}: ${err.message}`);
       }
 
-      // 200ms delay between requests
-      await delay(MIN_DELAY);
+
     }
   }
 
