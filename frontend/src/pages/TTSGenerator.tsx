@@ -478,7 +478,10 @@ export default function TTSGenerator() {
           setDubEditedText(res.myanmarText);
           utils.subscription.myStatus.invalidate();
         }
-      } catch (e: any) { showError(e?.message || "Dubbing failed"); }
+      } catch (e: any) { 
+        console.error("[DUB LINK ERROR]", e);
+        showError(e?.message || "Dubbing failed"); 
+      }
       return;
     }
 
@@ -493,7 +496,10 @@ export default function TTSGenerator() {
           setDubEditedText(res.myanmarText);
           utils.subscription.myStatus.invalidate();
         }
-      } catch (e: any) { showError(e?.message || "Dubbing failed"); }
+      } catch (e: any) { 
+        console.error("[DUB FILE ERROR]", e);
+        showError(e?.message || "Dubbing failed"); 
+      }
     };
     reader.readAsDataURL(dubVideoFile);
   };
