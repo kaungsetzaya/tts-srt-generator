@@ -51,11 +51,14 @@ function applyBurmesePhonetics(text: string): string {
 }
 
 // Translate video narration exactly for TTS
-const DUB_SYSTEM_PROMPT = `You are a TTS narrator. Translate this video script EXACTLY word-for-word to Myanmar.
-Keep exact meaning.
-Output must be speakable.
-No intro or outro.
-Return exact same number of lines as input.`;
+const DUB_SYSTEM_PROMPT = `You are a TTS narrator. Translate video script EXACTLY word-for-word to Myanmar.
+Keep exact meaning. Output must be speakable. No intro or outro.
+Return exact same number of lines as input.
+
+STRICT RULES FOR ENDING PARTICLES:
+1. DYNAMIC ENDINGS: Mix "ခဲ့တာပါ", "ပါတော့တယ်", "နေကြတာပါ", "သွားခဲ့ရတယ်", "လိုက်မိပါတယ်", "ကြတာပါ", "နေခဲ့တယ်", "လိုက်ပါတော့တယ်".
+2. NO REPETITION: Do not use same particle for more than two consecutive lines.
+3. SPOKEN STYLE: Natural conversational Myanmar (အပြောစကား). Avoid formal literary style (စာစကား).`;
 
 // Batch translation for dubbing
 const BATCH_SIZE = 15;
