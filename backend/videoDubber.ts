@@ -38,8 +38,8 @@ function getAudioDuration(filePath: string): Promise<number> {
   });
 }
 
-// ───── Whisper transcription ─────
-async function transcribeLocalWhisper(audioPath: string): Promise<{ text: string; srt: string }> {
+// ───── Whisper transcription with timestamps ─────
+async function transcribeLocalWhisper(audioPath: string): Promise<{ text: string; srt: string; segments: WhisperSegment[] }> {
   const outputDir = path.dirname(audioPath);
   const baseName = path.parse(audioPath).name;
 
@@ -47,11 +47,13 @@ async function transcribeLocalWhisper(audioPath: string): Promise<{ text: string
     audioPath,
     "--model", "base",
     "--output_dir", outputDir,
-    "--output_format", "all"
+    "--output_format", "all",
+    "--word_timestamps", "True"
   ]);
 
   const textPath = path.join(outputDir, `${baseName}.txt`);
   const srtPath = path.join(outputDir, `${baseName}.srt`);
+  const jsonPath = path.join(outputDir, `${baseName}.json`);
 
   if (!isPathWithinDir(textPath, outputDir) || !isPathWithinDir(srtPath, outputDir)) {
     throw new Error("Invalid file path detected.");
@@ -59,14 +61,84 @@ async function transcribeLocalWhisper(audioPath: string): Promise<{ text: string
 
   const text = await fs.readFile(textPath, 'utf-8');
   const srt = await fs.readFile(srtPath, 'utf-8');
+  
+  // Parse JSON for segment timestamps
+  let segments: WhisperSegment[] = [];
+  try {
+    if (existsSync(jsonPath)) {
+      const jsonData = JSON.parse(await fs.readFile(jsonPath, 'utf-8'));
+      segments = jsonData.segments?.map((seg: any) => ({
+        start: seg.start,
+        end: seg.end,
+        text: seg.text?.trim() || ""
+      })) || [];
+      await fs.unlink(jsonPath).catch(() => {});
+    }
+  } catch (e) {
+    console.log("[Dubber] Could not parse Whisper JSON, using SRT fallback");
+  }
 
   await fs.unlink(textPath).catch(() => {});
   await fs.unlink(srtPath).catch(() => {});
 
-  return { text, srt };
+  return { text, srt, segments };
 }
 
-// ───── Build SRT content from Myanmar text ─────
+interface WhisperSegment {
+  start: number;
+  end: number;
+  text: string;
+}
+
+// ───── Build SRT from actual Whisper timestamps ─────
+function buildMyanmarSRTFromSegments(segments: WhisperSegment[], myanmarSegments: string[], charsPerLine: number = 22): string {
+  function msToSrtTime(ms: number): string {
+    const h = Math.floor(ms / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    const mil = Math.round(ms % 1000);
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(mil).padStart(3, '0')}`;
+  }
+
+  const result: string[] = [];
+  let subtitleIndex = 1;
+
+  for (let i = 0; i < segments.length && i < myanmarSegments.length; i++) {
+    const seg = segments[i];
+    const myanmarText = myanmarSegments[i]?.trim();
+    
+    if (!myanmarText) continue;
+    
+    // Split long lines
+    const words = myanmarText.split(/\s+/);
+    const lines: string[] = [];
+    let currentLine = "";
+    
+    for (const word of words) {
+      if ((currentLine + " " + word).trim().length <= charsPerLine) {
+        currentLine = (currentLine + " " + word).trim();
+      } else {
+        if (currentLine) lines.push(currentLine);
+        currentLine = word;
+      }
+    }
+    if (currentLine) lines.push(currentLine);
+    
+    // Use original timing
+    const startMs = Math.round(seg.start * 1000);
+    const endMs = Math.round(seg.end * 1000);
+    
+    result.push(`${subtitleIndex}`);
+    result.push(`${msToSrtTime(startMs)} --> ${msToSrtTime(endMs)}`);
+    result.push(lines.join("\n"));
+    result.push("");
+    subtitleIndex++;
+  }
+
+  return result.join("\n");
+}
+
+// ───── Build SRT content from Myanmar text (legacy, estimate timing) ─────
 function buildMyanmarSRT(text: string, durationMs: number, charsPerLine: number = 20): string {
   const segmenter = new Intl.Segmenter("my", { granularity: "grapheme" });
   function graphemeLen(s: string): number {
@@ -174,12 +246,36 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
     });
 
     console.log(`[Dubber] Transcribing with Whisper...`);
-    const { text: englishText } = await transcribeLocalWhisper(tempAudioExtract);
+    const whisperResult = await transcribeLocalWhisper(tempAudioExtract);
+    const englishText = whisperResult.text;
+    const whisperSegments = whisperResult.segments;
     if (!englishText?.trim()) throw new Error("Whisper could not detect any speech.");
 
     console.log(`[Dubber] Translating to Myanmar...`);
     const sanitizedText = sanitizeForAI(englishText);
-    const { myanmar: myanmarText } = await geminiTranslate(sanitizedText, options.userApiKey);
+    
+    // Translate segments with timestamps if available
+    let myanmarText: string;
+    let myanmarSegments: string[] = [];
+    
+    if (whisperSegments && whisperSegments.length > 0) {
+      // Translate each segment separately to preserve timing
+      console.log(`[Dubber] Translating ${whisperSegments.length} segments...`);
+      for (let i = 0; i < whisperSegments.length; i++) {
+        const segText = whisperSegments[i].text.trim();
+        if (segText) {
+          const result = await geminiTranslate(sanitizeForAI(segText), options.userApiKey);
+          myanmarSegments.push(result.myanmar);
+        } else {
+          myanmarSegments.push("");
+        }
+      }
+      myanmarText = myanmarSegments.join(" ");
+    } else {
+      // Fallback to full text translation
+      const result = await geminiTranslate(sanitizedText, options.userApiKey);
+      myanmarText = result.myanmar;
+    }
 
     console.log(`[Dubber] Generating TTS (voice=${options.character || options.voice}, speed=${options.speed}, pitch=${options.pitch})...`);
     let ttsResult;
@@ -199,7 +295,12 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
 
     let srtContent = "";
     if (options.srtEnabled) {
-      srtContent = buildMyanmarSRT(myanmarText, ttsResult.durationMs, 20);
+      // Use actual Whisper timestamps if available
+      if (whisperSegments && whisperSegments.length > 0 && myanmarSegments.length > 0) {
+        srtContent = buildMyanmarSRTFromSegments(whisperSegments, myanmarSegments, 22);
+      } else {
+        srtContent = buildMyanmarSRT(myanmarText, ttsResult.durationMs, 20);
+      }
       const BOM = '\uFEFF';
       await fs.writeFile(tempSrtPath, BOM + srtContent, 'utf-8');
     }
