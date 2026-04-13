@@ -95,16 +95,13 @@ async function tryTranslateWithAllKeys(
       const data = await res.json() as any;
 
       if (res.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
-        const myanmar = data.candidates[0].content.parts[0].text;
-        const keyType = (userApiKey && userApiKey.trim() === key) ? "User Key" : "System Key";
-        console.log(`[Gemini] ✅ Used ${modelName} with ${keyType} ending in ...${key.slice(-4)}`);
-        return myanmar;
+        return data.candidates[0].content.parts[0].text;
       } else {
-        const errorMsg = data?.error?.message || res.status;
-        console.log(`[Gemini] ${modelName} key ...${key.slice(-4)} failed (${errorMsg})`);
+        const errorMsg = data.error?.message || "Unknown error";
+        console.log(`[Gemini] ${modelName} key ...${key.slice(-4)} failed: ${errorMsg}`);
       }
     } catch (e: any) {
-      console.log(`[Gemini] ${modelName} key ...${key.slice(-4)} error: ${e.message}`);
+      console.log(`[Gemini] ${modelName} error: ${e.message}`);
     }
   }
   return null;
@@ -115,25 +112,19 @@ export async function geminiTranslate(
   userApiKey?: string,
   fontSize?: number
 ): Promise<{ myanmar: string; modelUsed: string }> {
-  const systemKeys = getAllSystemKeys();
-  if (systemKeys.length === 0 && !userApiKey) {
-    throw new Error("GEMINI_API_KEY is not set and no user key was provided.");
-  }
-
-  // Try each model with ALL keys before moving to next model
+  // Try each model in the order defined in MODELS (Highest RPD first)
   for (const model of MODELS) {
     const result = await tryTranslateWithAllKeys(text, model.id, model.name, userApiKey, fontSize);
     if (result) {
       await incrementQuota(model.id);
       return { myanmar: result, modelUsed: model.name };
     }
-    console.log(`[Gemini] All keys exhausted for ${model.name}, trying next model...`);
   }
 
   throw new Error("All Gemini models and keys exhausted. Add more API keys or try again tomorrow.");
 }
 
-export async function getQuotaStatus(): Promise<Array<{ model: string; used: number; limit: number; available: number }>> {
+export async function getQuotaStatus(): Promise<any> {
   const quota = await loadQuota();
   const today = new Date().toISOString().split("T")[0];
   return MODELS.map(m => {
