@@ -3,41 +3,40 @@ import path from "path";
 
 const QUOTA_FILE = path.join(process.cwd(), "tmp_video", "gemini_quota.json");
 
-// ✅ Models with correct IDs and RPD limits
+// ✅ Models with correct IDs and limits
 const MODELS = [
-  { id: "models/gemini-3.1-flash-lite-preview", name: "Gemini 3.1 Flash Lite", rpd: 500 },
-  { id: "models/gemini-3-flash-preview", name: "Gemini 3 Flash", rpd: 20 },
-  { id: "models/gemini-2.5-flash-lite", name: "Gemini 2.5 Flash Lite", rpd: 20 },
-  { id: "models/gemini-2.5-flash", name: "Gemini 2.5 Flash", rpd: 20 }
+  { id: "models/gemini-3.1-flash-lite-preview", name: "Gemini 3.1 Flash Lite", rpd: 500, rpm: 15, tpm: 250000 },
+  { id: "models/gemini-3-flash-preview", name: "Gemini 3 Flash", rpd: 20, rpm: 5, tpm: 250000 },
+  { id: "models/gemini-2.5-flash-lite", name: "Gemini 2.5 Flash Lite", rpd: 20, rpm: 10, tpm: 250000 },
+  { id: "models/gemini-2.5-flash", name: "Gemini 2.5 Flash", rpd: 20, rpm: 5, tpm: 250000 }
 ];
 
 interface QuotaData {
   [modelId: string]: {
     date: string;
-    count: number;
+    dailyCount: number;
+    rpmCount: number;
+    rpmMinute: number;
+    lastRequest: number;
   };
 }
 
-// ✅ Use Sync operations for Quota to avoid race conditions
-function incrementQuotaSync(modelId: string): void {
-  const today = new Date().toISOString().split("T")[0];
-  let quota: QuotaData = {};
+// Rate limiting state
+let requestHistory: Array<{ key: string; timestamp: number }> = [];
+const RPM_WINDOW_MS = 60000; // 1 minute
+const MIN_REQUEST_INTERVAL_MS = 200; // Minimum 200ms between requests
 
+function getQuotaFile(): QuotaData {
   try {
     if (fs.existsSync(QUOTA_FILE)) {
-      const data = fs.readFileSync(QUOTA_FILE, "utf8");
-      quota = JSON.parse(data);
+      const data = fs.readFileSync(QUOTA_FILE, 'utf8');
+      return JSON.parse(data);
     }
-  } catch (e) {
-    quota = {};
-  }
+  } catch (e) {}
+  return {};
+}
 
-  if (!quota[modelId] || quota[modelId].date !== today) {
-    quota[modelId] = { date: today, count: 1 };
-  } else {
-    quota[modelId].count++;
-  }
-
+function saveQuotaFile(quota: QuotaData): void {
   try {
     fs.mkdirSync(path.dirname(QUOTA_FILE), { recursive: true });
     fs.writeFileSync(QUOTA_FILE, JSON.stringify(quota, null, 2));
@@ -46,17 +45,60 @@ function incrementQuotaSync(modelId: string): void {
   }
 }
 
-function getQuotaCount(modelId: string): number {
-  const today = new Date().toISOString().split("T")[0];
-  try {
-    if (fs.existsSync(QUOTA_FILE)) {
-      const data = fs.readFileSync(QUOTA_FILE, "utf8");
-      const quota: QuotaData = JSON.parse(data);
-      const usage = quota[modelId];
-      return (usage && usage.date === today) ? usage.count : 0;
+function cleanOldRequests(): void {
+  const now = Date.now();
+  requestHistory = requestHistory.filter(r => now - r.timestamp < RPM_WINDOW_MS);
+}
+
+function getRecentRequestCount(key: string): number {
+  const now = Date.now();
+  return requestHistory.filter(r => r.key === key && now - r.timestamp < RPM_WINDOW_MS).length;
+}
+
+function recordRequest(key: string): void {
+  cleanOldRequests();
+  requestHistory.push({ key, timestamp: Date.now() });
+}
+
+function canMakeRequest(key: string, rpmLimit: number): boolean {
+  return getRecentRequestCount(key) < rpmLimit;
+}
+
+function waitForRateLimit(key: string, rpmLimit: number): Promise<void> {
+  return new Promise((resolve) => {
+    const count = getRecentRequestCount(key);
+    if (count >= rpmLimit) {
+      // Find oldest request and wait until it expires
+      const oldest = requestHistory.filter(r => r.key === key).sort((a, b) => a.timestamp - b.timestamp)[0];
+      if (oldest) {
+        const waitTime = (oldest.timestamp + RPM_WINDOW_MS) - Date.now() + 100;
+        console.log(`[Gemini] RPM limit reached for key...${key.slice(-4)}, waiting ${Math.ceil(waitTime/1000)}s`);
+        setTimeout(resolve, waitTime);
+      } else {
+        resolve();
+      }
+    } else {
+      resolve();
     }
-  } catch (e) {}
-  return 0;
+  });
+}
+
+function incrementQuotaSync(modelId: string): void {
+  const today = new Date().toISOString().split("T")[0];
+  const quota = getQuotaFile();
+  
+  if (!quota[modelId] || quota[modelId].date !== today) {
+    quota[modelId] = { date: today, dailyCount: 0, rpmCount: 0, rpmMinute: Date.now(), lastRequest: 0 };
+  }
+  quota[modelId].dailyCount++;
+  saveQuotaFile(quota);
+}
+
+function getDailyCount(modelId: string): number {
+  const today = new Date().toISOString().split("T")[0];
+  const quota = getQuotaFile();
+  const usage = quota[modelId];
+  return (usage && usage.date === today) ? usage.dailyCount : 0;
 }
 
 function getAllSystemKeys(): string[] {
@@ -64,7 +106,7 @@ function getAllSystemKeys(): string[] {
   return keysStr.split(",").map(k => k.trim()).filter(k => k.length > 0);
 }
 
-// Phonetic Dictionary for better Myanmar translation
+// Phonetic Dictionary
 export const phoneticDictionary: Record<string, string> = {
   "CEO": "စီအီးအို",
   "FBI": "အက်ဖ်ဘီအိုင်",
@@ -116,39 +158,55 @@ function buildTranslatePrompt(fontSize?: number): string {
   const charsPerLine = fontSize ? Math.max(12, Math.round(60 - (fontSize - 12) * 1.2)) : 22;
   return `You are a professional Myanmar Voiceover Artist and Video Translator.
 
-Translate the provided text into an engaging, natural Myanmar narration style suitable for YouTube shorts, fascinating facts (like Zack D. Films), and movie recaps.
+Translate the provided text into an engaging, natural Myanmar narration style suitable for YouTube shorts, fascinating facts, and movie recaps.
 
 ABSOLUTE STRICT RULES:
-1. NARRATION STYLE: Use engaging storytelling and explainer Burmese. It should sound like a fascinating documentary or engaging recap. STRICTLY AVOID overly formal literary style (စာစကား).
-2. PRONOUNS: You MAY use "ကျွန်တော်" or "ကျွန်မ" ONLY IF the original script specifically contains first-person perspective.
-3. PROHIBITED PARTICLES (CRITICAL): NEVER use casual conversational or gendered ending particles. "ဗျ", "ဗျာ", "ရှင်", "ရှင့်", "လေ", "နော်", and "ကွ" are STRICTLY PROHIBITED.
-4. ALLOWED NARRATIVE PARTICLES: End sentences naturally using engaging narration particles like "ပါပဲ", "တော့တယ်", "ပါတယ်", "ခဲ့တယ်", "ခဲ့ပါတယ်", "ဖြစ်ပါတယ်", "သွားပါတယ်".
-5. TRANSLITERATION FOR SPECIFIC TERMS: Keep pop-culture, scientific, or specific English terms in Myanmar script pronunciation. Example: "Zombies" → "ဇွန်ဘီး". ZERO English letters (a-z) allowed in final output.
-6. FORMAT: Break translation into short, readable subtitle lines suitable for fast-paced videos. Target ~${charsPerLine} Myanmar graphemes per subtitle line.`;
+1. NARRATION STYLE: Use engaging storytelling. AVOID overly formal literary style.
+2. PRONOUNS: Use "ကျွန်တော်" or "ကျွန်မ" ONLY IF first-person.
+3. PROHIBITED PARTICLES: Never use "ဗျ", "ဗျာ", "ရှင်", "ရှင့်", "လေ", "နော်", "ကွ".
+4. ALLOWED PARTICLES: "ပါပဲ", "တော့တယ်", "ပါတယ်", "ခဲ့တယ်", "ခဲ့ပါတယ်", "ဖြစ်ပါတယ်", "သွားပါတယ်".
+5. ZERO English letters (a-z) in output.
+6. Format: Short subtitle lines (~${charsPerLine} Myanmar graphemes).`;
 }
 
-export async function geminiTranslate(text: string, userApiKey?: string, fontSize?: number): Promise<{ myanmar: string; modelUsed: string }> {
+async function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+export async function geminiTranslate(
+  text: string, 
+  userApiKey?: string, 
+  fontSize?: number
+): Promise<{ myanmar: string; modelUsed: string }> {
   const systemKeys = getAllSystemKeys();
-  const keysToTry = (userApiKey && userApiKey.trim() !== "") 
+  
+  // Build key priority: user key first, then system keys
+  const allKeys = (userApiKey?.trim()) 
     ? [userApiKey.trim(), ...systemKeys] 
     : systemKeys;
 
-  if (keysToTry.length === 0) {
-    throw new Error("GEMINI_API_KEY is not set in .env and no user key was provided.");
+  if (allKeys.length === 0) {
+    throw new Error("GEMINI_API_KEY not set and no user key provided.");
   }
 
   for (const model of MODELS) {
-    const todayCount = getQuotaCount(model.id);
-
-    if (todayCount >= model.rpd) {
-      console.log(`[Gemini] Model ${model.name} quota exhausted (${todayCount}/${model.rpd}). Skipping...`);
+    const dailyCount = getDailyCount(model.id);
+    if (dailyCount >= model.rpd) {
+      console.log(`[Gemini] ${model.name} daily limit reached (${dailyCount}/${model.rpd}). Skip.`);
       continue;
     }
 
-    for (const apiKey of keysToTry) {
+    for (const apiKey of allKeys) {
+      // Check RPM limit
+      if (!canMakeRequest(apiKey, model.rpm)) {
+        await waitForRateLimit(apiKey, model.rpm);
+      }
+
       const url = `https://generativelanguage.googleapis.com/v1beta/${model.id}:generateContent?key=${apiKey}`;
       
       try {
+        recordRequest(apiKey);
+        
         const res = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -156,32 +214,37 @@ export async function geminiTranslate(text: string, userApiKey?: string, fontSiz
             contents: [{ parts: [{ text: `${buildTranslatePrompt(fontSize)}\n${text}` }] }]
           })
         });
+        
         const data = await res.json();
 
-        if (res.ok) {
-          const translatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (translatedText) {
-            // Apply phonetic corrections
-            const myanmarText = applyBurmesePhonetics(translatedText.trim());
-            incrementQuotaSync(model.id);
-            return { myanmar: myanmarText, modelUsed: model.name };
-          }
+        if (res.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
+          const translatedText = data.candidates[0].content.parts[0].text;
+          const myanmarText = applyBurmesePhonetics(translatedText.trim());
+          incrementQuotaSync(model.id);
+          
+          const keyType = apiKey === userApiKey?.trim() ? "User Key" : "System Key";
+          console.log(`[Gemini] ✅ ${model.name} (${keyType} ...${apiKey.slice(-4)})`);
+          
+          return { myanmar: myanmarText, modelUsed: model.name };
         } else {
-          const errMsg = data.error?.message || "Unknown error";
-          console.error(`[Gemini] ${model.name} failed with ${res.status}: ${errMsg}`);
+          const errMsg = data.error?.message || `HTTP ${res.status}`;
+          console.log(`[Gemini] ❌ ${model.name} key ...${apiKey.slice(-4)}: ${errMsg}`);
         }
-      } catch (err) {
-        console.error(`[Gemini] Network error for ${model.name}:`, err);
+      } catch (err: any) {
+        console.log(`[Gemini] ❌ ${model.name} key ...${apiKey.slice(-4)}: ${err.message}`);
       }
+
+      // Small delay between requests
+      await sleep(MIN_REQUEST_INTERVAL_MS);
     }
   }
 
-  throw new Error("All Gemini models and keys exhausted. Add more API keys or try again tomorrow.");
+  throw new Error("All Gemini models and keys exhausted.");
 }
 
 export async function getQuotaStatus(): Promise<any> {
   return MODELS.map(m => {
-    const used = getQuotaCount(m.id);
-    return { model: m.name, used, limit: m.rpd, available: m.rpd - used };
+    const used = getDailyCount(m.id);
+    return { model: m.name, used, limit: m.rpd, rpm: m.rpm, available: m.rpd - used };
   });
 }
