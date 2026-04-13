@@ -91,25 +91,26 @@ async function getDailyUsage(userId: string) {
   if (!db) return { tts: 0, characterUse: 0, aiVideo: 0, videoTranslate: 0 };
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const todayGens = await db.select().from(ttsConversions)
-    .where(and(eq(ttsConversions.userId, userId), gte(ttsConversions.createdAt, todayStart)));
-  let tts = 0, characterUse = 0, aiVideo = 0, videoTranslate = 0;
-  for (const g of todayGens) {
-    if (g.status === "fail") continue;
-    const feat = g.feature ?? "tts";
-    if (feat === "tts") {
-      if (g.character && g.character.trim() !== "") {
-        characterUse++;
-      } else {
-        tts++;
-      }
-    } else if (feat === "dub_file" || feat === "dub_link") {
-      aiVideo++;
-    } else if (feat === "translate_file" || feat === "translate_link") {
-      videoTranslate++;
-    }
-  }
-  return { tts, characterUse, aiVideo, videoTranslate };
+  
+  // Use SQL count instead of fetching all records
+  const [dailyTts] = await db.select({ count: sql<number>`count(*)` }).from(ttsConversions)
+    .where(and(eq(ttsConversions.userId, userId), eq(ttsConversions.status, "success"), eq(ttsConversions.feature, "tts"), isNull(ttsConversions.character), gte(ttsConversions.createdAt, todayStart)));
+  
+  const [dailyChar] = await db.select({ count: sql<number>`count(*)` }).from(ttsConversions)
+    .where(and(eq(ttsConversions.userId, userId), eq(ttsConversions.status, "success"), eq(ttsConversions.feature, "tts"), isNotNull(ttsConversions.character), gte(ttsConversions.createdAt, todayStart)));
+  
+  const [dailyDub] = await db.select({ count: sql<number>`count(*)` }).from(ttsConversions)
+    .where(and(eq(ttsConversions.userId, userId), eq(ttsConversions.status, "success"), or(eq(ttsConversions.feature, "dub_file"), eq(ttsConversions.feature, "dub_link")), gte(ttsConversions.createdAt, todayStart)));
+  
+  const [dailyTranslate] = await db.select({ count: sql<number>`count(*)` }).from(ttsConversions)
+    .where(and(eq(ttsConversions.userId, userId), eq(ttsConversions.status, "success"), or(eq(ttsConversions.feature, "translate_file"), eq(ttsConversions.feature, "translate_link")), gte(ttsConversions.createdAt, todayStart)));
+  
+  return {
+    tts: dailyTts?.count ?? 0,
+    characterUse: dailyChar?.count ?? 0,
+    aiVideo: dailyDub?.count ?? 0,
+    videoTranslate: dailyTranslate?.count ?? 0
+  };
 }
 
 export const appRouter = router({

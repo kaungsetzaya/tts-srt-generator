@@ -66,21 +66,28 @@ pnpm build
 echo ""
 echo "[10/10] Setting up environment and database..."
 
+# Generate random passwords
+DB_PASSWORD=$(openssl rand -hex 12)
+JWT_SECRET=$(openssl rand -hex 32)
+
+echo "Generated DB Password: (first 8 chars) ${DB_PASSWORD:0:8}..."
+echo "Generated JWT Secret: (first 8 chars) ${JWT_SECRET:0:8}..."
+
 # Create .env.production file
-cat > .env.production << 'ENVFILE'
-DATABASE_URL=mysql://tts_user:tts_password_123@localhost:3306/tts_generator
+cat > .env.production << ENVFILE
+DATABASE_URL=mysql://tts_user:${DB_PASSWORD}@localhost:3306/tts_generator
 NODE_ENV=production
 PORT=3000
-JWT_SECRET=your_random_jwt_secret_key_here_change_this
+JWT_SECRET=${JWT_SECRET}
 VPS_TTS_API_URL=http://217.76.48.32:5000/generate
 VPS_TTS_AUDIO_BASE_URL=http://217.76.48.32:5000/audio/
 VPS_TTS_HEALTH_CHECK_URL=http://217.76.48.32:5000/health
 ENVFILE
 
 # Create MySQL database
-mysql -u root << 'SQLFILE'
+mysql -u root << SQLFILE
 CREATE DATABASE IF NOT EXISTS tts_generator;
-CREATE USER IF NOT EXISTS 'tts_user'@'localhost' IDENTIFIED BY 'tts_password_123';
+CREATE USER IF NOT EXISTS 'tts_user'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';
 GRANT ALL PRIVILEGES ON tts_generator.* TO 'tts_user'@'localhost';
 FLUSH PRIVILEGES;
 SQLFILE

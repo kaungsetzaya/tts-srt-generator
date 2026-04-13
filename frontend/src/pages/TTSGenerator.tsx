@@ -5,10 +5,10 @@ import { Slider } from "@/components/ui/slider";
 import { ChevronUp, Loader2, Download, Volume2, LogOut, Crown, AlertCircle, Mic, FileVideo, Settings, Sparkles, Upload, Sun, Moon, Copy, Check, Link as LinkIcon, Wand2, Clock as ClockIcon, Info, ChevronDown, BookOpen, History as HistoryIcon, Zap, ExternalLink, Star } from "lucide-react";
 import { useLocation } from "wouter";
 import { TTSGeneratorLayout } from "@/components/TTSGeneratorLayout";
+import { useTheme } from "@/contexts/ThemeContext";
 
 type MainTab = "tts" | "video" | "dubbing";
 type SecondaryTab = "history" | "plan" | "guide" | "settings" | null;
-type Theme = "dark" | "light";
 type Lang = "mm" | "en";
 
 // ─── Helper: Convert YouTube URL to embed URL ─────────────
@@ -158,7 +158,7 @@ export default function TTSGenerator() {
   const [mainTab, setMainTab] = useState<MainTab>("tts");
   const [secondaryTab, setSecondaryTab] = useState<SecondaryTab>(null);
   const [menuOpen, setMenuOpen] = useState(true);
-  const [theme, setTheme] = useState<Theme>("dark");
+  const { theme, toggleTheme } = useTheme();
   const [lang, setLang] = useState<Lang>("mm");
   const t = T[lang];
 
@@ -703,7 +703,7 @@ export default function TTSGenerator() {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => setTheme(isDark ? 'light' : 'dark')}
+              onClick={toggleTheme}
               className="p-1.5 rounded-lg transition-all flex items-center justify-center"
               style={{
                 border: `1px solid ${isDark ? 'rgba(192,111,48,0.35)' : 'rgba(192,111,48,0.15)'}`,
