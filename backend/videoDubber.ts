@@ -7,7 +7,8 @@ import { randomUUID } from 'crypto';
 import ffmpeg from 'fluent-ffmpeg';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { geminiTranslate, geminiTranslateBatch } from "./geminiTranslator";
+import { geminiTranslate } from "./geminiTranslator";
+import { geminiTranslateForDub } from "./geminiDubTranslator";
 import { downloadVideo } from "./_core/multiDownloader";
 import { generateSpeech, generateSpeechWithCharacter, type VoiceKey, type CharacterKey, CHARACTER_VOICES } from "./tts";
 import { isAllowedVideoUrl, isPathWithinDir, sanitizeForAI } from "./_core/security";
@@ -283,7 +284,7 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
     console.log(`[Dubber 30%] Transcribed ${whisperSegments.length} segments`);
 
     console.log(`[Dubber 35%] Translating ${whisperSegments.length} segments... | RAM: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB used`);
-    const { translated: translatedSegments } = await geminiTranslateBatch(whisperSegments, options.userApiKey);
+    const { translated: translatedSegments } = await geminiTranslateForDub(whisperSegments, options.userApiKey);
     console.log(`[Dubber 50%] Translation complete`);
     
     // Verify translation worked - check if we got Burmese text
