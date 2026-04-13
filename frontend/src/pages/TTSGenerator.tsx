@@ -224,7 +224,7 @@ export default function TTSGenerator() {
 
   // Dubbing SRT overlay settings
   const [srtEnabled, setSrtEnabled] = useState(true);
-  const [srtFontSize, setSrtFontSize] = useState(10);
+  const [srtFontSize, setSrtFontSize] = useState(12);
   const [srtColor, setSrtColor] = useState("#ffffff");
   const [srtDropShadow, setSrtDropShadow] = useState(true);
   const [srtBlurBg, setSrtBlurBg] = useState(true);
@@ -1257,7 +1257,7 @@ export default function TTSGenerator() {
                         <div>
                           <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: subtextColor }}>{lang === "mm" ? "စာအရွယ်အစား" : "Text Size"}</p>
                           <div className="flex items-center gap-3">
-                            <Slider value={[srtFontSize]} onValueChange={v => setSrtFontSize(v[0])} min={8} max={48} step={1} className="flex-1" />
+                            <Slider value={[srtFontSize]} onValueChange={v => setSrtFontSize(v[0])} min={12} max={48} step={1} className="flex-1" />
                             <span className="text-sm font-black min-w-[40px] text-right" style={{ color: accent }}>{srtFontSize}px</span>
                           </div>
                         </div>
