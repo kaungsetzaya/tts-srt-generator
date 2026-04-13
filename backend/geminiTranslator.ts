@@ -64,26 +64,40 @@ function getAllSystemKeys(): string[] {
   return keysStr.split(",").map(k => k.trim()).filter(k => k.length > 0);
 }
 
+// Phonetic Dictionary for better Myanmar translation
+export const phoneticDictionary: Record<string, string> = {
+  "CEO": "စီအီးအို",
+  "FBI": "အက်ဖ်ဘီအိုင်",
+  "Uric acid": "ယူရစ် အက်ဆစ်",
+  "Recap": "ရီကပ်ပ်",
+  "Zombies": "ဇွန်ဘီး",
+  "Zombie": "ဇွန်ဘီး",
+};
+
+function applyBurmesePhonetics(text: string): string {
+  let processedText = text;
+  const sortedKeys = Object.keys(phoneticDictionary).sort((a, b) => b.length - a.length);
+  for (const key of sortedKeys) {
+    const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(escapedKey, 'g');
+    processedText = processedText.replace(regex, phoneticDictionary[key]);
+  }
+  return processedText;
+}
+
 function buildTranslatePrompt(fontSize?: number): string {
   const charsPerLine = fontSize ? Math.max(12, Math.round(60 - (fontSize - 12) * 1.2)) : 22;
-  return `You are a professional Myanmar YouTube movie recap narrator.
+  return `You are a professional Myanmar Voiceover Artist and Video Translator.
 
-Translate the following text (any language) into Myanmar movie recap narration style.
+Translate the provided text into an engaging, natural Myanmar narration style suitable for YouTube shorts, fascinating facts (like Zack D. Films), and movie recaps.
 
-ABSOLUTE STRICT RULES - VIOLATION IS UNACCEPTABLE:
-1. ZERO English words allowed. Not a single English letter (a-z) in the output.
-2. ALL person names MUST be phonetically transliterated into Myanmar script.
-3. ALL technical/English terms MUST be Myanmar.
-4. NO "..." anywhere in the text
-5. NO quotation marks
-6. Sentence endings: ခဲ့ပါတယ်၊ လိုက်ပါတယ်၊ သွားပါတယ်၊ မှာပဲဖြစ်ပါတယ်၊ ပါတော့တယ်
-7. Use connectors: တဲ့အခါမှာတော့၊ ရင်းနဲ့၊ ပြီးတော့
-8. Cinematic, engaging narration tone
-9. Keep translation concise for video timing
-10. Target ~${charsPerLine} Myanmar graphemes per subtitle line
-11. Return ONLY pure Myanmar narration text - no labels, no "Translation:", no markdown
-
-Text:`;
+ABSOLUTE STRICT RULES:
+1. NARRATION STYLE: Use engaging storytelling and explainer Burmese. It should sound like a fascinating documentary or engaging recap. STRICTLY AVOID overly formal literary style (စာစကား).
+2. PRONOUNS: You MAY use "ကျွန်တော်" or "ကျွန်မ" ONLY IF the original script specifically contains first-person perspective.
+3. PROHIBITED PARTICLES (CRITICAL): NEVER use casual conversational or gendered ending particles. "ဗျ", "ဗျာ", "ရှင်", "ရှင့်", "လေ", "နော်", and "ကွ" are STRICTLY PROHIBITED.
+4. ALLOWED NARRATIVE PARTICLES: End sentences naturally using engaging narration particles like "ပါပဲ", "တော့တယ်", "ပါတယ်", "ခဲ့တယ်", "ခဲ့ပါတယ်", "ဖြစ်ပါတယ်", "သွားပါတယ်".
+5. TRANSLITERATION FOR SPECIFIC TERMS: Keep pop-culture, scientific, or specific English terms in Myanmar script pronunciation. Example: "Zombies" → "ဇွန်ဘီး". ZERO English letters (a-z) allowed in final output.
+6. FORMAT: Break translation into short, readable subtitle lines suitable for fast-paced videos. Target ~${charsPerLine} Myanmar graphemes per subtitle line.`;
 }
 
 export async function geminiTranslate(text: string, userApiKey?: string, fontSize?: number): Promise<{ myanmar: string; modelUsed: string }> {
@@ -105,7 +119,6 @@ export async function geminiTranslate(text: string, userApiKey?: string, fontSiz
     }
 
     for (const apiKey of keysToTry) {
-      // ✅ FIXED: Removed double /models/ from the URL
       const url = `https://generativelanguage.googleapis.com/v1beta/${model.id}:generateContent?key=${apiKey}`;
       
       try {
@@ -121,8 +134,10 @@ export async function geminiTranslate(text: string, userApiKey?: string, fontSiz
         if (res.ok) {
           const translatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
           if (translatedText) {
+            // Apply phonetic corrections
+            const myanmarText = applyBurmesePhonetics(translatedText.trim());
             incrementQuotaSync(model.id);
-            return { myanmar: translatedText.trim(), modelUsed: model.name };
+            return { myanmar: myanmarText, modelUsed: model.name };
           }
         } else {
           const errMsg = data.error?.message || "Unknown error";
