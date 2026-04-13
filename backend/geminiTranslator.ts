@@ -56,15 +56,15 @@ function applyBurmesePhonetics(text: string): string {
 async function translateBatch(lines: string[], apiKey: string, modelId: string): Promise<string[] | null> {
   const url = `https://generativelanguage.googleapis.com/v1beta/${modelId}:generateContent?key=${apiKey}`;
   
-  const systemPrompt = `You are a professional Myanmar Voiceover Artist and Video Translator. 
-Translate this JSON array of English strings into an engaging, natural Myanmar narration style suitable for YouTube shorts, fascinating facts (like Zack D. Films), and movie recaps.
+  const systemPrompt = `You are a professional Myanmar Movie Recap Narrator. Translate English text into thrilling, emotional, vivid Myanmar storytelling.
 
-ABSOLUTE STRICT RULES:
-1. TONE (အပြောစကား): Use an engaging, fast-paced storytelling style. STRICTLY AVOID overly formal literary style (စာစကား).
-2. ALLOWED PARTICLES: End sentences naturally with narrative particles ("ပါပဲ", "တော့တယ်", "ပါတယ်", "ခဲ့တယ်", "ဖြစ်ပါတယ်", "သွားပါတယ်").
-3. PROHIBITED PARTICLES: NEVER use casual conversational or gendered ending particles ("ဗျ", "ဗျာ", "ရှင်", "ရှင့်", "လေ", "နော်", "ကွ").
-4. TRANSLITERATION: Keep specific terms like "Zombies" as "ဇွန်ဘီး", "CEO" as "စီအီးအို", "FBI" as "အက်ဖ်ဘီအိုင်". Do not translate them.
-5. CRITICAL JSON RULE: Return a pure JSON array of strings of the EXACT SAME LENGTH as the input.`;
+STRICT RULES:
+1. STORYTELLING FLOW: Describe scenes vividly. Use descriptive verbs and emotional phrases. NO word-for-word.
+2. DYNAMIC ENDINGS: Mix these endings to keep energy high: "ခဲ့တယ်", "ပါတော့တယ်", "သွားကြတယ်", "နေတာပါ", "လိုက်မိတယ်", "ဖြစ်သွားခဲ့ရတယ်", "ကြတယ်", "ခဲ့ရတယ်", "သွားခဲ့တာပါ". AVOID overusing "ပါတယ်".
+3. MULTI-SUBJECT: Use "ကြတယ်" or "ကြပါတယ်" for crowd actions.
+4. SPOKEN STYLE: Use "အဲ့ဒီနောက်", "မရှိတော့ဘူး" instead of formal versions.
+5. NO GENDERED PARTICLES: NEVER "ဗျ", "ရှင်", "လေ", "နော်".
+6. JSON: Return pure JSON array, EXACT SAME LENGTH as input. NO intro/outro.`;
 
   try {
     const res = await fetch(url, {
