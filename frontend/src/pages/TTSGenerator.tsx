@@ -1056,7 +1056,7 @@ export default function TTSGenerator() {
                         )}
                       </div>
                     ) : dubPreviewUrl.startsWith("fallback:") || isExternalVideoUrl(dubPreviewUrl) ? (
-                      <div className="w-full rounded-xl overflow-hidden" style={{ position: "relative", width: dubPreviewUrl.includes("/shorts/") ? "169px" : "100%", aspectRatio: dubPreviewUrl.includes("/shorts/") ? "9/16" : "16/9", margin: dubPreviewUrl.includes("/shorts/") ? "0 auto" : "0", background: "var(--background)", borderRadius: "12px", overflow: "hidden" }}>
+                      <div className="rounded-xl overflow-hidden" style={{ position: "relative", width: aspectRatio === "9:16" ? "180px" : "100%", aspectRatio: aspectRatio === "9:16" ? "9/16" : "16/9", margin: aspectRatio === "9:16" ? "0 auto" : "0", background: "var(--background)", borderRadius: "12px", overflow: "hidden" }}>
                         {(() => {
                           const ytMatch = dubPreviewUrl.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([\w-]{11})/);
                           const videoId = ytMatch ? ytMatch[1] : null;
@@ -1401,13 +1401,15 @@ export default function TTSGenerator() {
                 <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
                   <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{lang === "mm" ? "AI ဖန်တီးပြီး ဗီဒီယို" : "AI Generated Video"}</div>
                   <div className="flex justify-center mt-2">
-                    <video
-                      ref={dubResultVideoRef}
-                      controls
-                      className="w-full rounded-xl"
-                      style={{ maxHeight: "480px", background: "var(--background)" }}
-                      src={(() => { try { const b = atob(dubResult.videoBase64); const arr = new Uint8Array(b.length); for(let i=0;i<b.length;i++) arr[i]=b.charCodeAt(i); return URL.createObjectURL(new Blob([arr], {type:'video/mp4'})); } catch { return `data:video/mp4;base64,${dubResult.videoBase64}`; } })()}
-                    />
+                    <div style={{ width: aspectRatio === "9:16" ? "180px" : "100%", margin: aspectRatio === "9:16" ? "0 auto" : "0", aspectRatio: aspectRatio === "9:16" ? "9/16" : "16/9", borderRadius: "12px", overflow: "hidden" }}>
+                      <video
+                        ref={dubResultVideoRef}
+                        controls
+                        className="w-full h-full rounded-xl"
+                        style={{ objectFit: "cover", background: "var(--background)" }}
+                        src={(() => { try { const b = atob(dubResult.videoBase64); const arr = new Uint8Array(b.length); for(let i=0;i<b.length;i++) arr[i]=b.charCodeAt(i); return URL.createObjectURL(new Blob([arr], {type:'video/mp4'})); } catch { return `data:video/mp4;base64,${dubResult.videoBase64}`; } })()}
+                      />
+                    </div>
                   </div>
                   <div className="flex items-center justify-center gap-3 mt-4">
                     <button onClick={handleDubDownload}
