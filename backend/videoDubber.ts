@@ -7,7 +7,7 @@ import { randomUUID } from 'crypto';
 import ffmpeg from 'fluent-ffmpeg';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { geminiTranslate, geminiTranslateBatch } from "./geminiTranslator";
+import { geminiTranslate } from "./geminiTranslator";
 import { downloadVideo } from "./_core/multiDownloader";
 import { generateSpeech, generateSpeechWithCharacter, type VoiceKey, type CharacterKey, CHARACTER_VOICES } from "./tts";
 import { isAllowedVideoUrl, isPathWithinDir, sanitizeForAI } from "./_core/security";
@@ -281,15 +281,9 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
     const whisperSegments = whisperResult.segments;
     if (!englishText?.trim()) throw new Error("Whisper could not detect any speech.");
 
-    console.log(`[Dubber] Translating ${whisperSegments.length} segments...`);
-    const { translated: translatedSegments } = await geminiTranslateBatch(whisperSegments, options.userApiKey);
-    
-    // Apply gapless timing: current.end = next.start
-    for (let i = 0; i < translatedSegments.length - 1; i++) {
-      translatedSegments[i].end = translatedSegments[i + 1].start;
-    }
-    
-    const myanmarText = translatedSegments.map(s => s.text).join(" ");
+    console.log(`[Dubber] Translating to Myanmar...`);
+    const sanitizedText = sanitizeForAI(englishText);
+    const { myanmar: myanmarText } = await geminiTranslate(sanitizedText, options.userApiKey);
 
     console.log(`[Dubber] Generating TTS (voice=${options.character || options.voice}, speed=${options.speed}, pitch=${options.pitch})...`);
     let ttsResult;
