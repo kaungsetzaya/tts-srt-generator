@@ -1,6 +1,7 @@
 import { translateVideo, translateVideoLink } from "./videoTranslator";
 import { dubVideoFromBuffer, dubVideoFromLink, type DubOptions } from "./videoDubber";
 import { getQuotaStatus } from "./geminiTranslator";
+import { createJob, getJob, updateJob } from "./jobs";
 import { COOKIE_NAME, UNAUTHED_ERR_MSG, NOT_ADMIN_ERR_MSG, FEATURES, PLANS, TRIAL_DEFAULTS, PAID_PLAN_LIMITS } from "@shared/const";
 import type { TrialLimits, PlanLimits, TrialUsage, SubscriptionStatus } from "@shared/types";
 import { getSessionCookieOptions } from "./_core/cookies";
@@ -20,6 +21,43 @@ import { auditLog, isAllowedVideoUrl, isValidVideoBuffer, isValidCharacterId, is
 // 🔐 JWT Secret - .env မှာ မသတ်မှတ်ရင် production တွင် crash ဖြစ်မည်
 if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
   throw new Error("[SECURITY] FATAL: JWT_SECRET is not set in environment variables!");
+}
+
+// Process dub job in background
+async function processDubJob(jobId: string, input: any, userId: string) {
+  updateJob(jobId, { status: "processing", progress: 5, message: "Starting dubbing..." });
+  
+  try {
+    const rawBase64 = input.videoBase64.includes(",") ? input.videoBase64.split(",")[1] : input.videoBase64;
+    const videoBuffer = Buffer.from(rawBase64, "base64");
+    
+    updateJob(jobId, { progress: 10, message: "Validating video..." });
+    if (videoBuffer.length > 25 * 1024 * 1024) throw new Error("ဖိုင်အကြီးလွန်ပါသည်။ အများဆုံး 25MB အထိသာ တင်နိုင်ပါသည်။");
+    if (!isValidVideoBuffer(videoBuffer)) throw new Error("ဗီဒီယို ဖိုင် format မမှန်ပါ။");
+    
+    const dubOpts: DubOptions = {
+      voice: input.voice, character: input.character, speed: input.speed, pitch: input.pitch,
+      srtEnabled: input.srtEnabled, srtFontSize: input.srtFontSize, srtColor: input.srtColor,
+      srtDropShadow: input.srtDropShadow, srtBlurBg: input.srtBlurBg, srtMarginV: input.srtMarginV,
+      srtBlurSize: input.srtBlurSize, srtBlurColor: input.srtBlurColor, srtFullWidth: input.srtFullWidth,
+      srtBorderRadius: input.srtBorderRadius, userApiKey: input.userApiKey,
+    };
+    
+    updateJob(jobId, { progress: 20, message: "Processing video..." });
+    const result = await dubVideoFromBuffer(videoBuffer, input.filename, dubOpts);
+    
+    updateJob(jobId, { status: "completed", progress: 100, message: "Done!", result });
+    
+  } catch (err: any) {
+    const rawMsg = err.message ?? "Dubbing failed.";
+    let userMsg = rawMsg;
+    if (rawMsg.includes("Command failed") || rawMsg.includes("/tmp/") || rawMsg.includes("/root/")) {
+      userMsg = "ဗီဒီယို ဖန်တီး၍ မရပါ။ ထပ်ကြိုးစားပါ။";
+    } else if (rawMsg.includes("Whisper")) {
+      userMsg = "ဗီဒီယိုတွင် စကားပြောသံ ရှာမတွေ့ပါ။";
+    }
+    updateJob(jobId, { status: "failed", error: userMsg });
+  }
 }
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "dev-only-secret-do-not-use-in-production"
@@ -751,6 +789,64 @@ export const appRouter = router({
       if (result.length === 0) return { active: false, plan: null, expiresAt: null, limits, usage, trialUsage: null, trialLimits: null };
       return { active: true, plan: result[0].plan, expiresAt: result[0].expiresAt, limits, usage, trialUsage, trialLimits: trialLimitsData };
     }),
+  }),
+
+  // ============ BACKGROUND JOBS ============
+  jobs: router({
+    // Start dub job (returns job ID immediately)
+    startDub: publicProcedure
+      .input(z.object({
+        videoBase64: z.string(),
+        filename: z.string().max(255),
+        voice: z.enum(["thiha", "nilar"]).default("thiha"),
+        character: z.string().optional(),
+        speed: z.number().min(0.5).max(2.0).default(1.0),
+        pitch: z.number().min(-20).max(20).default(0),
+        srtEnabled: z.boolean().default(true),
+        srtFontSize: z.number().min(12).max(48).optional(),
+        srtColor: z.string().optional(),
+        srtDropShadow: z.boolean().optional(),
+        srtBlurBg: z.boolean().optional(),
+        srtMarginV: z.number().min(0).max(200).optional(),
+        srtBlurSize: z.number().min(0).max(30).optional(),
+        srtBlurColor: z.enum(["black", "white"]).optional(),
+        srtFullWidth: z.boolean().optional(),
+        srtBorderRadius: z.enum(["rounded", "square"]).optional(),
+        userApiKey: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (!ctx.user) throw new Error("Please login first.");
+        
+        // Validate
+        if (input.character && !isValidCharacterId(input.character)) throw new Error("Invalid character voice.");
+        if (!validateBase64VideoPrefix(input.videoBase64)) throw new Error("Invalid video format.");
+        
+        // Create job
+        const jobId = createJob("dub_file", { ...input, userId: ctx.user.userId });
+        
+        // Start processing in background (don't await)
+        processDubJob(jobId, input, ctx.user.userId).catch(err => {
+          console.error(`[Job ${jobId}] Error:`, err.message);
+          updateJob(jobId, { status: "failed", error: err.message });
+        });
+        
+        return { jobId, message: "Job started" };
+      }),
+
+    // Get job status
+    getStatus: publicProcedure
+      .input(z.object({ jobId: z.string() }))
+      .query(async ({ input }) => {
+        const job = getJob(input.jobId);
+        if (!job) throw new Error("Job not found");
+        return {
+          status: job.status,
+          progress: job.progress,
+          message: job.message,
+          result: job.result,
+          error: job.error,
+        };
+      }),
   }),
 
   // ============ USER HISTORY ============

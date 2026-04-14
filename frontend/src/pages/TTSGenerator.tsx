@@ -254,6 +254,11 @@ export default function TTSGenerator() {
   // Separate mutations for dubbing tab
   const dubFileMutation = trpc.video.dubFile.useMutation();
   const dubLinkMutation = trpc.video.dubLink.useMutation();
+  
+  // Job-based mutations
+  const startDubMutation = trpc.jobs.startDub.useMutation();
+  const jobStatusQuery = trpc.jobs.getStatus.useQuery({ jobId: "" }, { enabled: false });
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
 
   const isAdmin = me?.role === "admin";
   const hasActiveSub = isAdmin || subStatus?.active;
@@ -469,13 +474,13 @@ export default function TTSGenerator() {
       srtBorderRadius,
     };
 
+    // Use job-based API for dubbing (handles long processing time)
     if (dubVideoUrl.trim()) {
       try {
-        const res = await dubLinkMutation.mutateAsync({ url: dubVideoUrl.trim(), ...dubOpts });
-        if (res.success) {
-          setDubResult({ videoUrl: res.videoUrl, videoBase64: res.videoBase64, myanmarText: res.myanmarText, srtContent: res.srtContent, durationMs: res.durationMs });
-          utils.subscription.myStatus.invalidate();
-        }
+        const res = await startDubMutation.mutateAsync({ videoBase64: btoa(dubVideoUrl.trim()), filename: "video.mp4", ...dubOpts, srtBlurBg: false });
+        setActiveJobId(res.jobId);
+        // Poll for job status
+        pollJobStatus(res.jobId);
       } catch (e: any) { 
         console.error("[DUB LINK ERROR]", e);
         showError(e?.message || "Dubbing failed"); 
@@ -488,17 +493,37 @@ export default function TTSGenerator() {
     reader.onload = async () => {
       const base64 = (reader.result as string).split(",")[1];
       try {
-        const res = await dubFileMutation.mutateAsync({ videoBase64: base64, filename: dubVideoFile.name, ...dubOpts });
-        if (res.success) {
-          setDubResult({ videoUrl: res.videoUrl, videoBase64: res.videoBase64, myanmarText: res.myanmarText, srtContent: res.srtContent, durationMs: res.durationMs });
-          utils.subscription.myStatus.invalidate();
-        }
+        const res = await startDubMutation.mutateAsync({ videoBase64: base64, filename: dubVideoFile.name, ...dubOpts });
+        setActiveJobId(res.jobId);
+        // Poll for job status
+        pollJobStatus(res.jobId);
       } catch (e: any) { 
         console.error("[DUB FILE ERROR]", e);
         showError(e?.message || "Dubbing failed"); 
       }
     };
     reader.readAsDataURL(dubVideoFile);
+  };
+
+  // Poll job status
+  const pollJobStatus = (jobId: string) => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const status = await trpc.jobs.getStatus.query({ jobId });
+        if (status.status === "completed" && status.result) {
+          clearInterval(pollInterval);
+          setDubResult(status.result);
+          setActiveJobId(null);
+          utils.subscription.myStatus.invalidate();
+        } else if (status.status === "failed") {
+          clearInterval(pollInterval);
+          showError(status.error || "Dubbing failed");
+          setActiveJobId(null);
+        }
+      } catch (e) {
+        console.error("[JOB POLL ERROR]", e);
+      }
+    }, 3000); // Poll every 3 seconds
   };
 
   const handleDubDownload = () => {
