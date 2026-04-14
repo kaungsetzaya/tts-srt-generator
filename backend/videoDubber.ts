@@ -444,11 +444,34 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
           ]);
       }
 
+      // Set timeout for FFmpeg (10 minutes max)
+      const ffmpegTimeout = 10 * 60 * 1000;
+      let ffmpegFinished = false;
+      let ffmpegError: Error | null = null;
+
       cmd
         .on('start', (cmdline: string) => console.log(`[Dubber] FFmpeg cmd:`, cmdline.slice(0, 200)))
-        .on('end', () => resolve())
-        .on('error', (err: Error) => reject(err))
+        .on('end', () => { ffmpegFinished = true; resolve(); })
+        .on('error', (err: Error) => { ffmpegError = err; reject(err); })
         .save(tempOutputPath);
+
+      // Wait for FFmpeg with timeout
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          if (!ffmpegFinished) {
+            cmd.kill('SIGKILL');
+            reject(new Error('FFmpeg timeout (10 minutes exceeded)'));
+          }
+        }, ffmpegTimeout);
+      });
+
+      await Promise.race([
+        new Promise<void>((resolve, reject) => {
+          if (ffmpegFinished) resolve();
+          else cmd.on('end', () => resolve()).on('error', (err: Error) => reject(err));
+        }),
+        timeoutPromise
+      ]);
     });
 
     // Save video to public downloads folder and return URL
