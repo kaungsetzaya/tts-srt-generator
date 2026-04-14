@@ -2,6 +2,7 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { ArrowLeft, Crown, Mic, FileVideo, Wand2, CheckCircle, AlertCircle, Sparkles } from "lucide-react";
 import { useLocation } from "wouter";
+import { useTheme } from "@/contexts/ThemeContext";
 
 type Lang = "mm" | "en";
 
@@ -81,12 +82,14 @@ export default function TrialInfo() {
   const t = T[lang];
   const [, navigate] = useLocation();
   const { data: subStatus } = trpc.subscription.myStatus.useQuery();
+  const { theme } = useTheme();
 
+  const isDark = theme === "dark";
   const accent = "#C06F30";
-  const cardBg = "rgba(15, 12, 41, 0.6)";
-  const cardBorder = "rgba(192,111,48,0.2)";
-  const textColor = "#EBE6D8";
-  const subtextColor = "rgba(240,238,255,0.6)";
+  const cardBg = isDark ? "rgba(15, 12, 41, 0.6)" : "rgba(255, 255, 255, 0.8)";
+  const cardBorder = isDark ? "rgba(192,111,48,0.2)" : "rgba(192,111,48,0.15)";
+  const textColor = isDark ? "#EBE6D8" : "#2B1D1C";
+  const subtextColor = isDark ? "rgba(240,238,255,0.6)" : "#6b5c50";
 
   const isTrial = subStatus?.plan === "trial";
   const trialUsage = subStatus?.trialUsage;
@@ -149,12 +152,17 @@ export default function TrialInfo() {
   ] : [];
 
   return (
-    <div className="min-h-screen font-sans" style={{
-      background: "linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%)",
+    <div className="min-h-screen font-sans transition-colors duration-500" style={{
+      background: isDark 
+        ? "linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%)"
+        : "linear-gradient(135deg, #E8E3CF 0%, #F5F0E6 50%, #E8E3CF 100%)",
       color: textColor
     }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b backdrop-blur-xl" style={{ borderColor: cardBorder, background: 'rgba(15,12,41,0.8)' }}>
+      <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b backdrop-blur-xl" style={{ 
+        borderColor: cardBorder, 
+        background: isDark ? 'rgba(15,12,41,0.8)' : 'rgba(255,255,255,0.8)' 
+      }}>
         <div className="flex items-center gap-3">
           <button onClick={() => navigate("/lumix")} className="flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold transition-colors hover:opacity-80" style={{ borderColor: cardBorder, color: accent }}>
             <ArrowLeft className="w-4 h-4" /> {t.back}
@@ -217,7 +225,7 @@ export default function TrialInfo() {
                       </div>
                       <p className="text-xs mb-3" style={{ color: subtextColor }}>{feat.desc}</p>
                       {/* Progress bar */}
-                      <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.1)" }}>
+                      <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)" }}>
                         <div
                           className="h-full rounded-full transition-all duration-500"
                           style={{
@@ -251,7 +259,7 @@ export default function TrialInfo() {
                     { label: t.limits.aiVideoStdDuration, value: `${Math.floor(trialLimits.maxAiVideoDurationSecStd / 60)}:${String(trialLimits.maxAiVideoDurationSecStd % 60).padStart(2, "0")}` },
                     { label: t.limits.aiVideoCharDuration, value: `${Math.floor(trialLimits.maxAiVideoDurationSecChar / 60)}:${String(trialLimits.maxAiVideoDurationSecChar % 60).padStart(2, "0")}` },
                   ].map((item, i) => (
-                    <div key={i} className="flex items-center justify-between py-1.5 border-b" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+                    <div key={i} className="flex items-center justify-between py-1.5 border-b" style={{ borderColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }}>
                       <span style={{ color: subtextColor }}>{item.label}</span>
                       <span className="font-bold" style={{ color: textColor }}>{item.value}</span>
                     </div>

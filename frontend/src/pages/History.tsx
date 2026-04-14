@@ -2,6 +2,7 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { ArrowLeft, Clock, Mic, FileVideo, Wand2, CheckCircle, XCircle } from "lucide-react";
 import { useLocation } from "wouter";
+import { useTheme } from "@/contexts/ThemeContext";
 
 type Lang = "mm" | "en";
 
@@ -56,13 +57,14 @@ export default function History() {
   const t = T[lang];
   const [, navigate] = useLocation();
   const { data: history, isLoading } = trpc.history.getMyHistory.useQuery({ limit: 100 });
+  const { theme } = useTheme();
 
-  const isDark = true; // match main app
+  const isDark = theme === "dark";
   const accent = "#C06F30";
-  const cardBg = "rgba(15, 12, 41, 0.6)";
-  const cardBorder = "rgba(192,111,48,0.2)";
-  const textColor = "#EBE6D8";
-  const subtextColor = "rgba(240,238,255,0.6)";
+  const cardBg = isDark ? "rgba(15, 12, 41, 0.6)" : "rgba(255, 255, 255, 0.8)";
+  const cardBorder = isDark ? "rgba(192,111,48,0.2)" : "rgba(192,111,48,0.15)";
+  const textColor = isDark ? "#EBE6D8" : "#2B1D1C";
+  const subtextColor = isDark ? "rgba(240,238,255,0.6)" : "#6b5c50";
 
   // Format time in user timezone
   const formatTime = (date: any) => {
@@ -85,12 +87,17 @@ export default function History() {
   };
 
   return (
-    <div className="min-h-screen font-sans" style={{
-      background: "linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%)",
+    <div className="min-h-screen font-sans transition-colors duration-500" style={{
+      background: isDark 
+        ? "linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%)"
+        : "linear-gradient(135deg, #E8E3CF 0%, #F5F0E6 50%, #E8E3CF 100%)",
       color: textColor
     }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b backdrop-blur-xl" style={{ borderColor: cardBorder, background: 'rgba(15,12,41,0.8)' }}>
+      <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b backdrop-blur-xl" style={{ 
+        borderColor: cardBorder, 
+        background: isDark ? 'rgba(15,12,41,0.8)' : 'rgba(255,255,255,0.8)' 
+      }}>
         <div className="flex items-center gap-3">
           <button onClick={() => navigate("/lumix")} className="flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold transition-colors hover:opacity-80" style={{ borderColor: cardBorder, color: accent }}>
             <ArrowLeft className="w-4 h-4" /> {t.back}
