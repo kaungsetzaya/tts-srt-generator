@@ -166,32 +166,62 @@ STRICT RULES:
 6. SPOKEN STYLE: Natural conversational Myanmar.
 7. CLEAN OUTPUT: JSON array ONLY. No intro/notes.`;
 
-// Batch translation for dubbing
-const BATCH_SIZE = 15;
+// Batch translation for dubbing - reduced size for better reliability
+const BATCH_SIZE = 10;
+
+// Retry with exponential backoff
+async function fetchWithRetry(url: string, body: any, maxRetries: number = 5): Promise<Response> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(60000) // 60s timeout
+      });
+      
+      // Rate limit? Wait and retry
+      if (res.status === 429 || res.status === 503) {
+        const waitTime = Math.min(1000 * Math.pow(2, attempt), 30000); // Max 30s wait
+        console.log(`[DubGemini] Rate limit (${res.status}). Waiting ${waitTime}ms before retry ${attempt + 1}/${maxRetries}`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        continue;
+      }
+      
+      return res;
+    } catch (err: any) {
+      lastError = err;
+      console.log(`[DubGemini] Fetch error: ${err.message}. Retry ${attempt + 1}/${maxRetries}`);
+      await new Promise(resolve => setTimeout(resolve, 2000 * (attempt + 1)));
+    }
+  }
+  
+  throw lastError || new Error('Max retries exceeded');
+}
 
 async function translateBatchDub(lines: string[], apiKey: string, modelId: string): Promise<string[] | null> {
   const url = `https://generativelanguage.googleapis.com/v1beta/${modelId}:generateContent?key=${apiKey}`;
 
   try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: {
-          parts: [{ text: DUB_SYSTEM_PROMPT }]
-        },
-        contents: [{ 
-          parts: [{ text: `Translate this JSON array:\n${JSON.stringify(lines)}` }] 
-        }],
-        generationConfig: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: "ARRAY",
-            items: { type: "STRING" }
-          }
+    const body = {
+      systemInstruction: {
+        parts: [{ text: DUB_SYSTEM_PROMPT }]
+      },
+      contents: [{ 
+        parts: [{ text: `Translate this JSON array:\n${JSON.stringify(lines)}` }] 
+      }],
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "ARRAY",
+          items: { type: "STRING" }
         }
-      })
-    });
+      }
+    };
+
+    const res = await fetchWithRetry(url, body);
 
     if (!res.ok) {
       const errorText = await res.text();
@@ -258,26 +288,43 @@ export async function geminiTranslateForDub(
       if (getDailyCount(model.id) >= model.rpd) continue;
       
       for (const apiKey of allKeys) {
-        const result = await translateBatchDub(chunk, apiKey, model.id);
-        
-        if (result && result.length === chunk.length) {
-          for (const item of result) {
-            translatedTexts.push(applyBurmesePhonetics(item));
+        try {
+          const result = await translateBatchDub(chunk, apiKey, model.id);
+          
+          if (result && result.length === chunk.length) {
+            for (const item of result) {
+              translatedTexts.push(applyBurmesePhonetics(item));
+            }
+            incrementQuota(model.id);
+            console.log(`[DubGemini] ✅ ${model.name}`);
+            success = true;
+            break;
           }
-          incrementQuota(model.id);
-          console.log(`[DubGemini] ✅ ${model.name}`);
-          success = true;
-          break;
+        } catch (err) {
+          console.log(`[DubGemini] Error: ${err.message}`);
         }
       }
       if (success) break;
+      
+      // Wait between models
+      if (!success) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
     }
     
     if (!success) {
-      console.log(`[DubGemini] Batch ${i + 1} failed`);
+      console.log(`[DubGemini] Batch ${i + 1} failed - using original text`);
       failedBatches++;
       for (let j = 0; j < chunk.length; j++) {
         translatedTexts.push(chunk[j]); // Fallback to original
+      }
+    }
+    
+    // Wait between batches to avoid rate limits
+    if (i < chunks.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  }
       }
     }
   }
