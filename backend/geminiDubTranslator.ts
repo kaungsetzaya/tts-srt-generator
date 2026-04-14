@@ -325,9 +325,6 @@ export async function geminiTranslateForDub(
       await new Promise(resolve => setTimeout(resolve, 500));
     }
   }
-      }
-    }
-  }
 
   if (failedBatches > chunks.length / 2) {
     throw new Error("Dub translation failed: too many batches failed.");

@@ -465,13 +465,16 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
         }, ffmpegTimeout);
       });
 
-      await Promise.race([
+      // No await needed inside Promise constructor - this is synchronous setup
+      // The FFmpeg process runs asynchronously and calls resolve/reject when done
+      const racePromise = Promise.race([
         new Promise<void>((resolve, reject) => {
           if (ffmpegFinished) resolve();
           else cmd.on('end', () => resolve()).on('error', (err: Error) => reject(err));
         }),
         timeoutPromise
       ]);
+      racePromise.then(resolve).catch(reject);
     });
 
     // Save video to public downloads folder and return URL
