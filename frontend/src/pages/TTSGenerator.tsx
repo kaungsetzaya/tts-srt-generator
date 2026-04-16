@@ -515,7 +515,7 @@ export default function TTSGenerator() {
   const pollJobStatus = (jobId: string) => {
     const pollInterval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/trpc/jobs.getStatus?input=${encodeURIComponent(JSON.stringify({ jobId }))}`);
+        const res = await fetch(`https://choco.de5.net/api/trpc/jobs.getStatus?input=${encodeURIComponent(JSON.stringify({ jobId }))}`, { credentials: "include" });
         const json = await res.json();
         const status = json.result?.data;
         if (!status) return;
