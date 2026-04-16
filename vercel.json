@@ -1,0 +1,27 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://choco.de5.net/api/:path*"
+    },
+    {
+      "source": "/webhook/:path*",
+      "destination": "https://choco.de5.net/webhook/:path*"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "https://lumix-studio.vercel.app"
+        },
+        {
+          "key": "Access-Control-Allow-Credentials",
+          "value": "true"
+        }
+      ]
+    }
+  ]
+}

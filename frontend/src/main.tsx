@@ -37,12 +37,13 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
-const BACKEND_URL = "https://choco.de5.net";
+// Use relative URL - works with Vercel rewrites to proxy to backend
+const BACKEND_URL = ""; // Empty for relative URLs
 
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      url: `${BACKEND_URL}/api/trpc`,
+      url: `/api/trpc`,
       transformer: superjson,
       fetch(input, init) {
         const controller = new AbortController();
@@ -64,7 +65,7 @@ const trpcClient = trpc.createClient({
 // ────────────────────────────────────────────────────
 function sendBrowserError(errorMessage: string, source: "window.onerror" | "unhandledrejection" | "react_error_boundary", stack?: string) {
   // Use raw fetch to avoid circular dependency with trpc
-  fetch(`${BACKEND_URL}/api/trpc/logBrowserError`, {
+  fetch(`/api/trpc/logBrowserError`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
