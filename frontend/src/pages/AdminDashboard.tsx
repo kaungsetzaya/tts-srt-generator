@@ -376,7 +376,7 @@ export default function AdminDashboard() {
                   {voiceStats?.voices?.length === 0 && <p className="text-xs opacity-30">No data</p>}
                   {voiceStats?.voices?.map((v: any) => (
                     <MiniBar key={v.name} label={v.name} count={v.count} max={maxVoice}
-                      color={v.name.startsWith("[Character]") ? "#f472b6" : C} />
+                      color={v.name?.startsWith("[Character]") ? "#f472b6" : C} />
                   ))}
                 </div>
                 <div className="space-y-4">
@@ -681,7 +681,7 @@ export default function AdminDashboard() {
                       <span className={`text-xs px-2 py-0.5 rounded font-bold uppercase ${log.severity === "error" ? "bg-red-500/20 text-red-400" : log.severity === "warn" ? "bg-yellow-500/20 text-yellow-400" : "bg-blue-500/20 text-blue-400"}`}>{log.severity}</span>
                       <span className="text-xs font-mono opacity-50">{log.errorCode}</span>
                       {/* Show source: browser errors vs app errors */}
-                      {log.feature?.startsWith("browser:") ? (
+                      {log.feature && log.feature.startsWith("browser:") ? (
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-600 font-bold uppercase">🌐 Browser</span>
                       ) : (
                         <span className="text-xs opacity-30">{FEATURE_LABELS[log.feature ?? ""] ?? log.feature}</span>
