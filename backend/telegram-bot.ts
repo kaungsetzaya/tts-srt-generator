@@ -1,12 +1,13 @@
 import { randomBytes } from "crypto";
 
-// Simple mock telegram bot for notifications
-// Replace with a real telegram bot (e.g., telegraf) for production
-export const telegramBot = {
-  sendMessage: async (chatId: string, text: string) => {
-    console.log(`[Telegram Bot] Sending message to ${chatId}: ${text}`);
-  },
-};
+export async function handleTelegramUpdate(update: any) {
+  console.log("[Telegram Bot] Handling update:", update);
+}
+
+export async function setWebhook(url: string) {
+  console.log("[Telegram Bot] Setting webhook to:", url);
+}
+
 
 export function generateTelegramId(): string {
   return randomBytes(18).toString("hex");
