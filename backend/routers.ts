@@ -305,14 +305,32 @@ export const appRouter = t.router({
       return { success: true };
     }),
     giveSubscription: adminProcedure.input(z.object({
-      userId: z.string(), plan: z.string(), days: z.number(), note: z.string().optional(),
+      userId: z.string(), plan: z.string(), days: z.number(), note: z.string().optional(), paymentMethod: z.string().optional(),
     })).mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-      await db.insert(subscriptions).values({
-        id: randomUUID(), userId: input.userId, plan: input.plan,
-        startsAt: new Date(), expiresAt: new Date(Date.now() + input.days * 86400000), note: input.note,
-      });
+      
+      // Check if user has active subscription
+      const existingSubs = await db.select().from(subscriptions)
+        .where(sql`user_id = ${input.userId} AND expires_at > NOW()`).limit(1);
+      
+      if (existingSubs.length > 0) {
+        // Extend existing subscription
+        const existing = existingSubs[0];
+        const currentExpires = new Date(existing.expiresAt!);
+        const newExpires = new Date(currentExpires.getTime() + input.days * 86400000);
+        await db.update(subscriptions).set({
+          expiresAt: newExpires,
+          plan: input.plan,
+          note: input.note || existing.note,
+        }).where(eq(subscriptions.id, existing.id));
+      } else {
+        // Create new subscription
+        await db.insert(subscriptions).values({
+          id: randomUUID(), userId: input.userId, plan: input.plan,
+          startsAt: new Date(), expiresAt: new Date(Date.now() + input.days * 86400000), note: input.note,
+        });
+      }
       return { success: true };
     }),
     cancelSubscription: adminProcedure.input(z.object({ userId: z.string() })).mutation(async ({ input }) => {
