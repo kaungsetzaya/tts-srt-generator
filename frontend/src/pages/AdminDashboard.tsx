@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
+import { queryClient } from "@/lib/queryClient";
 import {
   Loader2, Users, Crown, Clock, Plus, Shield, Settings, Search, LogOut, BarChart3, Ban, CheckCircle,
   Activity, Zap, HardDrive, Server, ChevronRight, ChevronLeft, ArrowLeft, Mic, FileVideo, AlertTriangle,
@@ -239,7 +240,7 @@ export default function AdminDashboard() {
   });
 
   const logoutMutation = trpc.auth.logout.useMutation({ onSuccess: () => { window.location.href = "/login"; } });
-  const giveSub = trpc.admin.giveSubscription.useMutation({ onSuccess: () => { refetch(); setShowSubModal(false); setSelectedUser(null); setNote(""); setTransactionId(""); setPaymentMethod("kpay"); setPaymentSlipBase64(""); setPaymentSlipPreview(""); } });
+  const giveSub = trpc.admin.giveSubscription.useMutation({ onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["admin", "getUsers"] }); refetch(); setShowSubModal(false); setSelectedUser(null); setNote(""); setTransactionId(""); setPaymentMethod("kpay"); setPaymentSlipBase64(""); setPaymentSlipPreview(""); } });
   const cancelSub = trpc.admin.cancelSubscription.useMutation({ onSuccess: () => refetch() });
   const setRole = trpc.admin.setRole.useMutation({ onSuccess: () => refetch() });
   const banUser = trpc.admin.banUser.useMutation({ onSuccess: () => refetch() });
