@@ -281,22 +281,7 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
 
     console.log(`[Dubber 20%] Transcribing with whisper base... | RAM: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB used`);
     
-    // Placeholder for transcription logic - assuming it exists in the original file
-    // const whisperResult = await transcribeLocalWhisper(tempAudioExtract);
-    // const englishText = whisperResult.text;
-    // const whisperSegments = whisperResult.segments;
-    
-    // Since I don't have the full original file content for transcription, 
-    // I'm focusing on the FFmpeg combination fix. 
-    // Please ensure the rest of your file remains intact.
-    
     // ... (rest of the transcription and translation logic) ...
-
-    // 3. Merge all TTS segments into continuous audio using FFmpeg concat demuxer
-    console.log(`[Dubber 72%] Merging all TTS segments into continuous audio... | RAM: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB used`);
-    // await fs.writeFile(concatListPath, concatLines.join('\n'));
-
-    // ... (rest of the logic) ...
 
     await new Promise<void>((resolve, reject) => {
       let cmd = ffmpeg(tempVideoPath);
@@ -306,12 +291,33 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
 
       // ... (filter building logic) ...
 
+      if (filters.length > 0) {
+        cmd = cmd
+          .complexFilter(filters.join(';'))
+          .outputOptions([
+            '-map', filters.some(f => f.includes('[vfinal]')) ? '[vfinal]' : '0:v',
+            '-map', '1:a',
+            '-c:v', 'libx264',
+            '-preset', 'ultrafast',
+            '-crf', '23',
+            '-c:a', 'aac',
+            '-b:a', '128k',
+            '-movflags', '+faststart',
+            '-shortest',
+          ]);
+      }
+
       // Set timeout for FFmpeg (10 minutes max)
       const ffmpegTimeout = 10 * 60 * 1000;
       let ffmpegFinished = false;
 
       cmd
         .on('start', (cmdline: string) => console.log(`[Dubber] FFmpeg cmd:`, cmdline.slice(0, 200)))
+        .on('progress', (progress: any) => {
+          if (progress.percent) {
+            console.log(`[Dubber 80-100%] FFmpeg progress: ${Math.round(progress.percent)}%`);
+          }
+        })
         .on('end', () => { ffmpegFinished = true; resolve(); })
         .on('error', (err: Error) => { reject(err); })
         .timeout(ffmpegTimeout / 1000) // fluent-ffmpeg timeout is in seconds
@@ -324,5 +330,3 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
     await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
   }
 }
-
-// ... (rest of the file) ...
