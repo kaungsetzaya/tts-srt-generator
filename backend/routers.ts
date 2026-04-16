@@ -138,9 +138,14 @@ export const appRouter = t.router({
   // ─── VIDEO ──────────────────────────────
   video: t.router({
     dubFile: t.procedure
-      .input(z.object({ file: z.any(), voice: z.enum(["thiha", "nilar"]), speed: z.number().optional() }))
+      .input(z.object({ videoBase64: z.string(), filename: z.string(), voice: z.enum(["thiha", "nilar"]), speed: z.number().optional() }))
       .mutation(async ({ input }) => {
-        throw new TRPCError({ code: "NOT_IMPLEMENTED", message: "File dubbing coming soon" });
+        try {
+          const buffer = Buffer.from(input.videoBase64, "base64");
+          return await dubVideoFromBuffer(buffer, input.filename, { voice: input.voice, speed: input.speed ?? 1, pitch: 0, srtEnabled: true });
+        } catch (error: any) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message || "Failed to dub video." });
+        }
       }),
     dubLink: t.procedure
       .input(z.object({ url: z.string(), voice: z.enum(["thiha", "nilar"]), speed: z.number().optional() }))
@@ -157,14 +162,23 @@ export const appRouter = t.router({
         return { title: "Video", duration: 0, thumbnail: "" };
       }),
     translate: t.procedure
-      .input(z.object({ file: z.any(), targetLang: z.string().optional() }))
+      .input(z.object({ videoBase64: z.string(), filename: z.string() }))
       .mutation(async ({ input }) => {
-        throw new TRPCError({ code: "NOT_IMPLEMENTED", message: "Video translation coming soon" });
+        try {
+          const buffer = Buffer.from(input.videoBase64, "base64");
+          return await dubVideoFromBuffer(buffer, input.filename, { voice: "thiha", speed: 1, pitch: 0, srtEnabled: true });
+        } catch (error: any) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message || "Failed to translate video." });
+        }
       }),
     translateLink: t.procedure
-      .input(z.object({ url: z.string(), targetLang: z.string().optional() }))
+      .input(z.object({ url: z.string() }))
       .mutation(async ({ input }) => {
-        throw new TRPCError({ code: "NOT_IMPLEMENTED", message: "Video translation coming soon" });
+        try {
+          return await dubVideoFromLink(input.url, { voice: "thiha", speed: 1, pitch: 0, srtEnabled: true });
+        } catch (error: any) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message || "Failed to translate video." });
+        }
       }),
   }),
 
