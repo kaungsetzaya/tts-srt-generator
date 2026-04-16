@@ -299,9 +299,9 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {[
             { label: "🟢 Online Now", value: onlineStats?.onlineCount ?? 0, color: "#4ade80", sub: "Active in 15min" },
-            { label: "🎙️ TTS (Month)", value: analytics?.featureBreakdown?.tts ?? 0, color: C, sub: `${analytics?.generations?.today ?? 0} today` },
-            { label: "🎬 Video (Month)", value: (analytics?.featureBreakdown?.videoUpload ?? 0) + (analytics?.featureBreakdown?.videoLink ?? 0), color: "#60a5fa", sub: `${analytics?.featureBreakdown?.translation ?? 0} translated` },
-            { label: "Total Users", value: normalUsers.length, color: "#c084fc", sub: `${activeSubs} active subs` },
+            { label: "🎙️ TTS (Month)", value: analytics?.totalConversions ?? 0, color: C, sub: `${analytics?.totalConversions ?? 0} total conversions` },
+            { label: "🎬 Video (Month)", value: analytics?.totalConversions ?? 0, color: "#60a5fa", sub: `${analytics?.activeSubs ?? 0} active subs` },
+            { label: "Total Users", value: analytics?.totalUsers ?? 0, color: "#c084fc", sub: `${analytics?.activeSubs ?? 0} active subs` },
           ].map(({ label, value, color, sub }) => (
             <div key={label} className="border rounded-xl p-4" style={{ background: cardBg, borderColor: border }}>
               <p className="text-xs uppercase tracking-wider opacity-50 mb-1">{label}</p>
