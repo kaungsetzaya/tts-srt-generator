@@ -329,18 +329,20 @@ export const appRouter = t.router({
     }),
     getAnalytics: adminProcedure.query(async () => {
       const db = await getDb();
-      if (!db) return { totalUsers: 0, activeSubs: 0, totalConversions: 0, revenue: 0 };
+      if (!db) return { totalUsers: 0, activeSubs: 0, totalConversions: 0, revenue: 0, planCounts: [] };
       try {
         const [totalUsersRow] = await db.select({ count: count() }).from(users);
         const [activeSubsRow] = await db.select({ count: count() }).from(subscriptions).where(sql`expires_at > NOW()`);
         const [totalConvRow] = await db.select({ count: count() }).from(ttsConversions);
+        const planRows = await db.select({ plan: subscriptions.plan, count: count() }).from(subscriptions).groupBy(subscriptions.plan);
         return {
           totalUsers: totalUsersRow?.count || 0,
           activeSubs: activeSubsRow?.count || 0,
           totalConversions: totalConvRow?.count || 0,
           revenue: 0,
+          planCounts: planRows,
         };
-      } catch { return { totalUsers: 0, activeSubs: 0, totalConversions: 0, revenue: 0 }; }
+      } catch { return { totalUsers: 0, activeSubs: 0, totalConversions: 0, revenue: 0, planCounts: [] }; }
     }),
     getServerHealth: adminProcedure.query(async () => {
       const mem = process.memoryUsage();
