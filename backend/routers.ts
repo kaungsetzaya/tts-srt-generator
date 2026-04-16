@@ -7,6 +7,8 @@ import { isAllowedVideoUrl } from "./_core/security";
 import { getDb } from "./db";
 import { users, ttsConversions, subscriptions, errorLogs, settings } from "../drizzle/schema";
 import { eq, desc, count, sql } from "drizzle-orm";
+import { SignJWT } from "jose";
+import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 
 import superjson from "superjson";
 
@@ -34,11 +36,12 @@ export const appRouter = t.router({
       return ctx.user;
     }),
     logout: t.procedure.mutation(async ({ ctx }) => {
+      ctx.res.setHeader("Set-Cookie", `${COOKIE_NAME}=; HttpOnly; Path=/; Max-Age=0`);
       return { success: true };
     }),
     verify: t.procedure
       .input(z.object({ code: z.string() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
@@ -51,11 +54,34 @@ export const appRouter = t.router({
           throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid or expired code" });
         }
 
-        await db.update(users).set({ telegramCode: null }).where(eq(users.id, user.id));
+        // Generate session token
         const sessionToken = randomUUID();
-        await db.update(users).set({ sessionToken }).where(eq(users.id, user.id));
+        const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "dev-only-secret-do-not-use-in-production");
 
-        return { success: true, userId: user.id, sessionToken };
+        // Update user: clear code, set session token
+        await db.update(users).set({
+          telegramCode: null,
+          sessionToken,
+          lastLoginAt: new Date(),
+        }).where(eq(users.id, user.id));
+
+        // Sign JWT
+        const token = await new SignJWT({
+          userId: user.id,
+          telegramId: user.telegramId || "",
+          name: user.telegramFirstName || user.name || "User",
+          role: user.role || "user",
+          sid: sessionToken,
+        })
+          .setProtectedHeader({ alg: "HS256" })
+          .setIssuedAt()
+          .setExpirationTime("7d")
+          .sign(JWT_SECRET);
+
+        // Set cookie
+        ctx.res.setHeader("Set-Cookie", `${COOKIE_NAME}=${token}; HttpOnly; Path=/; Max-Age=${7 * 24 * 60 * 60}; SameSite=Lax${process.env.NODE_ENV === "production" ? "; Secure" : ""}`);
+
+        return { success: true, userId: user.id, role: user.role || "user" };
       }),
   }),
 
