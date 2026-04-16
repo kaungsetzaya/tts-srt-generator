@@ -1,9 +1,8 @@
-import { randomBytes } from "crypto";
-import { randomBytes } from "crypto";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import path from "path";
 import fs from "fs/promises";
+import { randomBytes } from "crypto";
 
 const execFileAsync = promisify(execFile);
 const OUTPUT_DIR = path.join(process.cwd(), "static", "output");
@@ -18,7 +17,6 @@ export const SUPPORTED_VOICES = {
 
 export type VoiceKey = keyof typeof SUPPORTED_VOICES;
 
-// Simple replacement for nanoid using built-in crypto
 function generateId(length: number = 10): string {
   return randomBytes(Math.ceil(length / 2)).toString('hex').slice(0, length);
 }
