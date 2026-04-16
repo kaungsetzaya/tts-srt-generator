@@ -108,6 +108,18 @@ export const appRouter = t.router({
         }
       }),
   }),
+  history: t.router({
+    getMyHistory: t.procedure
+      .input(z.object({ limit: z.number().optional() }))
+      .query(async ({ ctx }) => {
+        return [];
+      }),
+  }),
+  subscription: t.router({
+    myStatus: t.procedure.query(async ({ ctx }) => {
+      return { active: false, plan: null };
+    }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;
