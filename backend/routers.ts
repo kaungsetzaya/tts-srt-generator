@@ -13,7 +13,7 @@ import { getDb } from "./db";
 import { users, subscriptions, settings, ttsConversions, errorLogs } from "../drizzle/schema";
 import { eq, desc, and, gte, sql, isNull, isNotNull, or } from "drizzle-orm";
 import { SignJWT } from "jose";
-import { randomBytes } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
 import { checkRateLimit, clearRateLimit } from "./_core/rateLimit";
 import { checkVideoApiRateLimit, checkIpRateLimit } from "./_core/apiRateLimit";
 import { auditLog, isAllowedVideoUrl, isValidVideoBuffer, isValidCharacterId, isValidVoiceId, validateBase64VideoPrefix, sanitizeForAI } from "./_core/security";
@@ -506,14 +506,12 @@ export const appRouter = router({
       try {
         const result = await translateVideoLink(input.url, input.userApiKey);
         if (db && ctx.user) {
-          import { randomBytes } from "crypto";
           await db.insert(ttsConversions).values({ id: randomBytes(Math.ceil(10/2)).toString("hex").slice(0, 10), userId: ctx.user.userId, feature: "translate_link", status: "success" }).catch(() => {});
         }
         return { success: true, ...result };
       } catch (error: any) {
         // Track failed attempt for trial refund
         if (db && ctx.user) {
-          import { randomBytes } from "crypto";
           await db.insert(ttsConversions).values({ id: randomBytes(Math.ceil(10/2)).toString("hex").slice(0, 10), userId: ctx.user.userId, feature: "translate_link", status: "fail", errorMsg: (error?.message ?? "unknown").slice(0, 499) }).catch(() => {});
         }
         const rawMsg = error.message ?? "Link translation failed.";
@@ -573,13 +571,11 @@ export const appRouter = router({
           if (!isValidVideoBuffer(videoBuffer)) throw new Error("ဗီဒီယို ဖိုင် format မမှန်ပါ။ MP4, MOV, AVI, MKV, WebM ဖိုင်များသာ တင်နိုင်ပါသည်။");
           const result = await translateVideo(videoBuffer, input.filename, input.userApiKey);
           if (db && ctx.user) {
-            import { randomBytes } from "crypto";
             await db.insert(ttsConversions).values({ id: randomBytes(Math.ceil(10/2)).toString("hex").slice(0, 10), userId: ctx.user.userId, feature: "translate_file", status: "success" }).catch(() => {});
           }
           return { success: true, ...result };
         } catch (error: any) {
           if (db && ctx.user) {
-            import { randomBytes } from "crypto";
             await db.insert(ttsConversions).values({ id: randomBytes(Math.ceil(10/2)).toString("hex").slice(0, 10), userId: ctx.user.userId, feature: "translate_file", status: "fail", errorMsg: (error?.message ?? "unknown").slice(0, 499) }).catch(() => {});
           }
           const rawMsg = error.message ?? "Translation failed.";
@@ -663,14 +659,12 @@ export const appRouter = router({
     let result;
     try { result = await dubVideoFromBuffer(videoBuffer, input.filename, dubOpts); } finally { releaseSlot(); }
           if (db && ctx.user) {
-            import { randomBytes } from "crypto";
             await db.insert(ttsConversions).values({ id: randomBytes(Math.ceil(10/2)).toString("hex").slice(0, 10), userId: ctx.user.userId, feature: "dub_file", character: input.character || undefined, status: "success" }).catch(() => {});
           }
           return { success: true, ...result };
         } catch (error: any) {
           // Track failure for trial refund
           if (db && ctx.user) {
-            import { randomBytes } from "crypto";
             await db.insert(ttsConversions).values({ id: randomBytes(Math.ceil(10/2)).toString("hex").slice(0, 10), userId: ctx.user.userId, feature: "dub_file", character: input.character || undefined, status: "fail", errorMsg: (error?.message ?? "unknown").slice(0, 499) }).catch(() => {});
           }
           const rawMsg = error.message ?? "Dubbing failed.";
@@ -750,13 +744,11 @@ export const appRouter = router({
           let result;
           try { result = await dubVideoFromLink(input.url, dubOpts); } finally { releaseSlot(); }
           if (db && ctx.user) {
-            import { randomBytes } from "crypto";
             await db.insert(ttsConversions).values({ id: randomBytes(Math.ceil(10/2)).toString("hex").slice(0, 10), userId: ctx.user.userId, feature: "dub_link", character: input.character || undefined, status: "success" }).catch(() => {});
           }
           return { success: true, ...result };
         } catch (error: any) {
           if (db && ctx.user) {
-            import { randomBytes } from "crypto";
             await db.insert(ttsConversions).values({ id: randomBytes(Math.ceil(10/2)).toString("hex").slice(0, 10), userId: ctx.user.userId, feature: "dub_link", character: input.character || undefined, status: "fail", errorMsg: (error?.message ?? "unknown").slice(0, 499) }).catch(() => {});
           }
           const rawMsg = error.message ?? "Link dubbing failed.";
@@ -947,7 +939,6 @@ export const appRouter = router({
             result = await generateSpeech(cleanText, input.voice, input.speed, input.tone, input.aspectRatio);
           }
           if (db) {
-            import { randomBytes } from "crypto";
             await db.insert(ttsConversions).values({
               id: randomBytes(5).toString('hex'), userId: ctx.user.userId, feature: "tts",
               voice: isCharacter ? undefined : input.voice,
@@ -965,7 +956,6 @@ export const appRouter = router({
           };
         } catch (error: any) {
           if (db) {
-            import { randomBytes } from "crypto";
             await db.insert(ttsConversions).values({
               id: randomBytes(5).toString('hex'), userId: ctx.user.userId, feature: "tts",
               voice: input.voice, character: input.character, charCount: cleanText.length,

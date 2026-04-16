@@ -79,7 +79,7 @@ export async function handleTelegramUpdate(update: any) {
 
       // Auto trial for existing users who don't have any subscription
       const now = new Date();
-      import { randomBytes } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
       const existingSubs = await db.select().from(subscriptions)
         .where(eq(subscriptions.userId, existingUserId)).limit(1);
       if (existingSubs.length === 0) {
@@ -170,7 +170,6 @@ export async function handleTelegramUpdate(update: any) {
         telegramCodeExpiresAt: codeExpiresAt,
       });
       // Auto trial — check settings
-      import { randomBytes } from "crypto";
       const autoEnabledRow = await db.select().from(settings).where(eq(settings.keyName, "auto_trial_enabled")).limit(1);
       const autoEnabled = autoEnabledRow[0]?.value === "true";
       if (autoEnabled) {

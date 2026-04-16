@@ -1,7 +1,7 @@
 import { eq, desc, and, gte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { users, subscriptions, ttsConversions } from "../drizzle/schema";
-import { randomBytes } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 

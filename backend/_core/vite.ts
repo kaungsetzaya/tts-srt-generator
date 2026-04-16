@@ -1,7 +1,7 @@
 import express, { type Express } from "express";
 import fs from "fs";
 import { type Server } from "http";
-import { randomBytes } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import viteConfig from "../../vite.config";
