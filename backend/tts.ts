@@ -1,8 +1,8 @@
+import { randomBytes, randomUUID } from "crypto";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import path from "path";
 import fs from "fs/promises";
-import { randomBytes, randomUUID } from "crypto";
 
 const execFileAsync = promisify(execFile);
 const OUTPUT_DIR = path.join(process.cwd(), "static", "output");

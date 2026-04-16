@@ -1,3 +1,4 @@
+import { randomBytes, randomUUID } from "crypto";
 import https from "https";
 import { getDb } from "./db";
 import { users, subscriptions, settings } from "../drizzle/schema";
@@ -79,7 +80,6 @@ export async function handleTelegramUpdate(update: any) {
 
       // Auto trial for existing users who don't have any subscription
       const now = new Date();
-import { randomBytes, randomUUID } from "crypto";
       const existingSubs = await db.select().from(subscriptions)
         .where(eq(subscriptions.userId, existingUserId)).limit(1);
       if (existingSubs.length === 0) {
