@@ -302,7 +302,7 @@ export default function AdminDashboard() {
             { label: "🟢 Online Now", value: onlineStats?.onlineCount ?? 0, color: "#4ade80", sub: "Active in 15min" },
             { label: "🎙️ TTS (Month)", value: analytics?.totalConversions ?? 0, color: C, sub: `${analytics?.totalConversions ?? 0} total conversions` },
             { label: "🎬 Video (Month)", value: analytics?.totalConversions ?? 0, color: "#60a5fa", sub: `${analytics?.activeSubs ?? 0} active subs` },
-            { label: "Total Users", value: analytics?.totalUsers ?? 0, color: "#c084fc", sub: `${analytics?.activeSubs ?? 0} active subs` },
+            { label: "Total Users", value: analytics?.totalUsers ?? 0, color: "#C06F30", sub: `${analytics?.activeSubs ?? 0} active subs` },
           ].map(({ label, value, color, sub }) => (
             <div key={label} className="border rounded-xl p-4" style={{ background: cardBg, borderColor: border }}>
               <p className="text-xs uppercase tracking-wider opacity-50 mb-1">{label}</p>
