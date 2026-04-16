@@ -78,8 +78,8 @@ export const appRouter = t.router({
           .setExpirationTime("7d")
           .sign(JWT_SECRET);
 
-        // Set cookie
-        ctx.res.setHeader("Set-Cookie", `${COOKIE_NAME}=${token}; HttpOnly; Path=/; Max-Age=${7 * 24 * 60 * 60}; SameSite=Lax${process.env.NODE_ENV === "production" ? "; Secure" : ""}`);
+        // Set cookie (SameSite=None for cross-origin Vercel frontend)
+        ctx.res.setHeader("Set-Cookie", `${COOKIE_NAME}=${token}; HttpOnly; Path=/; Max-Age=${7 * 24 * 60 * 60}; SameSite=None; Secure`);
 
         return { success: true, userId: user.id, role: user.role || "user" };
       }),
