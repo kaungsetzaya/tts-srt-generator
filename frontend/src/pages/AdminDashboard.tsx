@@ -31,8 +31,7 @@ const FEATURE_ICONS: Record<string, any> = {
 const C = "#C06F30"; // copper
 const C_GOLD = "#F4B34F"; // gold
 const C_BG = "#0f0f0f"; // dark background
-const C_CARD = "rgba(26,26,26,0.8)"; // card background
-const C_GLASS = "rgba(255,255,255,0.06)"; // glass effect
+const cardBg = "rgba(26,26,26,0.8)"; // card background
 const border = "rgba(192,111,48,0.25)";
 
 function StatBox({ label, value, color = C, sub }: { label: string; value: any; color?: string; sub?: string }) {
