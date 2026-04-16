@@ -66,24 +66,23 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
     console.log(`[Dubber 50%] Translation complete`);
     
     const concatLines: string[] = [];
-    let currentAudioMs = 0;
+    let totalDurationMs = 0;
     console.log(`[Dubber 55%] Starting TTS Loop for ${translatedSegments.length} segments`);
 
     for (let i = 0; i < translatedSegments.length; i++) {
       const seg = translatedSegments[i];
       if (!seg.text.trim()) continue;
       
-      console.log(`[Dubber 57%] Processing segment ${i + 1}/${translatedSegments.length}: "${seg.text.substring(0, 20)}..."`);
+      console.log(`[Dubber 57%] Processing segment ${i + 1}/${translatedSegments.length}`);
       
       try {
         const tts = await generateSpeech(seg.text, options.voice, options.speed, options.pitch);
         const segPath = path.join(tempDir, `s_${i}.mp3`);
         await fs.writeFile(segPath, tts.audioBuffer);
         concatLines.push(`file '${segPath}'`);
-        currentAudioMs += tts.durationMs;
+        totalDurationMs += tts.durationMs;
       } catch (ttsErr) {
         console.error(`[Dubber Error] TTS failed for segment ${i}:`, ttsErr);
-        // Continue to next segment instead of crashing
       }
     }
 
@@ -96,8 +95,8 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
     });
 
     const videoDuration = await getVideoDuration(tempVideoPath);
-    const speedRatio = videoDuration / (currentAudioMs / 1000);
-    console.log(`[Dubber 80%] Video: ${videoDuration}s, Audio: ${currentAudioMs/1000}s, Ratio: ${speedRatio.toFixed(2)}`);
+    const speedRatio = videoDuration / (totalDurationMs / 1000);
+    console.log(`[Dubber 80%] Video: ${videoDuration}s, Audio: ${totalDurationMs/1000}s, Ratio: ${speedRatio.toFixed(2)}`);
 
     console.log(`[Dubber 85%] Final FFmpeg Combine...`);
     await new Promise<void>((resolve, reject) => {
@@ -120,7 +119,7 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
     
     const videoUrl = `https://choco.de5.net/downloads/${downloadFilename}`;
     console.log(`[Dubber 100%] ✅ Success: ${videoUrl}` );
-    return { videoUrl, myanmarText: "", srtContent: "", durationMs: currentAudioMs };
+    return { videoUrl, myanmarText: "", srtContent: "", durationMs: totalDurationMs };
   } catch (err: any) {
     console.error("[Dubber Critical Error]", err);
     throw err;
