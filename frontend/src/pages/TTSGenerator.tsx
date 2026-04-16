@@ -5,10 +5,10 @@ import { Slider } from "@/components/ui/slider";
 import { ChevronUp, Loader2, Download, Volume2, LogOut, Crown, AlertCircle, Mic, FileVideo, Settings, Sparkles, Upload, Sun, Moon, Copy, Check, Link as LinkIcon, Wand2, Clock as ClockIcon, Info, ChevronDown, BookOpen, History as HistoryIcon, Zap, ExternalLink, Star } from "lucide-react";
 import { useLocation } from "wouter";
 import { TTSGeneratorLayout } from "@/components/TTSGeneratorLayout";
-import { useTheme } from "@/contexts/ThemeContext";
 
 type MainTab = "tts" | "video" | "dubbing";
 type SecondaryTab = "history" | "plan" | "guide" | "settings" | null;
+type Theme = "dark" | "light";
 type Lang = "mm" | "en";
 
 // ─── Helper: Convert YouTube URL to embed URL ─────────────
@@ -158,7 +158,7 @@ export default function TTSGenerator() {
   const [mainTab, setMainTab] = useState<MainTab>("tts");
   const [secondaryTab, setSecondaryTab] = useState<SecondaryTab>(null);
   const [menuOpen, setMenuOpen] = useState(true);
-  const { theme, toggleTheme } = useTheme();
+  const [theme, setTheme] = useState<Theme>("dark");
   const [lang, setLang] = useState<Lang>("mm");
   const t = T[lang];
 
@@ -204,8 +204,9 @@ export default function TTSGenerator() {
   const [dubVideoFile, setDubVideoFile] = useState<File | null>(null);
   const [dubVideoUrl, setDubVideoUrl] = useState<string>("");
   const [dubDragOver, setDubDragOver] = useState(false);
-  const [dubResult, setDubResult] = useState<{ videoUrl?: string; videoBase64?: string; myanmarText: string; srtContent: string; durationMs: number } | null>(null);
-
+  const [dubResult, setDubResult] = useState<{ videoBase64: string; myanmarText: string; srtContent: string; durationMs: number } | null>(null);
+  const [dubEditedText, setDubEditedText] = useState("");
+  const [dubCopied, setDubCopied] = useState(false);
   const dubFileRef = useRef<HTMLInputElement>(null);
   const dubResultVideoRef = useRef<HTMLVideoElement>(null);
 
@@ -223,7 +224,7 @@ export default function TTSGenerator() {
 
   // Dubbing SRT overlay settings
   const [srtEnabled, setSrtEnabled] = useState(true);
-  const [srtFontSize, setSrtFontSize] = useState(12);
+  const [srtFontSize, setSrtFontSize] = useState(10);
   const [srtColor, setSrtColor] = useState("#ffffff");
   const [srtDropShadow, setSrtDropShadow] = useState(true);
   const [srtBlurBg, setSrtBlurBg] = useState(true);
@@ -254,11 +255,6 @@ export default function TTSGenerator() {
   // Separate mutations for dubbing tab
   const dubFileMutation = trpc.video.dubFile.useMutation();
   const dubLinkMutation = trpc.video.dubLink.useMutation();
-  
-  // Job-based mutations
-  const startDubMutation = trpc.jobs.startDub.useMutation();
-  const jobStatusQuery = trpc.jobs.getStatus.useQuery({ jobId: "" }, { enabled: false });
-  const [activeJobId, setActiveJobId] = useState<string | null>(null);
 
   const isAdmin = me?.role === "admin";
   const hasActiveSub = isAdmin || subStatus?.active;
@@ -456,12 +452,6 @@ export default function TTSGenerator() {
     setDubPreviewUrl(url);
   };
 
-  // Character voice base mapping (for sending correct base voice)
-  const CHARACTER_VOICES_MAP: Record<string, { base: string }> = {
-    ryan: { base: "thiha" }, ronnie: { base: "thiha" }, lucas: { base: "thiha" },
-    daniel: { base: "thiha" }, evander: { base: "thiha" },
-    michelle: { base: "nilar" }, iris: { base: "nilar" }, charlotte: { base: "nilar" }, amara: { base: "nilar" },
-  };
   const handleDubGenerate = async () => {
     const dubOpts = {
       voice: dubVoiceMode === "standard" ? dubVoice : (CHARACTER_VOICES_MAP[dubCharacter]?.base || dubVoice) as "thiha" | "nilar",
@@ -480,17 +470,15 @@ export default function TTSGenerator() {
       srtBorderRadius,
     };
 
-    // Use job-based API for dubbing (handles long processing time)
     if (dubVideoUrl.trim()) {
       try {
-        const res = await startDubMutation.mutateAsync({ videoBase64: btoa(dubVideoUrl.trim()), filename: "video.mp4", ...dubOpts, srtBlurBg: false });
-        setActiveJobId(res.jobId);
-        // Poll for job status
-        pollJobStatus(res.jobId);
-      } catch (e: any) { 
-        console.error("[DUB LINK ERROR]", e);
-        showError(e?.message || "Dubbing failed"); 
-      }
+        const res = await dubLinkMutation.mutateAsync({ url: dubVideoUrl.trim(), ...dubOpts });
+        if (res.success) {
+          setDubResult({ videoBase64: res.videoBase64, myanmarText: res.myanmarText, srtContent: res.srtContent, durationMs: res.durationMs });
+          setDubEditedText(res.myanmarText);
+          utils.subscription.myStatus.invalidate();
+        }
+      } catch (e: any) { showError(e?.message || "Dubbing failed"); }
       return;
     }
 
@@ -499,62 +487,38 @@ export default function TTSGenerator() {
     reader.onload = async () => {
       const base64 = (reader.result as string).split(",")[1];
       try {
-        const res = await startDubMutation.mutateAsync({ videoBase64: base64, filename: dubVideoFile.name, ...dubOpts });
-        setActiveJobId(res.jobId);
-        // Poll for job status
-        pollJobStatus(res.jobId);
-      } catch (e: any) { 
-        console.error("[DUB FILE ERROR]", e);
-        showError(e?.message || "Dubbing failed"); 
-      }
+        const res = await dubFileMutation.mutateAsync({ videoBase64: base64, filename: dubVideoFile.name, ...dubOpts });
+        if (res.success) {
+          setDubResult({ videoBase64: res.videoBase64, myanmarText: res.myanmarText, srtContent: res.srtContent, durationMs: res.durationMs });
+          setDubEditedText(res.myanmarText);
+          utils.subscription.myStatus.invalidate();
+        }
+      } catch (e: any) { showError(e?.message || "Dubbing failed"); }
     };
     reader.readAsDataURL(dubVideoFile);
   };
 
-  // Poll job status
-  const pollJobStatus = (jobId: string) => {
-    const pollInterval = setInterval(async () => {
-      try {
-        const res = await fetch(`https://choco.de5.net/api/trpc/jobs.getStatus?input=${encodeURIComponent(JSON.stringify({ json: { jobId } }))}`, { credentials: "include" });
-        const json = await res.json();
-        const status = json.result?.data;
-        if (!status) return;
-        if (status.status === "completed" && status.result) {
-          clearInterval(pollInterval);
-          setDubResult(status.result);
-          setActiveJobId(null);
-          utils.subscription.myStatus.invalidate();
-        } else if (status.status === "failed") {
-          clearInterval(pollInterval);
-          showError(status.error || "Dubbing failed");
-          setActiveJobId(null);
-        }
-      } catch(e: any) {
-        console.error("[JOB POLL ERROR]", e);
-      }
-    }, 3000); // Poll every 3 seconds
+  const handleDubCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(dubEditedText);
+      setDubCopied(true);
+      showSuccess(lang === "mm" ? "SRT ကူးယူပြီးပါပြီ!" : "SRT copied!");
+      setTimeout(() => setDubCopied(false), 2000);
+    } catch { /* fallback */ }
   };
 
   const handleDubDownload = () => {
-    if (dubResult?.videoUrl) {
-      // Direct download from URL
-      const a = document.createElement("a");
-      a.href = dubResult.videoUrl;
-      a.download = `Dubbed_Myanmar_${Date.now()}.mp4`;
-      a.click();
-    } else if (dubResult?.videoBase64) {
-      // Fallback to base64
-      const binary = atob(dubResult.videoBase64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      const blob = new Blob([bytes], { type: "video/mp4" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `Dubbed_Myanmar_${Date.now()}.mp4`;
-      a.click();
-      URL.revokeObjectURL(url);
-    }
+    if (!dubResult?.videoBase64) return;
+    const binary = atob(dubResult.videoBase64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const blob = new Blob([bytes], { type: "video/mp4" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Dubbed_Myanmar_${Date.now()}.mp4`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   // Detect if a URL is an external platform link (YouTube, TikTok, Facebook)
@@ -617,10 +581,17 @@ export default function TTSGenerator() {
     setDubVideoFile(null);
     setDubVideoUrl("");
     setDubResult(null);
+    setDubEditedText("");
     setDubPreviewUrl("");
     setDubDetectedRatio("16:9");
   };
 
+  // Character voice base mapping (for sending correct base voice)
+  const CHARACTER_VOICES_MAP: Record<string, { base: string }> = {
+    ryan: { base: "thiha" }, ronnie: { base: "thiha" }, lucas: { base: "thiha" },
+    daniel: { base: "thiha" }, evander: { base: "thiha" },
+    michelle: { base: "nilar" }, iris: { base: "nilar" }, charlotte: { base: "nilar" }, amara: { base: "nilar" },
+  };
 
   // Thailand time formatter → now real user timezone
   const thaiTime = () => {
@@ -739,7 +710,7 @@ export default function TTSGenerator() {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={toggleTheme}
+              onClick={() => setTheme(isDark ? 'light' : 'dark')}
               className="p-1.5 rounded-lg transition-all flex items-center justify-center"
               style={{
                 border: `1px solid ${isDark ? 'rgba(192,111,48,0.35)' : 'rgba(192,111,48,0.15)'}`,
@@ -787,7 +758,7 @@ export default function TTSGenerator() {
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 max-w-6xl mx-auto">
               <div className="lg:col-span-2 space-y-2">
-                <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow, position: text.trim() ? "sticky" : "relative", top: text.trim() ? "20px" : "auto", zIndex: text.trim() ? 10 : "auto" }}>
+                <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow, position: text.trim() ? "sticky" : "relative", top: text.trim() ? "80px" : "auto", zIndex: text.trim() ? 40 : "auto" }}>
                   <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{t.inputText}</div>
                   <div className="relative">
                     <textarea
@@ -846,7 +817,7 @@ export default function TTSGenerator() {
               </div>
 
               <div className="space-y-4 sm:space-y-6">
-                <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow, position: "sticky", top: "20px" }}>
+                <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow, position: "sticky", top: "80px", zIndex: 40 }}>
                   <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{t.aspectRatio}</div>
                   <div className="grid grid-cols-2 gap-3 mb-5 sm:mb-6 mt-1">{(['9:16', '16:9'] as const).map(ratio => (<button key={ratio} onClick={() => setAspectRatio(ratio)} disabled={!hasPlan} className="py-2.5 sm:py-3 border rounded-xl font-black uppercase transition-all disabled:opacity-40" style={{ borderColor: aspectRatio === ratio ? accent : cardBorder, background: aspectRatio === ratio ? (isDark ? 'rgba(192,111,48,0.15)' : 'rgba(244,179,79,0.06)') : 'transparent', color: aspectRatio === ratio ? accent : textColor, boxShadow: aspectRatio === ratio && !isDark ? '0 4px 12px rgba(192,111,48,0.15)' : 'none' }}>{ratio}</button>))}</div>
                   
@@ -943,7 +914,7 @@ export default function TTSGenerator() {
                   <div className="flex justify-center">
                     <button onClick={handleVideoCopy}
                       className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all hover:scale-105"
-                      style={{ background: videoCopied ? "#4ade80" : accent, color: "var(--foreground)" }}>
+                      style={{ background: videoCopied ? "#4ade80" : accent, color: videoCopied ? "#000" : "#fff" }}>
                       {videoCopied ? <><Check className="w-4 h-4" /> {t.copied}</> : <><Copy className="w-4 h-4" /> {t.copyText}</>}
                     </button>
                   </div>
@@ -1029,7 +1000,7 @@ export default function TTSGenerator() {
             {dubPreviewUrl && !dubResult && (
               <div className="space-y-4">
                 {/* Video Preview — Sticky at top */}
-                <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow, position: "sticky", top: "70px", zIndex: 40 }}>
+                <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow, position: "sticky", top: "80px", zIndex: 40 }}>
                   <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{lang === "mm" ? "ဗီဒီယိုကြိုကြည့်" : "Video Preview"}</div>
                   <div className="flex justify-center mt-2">
                     {/* Preview: spinner → blob video → info card → HTML5 video */}
@@ -1049,7 +1020,7 @@ export default function TTSGenerator() {
                         borderRadius: "12px",
                         overflow: "hidden",
                         position: "relative",
-                        background: "var(--background)",
+                        background: "#000",
                       }}>
                         <video
                           ref={dubPreviewRef}
@@ -1092,7 +1063,7 @@ export default function TTSGenerator() {
                         )}
                       </div>
                     ) : dubPreviewUrl.startsWith("fallback:") || isExternalVideoUrl(dubPreviewUrl) ? (
-                      <div className="rounded-xl overflow-hidden" style={{ position: "relative", width: aspectRatio === "9:16" ? "180px" : "100%", aspectRatio: aspectRatio === "9:16" ? "9/16" : "16/9", margin: aspectRatio === "9:16" ? "0 auto" : "0", background: "var(--background)", borderRadius: "12px", overflow: "hidden" }}>
+                      <div className="w-full rounded-xl overflow-hidden" style={{ position: "relative", width: dubPreviewUrl.includes("/shorts/") ? "169px" : "100%", aspectRatio: dubPreviewUrl.includes("/shorts/") ? "9/16" : "16/9", margin: dubPreviewUrl.includes("/shorts/") ? "0 auto" : "0", background: "#000", borderRadius: "12px", overflow: "hidden" }}>
                         {(() => {
                           const ytMatch = dubPreviewUrl.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([\w-]{11})/);
                           const videoId = ytMatch ? ytMatch[1] : null;
@@ -1269,9 +1240,9 @@ export default function TTSGenerator() {
                         <p className="text-xs mt-0.5" style={{ color: subtextColor }}>{lang === "mm" ? "SRT စာတန်းထိုး ဖွင့်/ပိတ်" : "Toggle subtitle on/off"}</p>
                       </div>
                       <button onClick={() => setSrtEnabled(!srtEnabled)}
-                        className="relative w-14 h-7 sm:w-11 sm:h-6 rounded-full transition-all"
+                        className="relative w-11 h-6 rounded-full transition-all"
                         style={{ background: srtEnabled ? accent : (isDark ? "rgba(255,255,255,0.15)" : "#d1d5db") }}>
-                        <span className={`absolute top-0.5 sm:top-0.5 w-6 h-6 sm:w-5 sm:h-5 rounded-full bg-white transition-all shadow-md ${srtEnabled ? "left-8 sm:left-6" : "left-0.5"}`} />
+                        <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all shadow-md ${srtEnabled ? "left-6" : "left-0.5"}`} />
                       </button>
                     </div>
 
@@ -1280,7 +1251,7 @@ export default function TTSGenerator() {
                         <div>
                           <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: subtextColor }}>{lang === "mm" ? "စာအရွယ်အစား" : "Text Size"}</p>
                           <div className="flex items-center gap-3">
-                            <Slider value={[srtFontSize]} onValueChange={v => setSrtFontSize(v[0])} min={12} max={48} step={1} className="flex-1" />
+                            <Slider value={[srtFontSize]} onValueChange={v => setSrtFontSize(v[0])} min={8} max={48} step={1} className="flex-1" />
                             <span className="text-sm font-black min-w-[40px] text-right" style={{ color: accent }}>{srtFontSize}px</span>
                           </div>
                         </div>
@@ -1400,11 +1371,11 @@ export default function TTSGenerator() {
                 </div>
 
                 {/* Generate Dubbing Button */}
-                <button onClick={handleDubGenerate} disabled={startDubMutation.isPending || activeJobId !== null || dubPreviewUrl === 'loading'} className="w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 rounded-2xl text-white font-black uppercase tracking-widest transition-all disabled:opacity-50 hover:scale-[1.02] mt-2 shadow-lg text-sm sm:text-base" style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, boxShadow: `0 4px 12px rgba(0,0,0,0.15)` }}>
-                  {(startDubMutation.isPending || activeJobId !== null) ? <><Loader2 className="w-5 h-5 animate-spin" /><span className="text-xs sm:text-sm">{lang === "mm" ? "ဖန်တီးနေသည်... (၃-၅ မိနစ်)" : "Generating... (3-5 min)"}</span></> : <><Wand2 className="w-5 h-5" />{lang === "mm" ? "AI ဖြင့် ဖန်တီးမည်" : "Generate with AI"}</>}
+                <button onClick={handleDubGenerate} disabled={dubFileMutation.isPending || dubLinkMutation.isPending || dubPreviewUrl === 'loading' || dubPreviewMutation.isPending} className="w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 rounded-2xl text-white font-black uppercase tracking-widest transition-all disabled:opacity-50 hover:scale-[1.02] mt-2 shadow-lg text-sm sm:text-base" style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, boxShadow: `0 4px 12px rgba(0,0,0,0.15)` }}>
+                  {(dubFileMutation.isPending || dubLinkMutation.isPending) ? <><Loader2 className="w-5 h-5 animate-spin" /><span className="text-xs sm:text-sm">{lang === "mm" ? "ဖန်တီးနေသည်... (၃-၅ မိနစ်)" : "Generating... (3-5 min)"}</span></> : <><Wand2 className="w-5 h-5" />{lang === "mm" ? "AI ဖြင့် ဖန်တီးမည်" : "Generate with AI"}</>}
                 </button>
 
-                {(startDubMutation.isPending || activeJobId !== null) && (
+                {(dubFileMutation.isPending || dubLinkMutation.isPending) && (
                   <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
                     <div className="flex flex-col items-center justify-center gap-4 py-6">
                       <div className="flex items-center gap-2">
@@ -1437,15 +1408,13 @@ export default function TTSGenerator() {
                 <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
                   <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{lang === "mm" ? "AI ဖန်တီးပြီး ဗီဒီယို" : "AI Generated Video"}</div>
                   <div className="flex justify-center mt-2">
-                    <div style={{ width: aspectRatio === "9:16" ? "180px" : "100%", margin: aspectRatio === "9:16" ? "0 auto" : "0", aspectRatio: aspectRatio === "9:16" ? "9/16" : "16/9", borderRadius: "12px", overflow: "hidden" }}>
-                      <video
-                        ref={dubResultVideoRef}
-                        controls
-                        className="w-full h-full rounded-xl"
-                        style={{ objectFit: "cover", background: "var(--background)" }}
-                        src={dubResult.videoUrl || (() => { try { const b = atob(dubResult.videoBase64 || ''); const arr = new Uint8Array(b.length); for(let i=0;i<b.length;i++) arr[i]=b.charCodeAt(i); return URL.createObjectURL(new Blob([arr], {type:'video/mp4'})); } catch { return ''; } })()}
-                      />
-                    </div>
+                    <video
+                      ref={dubResultVideoRef}
+                      controls
+                      className="w-full rounded-xl"
+                      style={{ maxHeight: "480px", background: "#000" }}
+                      src={(() => { try { const b = atob(dubResult.videoBase64); const arr = new Uint8Array(b.length); for(let i=0;i<b.length;i++) arr[i]=b.charCodeAt(i); return URL.createObjectURL(new Blob([arr], {type:'video/mp4'})); } catch { return `data:video/mp4;base64,${dubResult.videoBase64}`; } })()}
+                    />
                   </div>
                   <div className="flex items-center justify-center gap-3 mt-4">
                     <button onClick={handleDubDownload}
@@ -1453,6 +1422,26 @@ export default function TTSGenerator() {
                       style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, boxShadow: `0 4px 12px rgba(0,0,0,0.15)` }}>
                       <Download className="w-5 h-5" /> {lang === "mm" ? "MP4 ဒေါင်းလုတ်" : "Download MP4"}
                     </button>
+                  </div>
+                </div>
+
+                {/* Translation Text */}
+                <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
+                  <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>{lang === "mm" ? "ဘာသာပြန်စာသား" : "Translation Text"}</div>
+                  <div className="space-y-3 mt-2">
+                    <div className="flex justify-end">
+                      <button onClick={handleDubCopy}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all hover:scale-105"
+                        style={{ background: dubCopied ? "#4ade80" : accent, color: dubCopied ? "#000" : "#fff" }}>
+                        {dubCopied ? <><Check className="w-4 h-4" /> {t.copied}</> : <><Copy className="w-4 h-4" /> {t.copyText}</>}
+                      </button>
+                    </div>
+                    <textarea
+                      value={dubEditedText}
+                      onChange={e => setDubEditedText(e.target.value)}
+                      className="w-full min-h-[120px] sm:min-h-[150px] p-4 rounded-xl border focus:outline-none focus:ring-2 resize-y text-sm font-sans"
+                      style={{ background: inputBg, borderColor: inputBorder, color: textColor, lineHeight: "2.2" }}
+                    />
                   </div>
                 </div>
 
@@ -1550,7 +1539,7 @@ export default function TTSGenerator() {
                   <button
                     onClick={() => setSecondaryTab(null)}
                     className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all hover:scale-105 hover:shadow-lg"
-                    style={{ background: accent, border: `2px solid ${accent}`, color: "var(--foreground)" }}
+                    style={{ background: accent, color: "#fff", border: `2px solid ${accent}` }}
                   >
                     <Wand2 className="w-4 h-4" />
                     {lang === "mm" ? "စတင်ဖန်တီးရန်" : "Start Generating"}
@@ -1815,5 +1804,3 @@ export default function TTSGenerator() {
     </TTSGeneratorLayout>
   );
 }
-// rebuild trigger 1776026701
-// dev branch 1776027867
