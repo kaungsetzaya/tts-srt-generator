@@ -31,18 +31,12 @@ async function transcribeLocalWhisper(audioPath: string): Promise<{ text: string
   const baseName = path.parse(audioPath).name;
   const scriptPath = path.join(process.cwd(), "backend", "transcriber.py");
   const outputJson = path.join(outputDir, `${baseName}_transcription.json`);
+  console.log(`[Dubber] Running Whisper on ${audioPath}`);
   await execFileAsync("python3", [scriptPath, audioPath, outputJson]);
   const data = JSON.parse(await fs.readFile(outputJson, 'utf-8'));
   const segments = data.segments?.map((seg: any) => ({ start: seg.start, end: seg.end, text: seg.text?.trim() || "" })) || [];
   await fs.unlink(outputJson).catch(() => {});
   return { text: data.text || "", srt: "", segments };
-}
-
-function hexToASS(hex: string): string {
-  const r = hex.slice(1, 3);
-  const g = hex.slice(3, 5);
-  const b = hex.slice(5, 7);
-  return `&H00${b}${g}${r}`.toUpperCase();
 }
 
 export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, options: DubOptions): Promise<DubResult> {
@@ -51,69 +45,97 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
   await fs.mkdir(tempDir, { recursive: true });
   const tempVideoPath = path.join(tempDir, `input_${id}.mp4`);
   const tempTTSAudio = path.join(tempDir, `tts_${id}.mp3`);
-  const tempSrtPath = path.join(tempDir, `subtitle_${id}.srt`);
   const tempOutputPath = path.join(tempDir, `output_${id}.mp4`);
 
   try {
     await fs.writeFile(tempVideoPath, videoBuffer);
+    console.log(`[Dubber 5%] Video saved: ${Math.round(videoBuffer.length / 1024)}KB`);
+
     const tempAudioExtract = path.join(tempDir, `ext_${id}.mp3`);
+    console.log(`[Dubber 10%] Extracting audio...`);
     await new Promise<void>((resolve, reject) => {
       ffmpeg(tempVideoPath).noVideo().audioCodec('libmp3lame').on('end', () => resolve()).on('error', reject).save(tempAudioExtract);
     });
 
+    console.log(`[Dubber 20%] Transcribing...`);
     const whisperResult = await transcribeLocalWhisper(tempAudioExtract);
+    console.log(`[Dubber 30%] Transcribed ${whisperResult.segments.length} segments`);
+
+    console.log(`[Dubber 35%] Translating...`);
     const { translated: translatedSegments } = await geminiTranslateForDub(whisperResult.segments, options.userApiKey);
+    console.log(`[Dubber 50%] Translation complete`);
     
     const concatLines: string[] = [];
     let currentAudioMs = 0;
-    let srtContent = "";
+    console.log(`[Dubber 55%] Starting TTS Loop for ${translatedSegments.length} segments`);
+
     for (let i = 0; i < translatedSegments.length; i++) {
       const seg = translatedSegments[i];
       if (!seg.text.trim()) continue;
-      const tts = await generateSpeech(seg.text, options.voice, options.speed, options.pitch);
-      const segPath = path.join(tempDir, `s_${i}.mp3`);
-      await fs.writeFile(segPath, tts.audioBuffer);
-      concatLines.push(`file '${segPath}'`);
-      srtContent += `${i+1}\n00:00:00,000 --> 00:00:01,000\n${seg.text}\n\n`; // Simplified SRT for speed
-      currentAudioMs += tts.durationMs;
+      
+      console.log(`[Dubber 57%] Processing segment ${i + 1}/${translatedSegments.length}: "${seg.text.substring(0, 20)}..."`);
+      
+      try {
+        const tts = await generateSpeech(seg.text, options.voice, options.speed, options.pitch);
+        const segPath = path.join(tempDir, `s_${i}.mp3`);
+        await fs.writeFile(segPath, tts.audioBuffer);
+        concatLines.push(`file '${segPath}'`);
+        currentAudioMs += tts.durationMs;
+      } catch (ttsErr) {
+        console.error(`[Dubber Error] TTS failed for segment ${i}:`, ttsErr);
+        // Continue to next segment instead of crashing
+      }
     }
 
-    await fs.writeFile(path.join(tempDir, 'list.txt'), concatLines.join('\n'));
+    console.log(`[Dubber 72%] Merging ${concatLines.length} TTS segments...`);
+    const listPath = path.join(tempDir, 'list.txt');
+    await fs.writeFile(listPath, concatLines.join('\n'));
+    
     await new Promise<void>((resolve, reject) => {
-      ffmpeg().input(path.join(tempDir, 'list.txt')).inputOptions(['-f', 'concat', '-safe', '0']).on('end', () => resolve()).on('error', reject).save(tempTTSAudio);
+      ffmpeg().input(listPath).inputOptions(['-f', 'concat', '-safe', '0']).on('end', () => resolve()).on('error', reject).save(tempTTSAudio);
     });
 
     const videoDuration = await getVideoDuration(tempVideoPath);
     const speedRatio = videoDuration / (currentAudioMs / 1000);
+    console.log(`[Dubber 80%] Video: ${videoDuration}s, Audio: ${currentAudioMs/1000}s, Ratio: ${speedRatio.toFixed(2)}`);
 
+    console.log(`[Dubber 85%] Final FFmpeg Combine...`);
     await new Promise<void>((resolve, reject) => {
-      let cmd = ffmpeg(tempVideoPath).input(tempTTSAudio);
-      // Use the simplest possible filter chain
-      const vFilter = speedRatio < 0.98 || speedRatio > 1.02 ? `setpts=PTS/${speedRatio}` : "copy";
-      
-      cmd.outputOptions([
-        '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '32',
-        '-c:a', 'aac', '-map', '0:v', '-map', '1:a', '-shortest'
-      ])
-      .on('start', (c) => console.log('[Dubber] Final FFmpeg start'))
-      .on('progress', (p) => console.log(`[Dubber] Progress: ${Math.round(p.percent)}%`))
-      .on('error', (e) => reject(e))
-      .on('end', () => resolve())
-      .save(tempOutputPath);
+      ffmpeg(tempVideoPath)
+        .input(tempTTSAudio)
+        .outputOptions([
+          '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '32',
+          '-c:a', 'aac', '-map', '0:v', '-map', '1:a', '-shortest'
+        ])
+        .on('progress', (p) => console.log(`[Dubber Progress] ${Math.round(p.percent)}%`))
+        .on('error', (e) => { console.error("[FFmpeg Final Error]", e); reject(e); })
+        .on('end', () => resolve())
+        .save(tempOutputPath);
     });
 
     const downloadFilename = `dub_${id}.mp4`;
-    await fs.copyFile(tempOutputPath, path.join(process.cwd(), 'static', 'downloads', downloadFilename));
-    return { videoUrl: `https://choco.de5.net/downloads/${downloadFilename}`, myanmarText: "", srtContent: "", durationMs: currentAudioMs };
+    const finalPath = path.join(process.cwd(), 'static', 'downloads', downloadFilename);
+    await fs.mkdir(path.dirname(finalPath), { recursive: true }).catch(() => {});
+    await fs.copyFile(tempOutputPath, finalPath);
+    
+    const videoUrl = `https://choco.de5.net/downloads/${downloadFilename}`;
+    console.log(`[Dubber 100%] ✅ Success: ${videoUrl}` );
+    return { videoUrl, myanmarText: "", srtContent: "", durationMs: currentAudioMs };
+  } catch (err: any) {
+    console.error("[Dubber Critical Error]", err);
+    throw err;
   } finally {
-    await fs.rm(tempDir, { recursive: true, force: true } ).catch(() => {});
+    await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
   }
 }
 
 export async function dubVideoFromLink(url: string, options: DubOptions): Promise<DubResult> {
   const id = randomUUID();
   const tempVideoPath = path.join(tmpdir(), `dl_${id}.mp4`);
+  console.log(`[Dubber] Downloading ${url}`);
   await downloadVideo(url, tempVideoPath, { timeout: 300000 });
   const buffer = await fs.readFile(tempVideoPath);
-  return await dubVideoFromBuffer(buffer, "v.mp4", options);
+  const result = await dubVideoFromBuffer(buffer, "v.mp4", options);
+  await fs.unlink(tempVideoPath).catch(() => {});
+  return result;
 }
