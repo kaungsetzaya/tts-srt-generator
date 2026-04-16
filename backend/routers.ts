@@ -377,7 +377,7 @@ export const appRouter = t.router({
           
           // Character usage stats
           const charRows = await db.select({ character: ttsConversions.character, count: count() })
-            .from(ttsConversions).where(sql`${ttsConversions.character} IS NOT NULL`).groupBy(ttsConversions.character);
+            .from(ttsConversions).groupBy(ttsConversions.character);
           const characters = charRows.filter(r => r.character).map(r => ({ character: r.character, count: r.count }));
           
           // Total counts
