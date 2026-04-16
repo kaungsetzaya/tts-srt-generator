@@ -264,7 +264,35 @@ export const appRouter = t.router({
     getUsers: adminProcedure.query(async () => {
       const db = await getDb();
       if (!db) return [];
-      try { return await db.select().from(users).limit(500); } catch { return []; }
+      try {
+        const userList = await db.select().from(users).limit(500);
+        
+        // Get subscription data for each user
+        const userIds = userList.map(u => u.id);
+        const subs = await db.select().from(subscriptions)
+          .where(sql`user_id IN (${userIds.join(',')}) AND expires_at > NOW()`);
+        
+        // Get generation count for each user
+        const genCounts = await db.select({ userId: ttsConversions.userId, count: count() })
+          .from(ttsConversions)
+          .where(sql`user_id IN (${userIds.join(',')})`)
+          .groupBy(ttsConversions.userId);
+        
+        // Merge data
+        return userList.map(user => {
+          const userSub = subs.find(s => s.userId === user.id);
+          const userGen = genCounts.find(g => g.userId === user.id);
+          return {
+            ...user,
+            subscription: userSub || null,
+            genCount: userGen?.count || 0,
+            daysLeft: userSub ? Math.ceil((new Date(userSub.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : 0
+          };
+        });
+      } catch (e) { 
+        console.error("[getUsers Error]", e);
+        return []; 
+      }
     }),
     banUser: adminProcedure.input(z.object({ userId: z.string(), ban: z.boolean() })).mutation(async ({ input }) => {
       const db = await getDb();
@@ -337,18 +365,92 @@ export const appRouter = t.router({
     getVoiceStats: adminProcedure.input(z.object({ timeframe: z.string().optional() }))
       .query(async () => {
         const db = await getDb();
-        if (!db) return { thiha: 0, nilar: 0, total: 0 };
+        if (!db) return { voices: [], features: [], baseVoices: [], characters: [], total: 0, totalChars: 0, totalDurationMs: 0 };
         try {
-          const rows = await db.select({ voice: ttsConversions.voice, count: count() })
+          // Voice usage stats (thiha/nilar)
+          const voiceRows = await db.select({ voice: ttsConversions.voice, count: count() })
             .from(ttsConversions).groupBy(ttsConversions.voice);
-          const stats: Record<string, number> = { thiha: 0, nilar: 0 };
-          let total = 0;
-          for (const r of rows) {
-            if (r.voice) { stats[r.voice] = r.count; total += r.count; }
-          }
-          return { ...stats, total };
-        } catch { return { thiha: 0, nilar: 0, total: 0 }; }
+          const voices = voiceRows.filter(r => r.voice).map(r => ({ voice: r.voice, count: r.count }));
+          
+          // Feature usage stats (tts, videoUpload, videoLink, translation)
+          const featureRows = await db.select({ feature: ttsConversions.feature, count: count() })
+            .from(ttsConversions).groupBy(ttsConversions.feature);
+          const features = featureRows.filter(r => r.feature).map(r => ({ feature: r.feature, count: r.count }));
+          
+          // Character usage stats
+          const charRows = await db.select({ character: ttsConversions.character, count: count() })
+            .from(ttsConversions).where(sql`character IS NOT NULL`).groupBy(ttsConversions.character);
+          const characters = charRows.filter(r => r.character).map(r => ({ character: r.character, count: r.count }));
+          
+          // Total counts
+          const [totalRow] = await db.select({ count: count(), chars: sql`SUM(char_count)`, duration: sql`SUM(duration_ms)` })
+            .from(ttsConversions);
+          
+          // Base voices (Thiha/Nilar breakdown)
+          const baseVoices = voiceRows.filter(r => r.voice && ['thiha', 'nilar'].includes(r.voice))
+            .map(r => ({ name: r.voice, count: r.count }));
+          
+          return { 
+            voices, 
+            features, 
+            baseVoices,
+            characters,
+            total: totalRow?.count || 0, 
+            totalChars: totalRow?.chars || 0, 
+            totalDurationMs: totalRow?.duration || 0 
+          };
+        } catch (e) { 
+          console.error("[getVoiceStats Error]", e);
+          return { voices: [], features: [], baseVoices: [], characters: [], total: 0, totalChars: 0, totalDurationMs: 0 }; 
+        }
       }),
+    getGenerationOverview: adminProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return { today: 0, thisWeek: 0, thisMonth: 0, allTime: 0, activeHours: [], daily: [] };
+      try {
+        // Today
+        const [todayRow] = await db.select({ count: count() }).from(ttsConversions)
+          .where(sql`DATE(created_at) = CURDATE()`);
+        
+        // This week
+        const [weekRow] = await db.select({ count: count() }).from(ttsConversions)
+          .where(sql`created_at > DATE_SUB(NOW(), INTERVAL 7 DAY)`);
+        
+        // This month
+        const [monthRow] = await db.select({ count: count() }).from(ttsConversions)
+          .where(sql`created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)`);
+        
+        // All time
+        const [allTimeRow] = await db.select({ count: count() }).from(ttsConversions);
+        
+        // Active hours breakdown
+        const hourRows = await db.select({ hour: sql`HOUR(created_at)`, count: count() })
+          .from(ttsConversions)
+          .where(sql`created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)`)
+          .groupBy(sql`HOUR(created_at)`);
+        const activeHours = hourRows.map(r => ({ hour: r.hour, count: r.count }));
+        
+        // Daily breakdown (last 30 days)
+        const dailyRows = await db.select({ date: sql`DATE(created_at)`, count: count() })
+          .from(ttsConversions)
+          .where(sql`created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)`)
+          .groupBy(sql`DATE(created_at)`)
+          .orderBy(sql`DATE(created_at)`);
+        const daily = dailyRows.map(r => ({ date: r.date, count: r.count }));
+        
+        return {
+          today: todayRow?.count || 0,
+          thisWeek: weekRow?.count || 0,
+          thisMonth: monthRow?.count || 0,
+          allTime: allTimeRow?.count || 0,
+          activeHours,
+          daily
+        };
+      } catch (e) {
+        console.error("[getGenerationOverview Error]", e);
+        return { today: 0, thisWeek: 0, thisMonth: 0, allTime: 0, activeHours: [], daily: [] };
+      }
+    }),
     getChurnStats: adminProcedure.query(async () => {
       const db = await getDb();
       if (!db) return { churnRate: 0, newUsers: 0, lostUsers: 0 };

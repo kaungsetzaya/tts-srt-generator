@@ -221,6 +221,7 @@ export default function AdminDashboard() {
   const { data: analytics } = trpc.admin.getAnalytics.useQuery();
   const { data: health } = trpc.admin.getServerHealth.useQuery(undefined, { refetchInterval: 30000 });
   const { data: voiceStats, refetch: refetchVoice } = trpc.adminStats.getVoiceStats.useQuery({ timeframe });
+  const { data: generationOverview } = trpc.adminStats.getGenerationOverview.useQuery();
   const { data: errorData, refetch: refetchErrors } = trpc.adminStats.getErrorLogs.useQuery({ limit: 50, onlyUnresolved: false });
   const { data: churnData } = trpc.adminStats.getChurnStats.useQuery();
   const { data: onlineStats } = trpc.adminStats.onlineUsers.useQuery(undefined, { refetchInterval: 60000 });
@@ -339,10 +340,10 @@ export default function AdminDashboard() {
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
-                  { label: "Today", value: analytics?.generations?.today ?? 0 },
-                  { label: "This Week", value: analytics?.generations?.week ?? 0 },
-                  { label: "This Month", value: analytics?.generations?.month ?? 0 },
-                  { label: "All Time", value: analytics?.generations?.total ?? 0 },
+                  { label: "Today", value: generationOverview?.today ?? 0 },
+                  { label: "This Week", value: generationOverview?.thisWeek ?? 0 },
+                  { label: "This Month", value: generationOverview?.thisMonth ?? 0 },
+                  { label: "All Time", value: generationOverview?.allTime ?? 0 },
                 ].map(({ label, value }) => (
                   <div key={label} className="border rounded-xl p-4 text-center" style={{ borderColor: border }}>
                     <p className="text-xs opacity-40 uppercase tracking-wider mb-2">{label}</p>
