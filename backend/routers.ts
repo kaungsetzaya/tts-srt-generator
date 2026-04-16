@@ -23,8 +23,8 @@ const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
 });
 
 // Admin procedure
-const adminProcedure = t.procedure.use(async ({ ctx, next }) => {
-  if (!ctx.user || ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin only" });
+const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+  if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin only" });
   return next({ ctx: { ...ctx, user: ctx.user } });
 });
 
