@@ -1288,7 +1288,7 @@ export default function TTSGenerator() {
                         <div>
                           <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: subtextColor }}>{lang === "mm" ? "စာအရောင်" : "Text Color"}</p>
                           <div className="flex gap-2 flex-wrap">
-                            {["#ffffff", "#facc15", "#4ade80", "#60a5fa", "#f472b6", "#c084fc", "#fb923c", "#f87171"].map(c => (
+                            {["#ffffff", "#facc15", "#4ade80", "#60a5fa", "#f472b6", "#F4B34F", "#fb923c", "#f87171"].map(c => (
                               <button key={c} onClick={() => setSrtColor(c)}
                                 className="w-8 h-8 rounded-lg border-2 transition-all hover:scale-110"
                                 style={{ background: c, borderColor: srtColor === c ? accent : "transparent", boxShadow: srtColor === c ? `0 0 10px ${c}` : "none" }} />
@@ -1662,7 +1662,7 @@ export default function TTSGenerator() {
                   { name: "Starter", price: "5,000 Ks", period: lang === "mm" ? "/ လ" : "/ mo", features: [lang === "mm" ? "အသံဖန်တီးမှု ၁၅/ရက်" : "15 generations/day", lang === "mm" ? "စာလုံး ၂၀,၀၀၀" : "20,000 chars", lang === "mm" ? "ဗီဒီယို ၃/ရက်" : "3 videos/day"], color: "#60a5fa", popular: false },
                   { name: "Pro", price: "15,000 Ks", period: lang === "mm" ? "/ လ" : "/ mo", features: [lang === "mm" ? "အသံဖန်တီးမှု ၅၀/ရက်" : "50 generations/day", lang === "mm" ? "စာလုံး ၅၀,၀၀၀" : "50,000 chars", lang === "mm" ? "ဗီဒီယို ၁၀/ရက်" : "10 videos/day", lang === "mm" ? "Premium Voices အကုန်" : "All premium voices"], color: accent, popular: true },
                   { name: "Business", price: "30,000 Ks", period: lang === "mm" ? "/ လ" : "/ mo", features: [lang === "mm" ? "အကန့်အသတ်မဲ့" : "Unlimited", lang === "mm" ? "စာလုံး ၁၀၀,၀၀၀" : "100,000 chars", lang === "mm" ? "ဗီဒီယို ၂၀/ရက်" : "20 videos/day", "Priority Support"], color: "#f59e0b", popular: false },
-                  { name: "Enterprise", price: lang === "mm" ? "ညှိနှိုင်း" : "Custom", period: "", features: [lang === "mm" ? "အကုန်အကန့်အသတ်မဲ့" : "Everything unlimited", "API Access", "24/7 Support", lang === "mm" ? "စနစ်ချိတ်ဆက်မှု" : "Custom integration"], color: "#c084fc", popular: false },
+                  { name: "Enterprise", price: lang === "mm" ? "ညှိနှိုင်း" : "Custom", period: "", features: [lang === "mm" ? "အကုန်အကန့်အသတ်မဲ့" : "Everything unlimited", "API Access", "24/7 Support", lang === "mm" ? "စနစ်ချိတ်ဆက်မှု" : "Custom integration"], color: "#F4B34F", popular: false },
                 ].map(plan => (
                   <div key={plan.name} className="rounded-2xl border p-5 sm:p-6 relative transition-all hover:scale-[1.02]" style={{ background: `linear-gradient(145deg, ${cardBg}, ${isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)'})`, borderColor: plan.popular ? accent : cardBorder, boxShadow: plan.popular ? `0 4px 16px rgba(0,0,0,0.1)` : boxShadow }}>
                     {plan.popular && <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-wider" style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, color: "#fff" }}>{lang === "mm" ? "လူကြိုက်များ" : "Popular"}</div>}

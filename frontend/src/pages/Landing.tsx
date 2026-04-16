@@ -102,14 +102,9 @@ export default function Landing() {
             style={{ color: C.nude }}
           >Plans</motion.button>
           <motion.button 
-            whileHover={{ scale: 1.15, y: -3, boxShadow: "0 12px 24px rgba(244,179,79,0.4)" }}
-            whileTap={{ scale: 0.9 }}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.4 }}
             onClick={go} 
-            className="px-6 py-2 rounded-full text-xs font-bold uppercase tracking-[0.15em] transition-all duration-200"
-            style={{ background: C.gold, color: isDark ? C.dark : "#fff", boxShadow: "0 8px 24px rgba(244,179,79,0.3)" }}
+            className="px-6 py-2 rounded-full text-xs font-bold uppercase tracking-[0.15em]"
+            style={{ background: C.gold, color: isDark ? C.dark : "#fff" }}
           >Login</motion.button>
         </motion.div>
       </motion.nav>
