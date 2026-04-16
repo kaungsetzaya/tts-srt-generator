@@ -1011,7 +1011,7 @@ export default function AdminDashboard() {
                   giveSub.mutate({
                     userId: selectedUser,
                     plan: selectedPlan,
-                    days: selectedPlan === "trial" ? trialDays : (selectedPlan === "1month" ? 30 : selectedPlan === "3months" ? 90 : selectedPlan === "6months" ? 180 : 365),
+                    days: selectedPlan === "trial" ? trialDays : (selectedPlan === "1month" ? 30 : selectedPlan === "3month" ? 90 : selectedPlan === "6month" ? 180 : 999999),
                     note: `${transactionId ? `TXN: ${transactionId}` : ""}${note ? ` | ${note}` : ""}`.trim() || undefined,
                     paymentMethod,
                     paymentSlip: paymentSlipBase64 || undefined,
