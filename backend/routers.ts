@@ -39,34 +39,25 @@ export const appRouter = t.router({
         }
       }),
   }),
-  dub: t.router({
-    fromLink: t.procedure
-      .input(
-        z.object({
-          url: z.string(),
-          voice: z.enum(["thiha", "nilar"]),
-          speed: z.number().optional(),
-          pitch: z.number().optional(),
-          srtEnabled: z.boolean().optional(),
-          userApiKey: z.string().optional(),
-        })
-      )
-      .mutation(async ({ input }) => {
-        try {
-          return await dubVideoFromLink(input.url, {
-            voice: input.voice,
-            speed: input.speed ?? 1.0,
-            pitch: input.pitch ?? 0,
-            srtEnabled: input.srtEnabled ?? true,
-            userApiKey: input.userApiKey,
-          });
-        } catch (error: any) {
-          console.error("[Dub Error]", error);
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: error.message || "Failed to dub video.",
-          });
+  auth: t.router({
+    verify: t.procedure
+      .input(z.object({ code: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+        const user = await db.query.users.findFirst({
+          where: (u: any, { eq }: any) => eq(u.telegramCode, input.code),
+        });
+
+        if (!user || !user.telegramCodeExpiresAt || new Date(user.telegramCodeExpiresAt) < new Date()) {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid or expired code" });
         }
+
+        // Clear code after successful login
+        await db.update(users).set({ telegramCode: null }).where(eq(users.id, user.id));
+
+        return { success: true, userId: user.id };
       }),
   }),
 });

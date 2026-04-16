@@ -1,4 +1,6 @@
 import { createTRPCReact } from "@trpc/react-query";
+import superjson from "superjson";
 
-// Use `any` for standalone frontend deploy (backend types not available on Vercel)
-export const trpc = createTRPCReact<any>();
+export const trpc = createTRPCReact<any>({
+  transformer: superjson,
+});
