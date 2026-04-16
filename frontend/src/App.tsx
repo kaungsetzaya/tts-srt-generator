@@ -11,6 +11,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import VideoTranslator from "./pages/VideoTranslator";
 import History from "./pages/History";
 import TrialInfo from "./pages/TrialInfo";
+import Plans from "./pages/Plans";
 import AuthGuard from "./components/AuthGuard";
 
 function Router() {
@@ -38,6 +39,7 @@ function Router() {
           <TrialInfo />
         </AuthGuard>
       </Route>
+      <Route path={"/plans"} component={Plans} />
       <Route path={"/video"}>
         {() => { window.location.href = '/lumix'; return null; }}
       </Route>

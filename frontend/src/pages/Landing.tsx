@@ -68,33 +68,26 @@ export default function Landing() {
         <div className="flex items-center gap-8">
           <span className="text-2xl font-black tracking-tight" style={{ color: C.gold }}>LUMIX</span>
           <button onClick={() => featRef.current?.scrollIntoView({ behavior: 'smooth' })} className="text-xs uppercase tracking-[0.2em]" style={{ color: C.nude }}>Features</button>
+          <button onClick={() => nav("/plans")} className="text-xs uppercase tracking-[0.2em]" style={{ color: C.nude }}>Plans</button>
           <button onClick={go} className="px-6 py-2 rounded-full text-xs font-bold uppercase tracking-[0.15em]" style={{ background: C.gold, color: isDark ? C.dark : "#fff" }}>Login</button>
         </div>
-        <div className="w-px h-6 bg-current opacity-20 mx-2" />
-        <button 
-          onClick={toggleTheme}
-          className="p-2 rounded-xl transition-all hover:scale-110"
-          style={{ background: C.glass, border: `1px solid ${C.glassB}`, color: C.gold }}
-        >
-          {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-        </button>
       </nav>
 
       {/* HERO - 3D floating */}
       <div ref={heroRef} className="relative z-10 flex items-center justify-center min-h-screen px-4 pt-24" style={{ scrollSnapAlign: "start" }}>
         <motion.div style={{ opacity: heroOp }} className="text-center">
           <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-            className="mb-12 inline-block px-4 py-1.5 rounded-full text-sm uppercase tracking-[0.4em] font-semibold"
+            className="mb-6 inline-block px-4 py-1.5 rounded-full text-xs uppercase tracking-[0.3em] font-semibold"
             style={{ background: C.glass, backdropFilter: "blur(12px)", border: `1px solid ${C.glassB}`, color: C.gold }}>
             Myanmar AI Content Platform
           </motion.div>
           <div>
             <motion.h1 initial={{ opacity: 0, y: 40, rotateX: 15 }} animate={{ opacity: 1, y: 0, rotateX: 0 }} transition={{ duration: 0.8, delay: 0.1 }}
-              className="font-black leading-[0.9] mb-2" style={{ fontSize: "clamp(52px, 14vw, 170px)", letterSpacing: "-0.03em", color: C.cream }}>
+              className="font-black leading-[0.9] mb-2" style={{ fontSize: "clamp(36px, 10vw, 120px)", letterSpacing: "-0.03em", color: C.cream }}>
               LUMIX
             </motion.h1>
             <motion.h1 initial={{ opacity: 0, y: 40, rotateX: 15 }} animate={{ opacity: 1, y: 0, rotateX: 0 }} transition={{ duration: 0.8, delay: 0.2 }}
-              className="font-black leading-[0.9] mb-8" style={{ fontSize: "clamp(52px, 14vw, 170px)", letterSpacing: "-0.03em", color: C.cream }}>
+              className="font-black leading-[0.9] mb-6" style={{ fontSize: "clamp(36px, 10vw, 120px)", letterSpacing: "-0.03em", color: C.cream }}>
               STUDIO
             </motion.h1>
           </div>
