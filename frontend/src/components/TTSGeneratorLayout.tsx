@@ -13,10 +13,19 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
+  SidebarRail,
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { History, BookOpen, Settings, PanelLeft, Mic, FileVideo, Wand2 } from "lucide-react";
+import {
+  History,
+  BookOpen,
+  Settings,
+  PanelLeft,
+  Mic,
+  FileVideo,
+  Wand2,
+} from "lucide-react";
 
 interface TTSGeneratorLayoutProps {
   children: ReactNode;
@@ -42,7 +51,7 @@ export function TTSGeneratorLayout({
   isDark,
 }: TTSGeneratorLayoutProps) {
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen>
       <div className="flex min-h-screen w-full">
         <TTSGeneratorSidebar
           currentTab={currentSecondaryTab}
@@ -53,11 +62,10 @@ export function TTSGeneratorLayout({
           miniLogoUrl={miniLogoUrl}
           isDark={isDark}
         />
+        <SidebarRail />
         <SidebarInset className="flex-1 flex flex-col min-h-screen">
           <main className="flex-1 overflow-auto pb-20 md:pb-0 p-4 md:p-6">
-            <div className="max-w-6xl mx-auto">
-              {children}
-            </div>
+            <div className="max-w-6xl mx-auto">{children}</div>
           </main>
           <MobileBottomNavigation
             mainTab={mainTab}
@@ -92,24 +100,59 @@ function TTSGeneratorSidebar({
   isDark = true,
 }: TTSGeneratorSidebarProps) {
   const sidebar = useSidebar();
-  console.log("[Sidebar] isDark:", isDark);
   const isCollapsed = !sidebar.open;
 
   const accent = "#C06F30";
   const accentSecondary = "#F4B34F";
 
   const allMenuItems = [
-    { id: "tts",      label: "စာမှအသံ",         labelEn: "Text to Speech",   icon: Mic,      type: "main" as const },
-    { id: "video",    label: "ဗီဒီယိုဘာသာပြန်", labelEn: "Video Translation", icon: FileVideo, type: "main" as const },
-    { id: "dubbing",  label: "AI Video",          labelEn: "AI Video",          icon: Wand2,     type: "main" as const },
-    { id: "history",  label: "မှတ်တမ်း",          labelEn: "History",           icon: History,  type: "secondary" as const },
-    { id: "guide",    label: "လမ်းညွှန်",         labelEn: "Guide",             icon: BookOpen, type: "secondary" as const },
-    { id: "settings", label: "ဆက်တင်",            labelEn: "Settings",          icon: Settings, type: "secondary" as const },
+    {
+      id: "tts",
+      label: "စာမှအသံ",
+      labelEn: "Text to Speech",
+      icon: Mic,
+      type: "main" as const,
+    },
+    {
+      id: "video",
+      label: "ဗီဒီယိုဘာသာပြန်",
+      labelEn: "Video Translation",
+      icon: FileVideo,
+      type: "main" as const,
+    },
+    {
+      id: "dubbing",
+      label: "AI Video",
+      labelEn: "AI Video",
+      icon: Wand2,
+      type: "main" as const,
+    },
+    {
+      id: "history",
+      label: "မှတ်တမ်း",
+      labelEn: "History",
+      icon: History,
+      type: "secondary" as const,
+    },
+    {
+      id: "guide",
+      label: "လမ်းညွှန်",
+      labelEn: "Guide",
+      icon: BookOpen,
+      type: "secondary" as const,
+    },
+    {
+      id: "settings",
+      label: "ဆက်တင်",
+      labelEn: "Settings",
+      icon: Settings,
+      type: "secondary" as const,
+    },
   ];
 
   // Fix: only one item can be active at a time
   // If a secondary tab is open, no main tab is highlighted, and vice versa
-  const getIsActive = (item: typeof allMenuItems[0]) => {
+  const getIsActive = (item: (typeof allMenuItems)[0]) => {
     if (item.type === "secondary") {
       return currentTab === item.id;
     }
@@ -118,16 +161,23 @@ function TTSGeneratorSidebar({
   };
 
   return (
-    <Sidebar 
-      className={`glass-sidebar ${isDark ? 'dark' : 'light'}`}
-      style={{ 
-        backgroundColor: isDark ? 'rgba(15, 15, 15, 0.95)' : 'rgba(232, 227, 207, 0.95)',
-        borderRight: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+    <Sidebar
+      collapsible="icon"
+      className={`glass-sidebar ${isDark ? "dark" : "light"}`}
+      style={{
+        backgroundColor: isDark
+          ? "rgba(15, 15, 15, 0.95)"
+          : "rgba(232, 227, 207, 0.95)",
+        borderRight: isDark
+          ? "1px solid rgba(255,255,255,0.08)"
+          : "1px solid rgba(0,0,0,0.08)",
       }}
     >
-      <SidebarHeader 
+      <SidebarHeader
         className="border-b py-4 px-4"
-        style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}
+        style={{
+          borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)",
+        }}
       >
         <div className="flex items-center justify-between gap-2 w-full">
           {/* Logo */}
@@ -138,15 +188,26 @@ function TTSGeneratorSidebar({
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.2 }}
               className="flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0"
-              style={{ 
-                background: isDark ? 'rgba(192,111,48,0.2)' : 'rgba(192,111,48,0.15)', 
-                border: `1px solid ${isDark ? 'rgba(192,111,48,0.4)' : 'rgba(192,111,48,0.3)'}` 
+              style={{
+                background: isDark
+                  ? "rgba(192,111,48,0.2)"
+                  : "rgba(192,111,48,0.15)",
+                border: `1px solid ${isDark ? "rgba(192,111,48,0.4)" : "rgba(192,111,48,0.3)"}`,
               }}
             >
               {miniLogoUrl ? (
-                <img src={miniLogoUrl} alt="Logo" className="w-5 h-5 object-contain" />
+                <img
+                  src={miniLogoUrl}
+                  alt="Logo"
+                  className="w-5 h-5 object-contain"
+                />
               ) : (
-                <span className="text-[10px] font-black" style={{ color: "#C06F30" }}>L</span>
+                <span
+                  className="text-[10px] font-black"
+                  style={{ color: "#C06F30" }}
+                >
+                  L
+                </span>
               )}
             </motion.div>
           ) : (
@@ -158,7 +219,11 @@ function TTSGeneratorSidebar({
               className="flex-1 min-w-0"
             >
               {logoUrl ? (
-                <img src={logoUrl} alt="LUMIX" className="h-7 w-auto object-contain" />
+                <img
+                  src={logoUrl}
+                  alt="LUMIX"
+                  className="h-7 w-auto object-contain"
+                />
               ) : (
                 <span
                   className="text-xl font-black tracking-widest"
@@ -178,12 +243,14 @@ function TTSGeneratorSidebar({
 
           <SidebarTrigger
             className="flex items-center justify-center rounded-xl transition-all duration-200 hover:scale-110 flex-shrink-0"
-            style={{ 
-              width: 36, 
-              height: 36, 
-              background: isDark ? 'rgba(192,111,48,0.15)' : 'rgba(192,111,48,0.12)', 
-              border: `1px solid ${isDark ? 'rgba(192,111,48,0.3)' : 'rgba(192,111,48,0.25)'}`, 
-              color: "#C06F30" 
+            style={{
+              width: 36,
+              height: 36,
+              background: isDark
+                ? "rgba(192,111,48,0.15)"
+                : "rgba(192,111,48,0.12)",
+              border: `1px solid ${isDark ? "rgba(192,111,48,0.3)" : "rgba(192,111,48,0.25)"}`,
+              color: "#C06F30",
             }}
           >
             <PanelLeft className="h-4 w-4" />
@@ -195,12 +262,16 @@ function TTSGeneratorSidebar({
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1.5">
-              {allMenuItems.map((item) => {
+              {allMenuItems.map(item => {
                 const isActive = getIsActive(item);
                 const Icon = item.icon;
                 return (
                   <SidebarMenuItem key={item.id}>
-                    <motion.div whileHover={{ x: isCollapsed ? 0 : 3 }} whileTap={{ scale: 0.97 }} transition={{ duration: 0.15 }}>
+                    <motion.div
+                      whileHover={{ x: isCollapsed ? 0 : 3 }}
+                      whileTap={{ scale: 0.97 }}
+                      transition={{ duration: 0.15 }}
+                    >
                       <SidebarMenuButton
                         onClick={() => {
                           if (item.type === "main") {
@@ -208,7 +279,9 @@ function TTSGeneratorSidebar({
                             onTabChange(null); // clear secondary tab
                           } else {
                             // toggle secondary: clicking active secondary closes it
-                            onTabChange(currentTab === item.id ? null : item.id as any);
+                            onTabChange(
+                              currentTab === item.id ? null : (item.id as any)
+                            );
                           }
                         }}
                         isActive={isActive}
@@ -216,15 +289,17 @@ function TTSGeneratorSidebar({
                         className="w-full relative overflow-hidden rounded-xl h-11 transition-all duration-200"
                         style={
                           isActive
-                            ? { 
-                                background: `linear-gradient(135deg, ${accent}40, ${accentSecondary}30)`, 
-                                color: isDark ? "#ECCEB6" : "#2B1D1C", 
-                                borderLeft: `3px solid ${accent}`, 
-                                boxShadow: `0 0 16px ${accent}33` 
+                            ? {
+                                background: `linear-gradient(135deg, ${accent}40, ${accentSecondary}30)`,
+                                color: isDark ? "#ECCEB6" : "#2B1D1C",
+                                borderLeft: `3px solid ${accent}`,
+                                boxShadow: `0 0 16px ${accent}33`,
                               }
-                            : { 
-                                color: isDark ? "rgba(236,206,182,0.6)" : "rgba(43,29,28,0.6)", 
-                                borderLeft: "3px solid transparent" 
+                            : {
+                                color: isDark
+                                  ? "rgba(236,206,182,0.6)"
+                                  : "rgba(43,29,28,0.6)",
+                                borderLeft: "3px solid transparent",
                               }
                         }
                       >
@@ -232,12 +307,21 @@ function TTSGeneratorSidebar({
                           <motion.div
                             layoutId={"navGlow-" + item.id}
                             className="absolute inset-0 rounded-xl"
-                            style={{ background: `linear-gradient(135deg, ${accent}20, ${accentSecondary}15)`, pointerEvents: "none" }}
-                            transition={{ type: "spring", bounce: 0.15, duration: 0.4 }}
+                            style={{
+                              background: `linear-gradient(135deg, ${accent}20, ${accentSecondary}15)`,
+                              pointerEvents: "none",
+                            }}
+                            transition={{
+                              type: "spring",
+                              bounce: 0.15,
+                              duration: 0.4,
+                            }}
                           />
                         )}
                         <Icon className="h-4 w-4 flex-shrink-0 relative z-10" />
-                        <span className="font-semibold text-[13px] truncate relative z-10">{item.label}</span>
+                        <span className="font-semibold text-[13px] truncate relative z-10">
+                          {item.label}
+                        </span>
                       </SidebarMenuButton>
                     </motion.div>
                   </SidebarMenuItem>
@@ -265,22 +349,24 @@ function MobileBottomNavigation({
   isDark?: boolean;
 }) {
   const mainNavItems = [
-    { id: "tts" as const,     icon: Mic,       label: "TTS" },
-    { id: "video" as const,   icon: FileVideo,  label: "Video" },
-    { id: "dubbing" as const, icon: Wand2,      label: "AI Video" },
+    { id: "tts" as const, icon: Mic, label: "TTS" },
+    { id: "video" as const, icon: FileVideo, label: "Video" },
+    { id: "dubbing" as const, icon: Wand2, label: "AI Video" },
   ];
   const secondaryItems = [
-    { id: "history",  icon: History,  label: "History" },
+    { id: "history", icon: History, label: "History" },
     { id: "settings", icon: Settings, label: "Settings" },
   ];
 
   return (
     <div
       className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t backdrop-blur-xl"
-      style={{ 
-        background: isDark ? "rgba(15,15,15,0.97)" : "rgba(232,227,207,0.97)", 
-        borderColor: isDark ? "rgba(192,111,48,0.25)" : "rgba(192,111,48,0.15)", 
-        boxShadow: isDark ? "0 -4px 30px rgba(192,111,48,0.15)" : "0 -4px 30px rgba(0,0,0,0.1)" 
+      style={{
+        background: isDark ? "rgba(15,15,15,0.97)" : "rgba(232,227,207,0.97)",
+        borderColor: isDark ? "rgba(192,111,48,0.25)" : "rgba(192,111,48,0.15)",
+        boxShadow: isDark
+          ? "0 -4px 30px rgba(192,111,48,0.15)"
+          : "0 -4px 30px rgba(0,0,0,0.1)",
       }}
     >
       <div className="flex items-center justify-around py-2 px-2 gap-1">
@@ -289,19 +375,32 @@ function MobileBottomNavigation({
           return (
             <motion.button
               key={id}
-              onClick={() => { setMainTab(id); onTabChange(null); }}
+              onClick={() => {
+                setMainTab(id);
+                onTabChange(null);
+              }}
               whileTap={{ scale: 0.9 }}
               className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl min-h-[44px] relative flex-1 transition-all duration-200"
-              style={{ color: isActive ? "#C06F30" : isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)" }}
+              style={{
+                color: isActive
+                  ? "#C06F30"
+                  : isDark
+                    ? "rgba(255,255,255,0.4)"
+                    : "rgba(0,0,0,0.4)",
+              }}
             >
               {isActive && (
-                <motion.div layoutId="mobileMainTab" className="absolute inset-0 rounded-xl"
+                <motion.div
+                  layoutId="mobileMainTab"
+                  className="absolute inset-0 rounded-xl"
                   style={{ background: "rgba(192,111,48,0.15)" }}
                   transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
                 />
               )}
               <Icon className="w-5 h-5 relative z-10" />
-              <span className="text-[10px] font-bold relative z-10 truncate">{label}</span>
+              <span className="text-[10px] font-bold relative z-10 truncate">
+                {label}
+              </span>
             </motion.button>
           );
         })}
@@ -313,16 +412,26 @@ function MobileBottomNavigation({
               onClick={() => onTabChange(isActive ? null : id)}
               whileTap={{ scale: 0.9 }}
               className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl min-h-[44px] relative flex-1 transition-all duration-200"
-              style={{ color: isActive ? "#C06F30" : isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)" }}
+              style={{
+                color: isActive
+                  ? "#C06F30"
+                  : isDark
+                    ? "rgba(255,255,255,0.4)"
+                    : "rgba(0,0,0,0.4)",
+              }}
             >
               {isActive && (
-                <motion.div layoutId={"mobileTab-" + id} className="absolute inset-0 rounded-xl"
+                <motion.div
+                  layoutId={"mobileTab-" + id}
+                  className="absolute inset-0 rounded-xl"
                   style={{ background: "rgba(192,111,48,0.15)" }}
                   transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
                 />
               )}
               <Icon className="w-5 h-5 relative z-10" />
-              <span className="text-[10px] font-bold relative z-10 truncate">{label}</span>
+              <span className="text-[10px] font-bold relative z-10 truncate">
+                {label}
+              </span>
             </motion.button>
           );
         })}
