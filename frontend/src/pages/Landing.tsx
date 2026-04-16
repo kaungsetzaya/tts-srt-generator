@@ -18,8 +18,8 @@ const C_LIGHT = {
 
 function F({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
   const r = useRef<HTMLDivElement>(null);
-  const v = useInView(r, { once: true, margin: "-60px" });
-  return <motion.div ref={r} initial={{ opacity: 0, y: 50, rotateX: 8 }} animate={v ? { opacity: 1, y: 0, rotateX: 0 } : {}} transition={{ duration: 0.8, delay, ease: [0.25, 0.46, 0.45, 0.94] }} className={className}>{children}</motion.div>;
+  const v = useInView(r, { amount: "any", margin: "-60px" });
+  return <motion.div ref={r} initial={{ opacity: 0, y: 50, rotateX: 8 }} animate={v ? { opacity: 1, y: 0, rotateX: 0 } : { opacity: 0, y: 50, rotateX: 8 }} transition={{ duration: 0.6, delay, ease: [0.25, 0.46, 0.45, 0.94] }} className={className}>{children}</motion.div>;
 }
 
 const features = [
