@@ -456,6 +456,12 @@ export default function TTSGenerator() {
     setDubPreviewUrl(url);
   };
 
+  // Character voice base mapping (for sending correct base voice)
+  const CHARACTER_VOICES_MAP: Record<string, { base: string }> = {
+    ryan: { base: "thiha" }, ronnie: { base: "thiha" }, lucas: { base: "thiha" },
+    daniel: { base: "thiha" }, evander: { base: "thiha" },
+    michelle: { base: "nilar" }, iris: { base: "nilar" }, charlotte: { base: "nilar" }, amara: { base: "nilar" },
+  };
   const handleDubGenerate = async () => {
     const dubOpts = {
       voice: dubVoiceMode === "standard" ? dubVoice : (CHARACTER_VOICES_MAP[dubCharacter]?.base || dubVoice) as "thiha" | "nilar",
@@ -611,12 +617,6 @@ export default function TTSGenerator() {
     setDubDetectedRatio("16:9");
   };
 
-  // Character voice base mapping (for sending correct base voice)
-  const CHARACTER_VOICES_MAP: Record<string, { base: string }> = {
-    ryan: { base: "thiha" }, ronnie: { base: "thiha" }, lucas: { base: "thiha" },
-    daniel: { base: "thiha" }, evander: { base: "thiha" },
-    michelle: { base: "nilar" }, iris: { base: "nilar" }, charlotte: { base: "nilar" }, amara: { base: "nilar" },
-  };
 
   // Thailand time formatter → now real user timezone
   const thaiTime = () => {
@@ -1396,11 +1396,11 @@ export default function TTSGenerator() {
                 </div>
 
                 {/* Generate Dubbing Button */}
-                <button onClick={handleDubGenerate} disabled={dubFileMutation.isPending || dubLinkMutation.isPending || dubPreviewUrl === 'loading' || dubPreviewMutation.isPending} className="w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 rounded-2xl text-white font-black uppercase tracking-widest transition-all disabled:opacity-50 hover:scale-[1.02] mt-2 shadow-lg text-sm sm:text-base" style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, boxShadow: `0 4px 12px rgba(0,0,0,0.15)` }}>
-                  {(dubFileMutation.isPending || dubLinkMutation.isPending) ? <><Loader2 className="w-5 h-5 animate-spin" /><span className="text-xs sm:text-sm">{lang === "mm" ? "ဖန်တီးနေသည်... (၃-၅ မိနစ်)" : "Generating... (3-5 min)"}</span></> : <><Wand2 className="w-5 h-5" />{lang === "mm" ? "AI ဖြင့် ဖန်တီးမည်" : "Generate with AI"}</>}
+                <button onClick={handleDubGenerate} disabled={startDubMutation.isPending || activeJobId !== null || dubPreviewUrl === 'loading'} className="w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 rounded-2xl text-white font-black uppercase tracking-widest transition-all disabled:opacity-50 hover:scale-[1.02] mt-2 shadow-lg text-sm sm:text-base" style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`, boxShadow: `0 4px 12px rgba(0,0,0,0.15)` }}>
+                  {(startDubMutation.isPending || activeJobId !== null) ? <><Loader2 className="w-5 h-5 animate-spin" /><span className="text-xs sm:text-sm">{lang === "mm" ? "ဖန်တီးနေသည်... (၃-၅ မိနစ်)" : "Generating... (3-5 min)"}</span></> : <><Wand2 className="w-5 h-5" />{lang === "mm" ? "AI ဖြင့် ဖန်တီးမည်" : "Generate with AI"}</>}
                 </button>
 
-                {(dubFileMutation.isPending || dubLinkMutation.isPending) && (
+                {(startDubMutation.isPending || activeJobId !== null) && (
                   <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
                     <div className="flex flex-col items-center justify-center gap-4 py-6">
                       <div className="flex items-center gap-2">
