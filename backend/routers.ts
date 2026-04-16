@@ -18,8 +18,11 @@ export const appRouter = t.router({
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
+        // Handle potential batched input
+        const code = typeof input === 'string' ? input : input.code;
+        
         const user = await db.query.users.findFirst({
-          where: (u: any, { eq }: any) => eq(u.telegramCode, input.code),
+          where: (u: any, { eq }: any) => eq(u.telegramCode, code),
         });
 
         if (!user || !user.telegramCodeExpiresAt || new Date(user.telegramCodeExpiresAt) < new Date()) {
