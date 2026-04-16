@@ -267,21 +267,19 @@ export const appRouter = t.router({
       try {
         const userList = await db.select().from(users).limit(500);
         
-        // Get subscription data for each user
-        const userIds = userList.map(u => u.id);
-        const subs = await db.select().from(subscriptions)
-          .where(sql`user_id IN (${userIds.join(',')}) AND expires_at > NOW()`);
+        // Get all subscriptions and filter in JS (more reliable than complex IN clause)
+        const allSubs = await db.select().from(subscriptions)
+          .where(sql`expires_at > NOW()`);
         
-        // Get generation count for each user
-        const genCounts = await db.select({ userId: ttsConversions.userId, count: count() })
+        // Get all generation counts and filter in JS
+        const allGenCounts = await db.select({ userId: ttsConversions.userId, count: count() })
           .from(ttsConversions)
-          .where(sql`user_id IN (${userIds.join(',')})`)
           .groupBy(ttsConversions.userId);
         
         // Merge data
         return userList.map(user => {
-          const userSub = subs.find(s => s.userId === user.id);
-          const userGen = genCounts.find(g => g.userId === user.id);
+          const userSub = allSubs.find(s => s.userId === user.id);
+          const userGen = allGenCounts.find(g => g.userId === user.id);
           return {
             ...user,
             subscription: userSub || null,
@@ -377,9 +375,9 @@ export const appRouter = t.router({
             .from(ttsConversions).groupBy(ttsConversions.feature);
           const features = featureRows.filter(r => r.feature).map(r => ({ feature: r.feature, count: r.count }));
           
-          // Character usage stats
+          // Character usage stats (use backticks for reserved keyword)
           const charRows = await db.select({ character: ttsConversions.character, count: count() })
-            .from(ttsConversions).where(sql`character IS NOT NULL`).groupBy(ttsConversions.character);
+            .from(ttsConversions).where(sql`\`character\` IS NOT NULL`).groupBy(ttsConversions.character);
           const characters = charRows.filter(r => r.character).map(r => ({ character: r.character, count: r.count }));
           
           // Total counts
