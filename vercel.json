@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://f41b6c04b59c7d52-217-76-48-32.serveousercontent.com/api/:path*"
+      "destination": "https://soft-plants-greet.loca.lt/api/:path*"
     },
     {
       "source": "/webhook/:path*",
-      "destination": "https://f41b6c04b59c7d52-217-76-48-32.serveousercontent.com/webhook/:path*"
+      "destination": "https://soft-plants-greet.loca.lt/webhook/:path*"
     }
   ],
   "headers": [
