@@ -16,6 +16,10 @@ const t = initTRPC.create({
 
 export const appRouter = t.router({
   auth: t.router({
+    me: t.procedure.query(async ({ ctx }) => {
+      if (!ctx.user) return null;
+      return ctx.user;
+    }),
     verify: t.procedure
       .input(z.object({ code: z.string() }))
       .mutation(async ({ input, ctx }) => {
