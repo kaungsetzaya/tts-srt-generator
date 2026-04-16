@@ -27,7 +27,7 @@ export const appRouter = t.router({
             input.pitch
           );
           return {
-            audioUrl: \`data:audio/mp3;base64,\${result.audioBuffer.toString("base64")}\`,
+            audioUrl: "data:audio/mp3;base64," + result.audioBuffer.toString("base64"),
             srtContent: result.srtContent,
           };
         } catch (error) {
