@@ -64,14 +64,20 @@ export default function Landing() {
       <div className="fixed inset-0 pointer-events-none z-0" style={{ backgroundImage: `linear-gradient(${C.cream}${isDark ? '06' : '10'} 1px, transparent 1px), linear-gradient(90deg, ${C.cream}${isDark ? '06' : '10'} 1px, transparent 1px)`, backgroundSize: "80px 80px" }} />
 
       {/* NAV */}
-      <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-2xl flex items-center gap-4" style={{ background: C.glass, backdropFilter: "blur(24px)", border: `1px solid ${C.glassB}`, boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}>
-        <div className="flex items-center gap-8">
-          <span className="text-2xl font-black tracking-tight" style={{ color: C.gold }}>LUMIX</span>
-          <button onClick={() => featRef.current?.scrollIntoView({ behavior: 'smooth' })} className="text-xs uppercase tracking-[0.2em]" style={{ color: C.nude }}>Features</button>
-          <button onClick={() => nav("/plans")} className="text-xs uppercase tracking-[0.2em]" style={{ color: C.nude }}>Plans</button>
-          <button onClick={go} className="px-6 py-2 rounded-full text-xs font-bold uppercase tracking-[0.15em]" style={{ background: C.gold, color: isDark ? C.dark : "#fff" }}>Login</button>
-        </div>
-      </nav>
+      <motion.nav 
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+        className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-2xl flex items-center gap-4"
+        style={{ background: C.glass, backdropFilter: "blur(24px)", border: `1px solid ${C.glassB}`, boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}
+      >
+        <motion.div className="flex items-center gap-8">
+          <motion.span whileHover={{ scale: 1.05 }} className="text-2xl font-black tracking-tight cursor-pointer" style={{ color: C.gold }}>LUMIX</motion.span>
+          <motion.button whileHover={{ scale: 1.1, color: C.gold }} onClick={() => featRef.current?.scrollIntoView({ behavior: 'smooth' })} className="text-xs uppercase tracking-[0.2em] transition-colors duration-200" style={{ color: C.nude }}>Features</motion.button>
+          <motion.button whileHover={{ scale: 1.1, color: C.gold }} onClick={() => nav("/plans")} className="text-xs uppercase tracking-[0.2em] transition-colors duration-200" style={{ color: C.nude }}>Plans</motion.button>
+          <motion.button whileHover={{ scale: 1.1, y: -2 }} whileTap={{ scale: 0.95 }} onClick={go} className="px-6 py-2 rounded-full text-xs font-bold uppercase tracking-[0.15em] transition-all duration-200" style={{ background: C.gold, color: isDark ? C.dark : "#fff" }}>Login</motion.button>
+        </motion.div>
+      </motion.nav>
 
       {/* HERO - 3D floating */}
       <div ref={heroRef} className="relative z-10 flex items-center justify-center min-h-screen px-4 pt-24" style={{ scrollSnapAlign: "start" }}>

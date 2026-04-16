@@ -1,7 +1,8 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Route, Switch, useLocation } from "wouter";
+import { AnimatePresence, motion } from "framer-motion";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import TTSGenerator from "./pages/TTSGenerator";
@@ -15,10 +16,19 @@ import Plans from "./pages/Plans";
 import AuthGuard from "./components/AuthGuard";
 
 function Router() {
+  const [location] = useLocation();
   return (
-    <Switch>
-      <Route path={"/"} component={Landing} />
-      <Route path={"/login"} component={Login} />
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={location}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+      >
+      <Switch>
+        <Route path={"/"} component={Landing} />
+        <Route path={"/login"} component={Login} />
       <Route path={"/lumix"}>
         <AuthGuard>
           <TTSGenerator />
@@ -46,6 +56,8 @@ function Router() {
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>
+    </motion.div>
+    </AnimatePresence>
   );
 }
 
