@@ -83,11 +83,11 @@ export default function Landing() {
           </motion.div>
           <div>
             <motion.h1 initial={{ opacity: 0, y: 40, rotateX: 15 }} animate={{ opacity: 1, y: 0, rotateX: 0 }} transition={{ duration: 0.8, delay: 0.1 }}
-              className="font-black leading-[0.9] mb-2" style={{ fontSize: "clamp(36px, 10vw, 120px)", letterSpacing: "-0.03em", color: C.cream }}>
+              className="font-black leading-[0.9] mb-2" style={{ fontSize: "clamp(52px, 14vw, 170px)", letterSpacing: "-0.03em", color: C.cream }}>
               LUMIX
             </motion.h1>
             <motion.h1 initial={{ opacity: 0, y: 40, rotateX: 15 }} animate={{ opacity: 1, y: 0, rotateX: 0 }} transition={{ duration: 0.8, delay: 0.2 }}
-              className="font-black leading-[0.9] mb-6" style={{ fontSize: "clamp(36px, 10vw, 120px)", letterSpacing: "-0.03em", color: C.cream }}>
+              className="font-black leading-[0.9] mb-8" style={{ fontSize: "clamp(52px, 14vw, 170px)", letterSpacing: "-0.03em", color: C.cream }}>
               STUDIO
             </motion.h1>
           </div>
@@ -100,9 +100,10 @@ export default function Landing() {
             AI Voice · Smart Subtitles · Video-to-Burmese Translation
           </motion.p>
           <motion.button initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55, type: "spring", stiffness: 400, damping: 25 }}
-            whileHover={{ scale: 1.05, y: -3 }} whileTap={{ scale: 0.96 }}
+            whileHover={{ scale: 1.05, y: -3 }}
+            whileTap={{ scale: 0.96 }}
             onClick={() => featRef.current?.scrollIntoView({ behavior: 'smooth' })}
-            className="px-10 py-4 rounded-2xl text-sm font-black uppercase tracking-[0.15em]"
+            className="px-10 py-4 rounded-2xl text-sm font-black uppercase tracking-[0.15em] cursor-pointer transition-all duration-200"
             style={{ background: C.gold, color: isDark ? C.dark : "#fff", boxShadow: `0 8px 24px ${isDark ? 'rgba(244,179,79,0.2)' : 'rgba(244,179,79,0.1)'}` }}>
             Ready to Use ↓
           </motion.button>
