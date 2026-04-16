@@ -164,47 +164,51 @@ function TTSGeneratorSidebar({
     <Sidebar
       collapsible="icon"
       className={`glass-sidebar ${isDark ? "dark" : "light"}`}
-      style={{
-        backgroundColor: isDark
-          ? "rgba(15, 15, 15, 0.95)"
-          : "rgba(232, 227, 207, 0.95)",
-        borderRight: isDark
-          ? "1px solid rgba(255,255,255,0.08)"
-          : "1px solid rgba(0,0,0,0.08)",
-      }}
+      style={
+        {
+          backgroundColor: isDark
+            ? "rgba(15, 15, 15, 0.95)"
+            : "rgba(232, 227, 207, 0.95)",
+          borderRight: isDark
+            ? "1px solid rgba(255,255,255,0.08)"
+            : "1px solid rgba(0,0,0,0.08)",
+          "--sidebar-width-icon": "4rem",
+        } as React.CSSProperties
+      }
     >
       <SidebarHeader
-        className="border-b py-4 px-4"
+        className="border-b py-3 px-2"
         style={{
           borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)",
         }}
       >
-        <div className="flex items-center justify-between gap-2 w-full">
+        <div className="flex items-center justify-between gap-2 w-full px-1">
           {/* Logo */}
           {isCollapsed ? (
             <motion.div
               key="mini-logo"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.2 }}
-              className="flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0"
+              initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
+              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+              transition={{ duration: 0.3, ease: [0.34, 1.56, 0.64, 1] }}
+              className="flex items-center justify-center w-10 h-10 rounded-xl flex-shrink-0 shadow-lg"
               style={{
-                background: isDark
-                  ? "rgba(192,111,48,0.2)"
-                  : "rgba(192,111,48,0.15)",
-                border: `1px solid ${isDark ? "rgba(192,111,48,0.4)" : "rgba(192,111,48,0.3)"}`,
+                background: `linear-gradient(135deg, ${accent}25, ${accentSecondary}15)`,
+                border: `1px solid ${isDark ? "rgba(192,111,48,0.5)" : "rgba(192,111,48,0.4)"}`,
               }}
             >
               {miniLogoUrl ? (
                 <img
                   src={miniLogoUrl}
                   alt="Logo"
-                  className="w-5 h-5 object-contain"
+                  className="w-6 h-6 object-contain"
                 />
               ) : (
                 <span
-                  className="text-[10px] font-black"
-                  style={{ color: "#C06F30" }}
+                  className="text-sm font-black"
+                  style={{
+                    color: "#C06F30",
+                    textShadow: `0 0 12px ${accent}60`,
+                  }}
                 >
                   L
                 </span>
@@ -213,9 +217,9 @@ function TTSGeneratorSidebar({
           ) : (
             <motion.div
               key="full-logo"
-              initial={{ opacity: 0, x: -8 }}
+              initial={{ opacity: 0, x: -12 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
+              transition={{ duration: 0.3, ease: [0.34, 1.56, 0.64, 1] }}
               className="flex-1 min-w-0"
             >
               {logoUrl ? (
@@ -233,6 +237,7 @@ function TTSGeneratorSidebar({
                     WebkitTextFillColor: "transparent",
                     backgroundClip: "text",
                     letterSpacing: "0.15em",
+                    filter: `drop-shadow(0 0 8px ${accent}40)`,
                   }}
                 >
                   LUMIX
@@ -241,20 +246,29 @@ function TTSGeneratorSidebar({
             </motion.div>
           )}
 
-          <SidebarTrigger
-            className="flex items-center justify-center rounded-xl transition-all duration-200 hover:scale-110 flex-shrink-0"
-            style={{
-              width: 36,
-              height: 36,
-              background: isDark
-                ? "rgba(192,111,48,0.15)"
-                : "rgba(192,111,48,0.12)",
-              border: `1px solid ${isDark ? "rgba(192,111,48,0.3)" : "rgba(192,111,48,0.25)"}`,
-              color: "#C06F30",
-            }}
+          <motion.div
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95, rotate: isCollapsed ? 180 : -180 }}
+            transition={{ duration: 0.3, ease: [0.34, 1.56, 0.64, 1] }}
           >
-            <PanelLeft className="h-4 w-4" />
-          </SidebarTrigger>
+            <SidebarTrigger
+              className="flex items-center justify-center rounded-xl flex-shrink-0"
+              style={{
+                width: 36,
+                height: 36,
+                background: isDark
+                  ? "rgba(192,111,48,0.15)"
+                  : "rgba(192,111,48,0.12)",
+                border: `1px solid ${isDark ? "rgba(192,111,48,0.3)" : "rgba(192,111,48,0.25)"}`,
+                color: "#C06F30",
+                boxShadow: isCollapsed
+                  ? `0 0 16px ${accent}30, inset 0 1px 0 rgba(255,255,255,0.1)`
+                  : "none",
+              }}
+            >
+              <PanelLeft className="h-4 w-4" />
+            </SidebarTrigger>
+          </motion.div>
         </div>
       </SidebarHeader>
 
@@ -268,17 +282,22 @@ function TTSGeneratorSidebar({
                 return (
                   <SidebarMenuItem key={item.id}>
                     <motion.div
-                      whileHover={{ x: isCollapsed ? 0 : 3 }}
+                      whileHover={{
+                        x: isCollapsed ? 0 : 4,
+                        scale: isCollapsed ? 1.08 : 1,
+                      }}
                       whileTap={{ scale: 0.97 }}
-                      transition={{ duration: 0.15 }}
+                      transition={{
+                        duration: 0.2,
+                        ease: [0.34, 1.56, 0.64, 1],
+                      }}
                     >
                       <SidebarMenuButton
                         onClick={() => {
                           if (item.type === "main") {
                             setMainTab(item.id as "tts" | "video" | "dubbing");
-                            onTabChange(null); // clear secondary tab
+                            onTabChange(null);
                           } else {
-                            // toggle secondary: clicking active secondary closes it
                             onTabChange(
                               currentTab === item.id ? null : (item.id as any)
                             );
@@ -286,14 +305,14 @@ function TTSGeneratorSidebar({
                         }}
                         isActive={isActive}
                         tooltip={item.labelEn}
-                        className="w-full relative overflow-hidden rounded-xl h-11 transition-all duration-200"
+                        className={`w-full relative overflow-hidden rounded-xl h-11 transition-all duration-200 ${isCollapsed ? "justify-center px-0" : ""}`}
                         style={
                           isActive
                             ? {
                                 background: `linear-gradient(135deg, ${accent}40, ${accentSecondary}30)`,
                                 color: isDark ? "#ECCEB6" : "#2B1D1C",
                                 borderLeft: `3px solid ${accent}`,
-                                boxShadow: `0 0 16px ${accent}33`,
+                                boxShadow: `0 0 20px ${accent}40, inset 0 1px 0 rgba(255,255,255,0.1)`,
                               }
                             : {
                                 color: isDark
@@ -307,21 +326,40 @@ function TTSGeneratorSidebar({
                           <motion.div
                             layoutId={"navGlow-" + item.id}
                             className="absolute inset-0 rounded-xl"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
                             style={{
-                              background: `linear-gradient(135deg, ${accent}20, ${accentSecondary}15)`,
+                              background: `linear-gradient(135deg, ${accent}25, ${accentSecondary}20)`,
                               pointerEvents: "none",
                             }}
                             transition={{
                               type: "spring",
-                              bounce: 0.15,
-                              duration: 0.4,
+                              bounce: 0.2,
+                              duration: 0.5,
                             }}
                           />
                         )}
-                        <Icon className="h-4 w-4 flex-shrink-0 relative z-10" />
-                        <span className="font-semibold text-[13px] truncate relative z-10">
-                          {item.label}
-                        </span>
+                        <motion.div
+                          whileHover={{ scale: 1.1 }}
+                          transition={{
+                            duration: 0.2,
+                            ease: [0.34, 1.56, 0.64, 1],
+                          }}
+                        >
+                          <Icon
+                            className={`h-5 w-5 flex-shrink-0 relative z-10 ${isCollapsed ? "" : "mr-2"}`}
+                          />
+                        </motion.div>
+                        {!isCollapsed && (
+                          <motion.span
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="font-semibold text-[13px] truncate relative z-10"
+                          >
+                            {item.label}
+                          </motion.span>
+                        )}
                       </SidebarMenuButton>
                     </motion.div>
                   </SidebarMenuItem>
