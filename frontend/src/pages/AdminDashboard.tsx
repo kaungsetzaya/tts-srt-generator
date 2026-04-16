@@ -134,7 +134,7 @@ function UserDetailDrawer({ userId, userName, onClose }: { userId: string; userN
             <div style={{ background: cardBg, borderColor: border }} className="border rounded-xl p-5">
               <p className="font-bold uppercase tracking-wider text-xs mb-4 opacity-60">Voice / Character Usage</p>
               {data.voices.length === 0 ? <p className="text-xs opacity-40">No voice data</p> : data.voices.map(v => (
-                <MiniBar key={v.name} label={v.name} count={v.count} max={maxVoice} color="#c084fc" />
+                <MiniBar key={v.name} label={v.name} count={v.count} max={maxVoice} color="#C06F30" />
               ))}
             </div>
 
@@ -376,7 +376,7 @@ export default function AdminDashboard() {
                   {voiceStats?.voices?.length === 0 && <p className="text-xs opacity-30">No data</p>}
                   {voiceStats?.voices?.map((v: any) => (
                     <MiniBar key={v.name} label={v.name} count={v.count} max={maxVoice}
-                      color={v.name?.startsWith("[Character]") ? "#f472b6" : C} />
+                      color={v.name?.startsWith("[Character]") ? "#F4B34F" : C} />
                   ))}
                 </div>
                 <div className="space-y-4">

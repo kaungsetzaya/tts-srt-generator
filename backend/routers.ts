@@ -375,9 +375,9 @@ export const appRouter = t.router({
             .from(ttsConversions).groupBy(ttsConversions.feature);
           const features = featureRows.filter(r => r.feature).map(r => ({ feature: r.feature, count: r.count }));
           
-          // Character usage stats (use backticks for reserved keyword)
+          // Character usage stats
           const charRows = await db.select({ character: ttsConversions.character, count: count() })
-            .from(ttsConversions).where(sql`\`character\` IS NOT NULL`).groupBy(ttsConversions.character);
+            .from(ttsConversions).where(sql`${ttsConversions.character} IS NOT NULL`).groupBy(ttsConversions.character);
           const characters = charRows.filter(r => r.character).map(r => ({ character: r.character, count: r.count }));
           
           // Total counts
