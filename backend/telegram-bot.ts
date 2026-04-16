@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from "crypto";
+import { randomBytes } from "crypto";
 import https from "https";
 import { getDb } from "./db";
 import { users, subscriptions, settings } from "../drizzle/schema";

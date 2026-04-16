@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from "crypto";
+import { randomUUID } from "crypto";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import * as fs from "fs";

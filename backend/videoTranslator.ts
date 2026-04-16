@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from "crypto";
+import { randomUUID } from "crypto";
 import { promises as fs } from 'fs';
 import { existsSync } from 'fs';
 import * as path from 'path';
