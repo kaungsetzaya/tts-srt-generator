@@ -272,7 +272,7 @@ export default function AdminDashboard() {
 
   const activeSubs = normalUsers.filter((u: any) => u.subscription).length;
   const totalRevenue = analytics?.planCounts?.reduce((sum: number, p: any) => sum + (PLAN_PRICE[p.plan as Plan] ?? 0) * p.count, 0) ?? 0;
-  const fmtMMK = (v: number) => `${v.toLocaleString()} MMK`;
+  const fmtMMK = (v: number) => `${(v ?? 0).toLocaleString()} MMK`;
   const maxVoice = Math.max(...(voiceStats?.voices?.map((v: any) => v.count) ?? [1]));
   const totalErrors = (errorData?.failedGenerations?.length ?? 0) + (errorData?.systemLogs?.filter((l: any) => !l.resolved).length ?? 0);
 
@@ -833,7 +833,7 @@ export default function AdminDashboard() {
                             <span className="font-black text-lg" style={{ color }}>{v.count}</span>
                           </div>
                           <div className="flex items-center gap-4 text-xs opacity-50">
-                            <span>{v.chars.toLocaleString()} chars</span>
+                            <span>{(v.chars ?? 0).toLocaleString()} chars</span>
                             <span>{fmtMs(v.durationMs)} audio</span>
                             <span className="ml-auto font-bold" style={{ color }}>{pct}%</span>
                           </div>
