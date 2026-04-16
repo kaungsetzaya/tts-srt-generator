@@ -2,7 +2,7 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import path from "path";
 import fs from "fs/promises";
-import { nanoid } from "nanoid";
+import { randomBytes } from "crypto";
 
 const execFileAsync = promisify(execFile);
 const OUTPUT_DIR = path.join(process.cwd(), "static", "output");
@@ -17,6 +17,13 @@ export const SUPPORTED_VOICES = {
 
 export type VoiceKey = keyof typeof SUPPORTED_VOICES;
 
+// Simple replacement for nanoid using built-in crypto
+function generateId(length: number = 10): string {
+  return randomBytes(Math.ceil(length / 2))
+    .toString('hex')
+    .slice(0, length);
+}
+
 export async function generateSpeech(
   text: string,
   voice: VoiceKey = "thiha",
@@ -25,13 +32,13 @@ export async function generateSpeech(
 ) {
   const voiceConfig = SUPPORTED_VOICES[voice];
   const ratePercent = Math.round((rate - 1.0) * 100);
-  const rateStr = ratePercent >= 0 ? \`+\${ratePercent}%\` : \`\${ratePercent}%\`;
-  const pitchStr = pitch >= 0 ? \`+\${pitch}Hz\` : \`\${pitch}Hz\`;
+  const rateStr = ratePercent >= 0 ? `+${ratePercent}%` : `${ratePercent}%`;
+  const pitchStr = pitch >= 0 ? `+${pitch}Hz` : `${pitch}Hz`;
 
-  const id = nanoid(10);
-  const audioPath = path.join(OUTPUT_DIR, \`\${id}.mp3\`);
-  const srtPath = path.join(OUTPUT_DIR, \`\${id}.srt\`);
-  const tmpText = path.join(OUTPUT_DIR, \`\${id}.txt\`);
+  const id = generateId(10);
+  const audioPath = path.join(OUTPUT_DIR, `${id}.mp3`);
+  const srtPath = path.join(OUTPUT_DIR, `${id}.srt`);
+  const tmpText = path.join(OUTPUT_DIR, `${id}.txt`);
 
   await fs.writeFile(tmpText, text, "utf8");
 
