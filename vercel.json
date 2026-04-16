@@ -2,6 +2,16 @@
   "rewrites": [
     {
       "source": "/api/:path*",
+      "destination": "https://choco.de5.net/api/:path*",
+      "has": [
+        {
+          "type": "header",
+          "key": "Cookie"
+        }
+      ]
+    },
+    {
+      "source": "/api/:path*",
       "destination": "https://choco.de5.net/api/:path*"
     },
     {
@@ -20,6 +30,14 @@
         {
           "key": "Access-Control-Allow-Credentials",
           "value": "true"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization, Cookie"
         }
       ]
     }
