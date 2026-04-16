@@ -36,7 +36,7 @@ export const appRouter = t.router({
       return ctx.user;
     }),
     logout: t.procedure.mutation(async ({ ctx }) => {
-      ctx.res.setHeader("Set-Cookie", `${COOKIE_NAME}=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax; Secure`);
+      ctx.res.setHeader("Set-Cookie", `${COOKIE_NAME}=; HttpOnly; Path=/; Max-Age=0; SameSite=None; Secure; Domain=.de5.net`);
       return { success: true };
     }),
     verify: t.procedure
@@ -78,8 +78,8 @@ export const appRouter = t.router({
           .setExpirationTime("7d")
           .sign(JWT_SECRET);
 
-        // Set cookie (SameSite=Lax for same-origin with Vercel proxy)
-        ctx.res.setHeader("Set-Cookie", `${COOKIE_NAME}=${token}; HttpOnly; Path=/; Max-Age=${7 * 24 * 60 * 60}; SameSite=Lax; Secure`);
+        // Set cookie with .de5.net domain for sharing across subdomains
+        ctx.res.setHeader("Set-Cookie", `${COOKIE_NAME}=${token}; HttpOnly; Path=/; Max-Age=${7 * 24 * 60 * 60}; SameSite=None; Secure; Domain=.de5.net`);
 
         return { success: true, userId: user.id, role: user.role || "user" };
       }),
