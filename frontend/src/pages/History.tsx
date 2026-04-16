@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeft, Clock, Mic, FileVideo, Wand2, CheckCircle, XCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  Clock,
+  Mic,
+  FileVideo,
+  Wand2,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
 import { useLocation } from "wouter";
 import { useTheme } from "@/contexts/ThemeContext";
 
@@ -42,7 +50,7 @@ const T = {
     translate_link: "Link Translate",
     dub_file: "AI Video (File)",
     dub_link: "AI Video (Link)",
-  }
+  },
 };
 
 function featureIcon(feat: string) {
@@ -53,18 +61,22 @@ function featureIcon(feat: string) {
 }
 
 export default function History() {
-  const [lang, setLang] = useState<Lang>(() => (localStorage.getItem("lumix_lang") as Lang) || "mm");
+  const [lang, setLang] = useState<Lang>(
+    () => (localStorage.getItem("lumix_lang") as Lang) || "mm"
+  );
   const t = T[lang];
   const [, navigate] = useLocation();
-  const { data: history, isLoading } = trpc.history.getMyHistory.useQuery({ limit: 100 });
+  const { data: history, isLoading } = trpc.history.getMyHistory.useQuery({
+    limit: 100,
+  });
   const { theme } = useTheme();
 
   const isDark = theme === "dark";
-  const accent = "#C06F30";
-  const cardBg = isDark ? "rgba(15, 12, 41, 0.6)" : "rgba(255, 255, 255, 0.8)";
-  const cardBorder = isDark ? "rgba(192,111,48,0.2)" : "rgba(192,111,48,0.15)";
-  const textColor = isDark ? "#EBE6D8" : "#2B1D1C";
-  const subtextColor = isDark ? "rgba(240,238,255,0.6)" : "#6b5c50";
+  const accent = "#2563EB";
+  const cardBg = isDark ? "rgba(15, 23, 42, 0.6)" : "rgba(255, 255, 255, 0.8)";
+  const cardBorder = isDark ? "rgba(37,99,235,0.2)" : "rgba(37,99,235,0.15)";
+  const textColor = isDark ? "#E2E8F0" : "#0F172A";
+  const subtextColor = isDark ? "rgba(148,163,184,0.6)" : "#64748B";
 
   // Format time in user timezone
   const formatTime = (date: any) => {
@@ -87,64 +99,124 @@ export default function History() {
   };
 
   return (
-    <div className="min-h-screen font-sans transition-colors duration-500" style={{
-      background: isDark 
-        ? "linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%)"
-        : "linear-gradient(135deg, #E8E3CF 0%, #F5F0E6 50%, #E8E3CF 100%)",
-      color: textColor
-    }}>
+    <div
+      className="min-h-screen font-sans transition-colors duration-500"
+      style={{
+        background: isDark
+          ? "linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%)"
+          : "linear-gradient(135deg, #E8E3CF 0%, #F5F0E6 50%, #E8E3CF 100%)",
+        color: textColor,
+      }}
+    >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b backdrop-blur-xl" style={{ 
-        borderColor: cardBorder, 
-        background: isDark ? 'rgba(15,12,41,0.8)' : 'rgba(255,255,255,0.8)' 
-      }}>
+      <div
+        className="flex items-center justify-between px-4 sm:px-6 py-4 border-b backdrop-blur-xl"
+        style={{
+          borderColor: cardBorder,
+          background: isDark ? "rgba(15,12,41,0.8)" : "rgba(255,255,255,0.8)",
+        }}
+      >
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate("/lumix")} className="flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold transition-colors hover:opacity-80" style={{ borderColor: cardBorder, color: accent }}>
+          <button
+            onClick={() => navigate("/lumix")}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold transition-colors hover:opacity-80"
+            style={{ borderColor: cardBorder, color: accent }}
+          >
             <ArrowLeft className="w-4 h-4" /> {t.back}
           </button>
-          <h1 className="text-lg sm:text-xl font-black uppercase tracking-widest" style={{ color: accent }}>{t.title}</h1>
+          <h1
+            className="text-lg sm:text-xl font-black uppercase tracking-widest"
+            style={{ color: accent }}
+          >
+            {t.title}
+          </h1>
         </div>
-        <button onClick={() => setLang(lang === "mm" ? "en" : "mm")} className="px-2 py-1 text-xs font-bold rounded border" style={{ borderColor: cardBorder, background: cardBg, color: textColor }}>
+        <button
+          onClick={() => setLang(lang === "mm" ? "en" : "mm")}
+          className="px-2 py-1 text-xs font-bold rounded border"
+          style={{
+            borderColor: cardBorder,
+            background: cardBg,
+            color: textColor,
+          }}
+        >
           {lang === "mm" ? "EN" : "MM"}
         </button>
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
-        <p className="text-sm font-bold mb-6" style={{ color: subtextColor }}>{t.subtitle}</p>
+        <p className="text-sm font-bold mb-6" style={{ color: subtextColor }}>
+          {t.subtitle}
+        </p>
 
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="w-8 h-8 border-2 rounded-full animate-spin" style={{ borderColor: accent, borderTopColor: "transparent" }} />
+            <div
+              className="w-8 h-8 border-2 rounded-full animate-spin"
+              style={{ borderColor: accent, borderTopColor: "transparent" }}
+            />
           </div>
         ) : !history || history.length === 0 ? (
           <div className="text-center py-20">
             <Clock className="w-12 h-12 mx-auto mb-4 opacity-30" />
-            <p className="text-sm font-bold" style={{ color: subtextColor }}>{t.noHistory}</p>
+            <p className="text-sm font-bold" style={{ color: subtextColor }}>
+              {t.noHistory}
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
-            {history.map((item) => (
-              <div key={item.id} className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-2xl border backdrop-blur-xl transition-all" style={{ background: cardBg, borderColor: cardBorder }}>
-                <div className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: item.status === "fail" ? "rgba(220,38,38,0.2)" : "rgba(192,111,48,0.15)", color: item.status === "fail" ? "#ef4444" : accent }}>
+            {history.map(item => (
+              <div
+                key={item.id}
+                className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-2xl border backdrop-blur-xl transition-all"
+                style={{ background: cardBg, borderColor: cardBorder }}
+              >
+                <div
+                  className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center"
+                  style={{
+                    background:
+                      item.status === "fail"
+                        ? "rgba(220,38,38,0.2)"
+                        : "rgba(192,111,48,0.15)",
+                    color: item.status === "fail" ? "#ef4444" : accent,
+                  }}
+                >
                   {featureIcon(item.feature || "tts")}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-bold truncate">{featureLabel(item.feature || "tts")}</span>
+                    <span className="text-sm font-bold truncate">
+                      {featureLabel(item.feature || "tts")}
+                    </span>
                     {item.status === "success" ? (
                       <CheckCircle className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />
                     ) : (
                       <XCircle className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
                     )}
                   </div>
-                  <div className="flex items-center gap-3 text-xs" style={{ color: subtextColor }}>
+                  <div
+                    className="flex items-center gap-3 text-xs"
+                    style={{ color: subtextColor }}
+                  >
                     {item.voice && <span>{item.character || item.voice}</span>}
-                    {(item.charCount ?? 0) > 0 && <span>{item.charCount?.toLocaleString()} {lang === "mm" ? "စာလုံး" : "chars"}</span>}
-                    {(item.durationMs ?? 0) > 0 && <span>{Math.floor((item.durationMs ?? 0) / 1000)}s</span>}
+                    {(item.charCount ?? 0) > 0 && (
+                      <span>
+                        {item.charCount?.toLocaleString()}{" "}
+                        {lang === "mm" ? "စာလုံး" : "chars"}
+                      </span>
+                    )}
+                    {(item.durationMs ?? 0) > 0 && (
+                      <span>{Math.floor((item.durationMs ?? 0) / 1000)}s</span>
+                    )}
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <div className="text-xs font-semibold" style={{ color: subtextColor }}>{formatTime(item.createdAt)}</div>
+                  <div
+                    className="text-xs font-semibold"
+                    style={{ color: subtextColor }}
+                  >
+                    {formatTime(item.createdAt)}
+                  </div>
                 </div>
               </div>
             ))}

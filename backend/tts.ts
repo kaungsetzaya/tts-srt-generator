@@ -5,14 +5,18 @@ import fs from "fs/promises";
 import { nanoid } from "nanoid";
 
 const execFileAsync = promisify(execFile);
-const OUTPUT_DIR = process.env.EDGE_TTS_OUTPUT_DIR ?? path.join(process.cwd(), "output");
+const OUTPUT_DIR =
+  process.env.EDGE_TTS_OUTPUT_DIR ?? path.join(process.cwd(), "output");
 
 fs.mkdir(OUTPUT_DIR, { recursive: true }).catch(() => {});
 
 let currentMurfKeyIndex = 0;
 function getMurfKey(): string | undefined {
   const keysStr = process.env.MURF_API_KEY || "";
-  const keys = keysStr.split(",").map(k => k.trim()).filter(k => k.length > 0);
+  const keys = keysStr
+    .split(",")
+    .map(k => k.trim())
+    .filter(k => k.length > 0);
   if (keys.length === 0) return undefined;
   const key = keys[currentMurfKeyIndex % keys.length];
   currentMurfKeyIndex++;
@@ -27,15 +31,60 @@ export const SUPPORTED_VOICES = {
 export type VoiceKey = keyof typeof SUPPORTED_VOICES;
 
 export const CHARACTER_VOICES = {
-  ryan:      { name: "ရဲရင့်",   gender: "male",   murfId: "en-US-ryan",      base: "thiha" as const },
-  ronnie:    { name: "ရောင်နီ",  gender: "male",   murfId: "en-US-ronnie",    base: "thiha" as const },
-  lucas:     { name: "လင်းခန့်", gender: "male",   murfId: "en-US-lucas",     base: "thiha" as const },
-  daniel:    { name: "ဒေဝ",      gender: "male",   murfId: "en-US-daniel",    base: "thiha" as const },
-  evander:   { name: "အဂ္ဂ",     gender: "male",   murfId: "en-US-evander",   base: "thiha" as const },
-  michelle:  { name: "မေချို",   gender: "female", murfId: "en-US-michelle",  base: "nilar" as const },
-  iris:      { name: "အိန္ဒြာ",  gender: "female", murfId: "en-US-iris",      base: "nilar" as const },
-  charlotte: { name: "သီရိ",     gender: "female", murfId: "en-US-charlotte", base: "nilar" as const },
-  amara:     { name: "အမရာ",     gender: "female", murfId: "en-US-amara",     base: "nilar" as const },
+  ryan: {
+    name: "ရဲရင့်",
+    gender: "male",
+    murfId: "en-US-ryan",
+    base: "thiha" as const,
+  },
+  ronnie: {
+    name: "ရောင်နီ",
+    gender: "male",
+    murfId: "en-US-ronnie",
+    base: "thiha" as const,
+  },
+  lucas: {
+    name: "လင်းခန့်",
+    gender: "male",
+    murfId: "en-US-lucas",
+    base: "thiha" as const,
+  },
+  daniel: {
+    name: "ဒေဝ",
+    gender: "male",
+    murfId: "en-US-daniel",
+    base: "thiha" as const,
+  },
+  evander: {
+    name: "အဂ္ဂ",
+    gender: "male",
+    murfId: "en-US-evander",
+    base: "thiha" as const,
+  },
+  michelle: {
+    name: "မေချို",
+    gender: "female",
+    murfId: "en-US-michelle",
+    base: "nilar" as const,
+  },
+  iris: {
+    name: "အိန္ဒြာ",
+    gender: "female",
+    murfId: "en-US-iris",
+    base: "nilar" as const,
+  },
+  charlotte: {
+    name: "သီရိ",
+    gender: "female",
+    murfId: "en-US-charlotte",
+    base: "nilar" as const,
+  },
+  amara: {
+    name: "အမရာ",
+    gender: "female",
+    murfId: "en-US-amara",
+    base: "nilar" as const,
+  },
 };
 
 export type CharacterKey = keyof typeof CHARACTER_VOICES;
@@ -43,7 +92,7 @@ export type CharacterKey = keyof typeof CHARACTER_VOICES;
 export interface GenerateResult {
   audioBuffer: Buffer;
   srtContent: string;
-  rawSrt: string;  // Raw edge-tts word-level SRT for precise timing
+  rawSrt: string; // Raw edge-tts word-level SRT for precise timing
   durationMs: number;
 }
 
@@ -56,7 +105,13 @@ export async function generateSpeechWithCharacter(
 ): Promise<GenerateResult> {
   const char = CHARACTER_VOICES[characterKey];
   // Step 1: Generate base TTS with Thiha or Nilar (pitch is now configurable)
-  const baseResult = await generateSpeech(text, char.base, rate, pitch, aspectRatio);
+  const baseResult = await generateSpeech(
+    text,
+    char.base,
+    rate,
+    pitch,
+    aspectRatio
+  );
   // Step 2: Convert voice with murf.ai
   const murfApiKey = getMurfKey();
   if (!murfApiKey) throw new Error("MURF_API_KEY not configured");
@@ -65,7 +120,11 @@ export async function generateSpeechWithCharacter(
   const form = new FormData();
   form.set("voice_id", char.murfId);
   form.set("format", "MP3");
-  form.set("file", new Blob([baseResult.audioBuffer], { type: "audio/mpeg" }), "audio.mp3");
+  form.set(
+    "file",
+    new Blob([baseResult.audioBuffer], { type: "audio/mpeg" }),
+    "audio.mp3"
+  );
 
   const response = await fetch("https://api.murf.ai/v1/voice-changer/convert", {
     method: "POST",
@@ -73,7 +132,7 @@ export async function generateSpeechWithCharacter(
     body: form as any,
   });
 
-  const result = await response.json() as any;
+  const result = (await response.json()) as any;
   if (result.error_code) throw new Error(result.error_message);
 
   // Download converted audio
@@ -105,7 +164,8 @@ export async function generateSpeech(
   const ratePercent = Math.round((actualRate - 1.0) * 100);
   const rateStr = ratePercent >= 0 ? `+${ratePercent}%` : `${ratePercent}%`;
   const clampedPitch = Math.max(-20, Math.min(20, pitch));
-  const pitchStr = clampedPitch >= 0 ? `+${clampedPitch}Hz` : `${clampedPitch}Hz`;
+  const pitchStr =
+    clampedPitch >= 0 ? `+${clampedPitch}Hz` : `${clampedPitch}Hz`;
 
   const id = nanoid(10);
   const audioPath = path.join(OUTPUT_DIR, `${id}.mp3`);
@@ -116,16 +176,42 @@ export async function generateSpeech(
 
   await acquireSlot();
   try {
-    await execFileAsync("edge-tts", [
-      "--voice", voiceConfig.shortName,
-      "--rate", rateStr,
-      `--pitch=${pitchStr}`,
-      "--file", tmpText,
-      "--write-media", audioPath,
-      "--write-subtitles", srtPath,
-    ], {
-      env: { ...process.env, PATH: process.env.PATH, HTTPS_PROXY: (() => { const h=process.env.EDGE_TTS_PROXY_HOST,p=process.env.EDGE_TTS_PROXY_PORT,u=process.env.EDGE_TTS_PROXY_USER,s=process.env.EDGE_TTS_PROXY_PASS; return (h&&p&&u&&s) ? `http://${u}:${s}@${h}:${p}` : ""; })(), HTTP_PROXY: (() => { const h=process.env.EDGE_TTS_PROXY_HOST,p=process.env.EDGE_TTS_PROXY_PORT,u=process.env.EDGE_TTS_PROXY_USER,s=process.env.EDGE_TTS_PROXY_PASS; return (h&&p&&u&&s) ? `http://${u}:${s}@${h}:${p}` : ""; })() },
-    });
+    await execFileAsync(
+      "edge-tts",
+      [
+        "--voice",
+        voiceConfig.shortName,
+        "--rate",
+        rateStr,
+        `--pitch=${pitchStr}`,
+        "--file",
+        tmpText,
+        "--write-media",
+        audioPath,
+        "--write-subtitles",
+        srtPath,
+      ],
+      {
+        env: {
+          ...process.env,
+          PATH: process.env.PATH,
+          HTTPS_PROXY: (() => {
+            const h = process.env.EDGE_TTS_PROXY_HOST,
+              p = process.env.EDGE_TTS_PROXY_PORT,
+              u = process.env.EDGE_TTS_PROXY_USER,
+              s = process.env.EDGE_TTS_PROXY_PASS;
+            return h && p && u && s ? `http://${u}:${s}@${h}:${p}` : "";
+          })(),
+          HTTP_PROXY: (() => {
+            const h = process.env.EDGE_TTS_PROXY_HOST,
+              p = process.env.EDGE_TTS_PROXY_PORT,
+              u = process.env.EDGE_TTS_PROXY_USER,
+              s = process.env.EDGE_TTS_PROXY_PASS;
+            return h && p && u && s ? `http://${u}:${s}@${h}:${p}` : "";
+          })(),
+        },
+      }
+    );
 
     const audioBuffer = await fs.readFile(audioPath);
 
@@ -138,7 +224,9 @@ export async function generateSpeech(
 
     const durationMs = parseLastEndTime(rawSrt);
     const charsPerLine = aspectRatio === "9:16" ? 16 : 22;
-    const srtContent = buildSRT(text, durationMs, charsPerLine);
+
+    // Use raw edge-tts timing data for accurate SRT timestamps
+    const srtContent = buildSRTFromRaw(rawSrt, text, charsPerLine);
 
     return { audioBuffer, rawSrt, srtContent, durationMs };
   } finally {
@@ -150,7 +238,9 @@ export async function generateSpeech(
 }
 
 function parseLastEndTime(srt: string): number {
-  const matches = [...srt.matchAll(/\d{2}:\d{2}:\d{2},\d{3} --> (\d{2}:\d{2}:\d{2},\d{3})/g)];
+  const matches = [
+    ...srt.matchAll(/\d{2}:\d{2}:\d{2},\d{3} --> (\d{2}:\d{2}:\d{2},\d{3})/g),
+  ];
   if (matches.length === 0) return 0;
   return srtTimeToMs(matches[matches.length - 1][1]);
 }
@@ -183,7 +273,12 @@ async function acquireSlot(): Promise<void> {
     activeRequests++;
     return;
   }
-  return new Promise(resolve => waitQueue.push(() => { activeRequests++; resolve(); }));
+  return new Promise(resolve =>
+    waitQueue.push(() => {
+      activeRequests++;
+      resolve();
+    })
+  );
 }
 
 function releaseSlot(): void {
@@ -197,8 +292,155 @@ function graphemeLen(s: string): number {
   return [...segmenter.segment(s)].length;
 }
 
-function buildSRT(text: string, durationMs: number, charsPerLine: number): string {
-  const tokens = text.trim().split(/\s+/).filter(t => t.length > 0);
+interface WordEntry {
+  startMs: number;
+  endMs: number;
+  text: string;
+}
+
+function parseRawSrt(rawSrt: string): WordEntry[] {
+  const entries: WordEntry[] = [];
+  const blocks = rawSrt.trim().split(/\n\n+/);
+
+  for (const block of blocks) {
+    const lines = block.trim().split("\n");
+    if (lines.length < 3) continue;
+
+    const timeMatch = lines[1].match(
+      /(\d{2}:\d{2}:\d{2},\d{3}) --> (\d{2}:\d{2}:\d{2},\d{3})/
+    );
+    if (!timeMatch) continue;
+
+    entries.push({
+      startMs: srtTimeToMs(timeMatch[1]),
+      endMs: srtTimeToMs(timeMatch[2]),
+      text: lines.slice(2).join(" ").trim(),
+    });
+  }
+
+  return entries;
+}
+
+function buildSRTFromRaw(
+  rawSrt: string,
+  originalText: string,
+  charsPerLine: number
+): string {
+  const words = parseRawSrt(rawSrt);
+
+  if (words.length === 0) {
+    return buildSRT(originalText, 0, charsPerLine);
+  }
+
+  const tokens = originalText
+    .trim()
+    .split(/\s+/)
+    .filter(t => t.length > 0);
+  if (tokens.length === 0) return "";
+
+  const tokenEntries: { token: string; startMs: number; endMs: number }[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    if (i < words.length) {
+      tokenEntries.push({
+        token: tokens[i],
+        startMs: words[i].startMs,
+        endMs: words[i].endMs,
+      });
+    } else {
+      const last = words[words.length - 1];
+      tokenEntries.push({
+        token: tokens[i],
+        startMs: last.endMs,
+        endMs: last.endMs + 200,
+      });
+    }
+  }
+
+  const segments: (typeof tokenEntries)[] = [];
+  let cur: typeof tokenEntries = [];
+  for (const entry of tokenEntries) {
+    cur.push(entry);
+    if (/[။၊]$/.test(entry.token)) {
+      segments.push(cur);
+      cur = [];
+    }
+  }
+  if (cur.length > 0) segments.push(cur);
+
+  const lines: { text: string; startMs: number; endMs: number }[] = [];
+  for (const seg of segments) {
+    let currentTokens: string[] = [];
+    let currentChars = 0;
+    let lineStartMs = seg[0].startMs;
+    let lineEndMs = seg[0].endMs;
+
+    for (const entry of seg) {
+      const tokenChars = graphemeLen(entry.token);
+      if (currentChars > 0 && currentChars + 1 + tokenChars > charsPerLine) {
+        lines.push({
+          text: currentTokens.join(" "),
+          startMs: lineStartMs,
+          endMs: lineEndMs,
+        });
+        currentTokens = [];
+        currentChars = 0;
+        lineStartMs = entry.startMs;
+      }
+      currentTokens.push(entry.token);
+      currentChars += (currentChars > 0 ? 1 : 0) + tokenChars;
+      lineEndMs = entry.endMs;
+    }
+    if (currentTokens.length > 0) {
+      lines.push({
+        text: currentTokens.join(" "),
+        startMs: lineStartMs,
+        endMs: lineEndMs,
+      });
+    }
+  }
+
+  const blocks: { lines: string[]; startMs: number; endMs: number }[] = [];
+  let i = 0;
+  while (i < lines.length) {
+    if (i + 1 < lines.length) {
+      blocks.push({
+        lines: [lines[i].text, lines[i + 1].text],
+        startMs: lines[i].startMs,
+        endMs: lines[i + 1].endMs,
+      });
+      i += 2;
+    } else {
+      blocks.push({
+        lines: [lines[i].text],
+        startMs: lines[i].startMs,
+        endMs: lines[i].endMs + 300,
+      });
+      i++;
+    }
+  }
+
+  const result: string[] = [];
+  for (let idx = 0; idx < blocks.length; idx++) {
+    result.push(`${idx + 1}`);
+    result.push(
+      `${msToSrtTime(blocks[idx].startMs)} --> ${msToSrtTime(blocks[idx].endMs)}`
+    );
+    result.push(blocks[idx].lines.join("\n"));
+    result.push("");
+  }
+
+  return result.join("\n");
+}
+
+function buildSRT(
+  text: string,
+  durationMs: number,
+  charsPerLine: number
+): string {
+  const tokens = text
+    .trim()
+    .split(/\s+/)
+    .filter(t => t.length > 0);
   if (tokens.length === 0) return "";
 
   // Step 1: split into segments by sentence boundary (။ ၊)
@@ -248,7 +490,11 @@ function buildSRT(text: string, durationMs: number, charsPerLine: number): strin
   // Merge any trailing solo block into previous
   const blocks: string[][] = [];
   for (let j = 0; j < rawBlocks.length; j++) {
-    if (rawBlocks[j].length === 1 && blocks.length > 0 && blocks[blocks.length - 1].length === 1) {
+    if (
+      rawBlocks[j].length === 1 &&
+      blocks.length > 0 &&
+      blocks[blocks.length - 1].length === 1
+    ) {
       blocks[blocks.length - 1].push(rawBlocks[j][0]);
     } else {
       blocks.push([...rawBlocks[j]]);
@@ -256,8 +502,12 @@ function buildSRT(text: string, durationMs: number, charsPerLine: number): strin
   }
 
   // Step 4: distribute duration by word count
-  const blockWordCounts = blocks.map(b =>
-    b.join(" ").split(/\s+/).filter(t => t.length > 0).length
+  const blockWordCounts = blocks.map(
+    b =>
+      b
+        .join(" ")
+        .split(/\s+/)
+        .filter(t => t.length > 0).length
   );
   const totalBlockWords = blockWordCounts.reduce((a, b) => a + b, 0);
 
@@ -265,9 +515,12 @@ function buildSRT(text: string, durationMs: number, charsPerLine: number): strin
   let currentMs = 0;
 
   for (let idx = 0; idx < blocks.length; idx++) {
-    const blockDuration = Math.round((blockWordCounts[idx] / totalBlockWords) * durationMs);
+    const blockDuration = Math.round(
+      (blockWordCounts[idx] / totalBlockWords) * durationMs
+    );
     const startMs = currentMs;
-    const endMs = idx === blocks.length - 1 ? durationMs : currentMs + blockDuration;
+    const endMs =
+      idx === blocks.length - 1 ? durationMs : currentMs + blockDuration;
     currentMs = endMs;
 
     result.push(`${idx + 1}`);
@@ -287,7 +540,10 @@ export function formatSrtTime(ms: number): string {
   return msToSrtTime(ms);
 }
 
-export function estimateSpeechDuration(text: string, rate: number = 1.0): number {
+export function estimateSpeechDuration(
+  text: string,
+  rate: number = 1.0
+): number {
   const wordCount = text.trim().split(/\s+/).length;
   return Math.round((wordCount * 400) / rate);
 }

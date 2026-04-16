@@ -2,7 +2,9 @@ import { randomBytes } from "crypto";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export async function geminiTranslateForDub(segments: any[], apiKey?: string) {
-  const genAI = new GoogleGenerativeAI(apiKey || process.env.GEMINI_API_KEY || "");
+  const genAI = new GoogleGenerativeAI(
+    apiKey || process.env.GEMINI_API_KEY || ""
+  );
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-lite" });
 
   const prompt = `Translate the following segments to Myanmar language for video dubbing. Keep the meaning and tone. Return the result as a JSON array of objects with 'text' property.
@@ -12,12 +14,12 @@ export async function geminiTranslateForDub(segments: any[], apiKey?: string) {
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
-    const jsonMatch = text.match(/\[\s\S]*\]/) as RegExpMatchArray | null;
+    const jsonMatch = text.match(/\[[\s\S]*?\]/) as RegExpMatchArray | null;
     const translatedTexts = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
 
     const translatedSegments = segments.map((seg, i) => ({
       ...seg,
-      text: translatedTexts[i]?.text || translatedTexts[i] || seg.text
+      text: translatedTexts[i]?.text || translatedTexts[i] || seg.text,
     }));
 
     return { translated: translatedSegments };

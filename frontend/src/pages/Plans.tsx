@@ -25,7 +25,7 @@ const plans = [
     period: "/month",
     desc: "Full access, billed monthly",
     badge: "Popular",
-    badgeColor: "#F4B34F",
+    badgeColor: "#0891B2",
     features: [
       "Unlimited TTS generations",
       "All 10+ premium voices",
@@ -43,7 +43,7 @@ const plans = [
     period: "/year",
     desc: "Best value, save 25%",
     badge: "Best Value",
-    badgeColor: "#C06F30",
+    badgeColor: "#2563EB",
     features: [
       "Everything in Monthly",
       "2 months free",
@@ -60,13 +60,20 @@ export default function Plans() {
   const [, nav] = useLocation();
 
   return (
-    <div className="min-h-screen" style={{ background: "#0f0f0f", color: "#EBE6D8" }}>
+    <div
+      className="min-h-screen"
+      style={{ background: "#0f0f0f", color: "#EBE6D8" }}
+    >
       {/* Header */}
       <div className="fixed top-4 left-4 z-50">
         <button
           onClick={() => nav("/")}
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold uppercase tracking-wider transition-all hover:opacity-80"
-          style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#F4B34F" }}
+          style={{
+            background: "rgba(255,255,255,0.06)",
+            border: "1px solid rgba(255,255,255,0.12)",
+            color: "#0891B2",
+          }}
         >
           <ArrowLeft className="w-4 h-4" /> Back
         </button>
@@ -80,15 +87,26 @@ export default function Plans() {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <div className="inline-block px-4 py-1.5 rounded-full text-xs uppercase tracking-[0.3em] font-semibold mb-4"
-            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#F4B34F" }}>
+          <div
+            className="inline-block px-4 py-1.5 rounded-full text-xs uppercase tracking-[0.3em] font-semibold mb-4"
+            style={{
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              color: "#0891B2",
+            }}
+          >
             Pricing
           </div>
-          <h1 className="font-black text-4xl md:text-6xl mb-4" style={{ letterSpacing: "-0.02em" }}>
-            Simple, <span style={{ color: "#F4B34F" }}>Transparent</span> Pricing
+          <h1
+            className="font-black text-4xl md:text-6xl mb-4"
+            style={{ letterSpacing: "-0.02em" }}
+          >
+            Simple, <span style={{ color: "#0891B2" }}>Transparent</span>{" "}
+            Pricing
           </h1>
           <p className="text-lg opacity-60 max-w-xl mx-auto">
-            Choose the plan that fits your content creation needs. Upgrade or downgrade anytime.
+            Choose the plan that fits your content creation needs. Upgrade or
+            downgrade anytime.
           </p>
         </motion.div>
 
@@ -103,12 +121,14 @@ export default function Plans() {
               className={`relative rounded-3xl p-8 ${plan.popular ? "scale-105" : ""}`}
               style={{
                 background: plan.popular
-                  ? "linear-gradient(135deg, rgba(192,111,48,0.15) 0%, rgba(244,179,79,0.08) 100%)"
+                  ? "linear-gradient(135deg, rgba(37,99,235,0.15) 0%, rgba(244,179,79,0.08) 100%)"
                   : "rgba(255,255,255,0.03)",
                 border: plan.popular
-                  ? "2px solid #C06F30"
+                  ? "2px solid #2563EB"
                   : "1px solid rgba(255,255,255,0.08)",
-                boxShadow: plan.popular ? "0 20px 60px rgba(192,111,48,0.2)" : "none",
+                boxShadow: plan.popular
+                  ? "0 20px 60px rgba(37,99,235,0.2)"
+                  : "none",
               }}
             >
               {/* Badge */}
@@ -121,9 +141,14 @@ export default function Plans() {
 
               {/* Plan Info */}
               <div className="text-center mb-8">
-                <h3 className="font-black text-xl uppercase tracking-wider mb-2">{plan.name}</h3>
+                <h3 className="font-black text-xl uppercase tracking-wider mb-2">
+                  {plan.name}
+                </h3>
                 <div className="flex items-baseline justify-center gap-1">
-                  <span className="text-4xl font-black" style={{ color: plan.popular ? "#F4B34F" : "#EBE6D8" }}>
+                  <span
+                    className="text-4xl font-black"
+                    style={{ color: plan.popular ? "#0891B2" : "#EBE6D8" }}
+                  >
                     {plan.price}
                   </span>
                   <span className="text-sm opacity-50">{plan.period}</span>
@@ -133,9 +158,12 @@ export default function Plans() {
 
               {/* Features */}
               <ul className="space-y-3 mb-8">
-                {plan.features.map((f) => (
+                {plan.features.map(f => (
                   <li key={f} className="flex items-start gap-3 text-sm">
-                    <Check className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: "#F4B34F" }} />
+                    <Check
+                      className="w-4 h-4 mt-0.5 flex-shrink-0"
+                      style={{ color: "#0891B2" }}
+                    />
                     <span>{f}</span>
                   </li>
                 ))}
@@ -147,9 +175,13 @@ export default function Plans() {
                 whileTap={{ scale: 0.98 }}
                 className="w-full py-3 rounded-xl font-bold uppercase tracking-wider text-sm transition-all"
                 style={{
-                  background: plan.popular ? "#F4B34F" : "rgba(255,255,255,0.06)",
+                  background: plan.popular
+                    ? "#0891B2"
+                    : "rgba(255,255,255,0.06)",
                   color: plan.popular ? "#0f0f0f" : "#EBE6D8",
-                  border: plan.popular ? "none" : "1px solid rgba(255,255,255,0.12)",
+                  border: plan.popular
+                    ? "none"
+                    : "1px solid rgba(255,255,255,0.12)",
                 }}
               >
                 {plan.cta}
@@ -186,11 +218,14 @@ export default function Plans() {
                 q: "Need help?",
                 a: "Contact us via Telegram @LumixSupportBot or email support@lumix.studio",
               },
-            ].map((faq) => (
+            ].map(faq => (
               <div
                 key={faq.q}
                 className="p-6 rounded-2xl"
-                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}
+                style={{
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                }}
               >
                 <h4 className="font-bold mb-2">{faq.q}</h4>
                 <p className="text-sm opacity-60">{faq.a}</p>
@@ -205,12 +240,24 @@ export default function Plans() {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.6 }}
           className="mt-16 text-center py-12 rounded-3xl"
-          style={{ background: "linear-gradient(135deg, rgba(192,111,48,0.12) 0%, rgba(244,179,79,0.06) 100%)", border: "1px solid rgba(192,111,48,0.2)" }}
+          style={{
+            background:
+              "linear-gradient(135deg, rgba(37,99,235,0.12) 0%, rgba(244,179,79,0.06) 100%)",
+            border: "1px solid rgba(37,99,235,0.2)",
+          }}
         >
-          <Crown className="w-8 h-8 mx-auto mb-4" style={{ color: "#F4B34F" }} />
+          <Crown
+            className="w-8 h-8 mx-auto mb-4"
+            style={{ color: "#0891B2" }}
+          />
           <h3 className="font-black text-xl mb-2">Enterprise Solutions</h3>
-          <p className="text-sm opacity-60 mb-4">Need custom volume pricing or API access?</p>
-          <button className="px-6 py-2 rounded-xl text-sm font-bold uppercase tracking-wider" style={{ background: "#F4B34F", color: "#0f0f0f" }}>
+          <p className="text-sm opacity-60 mb-4">
+            Need custom volume pricing or API access?
+          </p>
+          <button
+            className="px-6 py-2 rounded-xl text-sm font-bold uppercase tracking-wider"
+            style={{ background: "#0891B2", color: "#0f0f0f" }}
+          >
             Contact Sales
           </button>
         </motion.div>
