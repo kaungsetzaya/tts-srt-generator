@@ -72,10 +72,45 @@ export default function Landing() {
         style={{ background: C.glass, backdropFilter: "blur(24px)", border: `1px solid ${C.glassB}`, boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}
       >
         <motion.div className="flex items-center gap-8">
-          <motion.span whileHover={{ scale: 1.05 }} className="text-2xl font-black tracking-tight cursor-pointer" style={{ color: C.gold }}>LUMIX</motion.span>
-          <motion.button whileHover={{ scale: 1.1, color: C.gold }} onClick={() => featRef.current?.scrollIntoView({ behavior: 'smooth' })} className="text-xs uppercase tracking-[0.2em] transition-colors duration-200" style={{ color: C.nude }}>Features</motion.button>
-          <motion.button whileHover={{ scale: 1.1, color: C.gold }} onClick={() => nav("/plans")} className="text-xs uppercase tracking-[0.2em] transition-colors duration-200" style={{ color: C.nude }}>Plans</motion.button>
-          <motion.button whileHover={{ scale: 1.1, y: -2 }} whileTap={{ scale: 0.95 }} onClick={go} className="px-6 py-2 rounded-full text-xs font-bold uppercase tracking-[0.15em] transition-all duration-200" style={{ background: C.gold, color: isDark ? C.dark : "#fff" }}>Login</motion.button>
+          <motion.span 
+            whileHover={{ scale: 1.1, rotate: -3 }}
+            whileTap={{ scale: 0.95 }}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+            className="text-2xl font-black tracking-tight cursor-pointer"
+            style={{ color: C.gold }}
+          >LUMIX</motion.span>
+          <motion.button 
+            whileHover={{ scale: 1.15, y: -3, color: C.gold }}
+            whileTap={{ scale: 0.95 }}
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            onClick={() => featRef.current?.scrollIntoView({ behavior: 'smooth' })} 
+            className="text-xs uppercase tracking-[0.2em] transition-colors duration-200"
+            style={{ color: C.nude }}
+          >Features</motion.button>
+          <motion.button 
+            whileHover={{ scale: 1.15, y: -3, color: C.gold }}
+            whileTap={{ scale: 0.95 }}
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            onClick={() => nav("/plans")} 
+            className="text-xs uppercase tracking-[0.2em] transition-colors duration-200"
+            style={{ color: C.nude }}
+          >Plans</motion.button>
+          <motion.button 
+            whileHover={{ scale: 1.15, y: -3, boxShadow: "0 12px 24px rgba(244,179,79,0.4)" }}
+            whileTap={{ scale: 0.9 }}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.4 }}
+            onClick={go} 
+            className="px-6 py-2 rounded-full text-xs font-bold uppercase tracking-[0.15em] transition-all duration-200"
+            style={{ background: C.gold, color: isDark ? C.dark : "#fff", boxShadow: "0 8px 24px rgba(244,179,79,0.3)" }}
+          >Login</motion.button>
         </motion.div>
       </motion.nav>
 
