@@ -26,6 +26,7 @@ const EXTRA_ALLOWED_PATTERNS: RegExp[] = [
   /^https:\/\/[a-z0-9-]+-[a-z0-9-]+\.vercel\.app$/, // double-hash vercel urls
   /^https:\/\/[a-z0-9-]+\.projects\.vercel\.app$/, // *.projects.vercel.app
   /^https:\/\/[a-z0-9-]+-[a-z0-9-]+\.projects\.vercel\.app$/, // double-hash *.projects.vercel.app
+  /^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/, // cloudflare tunnel URLs
 ];
 
 function isOriginAllowed(origin: string): boolean {

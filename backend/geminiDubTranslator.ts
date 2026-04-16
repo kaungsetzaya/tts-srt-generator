@@ -12,7 +12,7 @@ export async function geminiTranslateForDub(segments: any[], apiKey?: string) {
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
-    const jsonMatch = text.match(/\[.*\]/s);
+    const jsonMatch = text.match(/\[\s\S]*\]/) as RegExpMatchArray | null;
     const translatedTexts = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
 
     const translatedSegments = segments.map((seg, i) => ({

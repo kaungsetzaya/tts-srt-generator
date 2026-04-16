@@ -28,9 +28,11 @@ const FEATURE_ICONS: Record<string, any> = {
 };
 
 // ── Accent colors ──────────────────────────────────────────────
-const C = "#C06F30";
-const cardBg = "rgba(10,8,30,0.7)";
-const border = "rgba(192,111,48,0.6)";
+const C = "#C06F30"; // copper
+const C_GOLD = "#F4B34F"; // gold
+const C_BG = "#0f0f0f"; // dark background
+const cardBg = "rgba(26,26,26,0.8)"; // card background
+const border = "rgba(192,111,48,0.25)";
 
 function StatBox({ label, value, color = C, sub }: { label: string; value: any; color?: string; sub?: string }) {
   return (
@@ -75,9 +77,9 @@ function UserDetailDrawer({ userId, userName, onClose }: { userId: string; userN
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end" style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
-      <div className="relative w-full max-w-2xl h-full overflow-y-auto" style={{ background: "#0f0f0f", borderLeft: `1px solid ${border}` }} onClick={e => e.stopPropagation()}>
+      <div className="relative w-full max-w-2xl h-full overflow-y-auto" style={{ background: C_BG, borderLeft: `1px solid ${border}` }} onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: border, background: "#0f0f0f" }}>
+        <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: border, background: C_BG }}>
           <div>
             <p className="font-black text-lg" style={{ color: C }}>{userName}</p>
             <p className="text-xs opacity-40">30-day activity breakdown</p>
@@ -134,7 +136,7 @@ function UserDetailDrawer({ userId, userName, onClose }: { userId: string; userN
             <div style={{ background: cardBg, borderColor: border }} className="border rounded-xl p-5">
               <p className="font-bold uppercase tracking-wider text-xs mb-4 opacity-60">Voice / Character Usage</p>
               {data.voices.length === 0 ? <p className="text-xs opacity-40">No voice data</p> : data.voices.map(v => (
-                <MiniBar key={v.name} label={v.name} count={v.count} max={maxVoice} color="#c084fc" />
+                <MiniBar key={v.name} label={v.name} count={v.count} max={maxVoice} color="#C06F30" />
               ))}
             </div>
 
@@ -221,6 +223,7 @@ export default function AdminDashboard() {
   const { data: analytics } = trpc.admin.getAnalytics.useQuery();
   const { data: health } = trpc.admin.getServerHealth.useQuery(undefined, { refetchInterval: 30000 });
   const { data: voiceStats, refetch: refetchVoice } = trpc.adminStats.getVoiceStats.useQuery({ timeframe });
+  const { data: generationOverview } = trpc.adminStats.getGenerationOverview.useQuery();
   const { data: errorData, refetch: refetchErrors } = trpc.adminStats.getErrorLogs.useQuery({ limit: 50, onlyUnresolved: false });
   const { data: churnData } = trpc.adminStats.getChurnStats.useQuery();
   const { data: onlineStats } = trpc.adminStats.onlineUsers.useQuery(undefined, { refetchInterval: 60000 });
@@ -238,7 +241,7 @@ export default function AdminDashboard() {
   });
 
   const logoutMutation = trpc.auth.logout.useMutation({ onSuccess: () => { window.location.href = "/login"; } });
-  const giveSub = trpc.admin.giveSubscription.useMutation({ onSuccess: () => { refetch(); setShowSubModal(false); setSelectedUser(null); setNote(""); setTransactionId(""); setPaymentMethod("kpay"); setPaymentSlipBase64(""); setPaymentSlipPreview(""); } });
+  const giveSub = trpc.admin.giveSubscription.useMutation({ onSuccess: () => { refetch(); setTimeout(() => refetch(), 500); setShowSubModal(false); setSelectedUser(null); setNote(""); setTransactionId(""); setPaymentMethod("kpay"); setPaymentSlipBase64(""); setPaymentSlipPreview(""); } });
   const cancelSub = trpc.admin.cancelSubscription.useMutation({ onSuccess: () => refetch() });
   const setRole = trpc.admin.setRole.useMutation({ onSuccess: () => refetch() });
   const banUser = trpc.admin.banUser.useMutation({ onSuccess: () => refetch() });
@@ -271,12 +274,12 @@ export default function AdminDashboard() {
 
   const activeSubs = normalUsers.filter((u: any) => u.subscription).length;
   const totalRevenue = analytics?.planCounts?.reduce((sum: number, p: any) => sum + (PLAN_PRICE[p.plan as Plan] ?? 0) * p.count, 0) ?? 0;
-  const fmtMMK = (v: number) => `${v.toLocaleString()} MMK`;
+  const fmtMMK = (v: number) => `${(v ?? 0).toLocaleString()} MMK`;
   const maxVoice = Math.max(...(voiceStats?.voices?.map((v: any) => v.count) ?? [1]));
   const totalErrors = (errorData?.failedGenerations?.length ?? 0) + (errorData?.systemLogs?.filter((l: any) => !l.resolved).length ?? 0);
 
   return (
-    <div className="min-h-screen text-foreground" style={{ background: "linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%)" }}>
+    <div className="min-h-screen text-foreground" style={{ background: C_BG }}>
       {/* User Detail Drawer */}
       {userDrawer && <UserDetailDrawer userId={userDrawer.id} userName={userDrawer.name} onClose={() => setUserDrawer(null)} />}
 
@@ -299,9 +302,9 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {[
             { label: "🟢 Online Now", value: onlineStats?.onlineCount ?? 0, color: "#4ade80", sub: "Active in 15min" },
-            { label: "🎙️ TTS (Month)", value: analytics?.featureBreakdown?.tts ?? 0, color: C, sub: `${analytics?.generations?.today ?? 0} today` },
-            { label: "🎬 Video (Month)", value: (analytics?.featureBreakdown?.videoUpload ?? 0) + (analytics?.featureBreakdown?.videoLink ?? 0), color: "#60a5fa", sub: `${analytics?.featureBreakdown?.translation ?? 0} translated` },
-            { label: "Total Users", value: normalUsers.length, color: "#c084fc", sub: `${activeSubs} active subs` },
+            { label: "🎙️ TTS (Month)", value: analytics?.totalConversions ?? 0, color: C, sub: `${analytics?.totalConversions ?? 0} total conversions` },
+            { label: "🎬 Video (Month)", value: analytics?.totalConversions ?? 0, color: "#60a5fa", sub: `${analytics?.activeSubs ?? 0} active subs` },
+            { label: "Total Users", value: analytics?.totalUsers ?? 0, color: "#C06F30", sub: `${analytics?.activeSubs ?? 0} active subs` },
           ].map(({ label, value, color, sub }) => (
             <div key={label} className="border rounded-xl p-4" style={{ background: cardBg, borderColor: border }}>
               <p className="text-xs uppercase tracking-wider opacity-50 mb-1">{label}</p>
@@ -339,10 +342,10 @@ export default function AdminDashboard() {
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
-                  { label: "Today", value: analytics?.generations?.today ?? 0 },
-                  { label: "This Week", value: analytics?.generations?.week ?? 0 },
-                  { label: "This Month", value: analytics?.generations?.month ?? 0 },
-                  { label: "All Time", value: analytics?.generations?.total ?? 0 },
+                  { label: "Today", value: generationOverview?.today ?? 0 },
+                  { label: "This Week", value: generationOverview?.thisWeek ?? 0 },
+                  { label: "This Month", value: generationOverview?.thisMonth ?? 0 },
+                  { label: "All Time", value: generationOverview?.allTime ?? 0 },
                 ].map(({ label, value }) => (
                   <div key={label} className="border rounded-xl p-4 text-center" style={{ borderColor: border }}>
                     <p className="text-xs opacity-40 uppercase tracking-wider mb-2">{label}</p>
@@ -375,7 +378,7 @@ export default function AdminDashboard() {
                   {voiceStats?.voices?.length === 0 && <p className="text-xs opacity-30">No data</p>}
                   {voiceStats?.voices?.map((v: any) => (
                     <MiniBar key={v.name} label={v.name} count={v.count} max={maxVoice}
-                      color={v.name.startsWith("[Character]") ? "#f472b6" : C} />
+                      color={v.name?.startsWith("[Character]") ? "#F4B34F" : C} />
                   ))}
                 </div>
                 <div className="space-y-4">
@@ -680,7 +683,7 @@ export default function AdminDashboard() {
                       <span className={`text-xs px-2 py-0.5 rounded font-bold uppercase ${log.severity === "error" ? "bg-red-500/20 text-red-400" : log.severity === "warn" ? "bg-yellow-500/20 text-yellow-400" : "bg-blue-500/20 text-blue-400"}`}>{log.severity}</span>
                       <span className="text-xs font-mono opacity-50">{log.errorCode}</span>
                       {/* Show source: browser errors vs app errors */}
-                      {log.feature?.startsWith("browser:") ? (
+                      {log.feature && log.feature.startsWith("browser:") ? (
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-600 font-bold uppercase">🌐 Browser</span>
                       ) : (
                         <span className="text-xs opacity-30">{FEATURE_LABELS[log.feature ?? ""] ?? log.feature}</span>
@@ -832,7 +835,7 @@ export default function AdminDashboard() {
                             <span className="font-black text-lg" style={{ color }}>{v.count}</span>
                           </div>
                           <div className="flex items-center gap-4 text-xs opacity-50">
-                            <span>{v.chars.toLocaleString()} chars</span>
+                            <span>{(v.chars ?? 0).toLocaleString()} chars</span>
                             <span>{fmtMs(v.durationMs)} audio</span>
                             <span className="ml-auto font-bold" style={{ color }}>{pct}%</span>
                           </div>
@@ -909,7 +912,7 @@ export default function AdminDashboard() {
       {/* Give Subscription Modal */}
       {showSubModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={() => setShowSubModal(false)}>
-          <div className="border rounded-xl p-6 w-full max-w-md m-4 max-h-[90vh] overflow-y-auto" style={{ background: "#1a1a1a", borderColor: border }} onClick={e => e.stopPropagation()}>
+          <div className="border rounded-xl p-6 w-full max-w-md m-4 max-h-[90vh] overflow-y-auto" style={{ background: C_CARD, borderColor: border }} onClick={e => e.stopPropagation()}>
             <h3 className="font-bold uppercase tracking-wider mb-4" style={{ color: C }}>Give Subscription</h3>
             <div className="space-y-4">
               <div>
@@ -1010,7 +1013,7 @@ export default function AdminDashboard() {
                   giveSub.mutate({
                     userId: selectedUser,
                     plan: selectedPlan,
-                    trialDays,
+                    days: selectedPlan === "trial" ? trialDays : (selectedPlan === "1month" ? 30 : selectedPlan === "3month" ? 90 : selectedPlan === "6month" ? 180 : 999999),
                     note: `${transactionId ? `TXN: ${transactionId}` : ""}${note ? ` | ${note}` : ""}`.trim() || undefined,
                     paymentMethod,
                     paymentSlip: paymentSlipBase64 || undefined,

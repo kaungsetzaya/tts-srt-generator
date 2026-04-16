@@ -39,7 +39,7 @@ async function startServer() {
         fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
         imgSrc: ["'self'", "data:", "https:", "https://wsrv.nl", "https://img.youtube.com"],
         mediaSrc: ["'self'", "blob:", "data:"],
-        connectSrc: ["'self'"],
+        connectSrc: ["'self'", "https://choco.de5.net", "https://lumix-studio.vercel.app", "https://*.vercel.app"],
         frameSrc: ["'none'"],
         objectSrc: ["'none'"],
         baseUri: ["'self'"],

@@ -37,12 +37,25 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
-const BACKEND_URL = "https://choco.de5.net";
+// Try to use custom domain, fall back to relative URLs if not available
+const getBackendUrl = () => {
+  // Check if running on Vercel
+  if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')) {
+    // Use relative URLs - Vercel will proxy via vercel.json rewrites
+    return '';
+  }
+  // Production VPS deployment
+  return process.env.NODE_ENV === 'production' 
+    ? '' // Relative for same-domain
+    : 'http://localhost:3000';
+};
+
+const BACKEND_URL = getBackendUrl();
 
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      url: `${BACKEND_URL}/api/trpc`,
+      url: BACKEND_URL ? `${BACKEND_URL}/api/trpc` : '/api/trpc',
       transformer: superjson,
       fetch(input, init) {
         const controller = new AbortController();
@@ -64,7 +77,7 @@ const trpcClient = trpc.createClient({
 // ────────────────────────────────────────────────────
 function sendBrowserError(errorMessage: string, source: "window.onerror" | "unhandledrejection" | "react_error_boundary", stack?: string) {
   // Use raw fetch to avoid circular dependency with trpc
-  fetch(`${BACKEND_URL}/api/trpc/logBrowserError`, {
+  fetch(BACKEND_URL ? `${BACKEND_URL}/api/trpc/logBrowserError` : '/api/trpc/logBrowserError', {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",

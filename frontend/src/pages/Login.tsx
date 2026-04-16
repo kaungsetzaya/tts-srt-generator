@@ -40,7 +40,7 @@ export default function Login() {
   const [, navigate] = useLocation();
 
   const mut = trpc.auth.verify.useMutation({
-    onSuccess: () => { window.location.href = "/lumix"; },
+    onSuccess: (d) => { window.location.href = d?.role === "admin" ? "/admin" : "/lumix"; },
     onError: (e) => { setError(e.message); },
   });
 

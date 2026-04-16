@@ -127,7 +127,6 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
         console.log(`[Video Translator] Downloading: ${url}`);
 
         const dlResult = await downloadVideo(url, tempVideoPath, {
-          cookiesPath: hasCookies ? cookiePath : undefined,
           timeout: 300000
         });
 
