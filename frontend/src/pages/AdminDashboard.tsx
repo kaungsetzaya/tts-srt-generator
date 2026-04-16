@@ -28,9 +28,12 @@ const FEATURE_ICONS: Record<string, any> = {
 };
 
 // ── Accent colors ──────────────────────────────────────────────
-const C = "#C06F30";
-const cardBg = "rgba(10,8,30,0.7)";
-const border = "rgba(192,111,48,0.6)";
+const C = "#C06F30"; // copper
+const C_GOLD = "#F4B34F"; // gold
+const C_BG = "#0f0f0f"; // dark background
+const C_CARD = "rgba(26,26,26,0.8)"; // card background
+const C_GLASS = "rgba(255,255,255,0.06)"; // glass effect
+const border = "rgba(192,111,48,0.25)";
 
 function StatBox({ label, value, color = C, sub }: { label: string; value: any; color?: string; sub?: string }) {
   return (
@@ -75,9 +78,9 @@ function UserDetailDrawer({ userId, userName, onClose }: { userId: string; userN
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end" style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
-      <div className="relative w-full max-w-2xl h-full overflow-y-auto" style={{ background: "#0f0f0f", borderLeft: `1px solid ${border}` }} onClick={e => e.stopPropagation()}>
+      <div className="relative w-full max-w-2xl h-full overflow-y-auto" style={{ background: C_BG, borderLeft: `1px solid ${border}` }} onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: border, background: "#0f0f0f" }}>
+        <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: border, background: C_BG }}>
           <div>
             <p className="font-black text-lg" style={{ color: C }}>{userName}</p>
             <p className="text-xs opacity-40">30-day activity breakdown</p>
@@ -277,7 +280,7 @@ export default function AdminDashboard() {
   const totalErrors = (errorData?.failedGenerations?.length ?? 0) + (errorData?.systemLogs?.filter((l: any) => !l.resolved).length ?? 0);
 
   return (
-    <div className="min-h-screen text-foreground" style={{ background: "linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%)" }}>
+    <div className="min-h-screen text-foreground" style={{ background: C_BG }}>
       {/* User Detail Drawer */}
       {userDrawer && <UserDetailDrawer userId={userDrawer.id} userName={userDrawer.name} onClose={() => setUserDrawer(null)} />}
 
@@ -910,7 +913,7 @@ export default function AdminDashboard() {
       {/* Give Subscription Modal */}
       {showSubModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={() => setShowSubModal(false)}>
-          <div className="border rounded-xl p-6 w-full max-w-md m-4 max-h-[90vh] overflow-y-auto" style={{ background: "#1a1a1a", borderColor: border }} onClick={e => e.stopPropagation()}>
+          <div className="border rounded-xl p-6 w-full max-w-md m-4 max-h-[90vh] overflow-y-auto" style={{ background: C_CARD, borderColor: border }} onClick={e => e.stopPropagation()}>
             <h3 className="font-bold uppercase tracking-wider mb-4" style={{ color: C }}>Give Subscription</h3>
             <div className="space-y-4">
               <div>
