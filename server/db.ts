@@ -98,3 +98,57 @@ export async function setUserRole(userId: string, role: string) {
   if (!db) throw new Error("DB not available");
   await db.update(users).set({ role }).where(eq(users.id, userId));
 }
+
+// Get user by OpenId (OAuth)
+export async function getUserByOpenId(openId: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(users)
+    .where(eq(users.openId, openId)).limit(1);
+  return result[0] ?? null;
+}
+
+// Upsert user (create or update)
+export async function upsertUser(data: {
+  openId: string;
+  name?: string | null;
+  email?: string | null;
+  loginMethod?: string | null;
+  lastSignedIn?: Date;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  
+  const existing = await db.select().from(users)
+    .where(eq(users.openId, data.openId)).limit(1);
+  
+  if (existing.length > 0) {
+    // Update existing user
+    const userId = existing[0].id;
+    const updateData: any = {
+      lastSignedIn: data.lastSignedIn || new Date(),
+      updatedAt: new Date(),
+    };
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.email !== undefined) updateData.email = data.email;
+    if (data.loginMethod !== undefined) updateData.loginMethod = data.loginMethod;
+    
+    await db.update(users).set(updateData).where(eq(users.id, userId));
+    return await getUserById(userId);
+  } else {
+    // Insert new user
+    const { nanoid } = await import("nanoid");
+    const userId = nanoid(36);
+    await db.insert(users).values({
+      id: userId,
+      openId: data.openId,
+      name: data.name || null,
+      email: data.email || null,
+      loginMethod: data.loginMethod || null,
+      lastSignedIn: data.lastSignedIn || new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    return await getUserById(userId);
+  }
+}

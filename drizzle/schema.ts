@@ -1,4 +1,5 @@
 import { mysqlTable, varchar, timestamp, text, int, boolean } from "drizzle-orm/mysql-core";
+import { sql } from "drizzle-orm";
 
 export const users = mysqlTable("users", {
   id: varchar("id", { length: 36 }).primaryKey().default(""),
@@ -13,9 +14,19 @@ export const users = mysqlTable("users", {
   // 🔐 One-Device Session — login တိုင်း token အသစ်ထုတ်ပြီး JWT ထဲ ထည့်သည်
   sessionToken: varchar("session_token", { length: 36 }),
   lastLoginAt: timestamp("last_login_at"),
+  // OAuth fields
+  openId: varchar("open_id", { length: 255 }).unique(),
+  name: varchar("name", { length: 255 }),
+  email: varchar("email", { length: 255 }),
+  loginMethod: varchar("login_method", { length: 50 }),
+  lastSignedIn: timestamp("last_signed_in"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Type exports
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
 
 export const subscriptions = mysqlTable("subscriptions", {
   id: varchar("id", { length: 36 }).primaryKey(),

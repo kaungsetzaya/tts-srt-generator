@@ -1,7 +1,7 @@
 import { eq, desc, and, gte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { users, subscriptions, ttsConversions } from "../drizzle/schema";
-import { nanoid } from "nanoid";
+import { randomBytes } from "crypto";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -61,7 +61,7 @@ export async function createSubscription(data: {
 }) {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
-  const id = nanoid(36);
+  const id = randomBytes(Math.ceil(36/2)).toString("hex").slice(0, 36);
   await db.insert(subscriptions).values({
     id,
     userId: data.userId,

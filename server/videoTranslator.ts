@@ -33,7 +33,7 @@ async function extractAudio(videoBuffer: Buffer): Promise<string> {
                 await fs.unlink(tempVideoPath).catch(() => {});
                 resolve(tempAudioPath);
             })
-            .on('error', async (err) => {
+            .on('error', async (err: any) => {
                 await fs.unlink(tempVideoPath).catch(() => {});
                 reject(err);
             })

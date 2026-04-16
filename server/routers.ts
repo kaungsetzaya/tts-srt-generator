@@ -40,8 +40,18 @@ function sanitizeText(text: string): string {
   return text.replace(/\0/g, "").replace(/[<>]/g, "").trim();
 }
 
-// ─── TRIAL-BASED USAGE LIMITS (total, not daily) ───────────────────────────
-type TrialLimits = {
+// --- Simple in-memory job store ---
+interface Job {
+  id: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  result?: any;
+  error?: string;
+  progress?: number;
+  createdAt: Date;
+}
+const jobs: Record<string, Job> = {};
+// --- End job store ---
+
   charLimitStandard: number;   // Thiha/Nilar char limit per generation
   charLimitCharacter: number;  // Other characters char limit per generation
   totalTtsSrt: number;         // Total TTS+SRT generations (trial period)
@@ -401,6 +411,7 @@ export const appRouter = router({
         if (!db) throw new Error("DB error");
         const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000);
         const activeUsers = await db.select({ userId: ttsConversions.userId })
+          .from(ttsConversions)
           .where(gte(ttsConversions.createdAt, fifteenMinsAgo))
           .groupBy(ttsConversions.userId);
         return {

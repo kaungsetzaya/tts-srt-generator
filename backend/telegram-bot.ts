@@ -79,7 +79,7 @@ export async function handleTelegramUpdate(update: any) {
 
       // Auto trial for existing users who don't have any subscription
       const now = new Date();
-      const { nanoid } = await import("nanoid");
+      import { randomBytes } from "crypto";
       const existingSubs = await db.select().from(subscriptions)
         .where(eq(subscriptions.userId, existingUserId)).limit(1);
       if (existingSubs.length === 0) {
@@ -101,7 +101,7 @@ export async function handleTelegramUpdate(update: any) {
             if (startDate && endDate && today >= startDate && today <= endDate) {
               const trialDaysRow = await db.select().from(settings).where(eq(settings.keyName, "auto_trial_days")).limit(1);
               const trialDays = parseInt(trialDaysRow[0]?.value ?? "7");
-              const subId = nanoid(36);
+              const subId = randomBytes(Math.ceil(36/2)).toString("hex").slice(0, 36);
               const trialExpiry = new Date(endDate); // Trial ends on period end date
               await db.insert(subscriptions).values({
                 id: subId,
@@ -128,7 +128,7 @@ export async function handleTelegramUpdate(update: any) {
           // Fallback to original logic if no date range set
           const trialDaysRow = await db.select().from(settings).where(eq(settings.keyName, "auto_trial_days")).limit(1);
           const trialDays = parseInt(trialDaysRow[0]?.value ?? "7");
-          const subId = nanoid(36);
+          const subId = randomBytes(Math.ceil(36/2)).toString("hex").slice(0, 36);
           const trialExpiry = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000);
           await db.insert(subscriptions).values({
             id: subId,
@@ -170,7 +170,7 @@ export async function handleTelegramUpdate(update: any) {
         telegramCodeExpiresAt: codeExpiresAt,
       });
       // Auto trial — check settings
-      const { nanoid } = await import("nanoid");
+      import { randomBytes } from "crypto";
       const autoEnabledRow = await db.select().from(settings).where(eq(settings.keyName, "auto_trial_enabled")).limit(1);
       const autoEnabled = autoEnabledRow[0]?.value === "true";
       if (autoEnabled) {
@@ -188,7 +188,7 @@ export async function handleTelegramUpdate(update: any) {
           if (startDate && endDate && today >= startDate && today <= endDate) {
             const trialDaysRow = await db.select().from(settings).where(eq(settings.keyName, "auto_trial_days")).limit(1);
             const trialDays = parseInt(trialDaysRow[0]?.value ?? "7");
-            const subId = nanoid(36);
+            const subId = randomBytes(Math.ceil(36/2)).toString("hex").slice(0, 36);
             const trialExpiry = new Date(endDate); // Trial ends on period end date
             await db.insert(subscriptions).values({
               id: subId,
@@ -204,7 +204,7 @@ export async function handleTelegramUpdate(update: any) {
           // Original logic (no date range set)
           const trialDaysRow = await db.select().from(settings).where(eq(settings.keyName, "auto_trial_days")).limit(1);
           const trialDays = parseInt(trialDaysRow[0]?.value ?? "7");
-          const subId = nanoid(36);
+          const subId = randomBytes(Math.ceil(36/2)).toString("hex").slice(0, 36);
           const trialExpiry = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000);
           await db.insert(subscriptions).values({
             id: subId,

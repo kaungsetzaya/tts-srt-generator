@@ -6,7 +6,7 @@
  */
 
 import type { Request, Response, NextFunction } from "express";
-import { nanoid } from "nanoid";
+import { randomBytes } from "crypto";
 
 // ────────────────────────────────────────────────────
 // ✅ 1. CORS — ကိုယ့် Domain မှ လာသော Request သာ ခွင့်ပြုသည်
@@ -248,7 +248,7 @@ setInterval(cleanTempFiles, 30 * 60 * 1000);
 // ✅ 8. Request ID Tracking — Every request gets a unique ID
 // ────────────────────────────────────────────────────
 export function requestIdMiddleware(req: Request, res: Response, next: NextFunction) {
-  const requestId = nanoid(12);
+  const requestId = randomBytes(Math.ceil(12/2)).toString("hex").slice(0, 12);
   (req as any).requestId = requestId;
   res.setHeader("X-Request-ID", requestId);
   next();

@@ -273,8 +273,8 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
         const escapedSrtPath = tempSrtPath.replace(/\\/g, '/').replace(/:/g, '\\:');
         
         // 🔤 Myanmar Font Fix: specify fonts that support Myanmar Unicode
-        // Priority: Noto Sans Myanmar → Padauk → Myanmar Text → Pyidaungsu → fallback
-        const myanmarFont = "Fontname=Noto Sans Myanmar";
+        // Use quotes for font names with spaces and add UTF-8 BOM for proper Myanmar text rendering
+        const myanmarFont = "Fontname='Noto Sans Myanmar',Fontname='Myanmar3',Fontname='Padauk'";
         const encoding = ",Encoding=1"; // UTF-8 encoding for ASS
         
         filters.push(`${videoLabel}subtitles='${escapedSrtPath}':force_style='${myanmarFont},FontSize=${fontSize},PrimaryColour=${fontColor},Alignment=2,MarginV=${marginV}${marginLR}${shadowStr}${borderStyle}${encoding}'[vfinal]`);

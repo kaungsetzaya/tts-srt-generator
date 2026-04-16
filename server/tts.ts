@@ -7,7 +7,8 @@ import { nanoid } from "nanoid";
 const execFileAsync = promisify(execFile);
 const OUTPUT_DIR = process.env.EDGE_TTS_OUTPUT_DIR ?? path.join(process.cwd(), "output");
 
-await fs.mkdir(OUTPUT_DIR, { recursive: true }).catch(() => {});
+// Ensure output directory exists
+fs.mkdir(OUTPUT_DIR, { recursive: true }).catch(() => {});
 
 let currentMurfKeyIndex = 0;
 function getMurfKey(): string | undefined {
@@ -83,6 +84,7 @@ export async function generateSpeechWithCharacter(
   return {
     audioBuffer: convertedBuffer,
     srtContent: baseResult.srtContent,
+    rawSrt: baseResult.rawSrt,
     durationMs: baseResult.durationMs,
   };
 }
@@ -138,7 +140,7 @@ export async function generateSpeech(
     const charsPerLine = aspectRatio === "9:16" ? 16 : 22;
     const srtContent = buildSRT(text, durationMs, charsPerLine);
 
-    return { audioBuffer, srtContent, durationMs };
+    return { audioBuffer, srtContent, rawSrt, durationMs };
   } finally {
     releaseSlot();
     await fs.unlink(tmpText).catch(() => {});
@@ -148,7 +150,7 @@ export async function generateSpeech(
 }
 
 function parseLastEndTime(srt: string): number {
-  const matches = [...srt.matchAll(/\d{2}:\d{2}:\d{2},\d{3} --> (\d{2}:\d{2}:\d{2},\d{3})/g)];
+  const matches = Array.from(srt.matchAll(/\d{2}:\d{2}:\d{2},\d{3} --> (\d{2}:\d{2}:\d{2},\d{3})/g));
   if (matches.length === 0) return 0;
   return srtTimeToMs(matches[matches.length - 1][1]);
 }
@@ -192,7 +194,7 @@ function releaseSlot(): void {
 
 const segmenter = new Intl.Segmenter("my", { granularity: "grapheme" });
 function graphemeLen(s: string): number {
-  return [...segmenter.segment(s)].length;
+  return Array.from(segmenter.segment(s)).length;
 }
 
 function buildSRT(text: string, durationMs: number, charsPerLine: number): string {
