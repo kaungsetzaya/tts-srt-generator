@@ -71,7 +71,7 @@ export async function generateSpeechWithCharacter(
     method: "POST",
     headers: { "api-key": murfApiKey },
     body: form as any,
-  });
+  } );
 
   const result = await response.json() as any;
   if (result.error_code) throw new Error(result.error_message);
@@ -116,6 +116,7 @@ export async function generateSpeech(
   await acquireSlot();
   try {
     await execFileAsync("edge-tts", [
+      "--timeout", "60", // Add a 60-second timeout for edge-tts
       "--voice", voiceConfig.shortName,
       "--rate", rateStr,
       `--pitch=${pitchStr}`,
@@ -123,7 +124,8 @@ export async function generateSpeech(
       "--write-media", audioPath,
       "--write-subtitles", srtPath,
     ], {
-      env: { ...process.env, PATH: process.env.PATH, HTTPS_PROXY: (() => { const h=process.env.EDGE_TTS_PROXY_HOST,p=process.env.EDGE_TTS_PROXY_PORT,u=process.env.EDGE_TTS_PROXY_USER,s=process.env.EDGE_TTS_PROXY_PASS; return (h&&p&&u&&s) ? `http://${u}:${s}@${h}:${p}` : ""; })(), HTTP_PROXY: (() => { const h=process.env.EDGE_TTS_PROXY_HOST,p=process.env.EDGE_TTS_PROXY_PORT,u=process.env.EDGE_TTS_PROXY_USER,s=process.env.EDGE_TTS_PROXY_PASS; return (h&&p&&u&&s) ? `http://${u}:${s}@${h}:${p}` : ""; })() },
+      env: { ...process.env, PATH: process.env.PATH, HTTPS_PROXY: (() => { const h=process.env.EDGE_TTS_PROXY_HOST,p=process.env.EDGE_TTS_PROXY_PORT,u=process.env.EDGE_TTS_PROXY_USER,s=process.env.EDGE_TTS_PROXY_PASS; return (h&&p&&u&&s) ? `http://${u}:${s}@${h}:${p}` : ""; } )(), HTTP_PROXY: (() => { const h=process.env.EDGE_TTS_PROXY_HOST,p=process.env.EDGE_TTS_PROXY_PORT,u=process.env.EDGE_TTS_PROXY_USER,s=process.env.EDGE_TTS_PROXY_PASS; return (h&&p&&u&&s) ? `http://${u}:${s}@${h}:${p}` : ""; } )() },
+      timeout: 60000, // 60 seconds in milliseconds
     });
 
     const audioBuffer = await fs.readFile(audioPath);
