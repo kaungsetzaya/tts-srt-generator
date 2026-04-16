@@ -16,6 +16,17 @@ app.use(express.json());
 // Serve static files from the 'static' directory
 app.use("/static", express.static(path.join(process.cwd(), "static")));
 
+// Serve frontend build files (for direct VPS access without Vercel)
+app.use(express.static(path.join(process.cwd(), "frontend/dist")));
+
+// SPA fallback - serve index.html for non-API routes
+app.get("*", (req, res, next) => {
+  if (req.path.startsWith("/api") || req.path.startsWith("/webhook")) {
+    return next();
+  }
+  res.sendFile(path.join(process.cwd(), "frontend/dist/index.html"));
+});
+
 // tRPC middleware
 app.use(
   "/api/trpc",
