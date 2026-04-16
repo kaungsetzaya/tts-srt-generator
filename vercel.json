@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://vmi2553361.contaboserver.net:3000/api/:path*"
+      "destination": "http://217.76.48.32:3000/api/:path*"
     },
     {
       "source": "/webhook/:path*",
-      "destination": "https://vmi2553361.contaboserver.net:3000/webhook/:path*"
+      "destination": "http://217.76.48.32:3000/webhook/:path*"
     }
   ],
   "headers": [
