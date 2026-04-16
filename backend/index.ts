@@ -3,6 +3,7 @@ import cors from "cors";
 import path from "path";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "./routers";
+import { createContext } from "./_core/context";
 import { randomBytes } from "crypto";
 
 const app = express();
@@ -19,7 +20,7 @@ app.use(
   "/api/trpc",
   createExpressMiddleware({
     router: appRouter,
-    createContext: () => ({}),
+    createContext,
   })
 );
 
@@ -28,8 +29,8 @@ app.get("/health", (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(\`[LUMIX] Server running on http://0.0.0.0:\${port}/\` );
-  console.log(\`[LUMIX] Environment: \${process.env.NODE_ENV || "development"}\`);
+  console.log(`[LUMIX] Server running on http://0.0.0.0:${port}/`);
+  console.log(`[LUMIX] Environment: ${process.env.NODE_ENV || "development"}`);
 });
 
 export function generateRequestId(): string {

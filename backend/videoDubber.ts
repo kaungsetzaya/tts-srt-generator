@@ -70,7 +70,7 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
         const segPath = path.join(tempDir, `s_${i}.mp3`);
         await fs.writeFile(segPath, tts.audioBuffer);
         concatLines.push(`file '${segPath}'`);
-        totalDurationMs += tts.durationMs;
+        totalDurationMs += (tts.durationMs ?? 0);
       } catch (ttsErr) {
         console.error(`[Dubber Error] TTS failed for segment ${i}:`, ttsErr);
       }
@@ -83,7 +83,7 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
     });
 
     const videoDuration = await getVideoDuration(tempVideoPath);
-    const speedRatio = videoDuration / (totalDurationMs / 1000);
+    const speedRatio = (videoDuration ?? 0) / (totalDurationMs / 1000 || 1);
 
     await new Promise<void>((resolve, reject) => {
       ffmpeg(tempVideoPath)
@@ -92,7 +92,7 @@ export async function dubVideoFromBuffer(videoBuffer: Buffer, filename: string, 
           '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '32',
           '-c:a', 'aac', '-map', '0:v', '-map', '1:a', '-shortest'
         ])
-        .on('progress', (p) => console.log(`[Dubber Progress] ${Math.round(p.percent)}%`))
+        .on('progress', (p) => console.log(`[Dubber Progress] ${Math.round(p.percent ?? 0)}%`))
         .on('error', (e) => { console.error("[FFmpeg Final Error]", e); reject(e); })
         .on('end', () => resolve())
         .save(tempOutputPath);

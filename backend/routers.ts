@@ -9,23 +9,23 @@ import { users, ttsConversions, subscriptions, errorLogs, settings } from "../dr
 import { eq, desc, count, sql } from "drizzle-orm";
 import { SignJWT } from "jose";
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
-
 import superjson from "superjson";
+import type { TrpcContext } from "./_core/context";
 
-const t = initTRPC.create({
+const t = initTRPC.context<TrpcContext>().create({
   transformer: superjson,
 });
 
 // Protected procedure (requires auth)
 const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
   if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED", message: "Login required" });
-  return next({ ctx: { ...ctx, user: ctx.user } });
+  return next({ ctx: { ...ctx, user: ctx.user } } as any);
 });
 
 // Admin procedure
 const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-  if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin only" });
-  return next({ ctx: { ...ctx, user: ctx.user } });
+  if (!ctx.user || ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin only" });
+  return next({ ctx: { ...ctx, user: ctx.user } } as any);
 });
 
 export const appRouter = t.router({
@@ -215,7 +215,7 @@ export const appRouter = t.router({
       if (!db) return { active: false, plan: null };
       try {
         const sub = await db.query.subscriptions.findFirst({
-          where: (s: any, { eq, and, gt }: any) => and(eq(s.userId, ctx.user.userId), gt(s.expiresAt, new Date())),
+          where: (s: any, { eq, and, gt }: any) => and(eq(s.userId, ctx.user!.userId), gt(s.expiresAt, new Date())),
           orderBy: (s: any, { desc }: any) => desc(s.createdAt),
         });
         return sub ? { active: true, plan: sub.plan, expiresAt: sub.expiresAt } : { active: false, plan: null };

@@ -52,6 +52,7 @@ interface Job {
 const jobs: Record<string, Job> = {};
 // --- End job store ---
 
+type TrialLimits = {
   charLimitStandard: number;   // Thiha/Nilar char limit per generation
   charLimitCharacter: number;  // Other characters char limit per generation
   totalTtsSrt: number;         // Total TTS+SRT generations (trial period)

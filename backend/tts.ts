@@ -7,7 +7,7 @@ import { nanoid } from "nanoid";
 const execFileAsync = promisify(execFile);
 const OUTPUT_DIR = process.env.EDGE_TTS_OUTPUT_DIR ?? path.join(process.cwd(), "output");
 
-await fs.mkdir(OUTPUT_DIR, { recursive: true }).catch(() => {});
+fs.mkdir(OUTPUT_DIR, { recursive: true }).catch(() => {});
 
 let currentMurfKeyIndex = 0;
 function getMurfKey(): string | undefined {
@@ -82,6 +82,7 @@ export async function generateSpeechWithCharacter(
 
   return {
     audioBuffer: convertedBuffer,
+    rawSrt: baseResult.rawSrt ?? "",
     srtContent: baseResult.srtContent,
     durationMs: baseResult.durationMs,
   };
@@ -139,7 +140,7 @@ export async function generateSpeech(
     const charsPerLine = aspectRatio === "9:16" ? 16 : 22;
     const srtContent = buildSRT(text, durationMs, charsPerLine);
 
-    return { audioBuffer, srtContent, durationMs };
+    return { audioBuffer, rawSrt, srtContent, durationMs };
   } finally {
     releaseSlot();
     await fs.unlink(tmpText).catch(() => {});
