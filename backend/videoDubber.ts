@@ -2,7 +2,7 @@ import { promises as fs } from 'fs';
 import { existsSync } from 'fs';
 import * as path from 'path';
 import { tmpdir } from 'os';
-import { randomUUID } from 'crypto';
+import { randomUUID, randomBytes } from 'crypto';
 // @ts-ignore - fluent-ffmpeg doesn't have types
 import ffmpeg from 'fluent-ffmpeg';
 import { execFile } from 'child_process';
@@ -16,6 +16,11 @@ import type { DubOptions, DubResult } from "@shared/types";
 
 const execFileAsync = promisify(execFile);
 export type { DubOptions, DubResult } from "@shared/types";
+
+// Simple replacement for nanoid using built-in crypto
+function generateId(length: number = 10): string {
+  return randomBytes(Math.ceil(length / 2)).toString('hex').slice(0, length);
+}
 
 function getVideoDuration(filePath: string): Promise<number> {
   return new Promise((resolve, reject) => {

@@ -19,9 +19,7 @@ export type VoiceKey = keyof typeof SUPPORTED_VOICES;
 
 // Simple replacement for nanoid using built-in crypto
 function generateId(length: number = 10): string {
-  return randomBytes(Math.ceil(length / 2))
-    .toString('hex')
-    .slice(0, length);
+  return randomBytes(Math.ceil(length / 2)).toString('hex').slice(0, length);
 }
 
 export async function generateSpeech(
