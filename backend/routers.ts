@@ -20,6 +20,9 @@ export const appRouter = t.router({
       if (!ctx.user) return null;
       return ctx.user;
     }),
+    logout: t.procedure.mutation(async ({ ctx }) => {
+      return { success: true };
+    }),
     verify: t.procedure
       .input(z.object({ code: z.string() }))
       .mutation(async ({ input, ctx }) => {
