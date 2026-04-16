@@ -513,8 +513,12 @@ export default function TTSGenerator() {
 
   // Poll job status
   const pollJobStatus = (jobId: string) => {
-    const pollInterval = setInterval(() => {
-      trpc.jobs.getStatus.query({ jobId }).then((status: any) => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/trpc/jobs.getStatus?input=${encodeURIComponent(JSON.stringify({ jobId }))}`);
+        const json = await res.json();
+        const status = json.result?.data;
+        if (!status) return;
         if (status.status === "completed" && status.result) {
           clearInterval(pollInterval);
           setDubResult(status.result);
@@ -525,9 +529,9 @@ export default function TTSGenerator() {
           showError(status.error || "Dubbing failed");
           setActiveJobId(null);
         }
-      }).catch((e: any) => {
+      } catch(e: any) {
         console.error("[JOB POLL ERROR]", e);
-      });
+      }
     }, 3000); // Poll every 3 seconds
   };
 
