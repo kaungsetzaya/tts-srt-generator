@@ -302,7 +302,19 @@ export const appRouter = t.router({
       return { success: true };
     }),
     getAnalytics: adminProcedure.query(async () => {
-      return { totalUsers: 0, activeSubs: 0, totalConversions: 0, revenue: 0 };
+      const db = await getDb();
+      if (!db) return { totalUsers: 0, activeSubs: 0, totalConversions: 0, revenue: 0 };
+      try {
+        const [totalUsersRow] = await db.select({ count: count() }).from(users);
+        const [activeSubsRow] = await db.select({ count: count() }).from(subscriptions).where(sql`expires_at > NOW()`);
+        const [totalConvRow] = await db.select({ count: count() }).from(ttsConversions);
+        return {
+          totalUsers: totalUsersRow?.count || 0,
+          activeSubs: activeSubsRow?.count || 0,
+          totalConversions: totalConvRow?.count || 0,
+          revenue: 0,
+        };
+      } catch { return { totalUsers: 0, activeSubs: 0, totalConversions: 0, revenue: 0 }; }
     }),
     getServerHealth: adminProcedure.query(async () => {
       const mem = process.memoryUsage();
@@ -313,13 +325,59 @@ export const appRouter = t.router({
   // ─── ADMIN STATS ────────────────────────
   adminStats: t.router({
     getErrorLogs: adminProcedure.input(z.object({ limit: z.number().optional(), onlyUnresolved: z.boolean().optional() }))
-      .query(async () => { return []; }),
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        try {
+          return await db.select().from(errorLogs)
+            .orderBy(desc(errorLogs.createdAt))
+            .limit(input.limit || 50);
+        } catch { return []; }
+      }),
     getVoiceStats: adminProcedure.input(z.object({ timeframe: z.string().optional() }))
-      .query(async () => { return { thiha: 0, nilar: 0, total: 0 }; }),
-    getChurnStats: adminProcedure.query(async () => { return { churnRate: 0, newUsers: 0, lostUsers: 0 }; }),
-    onlineUsers: adminProcedure.query(async () => { return { count: 0 }; }),
+      .query(async () => {
+        const db = await getDb();
+        if (!db) return { thiha: 0, nilar: 0, total: 0 };
+        try {
+          const rows = await db.select({ voice: ttsConversions.voice, count: count() })
+            .from(ttsConversions).groupBy(ttsConversions.voice);
+          const stats: Record<string, number> = { thiha: 0, nilar: 0 };
+          let total = 0;
+          for (const r of rows) {
+            if (r.voice) { stats[r.voice] = r.count; total += r.count; }
+          }
+          return { ...stats, total };
+        } catch { return { thiha: 0, nilar: 0, total: 0 }; }
+      }),
+    getChurnStats: adminProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return { churnRate: 0, newUsers: 0, lostUsers: 0 };
+      try {
+        const [newUsersRow] = await db.select({ count: count() }).from(users)
+          .where(sql`created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)`);
+        return { churnRate: 0, newUsers: newUsersRow?.count || 0, lostUsers: 0 };
+      } catch { return { churnRate: 0, newUsers: 0, lostUsers: 0 }; }
+    }),
+    onlineUsers: adminProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return { count: 0 };
+      try {
+        const [row] = await db.select({ count: count() }).from(users)
+          .where(sql`last_login_at > DATE_SUB(NOW(), INTERVAL 5 MINUTE)`);
+        return { count: row?.count || 0 };
+      } catch { return { count: 0 }; }
+    }),
     getUserDetail: adminProcedure.input(z.object({ userId: z.string() }))
-      .query(async ({ input }) => { return { user: null, history: [], subscription: null }; }),
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return { user: null, history: [], subscription: null };
+        try {
+          const [user] = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
+          const history = await db.select().from(ttsConversions).where(eq(ttsConversions.userId, input.userId)).orderBy(desc(ttsConversions.createdAt)).limit(50);
+          const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, input.userId)).limit(1);
+          return { user: user || null, history, subscription: sub || null };
+        } catch { return { user: null, history: [], subscription: null }; }
+      }),
     resolveError: adminProcedure.input(z.object({ errorId: z.string() })).mutation(async () => { return { success: true }; }),
     dismissFailedGen: adminProcedure.input(z.object({ id: z.string() })).mutation(async () => { return { success: true }; }),
     deleteSystemLog: adminProcedure.input(z.object({ id: z.string() })).mutation(async () => { return { success: true }; }),
