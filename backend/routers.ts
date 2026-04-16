@@ -8,7 +8,11 @@ import { getDb } from "./db";
 import { users } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 
-const t = initTRPC.create();
+import superjson from "superjson";
+
+const t = initTRPC.create({
+  transformer: superjson,
+});
 
 export const appRouter = t.router({
   auth: t.router({
