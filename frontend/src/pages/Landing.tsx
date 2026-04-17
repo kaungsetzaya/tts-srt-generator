@@ -71,7 +71,7 @@ export default function Landing() {
         className="fixed top-2 sm:top-4 left-2 sm:left-1/2 right-2 sm:right-auto sm:-translate-x-1/2 z-50 px-3 sm:px-6 py-2 sm:py-3 rounded-xl sm:rounded-2xl flex items-center gap-2 sm:gap-4"
         style={{ background: C.glass, backdropFilter: "blur(24px)", border: `1px solid ${C.glassB}`, boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}
       >
-        <motion.div className="flex items-center gap-2 sm:gap-8">
+        <motion.div className="flex items-center justify-between w-full gap-2 sm:gap-4">
           <motion.span 
             whileHover={{ scale: 1.1, rotate: -3 }}
             whileTap={{ scale: 0.95 }}
