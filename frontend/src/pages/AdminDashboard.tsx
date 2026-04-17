@@ -35,6 +35,7 @@ import {
   CreditCard,
   Calendar,
   Trash2,
+  Sparkles,
 } from "lucide-react";
 
 type Plan =
@@ -1983,30 +1984,31 @@ export default function AdminDashboard() {
               Give Subscription
             </h3>
             <div className="space-y-4">
-              <div>
-                <label className="text-xs uppercase tracking-wider opacity-70 block mb-2">
-                  Plan
+              <div className="bg-gradient-to-br from-[#1a1a2e] to-[#16162a] rounded-xl p-4 border border-[#8b5cf6]/30">
+                <label className="text-xs uppercase tracking-wider opacity-70 block mb-3 flex items-center gap-2">
+                  <Sparkles className="w-3 h-3 text-[#8b5cf6]" /> Plan
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   {(Object.keys(PLAN_LABELS) as Plan[]).map(plan => (
                     <button
                       key={plan}
                       onClick={() => handlePlanSelect(plan)}
-                      className="py-2 px-3 border text-sm font-bold uppercase rounded-lg transition-all"
+                      className="py-3 px-2 border text-xs font-bold rounded-lg transition-all relative overflow-hidden"
                       style={{
-                        borderColor: selectedPlan === plan ? C : border,
-                        background:
-                          selectedPlan === plan
-                            ? `rgba(192,111,48,0.2)`
-                            : "transparent",
-                        color: selectedPlan === plan ? C : "var(--foreground)",
-                        opacity: selectedPlan === plan ? 1 : 0.6,
+                        borderColor: selectedPlan === plan ? "#8b5cf6" : "rgba(139,92,246,0.2)",
+                        background: selectedPlan === plan 
+                          ? "linear-gradient(135deg, rgba(139,92,246,0.25) 0%, rgba(99,102,241,0.15) 100%)"
+                          : "rgba(255,255,255,0.02)",
+                        color: selectedPlan === plan ? "#a78bfa" : "rgba(255,255,255,0.6)",
                       }}
                     >
-                      {PLAN_LABELS[plan]}{" "}
-                      {PLAN_PRICE[plan] > 0
-                        ? `(${PLAN_PRICE[plan].toLocaleString()} MMK)`
-                        : ""}
+                      {selectedPlan === plan && (
+                        <div className="absolute inset-0 bg-gradient-to-r from-[#8b5cf6]/10 to-transparent" />
+                      )}
+                      <span className="relative z-10">{PLAN_LABELS[plan]}</span>
+                      {PLAN_PRICE[plan] > 0 && (
+                        <div className="text-[10px] mt-1 opacity-80">{PLAN_PRICE[plan].toLocaleString()} MMK</div>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -2017,28 +2019,23 @@ export default function AdminDashboard() {
                   {getDefaultDays(selectedPlan)} Days (Auto-calculated)
                 </p>
               </div>
-              <div>
-                <label className="text-xs uppercase tracking-wider opacity-70 block mb-2 flex items-center gap-2">
-                  <CreditCard className="w-3 h-3" /> Payment Method{" "}
+              <div className="bg-gradient-to-br from-[#1a1a2e] to-[#16162a] rounded-xl p-4 border border-[#10b981]/30">
+                <label className="text-xs uppercase tracking-wider opacity-70 block mb-3 flex items-center gap-2">
+                  <CreditCard className="w-3 h-3 text-[#10b981]" /> Payment Method{" "}
                   <span className="text-red-400">*</span>
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-4 gap-2">
                   {(Object.keys(PAYMENT_METHODS) as PaymentMethod[]).map(pm => (
                     <button
                       key={pm}
                       onClick={() => setPaymentMethod(pm)}
-                      className="py-2 px-3 border text-xs font-bold rounded-lg transition-all text-left"
+                      className="py-2 px-2 border text-xs font-bold rounded-lg transition-all text-center"
                       style={{
-                        borderColor: paymentMethod === pm ? "#4ade80" : border,
-                        background:
-                          paymentMethod === pm
-                            ? "rgba(74,222,128,0.15)"
-                            : "transparent",
-                        color:
-                          paymentMethod === pm
-                            ? "#4ade80"
-                            : "var(--foreground)",
-                        opacity: paymentMethod === pm ? 1 : 0.6,
+                        borderColor: paymentMethod === pm ? "#10b981" : "rgba(16,185,129,0.2)",
+                        background: paymentMethod === pm
+                          ? "rgba(16,185,129,0.15)"
+                          : "rgba(255,255,255,0.02)",
+                        color: paymentMethod === pm ? "#34d399" : "rgba(255,255,255,0.5)",
                       }}
                     >
                       {PAYMENT_METHODS[pm]}
@@ -2047,34 +2044,34 @@ export default function AdminDashboard() {
                 </div>
               </div>
               {paymentMethod !== "free" && paymentMethod !== "cash" && (
-                <div>
-                  <label className="text-xs uppercase tracking-wider opacity-70 block mb-2 flex items-center gap-2">
-                    <Banknote className="w-3 h-3" /> Transaction ID{" "}
+                <div className="bg-gradient-to-br from-[#1a1a2e] to-[#16162a] rounded-xl p-4 border border-[#06b6d4]/30">
+                  <label className="text-xs uppercase tracking-wider opacity-70 block mb-3 flex items-center gap-2">
+                    <Banknote className="w-3 h-3 text-[#06b6d4]" /> Transaction ID{" "}
                     <span className="text-red-400">*</span>
                   </label>
                   <input
                     value={transactionId}
                     onChange={e => setTransactionId(e.target.value)}
                     placeholder="e.g. TXN123456789"
-                    className="w-full border p-2.5 text-sm focus:outline-none rounded-lg font-mono"
+                    className="w-full border p-3 text-sm focus:outline-none rounded-lg font-mono bg-gradient-to-br from-[#0f172a] to-[#1e293b]"
                     style={{
-                      background: "rgba(0,0,0,0.4)",
-                      borderColor: transactionId ? "#4ade80" : border,
-                      color: "var(--foreground)",
+                      borderColor: transactionId ? "#06b6d4" : "rgba(6,182,212,0.2)",
+                      color: "#67e8f9",
                     }}
                   />
                 </div>
               )}
               {/* Payment Slip Upload */}
               {paymentMethod !== "free" && paymentMethod !== "cash" && (
-                <div>
-                  <label className="text-xs uppercase tracking-wider opacity-70 block mb-2 flex items-center gap-2">
-                    📷 Payment Slip (ပေးချေမှု စလစ်)
+                <div className="bg-gradient-to-br from-[#1a1a2e] to-[#16162a] rounded-xl p-4 border border-[#ec4899]/30">
+                  <label className="text-xs uppercase tracking-wider opacity-70 block mb-3 flex items-center gap-2">
+                    <span className="text-[#ec4899]">📷</span> Payment Slip
                   </label>
                   <div
-                    className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-white/5 transition-all"
+                    className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer hover:bg-white/5 transition-all"
                     style={{
-                      borderColor: paymentSlipBase64 ? "#4ade80" : border,
+                      borderColor: paymentSlipBase64 ? "#ec4899" : "rgba(236,72,153,0.3)",
+                      background: paymentSlipBase64 ? "rgba(236,72,153,0.05)" : "transparent",
                     }}
                     onClick={() => {
                       const inp = document.createElement("input");

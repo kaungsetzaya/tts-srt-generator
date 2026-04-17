@@ -5,7 +5,7 @@ import { Check, ArrowLeft, Crown, Star, Sparkles, Zap, Shield, Play } from "luci
 const plans = [
   {
     name: "Starter Pack",
-    price: "5,000",
+    price: "15,000",
     period: "one-time",
     credits: 50,
     desc: "Ideal for beginners and casual creators exploring the basics.",
@@ -23,7 +23,7 @@ const plans = [
   },
   {
     name: "Creator Pack",
-    price: "15,000",
+    price: "35,000",
     period: "one-time",
     credits: 200,
     desc: "Perfect for active social media influencers & regular uploads.",
@@ -41,7 +41,7 @@ const plans = [
   },
   {
     name: "Pro Pack",
-    price: "30,000",
+    price: "75,000",
     period: "one-time",
     credits: 500,
     desc: "Built for professional creators, agencies, and heavy usage.",

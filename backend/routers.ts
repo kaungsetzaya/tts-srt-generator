@@ -606,8 +606,8 @@ export const appRouter = t.router({
           .where(sql`user_id = ${input.userId} AND expires_at > NOW()`)
           .limit(1);
 
+        let isNewSubscription = false;
         if (existingSubs.length > 0) {
-          // Extend existing subscription (no new credits)
           const existing = existingSubs[0];
           const currentExpires = new Date(existing.expiresAt!);
           const newExpires = new Date(
@@ -622,7 +622,7 @@ export const appRouter = t.router({
             })
             .where(eq(subscriptions.id, existing.id));
         } else {
-          // Create new subscription and add credits
+          isNewSubscription = true;
           await db.insert(subscriptions).values({
             id: randomUUID(),
             userId: input.userId,
@@ -631,27 +631,26 @@ export const appRouter = t.router({
             expiresAt: new Date(Date.now() + input.days * 86400000),
             note: input.note,
           });
+        }
 
-          // Add credits to user only for new subscriptions
-          const [user] = await db
-            .select()
-            .from(users)
-            .where(eq(users.id, input.userId))
-            .limit(1);
-          if (user) {
-            const currentCredits = user.credits ?? 0;
-            await db
-              .update(users)
-              .set({ credits: currentCredits + creditsToAdd })
-              .where(eq(users.id, input.userId));
-            await db.insert(creditTransactions).values({
-              id: randomUUID(),
-              userId: input.userId,
-              amount: creditsToAdd,
-              type: "subscription",
-              description: `Subscribe: ${input.plan} plan`,
-            });
-          }
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, input.userId))
+          .limit(1);
+        if (user) {
+          const currentCredits = user.credits ?? 0;
+          await db
+            .update(users)
+            .set({ credits: currentCredits + creditsToAdd })
+            .where(eq(users.id, input.userId));
+          await db.insert(creditTransactions).values({
+            id: randomUUID(),
+            userId: input.userId,
+            amount: creditsToAdd,
+            type: "subscription",
+            description: `Subscribe: ${input.plan} plan`,
+          });
         }
 
         return { success: true };
