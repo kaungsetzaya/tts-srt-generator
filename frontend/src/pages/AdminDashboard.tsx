@@ -173,9 +173,10 @@ function UserDetailDrawer({
   userName: string;
   onClose: () => void;
 }) {
-  const { data, isLoading } = trpc.adminStats.getUserDetail.useQuery({
-    userId,
-  });
+  const { data, isLoading } = trpc.adminStats.getUserDetail.useQuery(
+    { userId },
+    { refetchInterval: 3000 }
+  );
 
   const fmtDuration = (ms: number) => {
     const s = Math.floor(ms / 1000);
@@ -512,7 +513,9 @@ export default function AdminDashboard() {
   };
 
   const { data: me } = trpc.auth.me.useQuery();
-  const { data: users, refetch } = trpc.admin.getUsers.useQuery();
+  const { data: users, refetch } = trpc.admin.getUsers.useQuery(undefined, {
+    refetchInterval: 3000,
+  });
   const { data: analytics } = trpc.admin.getAnalytics.useQuery();
   const { data: health } = trpc.admin.getServerHealth.useQuery(undefined, {
     refetchInterval: 30000,
