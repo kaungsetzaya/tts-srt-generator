@@ -123,7 +123,7 @@ export default function TrialInfo() {
       desc: t.features.charDesc,
       used: trialUsage.characterUse,
       total: trialLimits.totalCharacterUse,
-      color: "#f472b6",
+      color: "#F4B34F",
     },
     {
       icon: <FileVideo className="w-5 h-5" />,
@@ -131,7 +131,7 @@ export default function TrialInfo() {
       desc: t.features.videoDesc,
       used: trialUsage.videoTranslate,
       total: trialLimits.totalVideoTranslate,
-      color: "#60a5fa",
+      color: "#C06F30",
     },
     {
       icon: <Wand2 className="w-5 h-5" />,

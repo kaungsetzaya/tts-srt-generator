@@ -61,10 +61,10 @@ const plans = [
 
 const creditCosts = [
   { action: "TTS (Thiha/Nilar)", cost: "1", color: "#4ade80", icon: Play },
-  { action: "TTS (Character Voices)", cost: "3", color: "#60a5fa", icon: Zap },
-  { action: "Video Translate", cost: "5", color: "#F4B34F", icon: Sparkles },
+  { action: "TTS (Character Voices)", cost: "3", color: "#F4B34F", icon: Zap },
+  { action: "Video Translate", cost: "5", color: "#C06F30", icon: Sparkles },
   { action: "AI Video Dub (Thiha/Nilar)", cost: "10", color: "#C06F30", icon: Play },
-  { action: "AI Video Dub (Character)", cost: "15", color: "#f472b6", icon: Crown },
+  { action: "AI Video Dub (Character)", cost: "15", color: "#F4B34F", icon: Crown },
 ];
 
 export default function Plans() {
@@ -79,7 +79,7 @@ export default function Plans() {
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
         <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-[#F4B34F] opacity-[0.03] blur-[150px] rounded-full mix-blend-screen" />
         <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-[#C06F30] opacity-[0.04] blur-[150px] rounded-full mix-blend-screen" />
-        <div className="absolute top-[40%] left-[60%] w-[30%] h-[30%] bg-[#60a5fa] opacity-[0.02] blur-[120px] rounded-full mix-blend-screen" />
+        <div className="absolute top-[40%] left-[60%] w-[30%] h-[30%] bg-[#F4B34F] opacity-[0.01] blur-[120px] rounded-full mix-blend-screen" />
       </div>
 
       {/* Header */}
