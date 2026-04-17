@@ -24,6 +24,7 @@ import {
   settings,
   ttsConversions,
   errorLogs,
+  creditTransactions,
 } from "../drizzle/schema";
 import { eq, desc, and, gte, sql } from "drizzle-orm";
 import { SignJWT } from "jose";
@@ -393,6 +394,18 @@ export const appRouter = router({
         if (!db) throw new Error("DB not available");
         const now = new Date();
         let expiresAt: Date;
+        let creditsToAdd: number;
+        const planCredits: Record<string, number> = {
+          trial: 10,
+          starter: 50,
+          creator: 200,
+          pro: 500,
+          "1month": 100,
+          "3month": 350,
+          "6month": 700,
+          lifetime: 2000,
+        };
+        creditsToAdd = planCredits[input.plan] ?? 10;
         switch (input.plan) {
           case "trial":
             expiresAt = addDays(now, input.trialDays ?? 7);
@@ -412,6 +425,12 @@ export const appRouter = router({
           default:
             expiresAt = addMonths(now, 1);
         }
+
+        // Delete any existing active subscription first
+        await db
+          .delete(subscriptions)
+          .where(sql`user_id = ${input.userId} AND expires_at > NOW()`);
+
         const id = nanoid(36);
         await db.insert(subscriptions).values({
           id,
@@ -424,11 +443,33 @@ export const appRouter = router({
           paymentSlip: input.paymentSlip || null,
           note: input.note || null,
         });
+
+        // Add credits to user
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, input.userId))
+          .limit(1);
+        if (user) {
+          const currentCredits = user.credits ?? 0;
+          await db
+            .update(users)
+            .set({ credits: currentCredits + creditsToAdd })
+            .where(eq(users.id, input.userId));
+          await db.insert(creditTransactions).values({
+            id: nanoid(36),
+            userId: input.userId,
+            amount: creditsToAdd,
+            type: "subscription",
+            description: `Admin gave: ${input.plan} plan (${creditsToAdd} credits)`,
+          });
+        }
+
         auditLog(
           "GIVE_SUBSCRIPTION",
           ctx.user.userId,
           input.userId,
-          `plan=${input.plan}, payment=${input.paymentMethod ?? "unknown"}, expires=${expiresAt.toISOString()}`
+          `plan=${input.plan}, credits=${creditsToAdd}, payment=${input.paymentMethod ?? "unknown"}, expires=${expiresAt.toISOString()}`
         );
         return { success: true, expiresAt };
       }),
