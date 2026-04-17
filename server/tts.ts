@@ -5,7 +5,8 @@ import fs from "fs/promises";
 import { nanoid } from "nanoid";
 
 const execFileAsync = promisify(execFile);
-const OUTPUT_DIR = process.env.EDGE_TTS_OUTPUT_DIR ?? path.join(process.cwd(), "output");
+const OUTPUT_DIR =
+  process.env.EDGE_TTS_OUTPUT_DIR ?? path.join(process.cwd(), "output");
 
 // Ensure output directory exists
 fs.mkdir(OUTPUT_DIR, { recursive: true }).catch(() => {});
@@ -13,7 +14,10 @@ fs.mkdir(OUTPUT_DIR, { recursive: true }).catch(() => {});
 let currentMurfKeyIndex = 0;
 function getMurfKey(): string | undefined {
   const keysStr = process.env.MURF_API_KEY || "";
-  const keys = keysStr.split(",").map(k => k.trim()).filter(k => k.length > 0);
+  const keys = keysStr
+    .split(",")
+    .map(k => k.trim())
+    .filter(k => k.length > 0);
   if (keys.length === 0) return undefined;
   const key = keys[currentMurfKeyIndex % keys.length];
   currentMurfKeyIndex++;
@@ -28,15 +32,60 @@ export const SUPPORTED_VOICES = {
 export type VoiceKey = keyof typeof SUPPORTED_VOICES;
 
 export const CHARACTER_VOICES = {
-  ryan:      { name: "ရဲရင့်",   gender: "male",   murfId: "en-US-ryan",      base: "thiha" as const },
-  ronnie:    { name: "ရောင်နီ",  gender: "male",   murfId: "en-US-ronnie",    base: "thiha" as const },
-  lucas:     { name: "လင်းခန့်", gender: "male",   murfId: "en-US-lucas",     base: "thiha" as const },
-  daniel:    { name: "ဒေဝ",      gender: "male",   murfId: "en-US-daniel",    base: "thiha" as const },
-  evander:   { name: "အဂ္ဂ",     gender: "male",   murfId: "en-US-evander",   base: "thiha" as const },
-  michelle:  { name: "မေချို",   gender: "female", murfId: "en-US-michelle",  base: "nilar" as const },
-  iris:      { name: "အိန္ဒြာ",  gender: "female", murfId: "en-US-iris",      base: "nilar" as const },
-  charlotte: { name: "သီရိ",     gender: "female", murfId: "en-US-charlotte", base: "nilar" as const },
-  amara:     { name: "အမရာ",     gender: "female", murfId: "en-US-amara",     base: "nilar" as const },
+  ryan: {
+    name: "ရဲရင့်",
+    gender: "male",
+    murfId: "en-US-ryan",
+    base: "thiha" as const,
+  },
+  ronnie: {
+    name: "ရောင်နီ",
+    gender: "male",
+    murfId: "en-US-ronnie",
+    base: "thiha" as const,
+  },
+  lucas: {
+    name: "လင်းခန့်",
+    gender: "male",
+    murfId: "en-US-lucas",
+    base: "thiha" as const,
+  },
+  daniel: {
+    name: "ဒေဝ",
+    gender: "male",
+    murfId: "en-US-daniel",
+    base: "thiha" as const,
+  },
+  evander: {
+    name: "အဂ္ဂ",
+    gender: "male",
+    murfId: "en-US-evander",
+    base: "thiha" as const,
+  },
+  michelle: {
+    name: "မေချို",
+    gender: "female",
+    murfId: "en-US-michelle",
+    base: "nilar" as const,
+  },
+  iris: {
+    name: "အိန္ဒြာ",
+    gender: "female",
+    murfId: "en-US-iris",
+    base: "nilar" as const,
+  },
+  charlotte: {
+    name: "သီရိ",
+    gender: "female",
+    murfId: "en-US-charlotte",
+    base: "nilar" as const,
+  },
+  amara: {
+    name: "အမရာ",
+    gender: "female",
+    murfId: "en-US-amara",
+    base: "nilar" as const,
+  },
 };
 
 export type CharacterKey = keyof typeof CHARACTER_VOICES;
@@ -44,7 +93,7 @@ export type CharacterKey = keyof typeof CHARACTER_VOICES;
 export interface GenerateResult {
   audioBuffer: Buffer;
   srtContent: string;
-  rawSrt: string;  // Raw edge-tts word-level SRT for precise timing
+  rawSrt: string; // Raw edge-tts word-level SRT for precise timing
   durationMs: number;
 }
 
@@ -57,7 +106,13 @@ export async function generateSpeechWithCharacter(
 ): Promise<GenerateResult> {
   const char = CHARACTER_VOICES[characterKey];
   // Step 1: Generate base TTS with Thiha or Nilar (pitch is now configurable)
-  const baseResult = await generateSpeech(text, char.base, rate, pitch, aspectRatio);
+  const baseResult = await generateSpeech(
+    text,
+    char.base,
+    rate,
+    pitch,
+    aspectRatio
+  );
   // Step 2: Convert voice with murf.ai
   const murfApiKey = getMurfKey();
   if (!murfApiKey) throw new Error("MURF_API_KEY not configured");
@@ -66,7 +121,11 @@ export async function generateSpeechWithCharacter(
   const form = new FormData();
   form.set("voice_id", char.murfId);
   form.set("format", "MP3");
-  form.set("file", new Blob([baseResult.audioBuffer], { type: "audio/mpeg" }), "audio.mp3");
+  form.set(
+    "file",
+    new Blob([baseResult.audioBuffer], { type: "audio/mpeg" }),
+    "audio.mp3"
+  );
 
   const response = await fetch("https://api.murf.ai/v1/voice-changer/convert", {
     method: "POST",
@@ -74,7 +133,7 @@ export async function generateSpeechWithCharacter(
     body: form as any,
   });
 
-  const result = await response.json() as any;
+  const result = (await response.json()) as any;
   if (result.error_code) throw new Error(result.error_message);
 
   // Download converted audio
@@ -105,7 +164,8 @@ export async function generateSpeech(
   const ratePercent = Math.round((rate - 1.0) * 100) + MYANMAR_SPEED_BOOST;
   const rateStr = ratePercent >= 0 ? `+${ratePercent}%` : `${ratePercent}%`;
   const clampedPitch = Math.max(-20, Math.min(20, pitch));
-  const pitchStr = clampedPitch >= 0 ? `+${clampedPitch}Hz` : `${clampedPitch}Hz`;
+  const pitchStr =
+    clampedPitch >= 0 ? `+${clampedPitch}Hz` : `${clampedPitch}Hz`;
 
   const id = nanoid(10);
   const audioPath = path.join(OUTPUT_DIR, `${id}.mp3`);
@@ -116,41 +176,89 @@ export async function generateSpeech(
 
   await acquireSlot();
   try {
-    await execFileAsync("edge-tts", [
-      "--voice", voiceConfig.shortName,
-      "--rate", rateStr,
-      `--pitch=${pitchStr}`,
-      "--file", tmpText,
-      "--write-media", audioPath,
-      "--write-subtitles", srtPath,
-    ], {
-      env: { ...process.env, PATH: process.env.PATH, HTTPS_PROXY: process.env.EDGE_TTS_PROXY ?? "", HTTP_PROXY: process.env.EDGE_TTS_PROXY ?? "" },
-    });
+    // Use python -m edge_tts to ensure we find the module
+    const pythonCmd = process.platform === "win32" ? "python" : "python3";
+    console.log(
+      `[EDGE-TTS] Running: ${pythonCmd} -m edge_tts --voice ${voiceConfig.shortName} --rate ${rateStr} --pitch=${pitchStr}`
+    );
 
-    const audioBuffer = await fs.readFile(audioPath);
-
-    let rawSrt = "";
     try {
-      rawSrt = await fs.readFile(srtPath, "utf8");
-    } catch {
-      rawSrt = "";
+      await execFileAsync(
+        pythonCmd,
+        [
+          "-m",
+          "edge_tts",
+          "--voice",
+          voiceConfig.shortName,
+          "--rate",
+          rateStr,
+          `--pitch=${pitchStr}`,
+          "--file",
+          tmpText,
+          "--write-media",
+          audioPath,
+          "--write-subtitles",
+          srtPath,
+        ],
+        {
+          env: {
+            ...process.env,
+            HTTPS_PROXY: process.env.EDGE_TTS_PROXY ?? "",
+            HTTP_PROXY: process.env.EDGE_TTS_PROXY ?? "",
+          },
+        }
+      );
+    } catch (execError: any) {
+      console.error("[EDGE-TTS EXEC ERROR]", execError);
+      console.error("[EDGE-TTS STDERR]", execError.stderr?.toString());
+      console.error("[EDGE-TTS STDOUT]", execError.stdout?.toString());
+      throw new Error(
+        `edge-tts failed: ${execError.stderr?.toString() || execError.message}`
+      );
     }
 
-    const durationMs = parseLastEndTime(rawSrt);
-    const charsPerLine = aspectRatio === "9:16" ? 16 : 22;
-    const srtContent = buildSRT(text, durationMs, charsPerLine);
+    // Check if files were created
+    try {
+      const audioBuffer = await fs.readFile(audioPath);
+      console.log(
+        `[EDGE-TTS] Audio generated: ${audioPath} (${audioBuffer.length} bytes)`
+      );
 
-    return { audioBuffer, srtContent, rawSrt, durationMs };
+      let rawSrt = "";
+      try {
+        rawSrt = await fs.readFile(srtPath, "utf8");
+        console.log(
+          `[EDGE-TTS] SRT generated: ${srtPath} (${rawSrt.length} chars)`
+        );
+      } catch (srtError) {
+        console.warn("[EDGE-TTS] SRT file not found, generating from text");
+        rawSrt = "";
+      }
+
+      const durationMs = parseLastEndTime(rawSrt);
+      const charsPerLine = aspectRatio === "9:16" ? 16 : 22;
+      const srtContent = buildSRT(text, durationMs, charsPerLine);
+
+      return { audioBuffer, srtContent, rawSrt, durationMs };
+    } catch (fileError: any) {
+      console.error("[EDGE-TTS FILE ERROR]", fileError);
+      throw new Error(`Failed to read generated files: ${fileError.message}`);
+    }
   } finally {
     releaseSlot();
-    await fs.unlink(tmpText).catch(() => {});
-    await fs.unlink(audioPath).catch(() => {});
-    await fs.unlink(srtPath).catch(() => {});
+    // Cleanup temp files
+    await Promise.all([
+      fs.unlink(tmpText).catch(() => {}),
+      fs.unlink(audioPath).catch(() => {}),
+      fs.unlink(srtPath).catch(() => {}),
+    ]);
   }
 }
 
 function parseLastEndTime(srt: string): number {
-  const matches = Array.from(srt.matchAll(/\d{2}:\d{2}:\d{2},\d{3} --> (\d{2}:\d{2}:\d{2},\d{3})/g));
+  const matches = Array.from(
+    srt.matchAll(/\d{2}:\d{2}:\d{2},\d{3} --> (\d{2}:\d{2}:\d{2},\d{3})/g)
+  );
   if (matches.length === 0) return 0;
   return srtTimeToMs(matches[matches.length - 1][1]);
 }
@@ -183,7 +291,12 @@ async function acquireSlot(): Promise<void> {
     activeRequests++;
     return;
   }
-  return new Promise(resolve => waitQueue.push(() => { activeRequests++; resolve(); }));
+  return new Promise(resolve =>
+    waitQueue.push(() => {
+      activeRequests++;
+      resolve();
+    })
+  );
 }
 
 function releaseSlot(): void {
@@ -197,8 +310,15 @@ function graphemeLen(s: string): number {
   return Array.from(segmenter.segment(s)).length;
 }
 
-function buildSRT(text: string, durationMs: number, charsPerLine: number): string {
-  const tokens = text.trim().split(/\s+/).filter(t => t.length > 0);
+function buildSRT(
+  text: string,
+  durationMs: number,
+  charsPerLine: number
+): string {
+  const tokens = text
+    .trim()
+    .split(/\s+/)
+    .filter(t => t.length > 0);
   if (tokens.length === 0) return "";
 
   // Step 1: split into segments by sentence boundary (။ ၊)
@@ -248,7 +368,11 @@ function buildSRT(text: string, durationMs: number, charsPerLine: number): strin
   // Merge any trailing solo block into previous
   const blocks: string[][] = [];
   for (let j = 0; j < rawBlocks.length; j++) {
-    if (rawBlocks[j].length === 1 && blocks.length > 0 && blocks[blocks.length - 1].length === 1) {
+    if (
+      rawBlocks[j].length === 1 &&
+      blocks.length > 0 &&
+      blocks[blocks.length - 1].length === 1
+    ) {
       blocks[blocks.length - 1].push(rawBlocks[j][0]);
     } else {
       blocks.push([...rawBlocks[j]]);
@@ -256,8 +380,12 @@ function buildSRT(text: string, durationMs: number, charsPerLine: number): strin
   }
 
   // Step 4: distribute duration by word count
-  const blockWordCounts = blocks.map(b =>
-    b.join(" ").split(/\s+/).filter(t => t.length > 0).length
+  const blockWordCounts = blocks.map(
+    b =>
+      b
+        .join(" ")
+        .split(/\s+/)
+        .filter(t => t.length > 0).length
   );
   const totalBlockWords = blockWordCounts.reduce((a, b) => a + b, 0);
 
@@ -265,9 +393,12 @@ function buildSRT(text: string, durationMs: number, charsPerLine: number): strin
   let currentMs = 0;
 
   for (let idx = 0; idx < blocks.length; idx++) {
-    const blockDuration = Math.round((blockWordCounts[idx] / totalBlockWords) * durationMs);
+    const blockDuration = Math.round(
+      (blockWordCounts[idx] / totalBlockWords) * durationMs
+    );
     const startMs = currentMs;
-    const endMs = idx === blocks.length - 1 ? durationMs : currentMs + blockDuration;
+    const endMs =
+      idx === blocks.length - 1 ? durationMs : currentMs + blockDuration;
     currentMs = endMs;
 
     result.push(`${idx + 1}`);
@@ -287,7 +418,10 @@ export function formatSrtTime(ms: number): string {
   return msToSrtTime(ms);
 }
 
-export function estimateSpeechDuration(text: string, rate: number = 1.0): number {
+export function estimateSpeechDuration(
+  text: string,
+  rate: number = 1.0
+): number {
   const wordCount = text.trim().split(/\s+/).length;
   return Math.round((wordCount * 400) / rate);
 }
