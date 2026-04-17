@@ -95,7 +95,7 @@ export default function Landing() {
   const featRef = useRef<HTMLElement>(null);
   const [trans, setTrans] = useState(false);
   const { theme, toggleTheme } = useTheme();
-  const isDark = theme === "dark";
+  const isDark = true; // Always use dark theme for landing page
   const C = isDark ? C_DARK : C_LIGHT;
 
   const { scrollYProgress } = useScroll({
