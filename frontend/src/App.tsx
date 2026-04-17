@@ -21,10 +21,10 @@ function Router() {
     <AnimatePresence mode="wait">
       <motion.div
         key={location}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+        initial={{ opacity: 0, x: 50 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -50 }}
+        transition={{ duration: 0.25, ease: "easeInOut" }}
       >
       <Switch>
         <Route path={"/"} component={Landing} />

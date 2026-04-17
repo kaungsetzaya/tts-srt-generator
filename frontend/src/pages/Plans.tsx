@@ -324,45 +324,6 @@ export default function Plans() {
               ))}
             </div>
           </motion.div>
-
-          {/* Contact / Enterprise */}
-          <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="sticky top-24 relative p-10 rounded-3xl overflow-hidden"
-            style={{
-              background: "linear-gradient(135deg, rgba(30,30,30,0.8) 0%, rgba(15,15,15,0.9) 100%)",
-              border: "1px solid rgba(192,111,48,0.3)",
-              boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
-              backdropFilter: "blur(20px)",
-            }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-[#F4B34F]/10 to-transparent pointer-events-none" />
-            <Shield className="w-10 h-10 mb-6 relative z-10" style={{ color: "#F4B34F" }} />
-            <h3 className="font-black text-3xl mb-4 relative z-10">Need an <br/>Enterprise Plan?</h3>
-            <p className="text-sm opacity-70 mb-8 leading-relaxed max-w-sm relative z-10">
-              For teams, agencies, or custom integration needs requiring massive compute and dedicated infrastructure.
-            </p>
-            <ul className="space-y-3 mb-10 relative z-10">
-              {["Custom volume pricing", "Dedicated API access", "24/7 dedicated support team"].map(item => (
-                <li key={item} className="flex items-center gap-3 text-sm opacity-80">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#F4B34F]" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-            <a 
-              href="https://t.me/LumixStudioBot" 
-              target="_blank" 
-              rel="noreferrer"
-              className="inline-flex items-center justify-center w-full py-4 rounded-xl font-bold uppercase tracking-wider text-sm transition-transform hover:scale-[1.02] active:scale-[0.98] relative z-10"
-              style={{ background: "#EBE6D8", color: "#000" }}
-            >
-              Contact Sales Team
-            </a>
-          </motion.div>
         </div>
       </div>
     </div>
