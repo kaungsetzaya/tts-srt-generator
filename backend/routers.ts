@@ -529,9 +529,9 @@ export const appRouter = t.router({
           .groupBy(ttsConversions.userId);
 
         // Merge data
-        return userList.map(user => {
-          const userSub = allSubs.find(s => s.userId === user.id);
-          const userGen = allGenCounts.find(g => g.userId === user.id);
+        return userList.map((user: any) => {
+          const userSub = allSubs.find((s: any) => s.userId === user.id);
+          const userGen = allGenCounts.find((g: any) => g.userId === user.id);
           return {
             id: user.id,
             name: user.telegramFirstName || user.name || "Unknown",
