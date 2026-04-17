@@ -608,7 +608,6 @@ export const appRouter = t.router({
           starter: 50,
           creator: 200,
           pro: 500,
-          lifetime: 999999,
         };
         const creditsToAdd = planCredits[input.plan] ?? 10;
 

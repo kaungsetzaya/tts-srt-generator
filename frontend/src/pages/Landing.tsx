@@ -204,7 +204,7 @@ export default function Landing() {
       {/* HERO - 3D floating */}
       <div
         ref={heroRef}
-        className="relative z-10 flex items-center justify-center min-h-screen px-4 pt-24"
+        className="relative z-10 flex items-center justify-center px-4 pt-20 pb-4"
         style={{ scrollSnapAlign: "start" }}
       >
         <motion.div style={{ opacity: heroOp }} className="text-center">
@@ -227,9 +227,9 @@ export default function Landing() {
               initial={{ opacity: 0, y: 40, rotateX: 15 }}
               animate={{ opacity: 1, y: 0, rotateX: 0 }}
               transition={{ duration: 0.8, delay: 0.1 }}
-              className="font-black leading-[0.9] mb-2 md:mb-4"
+              className="font-black leading-[0.85] mb-1 md:mb-2"
               style={{
-                fontSize: "clamp(60px, 18vw, 220px)",
+                fontSize: "clamp(48px, 16vw, 200px)",
                 letterSpacing: "-0.03em",
                 color: C.cream,
               }}
@@ -240,9 +240,9 @@ export default function Landing() {
               initial={{ opacity: 0, y: 40, rotateX: 15 }}
               animate={{ opacity: 1, y: 0, rotateX: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
-              className="font-black leading-[0.9] mb-8 md:mb-12"
+              className="font-black leading-[0.85] mb-4 md:mb-8"
               style={{
-                fontSize: "clamp(60px, 18vw, 220px)",
+                fontSize: "clamp(48px, 16vw, 200px)",
                 letterSpacing: "-0.03em",
                 color: C.cream,
               }}

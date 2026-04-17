@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
-import { Check, ArrowLeft, Crown, Zap, Shield, Star } from "lucide-react";
+import { Check, ArrowLeft, Star } from "lucide-react";
 
 const plans = [
   {

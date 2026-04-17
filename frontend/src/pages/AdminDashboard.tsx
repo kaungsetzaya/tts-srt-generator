@@ -37,7 +37,7 @@ import {
   Trash2,
 } from "lucide-react";
 
-type Plan = "trial" | "starter" | "creator" | "pro" | "1month" | "3month" | "6month" | "lifetime";
+type Plan = "trial" | "starter" | "creator" | "pro";
 type MainTab = "analytics" | "users" | "reports" | "settings";
 type TimeFrame = "week" | "month" | "year" | "all";
 type PaymentMethod =
@@ -54,20 +54,18 @@ const PLAN_LABELS: Record<Plan, string> = {
   starter: "Starter (50cr)",
   creator: "Creator (200cr)",
   pro: "Pro (500cr)",
-  "1month": "1 Month",
-  "3month": "3 Months",
-  "6month": "6 Months",
-  lifetime: "Lifetime",
 };
 const PLAN_PRICE: Record<Plan, number> = {
   trial: 0,
   starter: 5000,
   creator: 15000,
   pro: 30000,
-  "1month": 5000,
-  "3month": 12000,
-  "6month": 20000,
-  lifetime: 50000,
+};
+const PLAN_CREDITS: Record<Plan, number> = {
+  trial: 10,
+  starter: 50,
+  creator: 200,
+  pro: 500,
 };
 const PAYMENT_METHODS: Record<PaymentMethod, string> = {
   kpay: "KBZ Pay",
@@ -449,7 +447,7 @@ export default function AdminDashboard() {
   const [tab, setTab] = useState<MainTab>("analytics");
   const [search, setSearch] = useState("");
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
-  const [selectedPlan, setSelectedPlan] = useState<Plan>("1month");
+  const [selectedPlan, setSelectedPlan] = useState<Plan>("starter");
   const [trialDays, setTrialDays] = useState(3);
   const [note, setNote] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("kpay");
@@ -2160,13 +2158,7 @@ export default function AdminDashboard() {
                               ? 90
                               : selectedPlan === "pro"
                                 ? 180
-                                : selectedPlan === "1month"
-                                  ? 30
-                                  : selectedPlan === "3month"
-                                    ? 90
-                                    : selectedPlan === "6month"
-                                      ? 180
-                                      : 999999,
+                                : 999999,
                       note:
                         `${transactionId ? `TXN: ${transactionId}` : ""}${note ? ` | ${note}` : ""}`.trim() ||
                         undefined,
