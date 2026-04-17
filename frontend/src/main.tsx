@@ -37,17 +37,18 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
-// Try to use custom domain, fall back to relative URLs if not available
+// Use choco.de5.net backend directly
 const getBackendUrl = () => {
-  // Check if running on Vercel
-  if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')) {
-    // Use relative URLs - Vercel will proxy via vercel.json rewrites
-    return '';
+  // Direct choco.de5.net for all deployments
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    // If accessing via choco.de5.net or localhost, use that directly
+    if (host === 'choco.de5.net' || host === 'www.choco.de5.net' || host === 'localhost') {
+      return 'https://choco.de5.net';
+    }
   }
-  // Production VPS deployment
-  return process.env.NODE_ENV === 'production' 
-    ? '' // Relative for same-domain
-    : 'http://localhost:3000';
+  // Default to choco.de5.net
+  return 'https://choco.de5.net';
 };
 
 const BACKEND_URL = getBackendUrl();
