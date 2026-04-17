@@ -1,59 +1,70 @@
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
-import { Check, ArrowLeft, Crown, Zap, Shield } from "lucide-react";
+import { Check, ArrowLeft, Crown, Zap, Shield, Star } from "lucide-react";
 
 const plans = [
   {
-    name: "Free",
-    price: "0",
-    period: "forever",
-    desc: "Trial access for new users",
-    badge: "Free",
+    name: "Starter Pack",
+    price: "5,000",
+    period: "one-time",
+    credits: 50,
+    desc: "Ideal for beginners and casual creators.",
+    badge: "Starter",
     badgeColor: "#6b7280",
     features: [
-      "5 TTS generations",
-      "Basic voices",
-      "720p video export",
-      "Community support",
+      "50 Credits",
+      "Access to Standard Voices (Thiha & Nilar)",
+      "Video Translate (Script/SRT Extraction)",
+      "Basic AI Video Dubbing",
+      "2.5 min / 25MB per task limit",
     ],
-    cta: "Start Free",
+    cta: "Get Starter",
     popular: false,
   },
   {
-    name: "Monthly",
-    price: "9,900",
-    period: "/month",
-    desc: "Full access, billed monthly",
+    name: "Creator Pack",
+    price: "15,000",
+    period: "one-time",
+    credits: 200,
+    desc: "Perfect for active social media influencers.",
     badge: "Popular",
     badgeColor: "#F4B34F",
     features: [
-      "Unlimited TTS generations",
-      "All 10+ premium voices",
-      "4K video export",
-      "Video dubbing & translation",
-      "Priority support",
-      "SRT subtitle generation",
+      "200 Credits",
+      "Everything in Starter",
+      "Access to Premium Voices",
+      "Priority Queue (Faster processing)",
+      "Premium AI Video Dubbing",
     ],
-    cta: "Get Monthly",
+    cta: "Get Creator",
     popular: true,
   },
   {
-    name: "Yearly",
-    price: "89,000",
-    period: "/year",
-    desc: "Best value, save 25%",
+    name: "Pro Pack",
+    price: "30,000",
+    period: "one-time",
+    credits: 500,
+    desc: "Built for professional creators and agencies.",
     badge: "Best Value",
     badgeColor: "#C06F30",
     features: [
-      "Everything in Monthly",
-      "2 months free",
-      "Early access to new features",
+      "500 Credits",
+      "Everything in Creator",
+      "Fastest Rendering Speed",
+      "Early access to Beta features",
       "Dedicated support",
-      "Custom voice cloning (soon)",
     ],
-    cta: "Get Yearly",
+    cta: "Get Pro",
     popular: false,
   },
+];
+
+const creditCosts = [
+  { action: "TTS (Thiha/Nilar)", cost: "1", color: "#4ade80" },
+  { action: "TTS (Character Voices)", cost: "3", color: "#60a5fa" },
+  { action: "Video Translate", cost: "5", color: "#F4B34F" },
+  { action: "AI Video Dub (Thiha/Nilar)", cost: "10", color: "#C06F30" },
+  { action: "AI Video Dub (Character)", cost: "15", color: "#f472b6" },
 ];
 
 export default function Plans() {
@@ -85,10 +96,10 @@ export default function Plans() {
             Pricing
           </div>
           <h1 className="font-black text-4xl md:text-6xl mb-4" style={{ letterSpacing: "-0.02em" }}>
-            Simple, <span style={{ color: "#F4B34F" }}>Transparent</span> Pricing
+            Simple, <span style={{ color: "#F4B34F" }}>Credit-Based</span> Pricing
           </h1>
           <p className="text-lg opacity-60 max-w-xl mx-auto">
-            Choose the plan that fits your content creation needs. Upgrade or downgrade anytime.
+            Pay for what you use. Buy credits and use them across all features. No recurring charges.
           </p>
         </motion.div>
 
@@ -100,7 +111,7 @@ export default function Plans() {
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: i * 0.1 }}
-              className={`relative rounded-3xl p-8 ${plan.popular ? "scale-105" : ""}`}
+              className={`relative rounded-3xl p-8 ${plan.popular ? "md:scale-105" : ""}`}
               style={{
                 background: plan.popular
                   ? "linear-gradient(135deg, rgba(192,111,48,0.15) 0%, rgba(244,179,79,0.08) 100%)"
@@ -126,9 +137,16 @@ export default function Plans() {
                   <span className="text-4xl font-black" style={{ color: plan.popular ? "#F4B34F" : "#EBE6D8" }}>
                     {plan.price}
                   </span>
-                  <span className="text-sm opacity-50">{plan.period}</span>
+                  <span className="text-sm opacity-50">MMK</span>
                 </div>
                 <p className="text-sm mt-2 opacity-60">{plan.desc}</p>
+                <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full"
+                  style={{ background: "rgba(244,179,79,0.1)", border: "1px solid rgba(244,179,79,0.3)" }}>
+                  <Star className="w-3.5 h-3.5" style={{ color: "#F4B34F" }} />
+                  <span className="text-sm font-bold" style={{ color: "#F4B34F" }}>
+                    {plan.credits} Credits
+                  </span>
+                </div>
               </div>
 
               {/* Features */}
@@ -158,6 +176,36 @@ export default function Plans() {
           ))}
         </div>
 
+        {/* Credit Usage Table */}
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="mt-16 max-w-2xl mx-auto"
+        >
+          <h2 className="font-black text-2xl mb-6 text-center uppercase tracking-wider">
+            Credit <span style={{ color: "#F4B34F" }}>Usage</span>
+          </h2>
+          <div className="rounded-2xl overflow-hidden"
+            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            {creditCosts.map((item, i) => (
+              <div
+                key={item.action}
+                className={`flex items-center justify-between px-6 py-4 ${i < creditCosts.length - 1 ? "border-b" : ""}`}
+                style={{ borderColor: "rgba(255,255,255,0.06)" }}
+              >
+                <span className="text-sm font-medium">{item.action}</span>
+                <span className="font-black text-lg" style={{ color: item.color }}>
+                  {item.cost} {Number(item.cost) === 1 ? "credit" : "credits"}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="text-center text-sm opacity-40 mt-4">
+            Trial users get <span className="font-bold" style={{ color: "#F4B34F" }}>10 free credits</span> to start
+          </p>
+        </motion.div>
+
         {/* FAQ */}
         <motion.div
           initial={{ opacity: 0, y: 40 }}
@@ -171,20 +219,20 @@ export default function Plans() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto text-left">
             {[
               {
-                q: "How do I subscribe?",
-                a: "Go to Telegram bot @LumixStudioBot and use /subscribe command. Scan QR code or use payment link.",
+                q: "How do I buy credits?",
+                a: "Contact us via Telegram @LumixStudioBot. We accept KBZ Pay, Wave Pay, CB Pay, AYA Pay, and bank transfer.",
               },
               {
-                q: "Can I cancel anytime?",
-                a: "Yes, you can cancel your subscription anytime. Your access continues until the billing period ends.",
+                q: "Do credits expire?",
+                a: "Credits are valid for the duration of your subscription plan. Use them anytime within your active period.",
               },
               {
                 q: "What payment methods?",
-                a: "We accept KBZ Pay, Wave Pay, and major credit/debit cards via payment gateway.",
+                a: "KBZ Pay, Wave Pay, CB Pay, AYA Pay, Bank Transfer, and Cash.",
               },
               {
                 q: "Need help?",
-                a: "Contact us via Telegram @LumixSupportBot or email support@lumix.studio",
+                a: "Contact us via Telegram @LumixStudioBot — we respond within 24 hours.",
               },
             ].map((faq) => (
               <div
