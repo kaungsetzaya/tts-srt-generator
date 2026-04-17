@@ -78,7 +78,7 @@ export default function Landing() {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-lg sm:text-2xl font-black tracking-tight cursor-pointer"
+            className="text-base sm:text-2xl font-black tracking-tight cursor-pointer"
             style={{ color: C.gold }}
           >LUMIX</motion.span>
           <motion.button 
@@ -88,7 +88,7 @@ export default function Landing() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
             onClick={() => featRef.current?.scrollIntoView({ behavior: 'smooth' })} 
-                        className="text-[10px] sm:text-xs uppercase tracking-[0.1em] sm:tracking-[0.2em] transition-colors duration-200"
+            className="text-[8px] sm:text-xs uppercase tracking-[0.05em] sm:tracking-[0.2em] transition-colors duration-200"
             style={{ color: C.nude }}
           >Features</motion.button>
           <motion.button 
@@ -98,12 +98,12 @@ export default function Landing() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
             onClick={() => nav("/plans")} 
-            className="text-[10px] sm:text-xs uppercase tracking-[0.1em] sm:tracking-[0.2em] transition-colors duration-200"
+            className="text-[8px] sm:text-xs uppercase tracking-[0.05em] sm:tracking-[0.2em] transition-colors duration-200"
             style={{ color: C.nude }}
           >Plans</motion.button>
           <motion.button 
             onClick={go} 
-            className="px-3 sm:px-6 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-[0.1em] sm:tracking-[0.15em]"
+            className="px-2 sm:px-6 py-1 sm:py-2 rounded-full text-[8px] sm:text-xs font-bold uppercase tracking-[0.05em] sm:tracking-[0.15em]"
             style={{ background: C.gold, color: isDark ? C.dark : "#fff" }}
           >Login</motion.button>
         </motion.div>
