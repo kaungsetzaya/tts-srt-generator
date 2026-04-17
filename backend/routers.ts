@@ -134,28 +134,6 @@ export const appRouter = t.router({
         })
       )
       .mutation(async ({ input, ctx }) => {
-        // Check subscription
-        const db = await getDb();
-        if (!db)
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "Database not available",
-          });
-
-        const isAdmin = ctx.user!.role === "admin";
-        if (!isAdmin) {
-          const sub = await db.query.subscriptions.findFirst({
-            where: (s: any, { eq, and, gt }: any) =>
-              and(eq(s.userId, ctx.user!.userId), gt(s.expiresAt, new Date())),
-          });
-          if (!sub) {
-            throw new TRPCError({
-              code: "FORBIDDEN",
-              message: "No active subscription",
-            });
-          }
-        }
-
         const voice = input.voice || "thiha";
         const rate = input.speed ?? 1.0;
         const pitch = input.tone ?? 0;
