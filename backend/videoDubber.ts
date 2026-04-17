@@ -98,11 +98,14 @@ export async function dubVideoFromBuffer(
     // Assemble full Myanmar text from translated segments - one paragraph
     const myanmarText = translatedSegments
       .map((seg: any) => {
-        // Clean text: remove dots, extra spaces, non-Burmese characters
+        // Clean text: remove quotes, dots, keep only Burmese
         let text = seg.text || "";
-        text = text.replace(/\.{3,}/g, ""); // Remove ... or ....
-        text = text.replace(/[^\u1000-\u109F\uAA60-\uAA7F\s]/g, ""); // Keep only Burmese
-        text = text.replace(/\s+/g, " ").trim(); // Normalize spaces
+        text = text.replace(/['"'"'«»""'']/g, "");
+        text = text.replace(/\.{2,}/g, "");
+        text = text.replace(/[^\u1000-\u109F\uAA60-\uAA7F\s\u1040-\u104E]/g, "");
+        text = text.replace(/\s+([\u1040-\u104E])/g, "$1");
+        text = text.replace(/([\u1000-\u109F\uAA60-\uAA7F])\s+/g, "$1 ");
+        text = text.trim();
         return text;
       })
       .filter(Boolean)
@@ -113,11 +116,14 @@ export async function dubVideoFromBuffer(
     let srtIndex = 1;
     for (let i = 0; i < translatedSegments.length; i++) {
       const seg = translatedSegments[i];
-      // Clean text: remove dots, non-Burmese
+      // Clean text: remove quotes, dots, keep only Burmese
       let cleanText = seg.text || "";
-      cleanText = cleanText.replace(/\.{3,}/g, "");
-      cleanText = cleanText.replace(/[^\u1000-\u109F\uAA60-\uAA7F\s]/g, "");
-      cleanText = cleanText.replace(/\s+/g, " ").trim();
+      cleanText = cleanText.replace(/['"'"'«»""'']/g, "");
+      cleanText = cleanText.replace(/\.{2,}/g, "");
+      cleanText = cleanText.replace(/[^\u1000-\u109F\uAA60-\uAA7F\s\u1040-\u104E]/g, "");
+      cleanText = cleanText.replace(/\s+([\u1040-\u104E])/g, "$1");
+      cleanText = cleanText.replace(/([\u1000-\u109F\uAA60-\uAA7F])\s+/g, "$1 ");
+      cleanText = cleanText.trim();
       
       if (cleanText) {
         const startMs = Math.round(seg.start * 1000);

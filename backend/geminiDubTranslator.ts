@@ -7,12 +7,11 @@ export async function geminiTranslateForDub(segments: any[], apiKey?: string) {
   );
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-lite" });
 
-  const prompt = `Translate the following English/other language segments to clean Myanmar (Burmese) language only. Rules:
-1. Output ONLY Burmese/Myanmar text - no English, no other languages
-2. NO "....." or "...." or any dots/suspension marks
-3. Write all text in ONE continuous paragraph (no line breaks within a segment)
-4. Keep natural speaking tone
-5. Return as JSON array with 'text' property for each segment
+  const prompt = `Translate the following English/other language segments to ONLY the raw Myanmar (Burmese) video transcription text. Rules:
+1. Output ONLY raw video transcription text - NO descriptions like "Here is the translation..."
+2. NO quotes, NO "..." dots, NO suspension marks
+3. NO explanatory text - only the actual spoken content from the video
+4. Return as JSON array with 'text' property for each segment
 
 Segments: ${JSON.stringify(segments.map(s => s.text))}`
 
