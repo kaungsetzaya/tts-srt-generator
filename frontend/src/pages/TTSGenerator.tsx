@@ -365,6 +365,7 @@ export default function TTSGenerator() {
   // Compute character limit for current voice mode based on plan
   const getCharLimit = () => {
     if (isAdmin) return 99999;
+    if (!currentPlan) return 0; // No plan yet
     if (currentPlan === "trial") {
       // Trial: Thiha/Nilar 5000, others 1600
       return voiceMode === "character" ? 1600 : 5000;
