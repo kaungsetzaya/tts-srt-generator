@@ -957,33 +957,64 @@ export default function TTSGenerator() {
           }}
         >
           <div className="flex items-center gap-1.5 sm:gap-2 ml-auto">
-            {/* Subscription badge */}
+            {/* Premium Subscription Bar */}
             <div
-              className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
+              className="hidden md:flex items-center gap-3 px-3 py-1.5 rounded-lg text-xs font-medium"
               style={{
-                background: isDark
-                  ? "rgba(192,111,48,0.12)"
-                  : "rgba(244,179,79,0.06)",
-                border: `1px solid ${subColor}30`,
-                color: subColor,
+                background: hasActiveSub 
+                  ? "linear-gradient(135deg, rgba(139,92,246,0.15) 0%, rgba(59,130,246,0.1) 100%)"
+                  : isDark 
+                    ? "rgba(75,85,99,0.3)" 
+                    : "rgba(229,231,235,0.5)",
+                border: `1px solid ${hasActiveSub ? "rgba(139,92,246,0.3)" : "rgba(156,163,175,0.3)"}`,
               }}
             >
               {hasActiveSub ? (
-                <Crown className="w-3.5 h-3.5" />
+                <>
+                  <span 
+                    className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide"
+                    style={{
+                      background: "linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%)",
+                      color: "#fff",
+                    }}
+                  >
+                    {subStatus?.plan === "trial" ? (lang === "mm" ? "အစမ်း" : "Trial") : subStatus?.plan}
+                  </span>
+                  <span style={{ color: isDark ? "#9CA3AF" : "#4B5563" }}>
+                    {daysLeft !== null ? `${daysLeft}d left` : ""}
+                  </span>
+                  <div className="flex-1 h-1.5 max-w-[80px] rounded-full overflow-hidden" style={{ background: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)" }}>
+                    <div 
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${Math.min(100, ((subStatus?.credits ?? 0) / (planLimits?.maxCredits ?? 800)) * 100)}%`,
+                        background: "linear-gradient(90deg, #8B5CF6, #6366F1)",
+                      }}
+                    />
+                  </div>
+                  <span style={{ color: isDark ? "#D1D5DB" : "#374151" }}>
+                    {subStatus?.credits ?? 0} credits
+                  </span>
+                </>
               ) : (
-                <AlertCircle className="w-3.5 h-3.5" />
+                <>
+                  <span style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
+                    {me ? (lang === "mm" ? "အမျိုးသမီး" : "Free") : ""}
+                  </span>
+                  <div className="flex-1 h-1.5 max-w-[80px] rounded-full overflow-hidden" style={{ background: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)" }}>
+                    <div 
+                      className="h-full rounded-full"
+                      style={{
+                        width: "0%",
+                        background: isDark ? "#4B5563" : "#9CA3AF",
+                      }}
+                    />
+                  </div>
+                  <span style={{ color: isDark ? "#6B7280" : "#9CA3AF" }}>
+                    {subStatus?.credits ?? 0}
+                  </span>
+                </>
               )}
-              <span>
-                {isAdmin
-                  ? t.admin
-                  : subStatus?.active && daysLeft !== null
-                    ? `${subStatus.plan === "trial" ? (lang === "mm" ? "အစမ်းသုံး" : "Trial") : subStatus.plan} · ${daysLeft}d · 💰${subStatus?.credits ?? 0}`
-                    : subStatus?.active
-                      ? subStatus.plan
-                      : me
-                        ? (lang === "mm" ? "Subscription မရှိ · " : "No Sub · ") + `💰${subStatus?.credits ?? 0}`
-                        : `💰${subStatus?.credits ?? 0}`}
-              </span>
             </div>
             {/* Username */}
             <span
@@ -3970,11 +4001,12 @@ export default function TTSGenerator() {
                 >
                   {lang === "mm" ? "Plan များ" : "Plans"}
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                   {[
                     {
                       name: "Starter",
-                      price: "5,000 Ks",
+                      price: "15,000 Ks",
+                      credits: 50,
                       period: lang === "mm" ? "/ လ" : "/ mo",
                       features: [
                         lang === "mm"
@@ -3987,50 +4019,36 @@ export default function TTSGenerator() {
                       popular: false,
                     },
                     {
-                      name: "Pro",
-                      price: "15,000 Ks",
+                      name: "Creator",
+                      price: "35,000 Ks",
+                      credits: 200,
                       period: lang === "mm" ? "/ လ" : "/ mo",
                       features: [
                         lang === "mm"
-                          ? "အသံဖန်တီးမှု ၅၀/ရက်"
-                          : "50 generations/day",
-                        lang === "mm" ? "စာလုံး ၅၀,၀၀၀" : "50,000 chars",
+                          ? "အသံဖန်တီးမှု ၃၀/ရက်"
+                          : "30 generations/day",
+                        lang === "mm" ? "စာလုံး ၃၀,၀၀၀" : "30,000 chars",
                         lang === "mm" ? "ဗီဒီယို ၁၀/ရက်" : "10 videos/day",
+                      ],
+                      color: "#8b5cf6",
+                      popular: true,
+                    },
+                    {
+                      name: "Pro",
+                      price: "75,000 Ks",
+                      credits: 500,
+                      period: lang === "mm" ? "/ လ" : "/ mo",
+                      features: [
+                        lang === "mm"
+                          ? "အသံဖန်တီးမှု အကန့်အသတ်မဲ့"
+                          : "Unlimited generations",
+                        lang === "mm" ? "စာလုံး ၁၀၀,၀၀၀" : "100,000 chars",
+                        lang === "mm" ? "ဗီဒီယို အကန့်အသတ်မဲ့" : "Unlimited videos",
                         lang === "mm"
                           ? "Premium Voices အကုန်"
                           : "All premium voices",
                       ],
                       color: accent,
-                      popular: true,
-                    },
-                    {
-                      name: "Business",
-                      price: "30,000 Ks",
-                      period: lang === "mm" ? "/ လ" : "/ mo",
-                      features: [
-                        lang === "mm" ? "အကန့်အသတ်မဲ့" : "Unlimited",
-                        lang === "mm" ? "စာလုံး ၁၀၀,၀၀၀" : "100,000 chars",
-                        lang === "mm" ? "ဗီဒီယို ၂၀/ရက်" : "20 videos/day",
-                        "Priority Support",
-                      ],
-                      color: "#f59e0b",
-                      popular: false,
-                    },
-                    {
-                      name: "Enterprise",
-                      price: lang === "mm" ? "ညှိနှိုင်း" : "Custom",
-                      period: "",
-                      features: [
-                        lang === "mm"
-                          ? "အကုန်အကန့်အသတ်မဲ့"
-                          : "Everything unlimited",
-                        "API Access",
-                        "24/7 Support",
-                        lang === "mm"
-                          ? "စနစ်ချိတ်ဆက်မှု"
-                          : "Custom integration",
-                      ],
-                      color: "#F4B34F",
                       popular: false,
                     },
                   ].map(plan => (
