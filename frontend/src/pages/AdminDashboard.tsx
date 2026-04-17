@@ -2018,26 +2018,26 @@ export default function AdminDashboard() {
               Give Subscription
             </h3>
             <div className="space-y-4">
-              <div className="bg-gradient-to-br from-[#1a1a2e] to-[#16162a] rounded-xl p-4 border border-[#8b5cf6]/30">
+              <div className="rounded-xl p-4 border" style={{ borderColor: border, background: cardBg }}>
                 <label className="text-xs uppercase tracking-wider opacity-70 block mb-3 flex items-center gap-2">
-                  <Sparkles className="w-3 h-3 text-[#8b5cf6]" /> Plan
+                  <Sparkles className="w-3 h-3" style={{ color: C_GOLD }} /> Plan
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   {(Object.keys(PLAN_LABELS) as Plan[]).map(plan => (
                     <button
                       key={plan}
                       onClick={() => handlePlanSelect(plan)}
-                      className="py-3 px-2 border text-xs font-bold rounded-lg transition-all relative overflow-hidden"
+                      className="py-3 px-2 border text-xs font-bold rounded-xl transition-all relative overflow-hidden"
                       style={{
-                        borderColor: selectedPlan === plan ? "#8b5cf6" : "rgba(139,92,246,0.2)",
-                        background: selectedPlan === plan 
-                          ? "linear-gradient(135deg, rgba(139,92,246,0.25) 0%, rgba(99,102,241,0.15) 100%)"
+                        borderColor: selectedPlan === plan ? C : border,
+                        background: selectedPlan === plan
+                          ? `linear-gradient(135deg, ${C}25 0%, ${C_GOLD}10 100%)`
                           : "rgba(255,255,255,0.02)",
-                        color: selectedPlan === plan ? "#a78bfa" : "rgba(255,255,255,0.6)",
+                        color: selectedPlan === plan ? C_GOLD : "rgba(255,255,255,0.5)",
                       }}
                     >
                       {selectedPlan === plan && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-[#8b5cf6]/10 to-transparent" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-[#C06F30]/10 to-transparent" />
                       )}
                       <span className="relative z-10">{PLAN_LABELS[plan]}</span>
                       {PLAN_PRICE[plan] > 0 && (
@@ -2053,9 +2053,9 @@ export default function AdminDashboard() {
                   {getDefaultDays(selectedPlan)} Days (Auto-calculated)
                 </p>
               </div>
-              <div className="bg-gradient-to-br from-[#1a1a2e] to-[#16162a] rounded-xl p-4 border border-[#10b981]/30">
+              <div className="rounded-xl p-4 border" style={{ borderColor: border, background: cardBg }}>
                 <label className="text-xs uppercase tracking-wider opacity-70 block mb-3 flex items-center gap-2">
-                  <CreditCard className="w-3 h-3 text-[#10b981]" /> Payment Method{" "}
+                  <CreditCard className="w-3 h-3" style={{ color: C }} /> Payment Method{" "}
                   <span className="text-red-400">*</span>
                 </label>
                 <div className="grid grid-cols-4 gap-2">
@@ -2063,13 +2063,13 @@ export default function AdminDashboard() {
                     <button
                       key={pm}
                       onClick={() => setPaymentMethod(pm)}
-                      className="py-2 px-2 border text-xs font-bold rounded-lg transition-all text-center"
+                      className="py-2 px-2 border text-xs font-bold rounded-xl transition-all text-center"
                       style={{
-                        borderColor: paymentMethod === pm ? "#10b981" : "rgba(16,185,129,0.2)",
+                        borderColor: paymentMethod === pm ? C_GOLD : border,
                         background: paymentMethod === pm
-                          ? "rgba(16,185,129,0.15)"
+                          ? `${C_GOLD}15`
                           : "rgba(255,255,255,0.02)",
-                        color: paymentMethod === pm ? "#34d399" : "rgba(255,255,255,0.5)",
+                        color: paymentMethod === pm ? C_GOLD : "rgba(255,255,255,0.5)",
                       }}
                     >
                       {PAYMENT_METHODS[pm]}
@@ -2078,34 +2078,35 @@ export default function AdminDashboard() {
                 </div>
               </div>
               {paymentMethod !== "free" && paymentMethod !== "cash" && (
-                <div className="bg-gradient-to-br from-[#1a1a2e] to-[#16162a] rounded-xl p-4 border border-[#06b6d4]/30">
+                <div className="rounded-xl p-4 border" style={{ borderColor: border, background: cardBg }}>
                   <label className="text-xs uppercase tracking-wider opacity-70 block mb-3 flex items-center gap-2">
-                    <Banknote className="w-3 h-3 text-[#06b6d4]" /> Transaction ID{" "}
+                    <Banknote className="w-3 h-3" style={{ color: C }} /> Transaction ID{" "}
                     <span className="text-red-400">*</span>
                   </label>
                   <input
                     value={transactionId}
                     onChange={e => setTransactionId(e.target.value)}
                     placeholder="e.g. TXN123456789"
-                    className="w-full border p-3 text-sm focus:outline-none rounded-lg font-mono bg-gradient-to-br from-[#0f172a] to-[#1e293b]"
+                    className="w-full border p-3 text-sm focus:outline-none rounded-lg font-mono"
                     style={{
-                      borderColor: transactionId ? "#06b6d4" : "rgba(6,182,212,0.2)",
-                      color: "#67e8f9",
+                      background: "rgba(0,0,0,0.4)",
+                      borderColor: transactionId ? C_GOLD : border,
+                      color: C_GOLD,
                     }}
                   />
                 </div>
               )}
               {/* Payment Slip Upload */}
               {paymentMethod !== "free" && paymentMethod !== "cash" && (
-                <div className="bg-gradient-to-br from-[#1a1a2e] to-[#16162a] rounded-xl p-4 border border-[#ec4899]/30">
+                <div className="rounded-xl p-4 border" style={{ borderColor: border, background: cardBg }}>
                   <label className="text-xs uppercase tracking-wider opacity-70 block mb-3 flex items-center gap-2">
-                    <span className="text-[#ec4899]">📷</span> Payment Slip
+                    <span style={{ color: C }}>📷</span> Payment Slip
                   </label>
                   <div
                     className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer hover:bg-white/5 transition-all"
                     style={{
-                      borderColor: paymentSlipBase64 ? "#ec4899" : "rgba(236,72,153,0.3)",
-                      background: paymentSlipBase64 ? "rgba(236,72,153,0.05)" : "transparent",
+                      borderColor: paymentSlipBase64 ? C_GOLD : border,
+                      background: paymentSlipBase64 ? `${C_GOLD}08` : "transparent",
                     }}
                     onClick={() => {
                       const inp = document.createElement("input");
