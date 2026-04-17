@@ -37,7 +37,7 @@ import {
   Trash2,
 } from "lucide-react";
 
-type Plan = "trial" | "1month" | "3month" | "6month" | "lifetime";
+type Plan = "trial" | "starter" | "creator" | "pro" | "1month" | "3month" | "6month" | "lifetime";
 type MainTab = "analytics" | "users" | "reports" | "settings";
 type TimeFrame = "week" | "month" | "year" | "all";
 type PaymentMethod =
@@ -50,7 +50,10 @@ type PaymentMethod =
   | "free";
 
 const PLAN_LABELS: Record<Plan, string> = {
-  trial: "Trial",
+  trial: "Trial (10cr)",
+  starter: "Starter (50cr)",
+  creator: "Creator (200cr)",
+  pro: "Pro (500cr)",
   "1month": "1 Month",
   "3month": "3 Months",
   "6month": "6 Months",
@@ -58,6 +61,9 @@ const PLAN_LABELS: Record<Plan, string> = {
 };
 const PLAN_PRICE: Record<Plan, number> = {
   trial: 0,
+  starter: 5000,
+  creator: 15000,
+  pro: 30000,
   "1month": 5000,
   "3month": 12000,
   "6month": 20000,
@@ -1114,6 +1120,7 @@ export default function AdminDashboard() {
                     <th className="text-center p-3">Days</th>
                     <th className="text-center p-3">Gens</th>
                     <th className="text-left p-3">Last Active</th>
+                    <th className="text-center p-3">Credits</th>
                     <th className="text-left p-3">Status</th>
                     <th className="text-left p-3">Actions</th>
                   </tr>
@@ -1121,10 +1128,10 @@ export default function AdminDashboard() {
                 <tbody>
                   {filteredUsers.map((user: any) => {
                     const days = daysLeft(user.subscription?.expiresAt);
-                    const isBanned = !!user.bannedAt;
+                    const isBanned = !!user.banned;
                     const genCount = user.genCount ?? 0;
-                    const displayName = user.telegramFirstName ?? "—";
-                    const username = user.telegramUsername ?? "—";
+                    const displayName = user.name ?? "—";
+                    const username = user.username ?? "—";
                     return (
                       <tr
                         key={user.id}
@@ -1148,7 +1155,7 @@ export default function AdminDashboard() {
                         <td className="p-3">
                           {user.subscription ? (
                             <span className="text-xs px-2 py-1 rounded-md bg-green-500/20 text-green-400 font-bold uppercase">
-                              {user.subscription.plan}
+                              {PLAN_LABELS[user.subscription.plan as Plan] ?? user.subscription.plan}
                             </span>
                           ) : (
                             <span className="text-xs px-2 py-1 rounded-md bg-red-500/20 text-red-400 font-bold">
@@ -1176,7 +1183,12 @@ export default function AdminDashboard() {
                           </span>
                         </td>
                         <td className="p-3 text-xs opacity-50">
-                          {fmtTime(user.lastActive)}
+                          {fmtTime(user.lastLoginAt)}
+                        </td>
+                        <td className="p-3 text-center">
+                          <span className="text-xs font-bold" style={{ color: C_GOLD }}>
+                            💰 {user.credits ?? 0}
+                          </span>
                         </td>
                         <td className="p-3">
                           {isBanned ? (
@@ -1299,10 +1311,10 @@ export default function AdminDashboard() {
                   >
                     <div>
                       <span className="font-bold">
-                        {user.telegramFirstName ?? "—"}
+                        {user.name ?? "—"}
                       </span>
                       <span className="text-xs opacity-40 ml-2">
-                        @{user.telegramUsername ?? "—"}
+                        @{user.username ?? "—"}
                       </span>
                     </div>
                     {user.id !== me?.userId ? (
@@ -2142,13 +2154,19 @@ export default function AdminDashboard() {
                       days:
                         selectedPlan === "trial"
                           ? trialDays
-                          : selectedPlan === "1month"
+                          : selectedPlan === "starter"
                             ? 30
-                            : selectedPlan === "3month"
+                            : selectedPlan === "creator"
                               ? 90
-                              : selectedPlan === "6month"
+                              : selectedPlan === "pro"
                                 ? 180
-                                : 999999,
+                                : selectedPlan === "1month"
+                                  ? 30
+                                  : selectedPlan === "3month"
+                                    ? 90
+                                    : selectedPlan === "6month"
+                                      ? 180
+                                      : 999999,
                       note:
                         `${transactionId ? `TXN: ${transactionId}` : ""}${note ? ` | ${note}` : ""}`.trim() ||
                         undefined,

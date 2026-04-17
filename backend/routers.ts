@@ -726,9 +726,19 @@ export const appRouter = t.router({
     }),
     getServerHealth: adminProcedure.query(async () => {
       const mem = process.memoryUsage();
+      const fs = require('fs');
+      let disk = "—";
+      try {
+        const stat = fs.statSync('/');
+        disk = `${Math.round(mem.rss / 1024 / 1024)}MB used`;
+      } catch {}
       return {
         uptime: process.uptime(),
-        memory: Math.round(mem.heapUsed / 1024 / 1024) + "MB",
+        memory: {
+          used: Math.round(mem.rss / 1024 / 1024),
+          heap: Math.round(mem.heapUsed / 1024 / 1024),
+        },
+        disk,
         status: "ok",
       };
     }),
@@ -745,15 +755,22 @@ export const appRouter = t.router({
       )
       .query(async ({ input }) => {
         const db = await getDb();
-        if (!db) return [];
+        if (!db) return { failedGenerations: [], systemLogs: [] };
         try {
-          return await db
+          const logs = await db
             .select()
             .from(errorLogs)
             .orderBy(desc(errorLogs.createdAt))
             .limit(input.limit || 50);
-        } catch {
-          return [];
+          
+          // Split into failed generations and system logs
+          const failedGenerations = logs.filter((l: any) => l.type === 'generation' || l.severity === 'error');
+          const systemLogs = logs;
+          
+          return { failedGenerations, systemLogs };
+        } catch (e) {
+          console.error('[getErrorLogs Error]', e);
+          return { failedGenerations: [], systemLogs: [] };
         }
       }),
     getVoiceStats: adminProcedure
@@ -789,15 +806,6 @@ export const appRouter = t.router({
             .filter(r => r.feature)
             .map(r => ({ feature: r.feature, count: r.count }));
 
-          // Character usage stats
-          const charRows = await db
-            .select({ character: ttsConversions.character, count: count() })
-            .from(ttsConversions)
-            .groupBy(ttsConversions.character);
-          const characters = charRows
-            .filter(r => r.character)
-            .map(r => ({ character: r.character, count: r.count }));
-
           // Total counts
           const [totalRow] = await db
             .select({
@@ -807,19 +815,57 @@ export const appRouter = t.router({
             })
             .from(ttsConversions);
 
-          // Base voices (Thiha/Nilar breakdown)
-          const baseVoices = voiceRows
-            .filter(r => r.voice && ["thiha", "nilar"].includes(r.voice))
-            .map(r => ({ name: r.voice, count: r.count }));
+          // Base voices (Thiha/Nilar breakdown) with displayName, chars, durationMs
+          const baseVoiceDetails = await db
+            .select({
+              voice: ttsConversions.voice,
+              count: count(),
+              chars: sql`COALESCE(SUM(char_count), 0)`,
+              duration: sql`COALESCE(SUM(duration_ms), 0)`,
+            })
+            .from(ttsConversions)
+            .where(sql`voice IN ('thiha', 'nilar')`)
+            .groupBy(ttsConversions.voice);
+          
+          const baseVoices = baseVoiceDetails.map(r => ({
+            name: r.voice,
+            displayName: r.voice === 'thiha' ? 'Thiha (Male)' : 'Nilar (Female)',
+            count: r.count,
+            chars: Number(r.chars),
+            durationMs: Number(r.duration),
+          }));
+
+          // Character voices with details
+          const charDetails = await db
+            .select({
+              character: ttsConversions.character,
+              voice: ttsConversions.voice,
+              count: count(),
+              chars: sql`COALESCE(SUM(char_count), 0)`,
+              duration: sql`COALESCE(SUM(duration_ms), 0)`,
+            })
+            .from(ttsConversions)
+            .where(sql`character IS NOT NULL AND character != ''`)
+            .groupBy(ttsConversions.character, ttsConversions.voice);
+          
+          const characters = charDetails.map(r => ({
+            key: r.character,
+            displayName: r.character,
+            base: r.voice || 'thiha',
+            baseDisplayName: r.voice === 'nilar' ? 'Nilar' : 'Thiha',
+            count: r.count,
+            chars: Number(r.chars),
+            durationMs: Number(r.duration),
+          }));
 
           return {
-            voices,
+            voices: voices.map(v => ({ name: v.voice, count: v.count })),
             features,
             baseVoices,
             characters,
             total: totalRow?.count || 0,
-            totalChars: totalRow?.chars || 0,
-            totalDurationMs: totalRow?.duration || 0,
+            totalChars: Number(totalRow?.chars) || 0,
+            totalDurationMs: Number(totalRow?.duration) || 0,
           };
         } catch (e) {
           console.error("[getVoiceStats Error]", e);
@@ -965,42 +1011,128 @@ export const appRouter = t.router({
     }),
     onlineUsers: adminProcedure.query(async () => {
       const db = await getDb();
-      if (!db) return { count: 0 };
+      if (!db) return { onlineCount: 0 };
       try {
         const [row] = await db
           .select({ count: count() })
           .from(users)
-          .where(sql`last_login_at > DATE_SUB(NOW(), INTERVAL 5 MINUTE)`);
-        return { count: row?.count || 0 };
+          .where(sql`last_login_at > DATE_SUB(NOW(), INTERVAL 15 MINUTE)`);
+        return { onlineCount: row?.count || 0 };
       } catch {
-        return { count: 0 };
+        return { onlineCount: 0 };
       }
     }),
     getUserDetail: adminProcedure
       .input(z.object({ userId: z.string() }))
       .query(async ({ input }) => {
         const db = await getDb();
-        if (!db) return { user: null, history: [], subscription: null };
+        const empty = {
+          totalGens: 0, recentGens: 0, totalChars: 0, totalDurationMs: 0,
+          statusBreakdown: { success: 0, fail: 0 },
+          features: [], voices: [], activeHours: [], daily: [], recentLogs: [],
+          subscription: null as any,
+        };
+        if (!db) return empty;
         try {
-          const [user] = await db
-            .select()
-            .from(users)
-            .where(eq(users.id, input.userId))
-            .limit(1);
-          const history = await db
+          // 30-day stats
+          const [stats30] = await db
+            .select({ count: count(), chars: sql`COALESCE(SUM(char_count),0)`, duration: sql`COALESCE(SUM(duration_ms),0)` })
+            .from(ttsConversions)
+            .where(sql`user_id = ${input.userId} AND created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)`);
+          
+          // 7-day stats
+          const [stats7] = await db
+            .select({ count: count() })
+            .from(ttsConversions)
+            .where(sql`user_id = ${input.userId} AND created_at > DATE_SUB(NOW(), INTERVAL 7 DAY)`);
+          
+          // Success/Fail breakdown
+          const statusRows = await db
+            .select({ status: sql`COALESCE(status, 'success')`, count: count() })
+            .from(ttsConversions)
+            .where(sql`user_id = ${input.userId} AND created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)`)
+            .groupBy(sql`COALESCE(status, 'success')`);
+          
+          const statusBreakdown: any = { success: 0, fail: 0 };
+          statusRows.forEach((r: any) => {
+            if (r.status === 'fail') statusBreakdown.fail = r.count;
+            else statusBreakdown.success = r.count;
+          });
+          
+          // Feature breakdown
+          const featureRows = await db
+            .select({ feature: sql`COALESCE(feature, 'tts')`, count: count() })
+            .from(ttsConversions)
+            .where(sql`user_id = ${input.userId} AND created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)`)
+            .groupBy(sql`COALESCE(feature, 'tts')`);
+          const features = featureRows.map((r: any) => ({ feature: r.feature, count: r.count }));
+          
+          // Voice/character breakdown
+          const voiceRows = await db
+            .select({ name: sql`COALESCE(character, voice, 'unknown')`, count: count() })
+            .from(ttsConversions)
+            .where(sql`user_id = ${input.userId} AND created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)`)
+            .groupBy(sql`COALESCE(character, voice, 'unknown')`);
+          const voices = voiceRows.map((r: any) => ({ name: String(r.name), count: r.count }));
+          
+          // Active hours
+          const hourRows = await db
+            .select({ hour: sql`HOUR(created_at)`, count: count() })
+            .from(ttsConversions)
+            .where(sql`user_id = ${input.userId} AND created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)`)
+            .groupBy(sql`HOUR(created_at)`);
+          const activeHours = hourRows.map((r: any) => ({ hour: Number(r.hour), count: r.count }));
+          
+          // Daily breakdown
+          const dailyRows = await db
+            .select({ date: sql`DATE(created_at)`, count: count() })
+            .from(ttsConversions)
+            .where(sql`user_id = ${input.userId} AND created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)`)
+            .groupBy(sql`DATE(created_at)`)
+            .orderBy(sql`DATE(created_at)`);
+          const daily = dailyRows.map((r: any) => ({ date: String(r.date), count: r.count }));
+          
+          // Recent logs
+          const recentLogs = await db
             .select()
             .from(ttsConversions)
             .where(eq(ttsConversions.userId, input.userId))
             .orderBy(desc(ttsConversions.createdAt))
-            .limit(50);
+            .limit(20);
+          
+          // Subscription
           const [sub] = await db
             .select()
             .from(subscriptions)
-            .where(eq(subscriptions.userId, input.userId))
+            .where(sql`user_id = ${input.userId} AND expires_at > NOW()`)
             .limit(1);
-          return { user: user || null, history, subscription: sub || null };
-        } catch {
-          return { user: null, history: [], subscription: null };
+          
+          return {
+            totalGens: stats30?.count || 0,
+            recentGens: stats7?.count || 0,
+            totalChars: Number(stats30?.chars) || 0,
+            totalDurationMs: Number(stats30?.duration) || 0,
+            statusBreakdown,
+            features,
+            voices,
+            activeHours,
+            daily,
+            recentLogs: recentLogs.map((l: any) => ({
+              id: l.id,
+              feature: l.feature,
+              voice: l.voice,
+              character: l.character,
+              charCount: l.charCount,
+              durationMs: l.durationMs,
+              status: l.status || 'success',
+              errorMsg: l.errorMsg,
+              createdAt: l.createdAt,
+            })),
+            subscription: sub || null,
+          };
+        } catch (e) {
+          console.error('[getUserDetail Error]', e);
+          return empty;
         }
       }),
     resolveError: adminProcedure
