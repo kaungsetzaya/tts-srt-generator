@@ -449,6 +449,15 @@ export default function AdminDashboard() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("kpay");
   const [transactionId, setTransactionId] = useState("");
   const [showSubModal, setShowSubModal] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    confirmText?: string;
+    cancelText?: string;
+    variant?: "danger" | "warning" | "info";
+  }>({ show: false, title: "", message: "", onConfirm: () => {} });
   const [autoTrialEnabled, setAutoTrialEnabled] = useState(true);
   const [autoTrialDays, setAutoTrialDays] = useState(7);
   const [timeframe, setTimeframe] = useState<TimeFrame>("month");
@@ -1195,8 +1204,15 @@ export default function AdminDashboard() {
                             {user.subscription && (
                               <button
                                 onClick={() => {
-                                  if (confirm("Cancel subscription?"))
-                                    cancelSub.mutate({ userId: user.id });
+                                  setConfirmModal({
+                                    show: true,
+                                    title: "Cancel Subscription",
+                                    message:
+                                      "Are you sure you want to cancel this user's subscription? This action cannot be undone.",
+                                    variant: "danger",
+                                    onConfirm: () =>
+                                      cancelSub.mutate({ userId: user.id }),
+                                  });
                                 }}
                                 className="text-xs px-2 py-1 border border-red-500/50 text-red-400 hover:bg-red-500/20 rounded-lg transition-all"
                               >
@@ -1205,15 +1221,20 @@ export default function AdminDashboard() {
                             )}
                             <button
                               onClick={() => {
-                                if (
-                                  confirm(
-                                    isBanned ? "Unban user?" : "Ban user?"
-                                  )
-                                )
-                                  banUser.mutate({
-                                    userId: user.id,
-                                    ban: !isBanned,
-                                  });
+                                setConfirmModal({
+                                  show: true,
+                                  title: isBanned ? "Unban User" : "Ban User",
+                                  message: isBanned
+                                    ? "Are you sure you want to unban this user? They will regain access to the platform."
+                                    : "Are you sure you want to ban this user? They will lose access to the platform immediately.",
+                                  variant: isBanned ? "info" : "warning",
+                                  confirmText: isBanned ? "Unban" : "Ban",
+                                  onConfirm: () =>
+                                    banUser.mutate({
+                                      userId: user.id,
+                                      ban: !isBanned,
+                                    }),
+                                });
                               }}
                               className={`flex items-center gap-1 text-xs px-2 py-1 border rounded-lg transition-all ${isBanned ? "border-green-500/50 text-green-400 hover:bg-green-500/20" : "border-orange-500/50 text-orange-400 hover:bg-orange-500/20"}`}
                             >
@@ -1231,12 +1252,15 @@ export default function AdminDashboard() {
                             </button>
                             <button
                               onClick={() => {
-                                if (
-                                  confirm(
-                                    `Delete user "${displayName}" (@${username})? This will permanently remove their account, subscriptions, and all generation history. They can rejoin via /start with a new code.`
-                                  )
-                                )
-                                  deleteUser.mutate({ userId: user.id });
+                                setConfirmModal({
+                                  show: true,
+                                  title: "Delete User",
+                                  message: `Delete user "${displayName}" (@${username})? This will permanently remove their account, subscriptions, and all generation history. This action cannot be undone.`,
+                                  variant: "danger",
+                                  confirmText: "Delete",
+                                  onConfirm: () =>
+                                    deleteUser.mutate({ userId: user.id }),
+                                });
                               }}
                               className="flex items-center gap-1 text-xs px-2 py-1 border border-red-600/50 text-red-500 hover:bg-red-600/20 rounded-lg transition-all"
                             >
@@ -2149,6 +2173,88 @@ export default function AdminDashboard() {
                   Cancel
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmModal.show && (
+        <div
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+          onClick={() => setConfirmModal({ ...confirmModal, show: false })}
+        >
+          <div
+            className="border rounded-2xl p-6 w-full max-w-md m-4"
+            style={{
+              background: cardBg,
+              borderColor: border,
+              boxShadow: `0 20px 60px rgba(0,0,0,0.5)`,
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              {confirmModal.variant === "danger" ? (
+                <AlertTriangle
+                  className="w-6 h-6"
+                  style={{ color: "#ef4444" }}
+                />
+              ) : confirmModal.variant === "warning" ? (
+                <AlertTriangle
+                  className="w-6 h-6"
+                  style={{ color: "#f59e0b" }}
+                />
+              ) : (
+                <Info className="w-6 h-6" style={{ color: C }} />
+              )}
+              <h3
+                className="font-bold uppercase tracking-wider text-lg"
+                style={{
+                  color:
+                    confirmModal.variant === "danger"
+                      ? "#ef4444"
+                      : confirmModal.variant === "warning"
+                        ? "#f59e0b"
+                        : C,
+                }}
+              >
+                {confirmModal.title}
+              </h3>
+            </div>
+            <p
+              className="text-sm opacity-80 mb-6 leading-relaxed"
+              style={{ color: "var(--foreground)" }}
+            >
+              {confirmModal.message}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  confirmModal.onConfirm();
+                  setConfirmModal({ ...confirmModal, show: false });
+                }}
+                className="flex-1 py-2.5 font-bold uppercase text-sm rounded-xl transition-all"
+                style={{
+                  background:
+                    confirmModal.variant === "danger"
+                      ? "#ef4444"
+                      : confirmModal.variant === "warning"
+                        ? "#f59e0b"
+                        : C,
+                  color: "#fff",
+                }}
+              >
+                {confirmModal.confirmText || "Confirm"}
+              </button>
+              <button
+                onClick={() =>
+                  setConfirmModal({ ...confirmModal, show: false })
+                }
+                className="flex-1 py-2.5 border font-bold uppercase text-sm hover:opacity-70 rounded-xl transition-all"
+                style={{ borderColor: border }}
+              >
+                {confirmModal.cancelText || "Cancel"}
+              </button>
             </div>
           </div>
         </div>
