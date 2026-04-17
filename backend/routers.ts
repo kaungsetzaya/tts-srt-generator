@@ -701,7 +701,7 @@ export const appRouter = t.router({
           .limit(1);
 
         if (existingSubs.length > 0) {
-          // Extend existing subscription
+          // Extend existing subscription (no new credits)
           const existing = existingSubs[0];
           const currentExpires = new Date(existing.expiresAt!);
           const newExpires = new Date(
@@ -716,7 +716,7 @@ export const appRouter = t.router({
             })
             .where(eq(subscriptions.id, existing.id));
         } else {
-          // Create new subscription
+          // Create new subscription and add credits
           await db.insert(subscriptions).values({
             id: randomUUID(),
             userId: input.userId,
@@ -725,27 +725,27 @@ export const appRouter = t.router({
             expiresAt: new Date(Date.now() + input.days * 86400000),
             note: input.note,
           });
-        }
 
-        // Add credits to user
-        const [user] = await db
-          .select()
-          .from(users)
-          .where(eq(users.id, input.userId))
-          .limit(1);
-        if (user) {
-          const currentCredits = user.credits ?? 0;
-          await db
-            .update(users)
-            .set({ credits: currentCredits + creditsToAdd })
-            .where(eq(users.id, input.userId));
-          await db.insert(creditTransactions).values({
-            id: randomUUID(),
-            userId: input.userId,
-            amount: creditsToAdd,
-            type: "subscription",
-            description: `Subscribe: ${input.plan} plan`,
-          });
+          // Add credits to user only for new subscriptions
+          const [user] = await db
+            .select()
+            .from(users)
+            .where(eq(users.id, input.userId))
+            .limit(1);
+          if (user) {
+            const currentCredits = user.credits ?? 0;
+            await db
+              .update(users)
+              .set({ credits: currentCredits + creditsToAdd })
+              .where(eq(users.id, input.userId));
+            await db.insert(creditTransactions).values({
+              id: randomUUID(),
+              userId: input.userId,
+              amount: creditsToAdd,
+              type: "subscription",
+              description: `Subscribe: ${input.plan} plan`,
+            });
+          }
         }
 
         return { success: true };
@@ -759,6 +759,25 @@ export const appRouter = t.router({
           .update(subscriptions)
           .set({ expiresAt: new Date() })
           .where(eq(subscriptions.userId, input.userId));
+        // Clear user's credits when subscription is cancelled
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, input.userId))
+          .limit(1);
+        if (user && user.credits && user.credits > 0) {
+          await db
+            .update(users)
+            .set({ credits: 0 })
+            .where(eq(users.id, input.userId));
+          await db.insert(creditTransactions).values({
+            id: randomUUID(),
+            userId: input.userId,
+            amount: -user.credits,
+            type: "subscription_cancelled",
+            description: "Subscription cancelled - credits cleared",
+          });
+        }
         return { success: true };
       }),
     setRole: adminProcedure
