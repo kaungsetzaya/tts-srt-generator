@@ -448,7 +448,7 @@ export default function AdminDashboard() {
   const [search, setSearch] = useState("");
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<Plan>("starter");
-  const [trialDays, setTrialDays] = useState(3);
+  const [trialDays, setTrialDays] = useState(30);
   const [note, setNote] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("kpay");
   const [transactionId, setTransactionId] = useState("");
@@ -1984,20 +1984,19 @@ export default function AdminDashboard() {
                   ))}
                 </div>
               </div>
-              {selectedPlan === "trial" && (
-                <div>
-                  <label className="text-xs uppercase tracking-wider opacity-70 block mb-2">
-                    Trial Days
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={365}
-                    value={trialDays}
-                    onChange={e => setTrialDays(Number(e.target.value))}
-                    className="w-full border p-2 text-sm focus:outline-none text-center font-bold rounded-lg"
-                    style={{
-                      background: "rgba(0,0,0,0.4)",
+              <div>
+                <label className="text-xs uppercase tracking-wider opacity-70 block mb-2">
+                  Duration (Days) — {PLAN_LABELS[selectedPlan]} defaults to {selectedPlan === "trial" ? "3" : selectedPlan === "starter" ? "30" : selectedPlan === "creator" ? "90" : "180"}d
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={3650}
+                  value={trialDays}
+                  onChange={e => setTrialDays(Number(e.target.value))}
+                  className="w-full border p-2 text-sm focus:outline-none text-center font-bold rounded-lg"
+                  style={{
+                    background: "rgba(0,0,0,0.4)",
                       borderColor: border,
                       color: C,
                     }}
@@ -2152,13 +2151,7 @@ export default function AdminDashboard() {
                       days:
                         selectedPlan === "trial"
                           ? trialDays
-                          : selectedPlan === "starter"
-                            ? 30
-                            : selectedPlan === "creator"
-                              ? 90
-                              : selectedPlan === "pro"
-                                ? 180
-                                : 999999,
+                          : trialDays || Math.ceil((selectedPlan === "starter" ? 1 : selectedPlan === "creator" ? 3 : 6) * 30.44),
                       note:
                         `${transactionId ? `TXN: ${transactionId}` : ""}${note ? ` | ${note}` : ""}`.trim() ||
                         undefined,
