@@ -726,11 +726,11 @@ export const appRouter = t.router({
     }),
     getServerHealth: adminProcedure.query(async () => {
       const mem = process.memoryUsage();
-      const fs = require('fs');
+      const { execSync } = await import('child_process');
       let disk = "—";
       try {
-        const stat = fs.statSync('/');
-        disk = `${Math.round(mem.rss / 1024 / 1024)}MB used`;
+        const df = execSync('df -h / | tail -1 | awk \'{print $3}\'').toString().trim();
+        disk = df || "—";
       } catch {}
       return {
         uptime: process.uptime(),
