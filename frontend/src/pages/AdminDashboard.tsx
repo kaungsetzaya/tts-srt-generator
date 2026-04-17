@@ -1875,7 +1875,9 @@ export default function AdminDashboard() {
                             />
                           </div>
                           <div className="flex items-center gap-4 mt-2 text-xs opacity-40">
-                            <span>{ch.chars.toLocaleString()} characters</span>
+                            <span>
+                              {(ch.chars ?? 0).toLocaleString()} characters
+                            </span>
                             <span>{fmtMs(ch.durationMs)} audio</span>
                           </div>
                         </div>
