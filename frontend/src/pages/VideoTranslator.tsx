@@ -123,7 +123,7 @@ export default function VideoTranslator() {
             className="w-full py-4 font-black uppercase tracking-widest flex items-center justify-center gap-3 disabled:opacity-50 transition-all rounded-xl"
             style={{ background: isLoading ? "rgba(192,111,48,0.4)" : C }}>
             {isLoading ? (
-              <><Loader2 className="w-5 h-5 animate-spin" /> Processing... (1-3 minutes)</>
+              <><Loader2 className="w-5 h-5 animate-spin" /> Translating...</>
             ) : (
               <><Languages className="w-5 h-5" /> Translate to Myanmar</>
             )}
@@ -139,7 +139,7 @@ export default function VideoTranslator() {
               <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: C, animationDelay: "0.6s" }} />
             </div>
             <p className="text-sm font-bold opacity-60">Translating your video...</p>
-            <p className="text-xs opacity-40 mt-2">This may take 1-3 minutes depending on video length</p>
+            <p className="text-xs opacity-40 mt-2">Please wait</p>
           </div>
         )}
 

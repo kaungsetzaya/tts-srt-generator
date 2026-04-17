@@ -119,7 +119,7 @@ export default function Landing() {
 
   return (
     <div
-      className="min-h-screen relative overflow-x-hidden transition-colors duration-500"
+      className="min-h-screen relative overflow-x-hidden transition-colors duration-500 dark"
       style={{ background: C.bg, color: C.cream, perspective: "1200px" }}
     >
       {/* Ambient glow blobs */}

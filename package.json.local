@@ -1,0 +1,6 @@
+{
+  "name": "tts-srt-generator-local",
+  "imports": {
+    "@shared/*": "./dist/shared/*.js"
+  }
+}

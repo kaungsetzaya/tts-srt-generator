@@ -172,3 +172,88 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
         await fs.unlink(tempAudioPath).catch(() => {});
     }
 }
+
+// ------------------ Job Processor Registration ------------------
+import { registerProcessor, updateJob } from "./jobs";
+import { getDb } from "./db";
+import { users } from "../drizzle/schema";
+import { eq, sql } from "drizzle-orm";
+
+registerProcessor("translate_file", async (job) => {
+    const { videoBase64, filename, userId } = job.input;
+    
+    updateJob(job.id, { progress: 20, message: "Extracting audio..." });
+    
+    try {
+        const buffer = Buffer.from(videoBase64, "base64");
+        const result = await translateVideo(buffer, filename);
+        
+        updateJob(job.id, { 
+            status: "completed", 
+            progress: 100, 
+            result,
+            message: "Done"
+        });
+    } catch (error: any) {
+        // Refund credits on failure
+        if (userId) {
+            try {
+                const db = await getDb();
+                if (db) {
+                    // Add back credits
+                    await db.update(users)
+                        .set({ credits: sql`credits + ${5}` })
+                        .where(eq(users.id, userId));
+                    console.log(`[Translate] Refunded 5 credits to user ${userId}`);
+                }
+            } catch (refundErr) {
+                console.error("[Translate] Refund failed:", refundErr);
+            }
+        }
+        
+        updateJob(job.id, { 
+            status: "failed", 
+            error: error.message || "Translation failed",
+            message: "Failed"
+        });
+    }
+});
+
+// Register processor for URL translation
+registerProcessor("translate_link", async (job) => {
+    const { url, userId } = job.input;
+    
+    updateJob(job.id, { progress: 20, message: "Downloading video..." });
+    
+    try {
+        const result = await translateVideoLink(url);
+        
+        updateJob(job.id, { 
+            status: "completed", 
+            progress: 100, 
+            result,
+            message: "Done"
+        });
+    } catch (error: any) {
+        // Refund credits on failure
+        if (userId) {
+            try {
+                const db = await getDb();
+                if (db) {
+                    await db.update(users)
+                        .set({ credits: sql`credits + ${5}` })
+                        .where(eq(users.id, userId));
+                    console.log(`[Translate Link] Refunded 5 credits to user ${userId}`);
+                }
+            } catch (refundErr) {
+                console.error("[Translate Link] Refund failed:", refundErr);
+            }
+        }
+        
+        updateJob(job.id, { 
+            status: "failed", 
+            error: error.message || "Translation failed",
+            message: "Failed"
+        });
+    }
+});

@@ -10,8 +10,47 @@ import type { TrpcContext } from "./_core/context";
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(cors());
-app.use(express.json());
+// Security Headers
+app.use((req, res, next) => {
+  // Content-Security-Policy - Restrict content sources
+  res.setHeader("Content-Security-Policy", 
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+    "font-src 'self' https://fonts.gstatic.com; " +
+    "img-src 'self' data: https: blob:; " +
+    "media-src 'self' blob: https:; " +
+    "connect-src 'self' https://generativelanguage.googleapis.com https://choco.de5.net https://*.vercel.app; " +
+    "frame-src 'self' https://www.youtube.com https://youtube.com; " +
+    "frame-ancestors 'none';"
+  );
+  
+  // Strict-Transport-Security - Enforce HTTPS
+  res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  
+  // X-Frame-Options - Prevent clickjacking
+  res.setHeader("X-Frame-Options", "DENY");
+  
+  // X-Content-Type-Options - Prevent MIME-sniffing
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  
+  // X-XSS-Protection - Enable browser XSS filter
+  res.setHeader("X-XSS-Protection", "1; mode=block");
+  
+  // Referrer-Policy
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  
+  // Permissions-Policy
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  
+  next();
+});
+
+app.use(cors({
+  origin: true,
+  credentials: true,
+}));
+app.use(express.json({ limit: "10mb" }));
 
 // Serve static files from the 'static' directory
 app.use("/static", express.static(path.join(process.cwd(), "static")));

@@ -108,7 +108,7 @@ const T = {
     tabs: {
       tts: "စာမှအသံ",
       video: "ဗီဒီယိုဘာသာပြန်",
-      dubbing: "AI Video",
+      dubbing: "Auto Creator",
       settings: "ဆက်တင်",
       history: "မှတ်တမ်း",
       plan: "Plan",
@@ -144,7 +144,7 @@ const T = {
     linkPlaceholder: "https://youtube.com/...",
     orLine: "သို့မဟုတ်",
     translateBtn: "မြန်မာဘာသာပြန်မည်",
-    translating: "ဘာသာပြန်နေသည်... (၁-၃ မိနစ် ကြာနိုင်)",
+    translating: "ဘာသာပြန်နေသည်...",
     result: "ဘာသာပြန်ရလဒ်",
     translateAnother: "နောက်ထပ် ဗီဒီယိုဘာသာပြန်မည်",
     settingsTitle: "ဆက်တင်များ",
@@ -164,7 +164,7 @@ const T = {
     tabs: {
       tts: "TTS",
       video: "Translate",
-      dubbing: "AI Video",
+      dubbing: "Auto Creator",
       settings: "Settings",
       history: "History",
       plan: "Plan",
@@ -200,7 +200,7 @@ const T = {
     linkPlaceholder: "https://youtube.com/...",
     orLine: "OR",
     translateBtn: "Translate to Myanmar",
-    translating: "Processing... (may take 1-3 minutes)",
+    translating: "Translating...",
     result: "Translation Result",
     translateAnother: "Translate Another Video",
     settingsTitle: "Settings",
@@ -305,7 +305,7 @@ export default function TTSGenerator() {
 
   // Dubbing SRT overlay settings
   const [srtEnabled, setSrtEnabled] = useState(true);
-  const [srtFontSize, setSrtFontSize] = useState(12);
+  const [srtFontSize, setSrtFontSize] = useState(24); // Better for Burmese text
   const [srtColor, setSrtColor] = useState("#ffffff");
   const [srtDropShadow, setSrtDropShadow] = useState(true);
   const [srtBlurBg, setSrtBlurBg] = useState(true);
@@ -391,17 +391,16 @@ export default function TTSGenerator() {
   const accentSecondary = "#F4B34F";
   const deepRed = "#861C1C";
   const peach = "#ECCEB6";
-  const cream = "#E8E3CF";
+  const cream = "#EBE6D8";
   const darkBrown = "#2B1D1C";
-  const subColor = isAdmin
-    ? accent
-    : daysLeft === null
-      ? accent
-      : daysLeft > 14
-        ? "#16a34a"
-        : daysLeft > 4
-          ? "#ea580c"
-          : deepRed;
+  const subColor = accent;
+
+  // Premium color scheme for light mode - Modern Slate
+  const lightBg = "#F8FAFC";
+  const lightCardBg = "#FFFFFF";
+  const lightCardBorder = "#E2E8F0";
+  const lightText = "#1E293B";
+  const lightSubtext = "#64748B";
 
   // Helper: hex color + opacity → 8-digit hex
   const withOpacity = (color: string, opacity: number) => {
@@ -470,19 +469,19 @@ export default function TTSGenerator() {
     }
   }, [generatedFiles?.audioObjectUrl]);
 
-  // Light theme: Warm Cream, Dark: Deep Dark
+  // Light theme: Premium Modern, Dark: Deep Dark
   const bgGradient = isDark
     ? "linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%)"
-    : "linear-gradient(135deg, #E8E3CF 0%, #f5f0e5 50%, #E8E3CF 100%)";
+    : "linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 50%, #E2E8F0 100%)";
 
-  // Card backgrounds — light uses soft white glass on Canvas Cloud
+  // Card backgrounds — light uses soft white glass
   const cardBg = isDark ? "rgba(15,15,15,0.85)" : "rgba(255,255,255,0.95)";
-  const cardBorder = isDark ? "rgba(192,111,48,0.2)" : "rgba(244,179,79,0.12)";
-  const textColor = isDark ? "#EBE6D8" : "#2B1D1C";
-  const subtextColor = isDark ? "rgba(236,206,182,0.7)" : "#6b5c50";
-  const labelBg = isDark ? "rgba(192,111,48,0.15)" : "rgba(192,111,48,0.15)";
-  const inputBg = isDark ? "rgba(15,15,15,0.6)" : "rgba(255,255,255,0.95)";
-  const inputBorder = isDark ? "rgba(192,111,48,0.2)" : "rgba(192,111,48,0.18)";
+  const cardBorder = isDark ? "rgba(192,111,48,0.2)" : "rgba(148,163,184,0.2)";
+  const textColor = isDark ? "#EBE6D8" : "#1E293B";
+  const subtextColor = isDark ? "rgba(236,206,182,0.7)" : "#64748B";
+  const labelBg = isDark ? "rgba(192,111,48,0.15)" : "rgba(255,255,255,0.95)";
+  const inputBg = isDark ? "rgba(15,15,15,0.6)" : "#FFFFFF";
+  const inputBorder = isDark ? "rgba(192,111,48,0.2)" : "rgba(148,163,184,0.3)";
 
   const box =
     "relative border p-4 md:p-5 pt-8 backdrop-blur-xl transition-all duration-300 rounded-2xl mt-6";
@@ -859,12 +858,8 @@ export default function TTSGenerator() {
     });
   };
 
-  // Determine if the nav should be sticky
-  const shouldNavStick = useMemo(() => {
-    if (mainTab === "tts" && text.trim()) return true;
-    if (mainTab === "dubbing" && dubPreviewUrl && !dubResult) return true;
-    return false;
-  }, [mainTab, text, dubPreviewUrl, dubResult]);
+  // Determine if the nav should be sticky - make it always sticky for better UX
+  const shouldNavStick = true;
 
   return (
     <TTSGeneratorLayout
@@ -874,6 +869,8 @@ export default function TTSGenerator() {
       mainTab={mainTab}
       setMainTab={setMainTab}
       isDark={isDark}
+      lang={lang}
+      setLang={setLang}
     >
       <div
         className="h-full relative transition-colors duration-500 font-sans"
@@ -943,7 +940,7 @@ export default function TTSGenerator() {
 
         {/* ═══ TOP CONTROLS BAR ═══ */}
         <div
-          className={`${shouldNavStick ? "sticky top-0" : ""} z-50 backdrop-blur-2xl border-b flex items-center justify-between px-4 sm:px-6 py-2.5 w-full`}
+          className={`${shouldNavStick ? "sticky top-0" : ""} z-50 backdrop-blur-2xl border-b flex items-center justify-between py-2 sm:py-2.5 w-full`}
           style={{
             borderColor: isDark
               ? "rgba(192,111,48,0.15)"
@@ -959,49 +956,56 @@ export default function TTSGenerator() {
           <div className="flex items-center gap-1.5 sm:gap-2 ml-auto">
             {/* Premium Subscription Bar */}
             <div
-              className="hidden md:flex items-center gap-3 px-3 py-1.5 rounded-lg text-xs font-medium"
+              className="hidden md:flex items-center gap-4 px-4 py-2 rounded-xl text-xs font-semibold relative overflow-hidden"
               style={{
                 background: hasActiveSub 
-                  ? "linear-gradient(135deg, rgba(139,92,246,0.15) 0%, rgba(59,130,246,0.1) 100%)"
+                  ? "linear-gradient(135deg, rgba(192,111,48,0.25) 0%, rgba(244,179,79,0.15) 50%, rgba(192,111,48,0.25) 100%)"
                   : isDark 
                     ? "rgba(75,85,99,0.3)" 
                     : "rgba(229,231,235,0.5)",
-                border: `1px solid ${hasActiveSub ? "rgba(139,92,246,0.3)" : "rgba(156,163,175,0.3)"}`,
+                border: `1px solid ${hasActiveSub ? "rgba(244,179,79,0.5)" : "rgba(156,163,175,0.3)"}`,
               }}
             >
+              {hasActiveSub && (
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" style={{ animationDuration: "2s" }} />
+              )}
               {hasActiveSub ? (
                 <>
-                  <span 
-                    className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide"
-                    style={{
-                      background: "linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%)",
-                      color: "#fff",
-                    }}
-                  >
-                    {subStatus?.plan === "trial" ? (lang === "mm" ? "အစမ်း" : "Trial") : subStatus?.plan}
-                  </span>
-                  <span style={{ color: isDark ? "#9CA3AF" : "#4B5563" }}>
-                    {daysLeft !== null ? `${daysLeft}d left` : ""}
-                  </span>
-                  <div className="flex-1 h-1.5 max-w-[80px] rounded-full overflow-hidden" style={{ background: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)" }}>
-                    <div 
-                      className="h-full rounded-full transition-all"
+                  <div className="relative z-10 flex items-center gap-2">
+                    <span 
+                      className="px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider"
                       style={{
-                        width: `${Math.min(100, ((subStatus?.credits ?? 0) / (planLimits?.maxCredits ?? 800)) * 100)}%`,
-                        background: "linear-gradient(90deg, #8B5CF6, #6366F1)",
+                        background: "linear-gradient(135deg, #C06F30 0%, #F4B34F 100%)",
+                        color: "#fff",
+                        boxShadow: "0 2px 8px rgba(192,111,48,0.4)",
+                      }}
+                    >
+                      {subStatus?.plan === "trial" ? (lang === "mm" ? "အစမ်း" : "Trial") : subStatus?.plan}
+                    </span>
+                  </div>
+                  <div className="relative z-10 flex-1 h-2 max-w-[100px] rounded-full overflow-hidden" style={{ background: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.1)" }}>
+                    <motion.div 
+                      className="h-full rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min(100, ((subStatus?.credits ?? 0) / (planLimits?.maxCredits ?? 800)) * 100)}%` }}
+                      transition={{ duration: 0.8, ease: "easeOut" }}
+                      style={{
+                        background: "linear-gradient(90deg, #C06F30, #F4B34F, #FCD34D)",
+                        boxShadow: "0 0 10px rgba(244,179,79,0.5)",
                       }}
                     />
                   </div>
-                  <span style={{ color: isDark ? "#D1D5DB" : "#374151" }}>
-                    {subStatus?.credits ?? 0} credits
-                  </span>
+                  <div className="relative z-10 flex items-center gap-2 font-bold" style={{ color: isDark ? "#F4B34F" : "#B45309" }}>
+                    <span>{subStatus?.credits ?? 0}</span>
+                    <span className="text-xs opacity-70 uppercase">credits</span>
+                  </div>
                 </>
               ) : (
                 <>
-                  <span style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
+                  <span className="relative z-10 text-sm font-medium" style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
                     {me ? (lang === "mm" ? "အမျိုးသမီး" : "Free") : ""}
                   </span>
-                  <div className="flex-1 h-1.5 max-w-[80px] rounded-full overflow-hidden" style={{ background: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)" }}>
+                  <div className="relative z-10 flex-1 h-2 max-w-[100px] rounded-full overflow-hidden" style={{ background: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)" }}>
                     <div 
                       className="h-full rounded-full"
                       style={{
@@ -1010,7 +1014,7 @@ export default function TTSGenerator() {
                       }}
                     />
                   </div>
-                  <span style={{ color: isDark ? "#6B7280" : "#9CA3AF" }}>
+                  <span className="relative z-10" style={{ color: isDark ? "#6B7280" : "#9CA3AF" }}>
                     {subStatus?.credits ?? 0}
                   </span>
                 </>
@@ -1093,14 +1097,14 @@ export default function TTSGenerator() {
           </div>
         </div>
 
-        <div className="relative z-10 px-3 sm:px-4 py-6 sm:py-8 md:py-10 max-w-7xl mx-auto">
+        <div className="relative z-10 py-3 sm:py-4 md:py-5 pt-12 sm:pt-14 md:pt-16">
           {/* Main Tab Content - Only show when no secondary tab is active */}
           {!secondaryTab && (
             <>
               {/* === TTS TAB === */}
               {mainTab === "tts" && (
                 <div className="animate-in fade-in zoom-in-95 duration-300">
-                  <div className="mb-4 sm:mb-6 relative text-center py-2">
+                  <div className="mb-2 sm:mb-4 relative text-center py-1">
                     <h1
                       className="text-2xl sm:text-3xl md:text-5xl font-black uppercase tracking-wider sm:tracking-widest mb-2"
                       style={{ textShadow: "none", color: accent }}
@@ -1132,7 +1136,7 @@ export default function TTSGenerator() {
                       </div>
                     )}
                   </div>
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 max-w-6xl mx-auto">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 max-w-6xl mx-auto">
                     <div className="lg:col-span-2 space-y-2">
                       <div
                         className={box}
@@ -1373,7 +1377,7 @@ export default function TTSGenerator() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                         {[
                           {
                             label: t.tone,
@@ -1506,7 +1510,7 @@ export default function TTSGenerator() {
                           ))}
                         </div>
 
-                        <button
+                        <motion.button
                           onClick={handleGenerate}
                           disabled={
                             generateMutation.isPending ||
@@ -1514,24 +1518,47 @@ export default function TTSGenerator() {
                             !hasPlan ||
                             (!isAdmin && text.length > currentCharLimit)
                           }
-                          className="w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 rounded-2xl text-white font-black uppercase tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] shadow-lg text-sm sm:text-base"
+                          whileHover={{ scale: generateMutation.isPending ? 1 : 1.02 }}
+                          whileTap={{ scale: generateMutation.isPending ? 1 : 0.98 }}
+                          className="w-full relative overflow-hidden group flex items-center justify-center gap-3 py-4 sm:py-5 rounded-2xl text-white font-black uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                           style={{
                             background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`,
-                            boxShadow: `0 4px 12px rgba(0,0,0,0.15)`,
                           }}
                         >
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                           {generateMutation.isPending ? (
                             <>
-                              <Loader2 className="w-5 h-5 animate-spin" />
-                              {t.generating}
+                              <div className="relative flex items-center gap-2">
+                                <Loader2 className="w-6 h-6 animate-spin" />
+                                <div className="flex gap-1">
+                                  <div className="w-2 h-2 rounded-full bg-white animate-pulse" style={{ animationDelay: "0s" }} />
+                                  <div className="w-2 h-2 rounded-full bg-white animate-pulse" style={{ animationDelay: "0.2s" }} />
+                                  <div className="w-2 h-2 rounded-full bg-white animate-pulse" style={{ animationDelay: "0.4s" }} />
+                                </div>
+                              </div>
+                              <span className="relative z-10">{t.generating}</span>
                             </>
                           ) : (
                             <>
-                              <Volume2 className="w-5 h-5" />
-                              {t.generate}
+                              <div className="relative">
+                                <Volume2 className="w-6 h-6" />
+                                <div className="absolute -top-1 -right-1 w-2 h-2 bg-white rounded-full animate-ping" />
+                              </div>
+                              <span className="relative z-10">{t.generate}</span>
+                              <span 
+                                className="relative z-10 px-3 py-1.5 rounded-full text-[13px] font-black"
+                                style={{ 
+                                  background: "#fff", 
+                                  color: accent,
+                                  boxShadow: "0 2px 8px rgba(0,0,0,0.3)"
+                                }}
+                              >
+                                {voiceMode === "character" ? "3" : "1"} credits
+                              </span>
+                              <Sparkles className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                             </>
                           )}
-                        </button>
+                        </motion.button>
 
                         {generatedFiles && (
                           <div
@@ -1602,7 +1629,7 @@ export default function TTSGenerator() {
               {/* === VIDEO TAB — Simple Translation === */}
               {mainTab === "video" && (
                 <div className="max-w-xl mx-auto animate-in fade-in zoom-in-95 duration-300 space-y-4">
-                  <div className="text-center mb-4 sm:mb-6">
+                  <div className="text-center mb-2 sm:mb-4">
                     <h2
                       className="text-2xl sm:text-3xl md:text-4xl font-black uppercase tracking-wider sm:tracking-widest mb-2 leading-normal"
                       style={{ textShadow: "none", color: accent }}
@@ -1808,7 +1835,7 @@ export default function TTSGenerator() {
                             translateMutation.isPending ||
                             translateLinkMutation.isPending
                           }
-                          className="w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 rounded-2xl text-white font-black uppercase tracking-widest transition-all disabled:opacity-50 hover:scale-[1.02] mt-4 shadow-lg text-sm sm:text-base"
+                          className="w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 rounded-2xl text-white font-black uppercase tracking-widest transition-all disabled:opacity-50 hover:scale-[1.02] mt-4 shadow-lg text-sm sm:text-base relative"
                           style={{
                             background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`,
                             boxShadow: `0 4px 12px rgba(0,0,0,0.15)`,
@@ -1824,6 +1851,16 @@ export default function TTSGenerator() {
                             <>
                               <Sparkles className="w-5 h-5" />
                               {t.translateBtn}
+                              <span 
+                                className="px-3 py-1.5 rounded-full text-[13px] font-black"
+                                style={{ 
+                                  background: "#fff", 
+                                  color: accent,
+                                  boxShadow: "0 2px 8px rgba(0,0,0,0.3)"
+                                }}
+                              >
+                                5 credits
+                              </span>
                             </>
                           )}
                         </button>
@@ -1939,24 +1976,24 @@ export default function TTSGenerator() {
                 </div>
               )}
 
-              {/* === DUBBING TAB — AI Auto Video Maker === */}
+              {/* === DUBBING TAB — Auto Creator === */}
               {mainTab === "dubbing" && (
                 <div className="max-w-2xl mx-auto animate-in fade-in zoom-in-95 duration-300">
-                  <div className="text-center mb-4 sm:mb-6">
+                  <div className="text-center mb-2 sm:mb-4">
                     <h2
                       className="text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-wider sm:tracking-widest mb-2 leading-normal"
                       style={{ textShadow: "none", color: accent }}
                     >
                       {lang === "mm"
-                        ? "AI Auto Video Maker"
-                        : "AI Auto Video Maker"}
+                        ? "Auto Creator"
+                        : "Auto Creator"}
                     </h2>
                     <p
                       className="font-bold tracking-wider text-xs sm:text-sm mt-1"
                       style={{ color: subtextColor }}
                     >
                       {lang === "mm"
-                        ? "AI ဖြင့် Video ဖန်တီးခြင်း"
+                        ? "ဖြင့် Video ဖန်တီးခြင်း"
                         : "Create dubbed videos with AI"}
                     </p>
                     {!isAdmin && !hasPlan && me && !subLoading && (
@@ -2163,7 +2200,7 @@ export default function TTSGenerator() {
                   {/* ── STEP: Video Preview + Settings ── */}
                   {dubPreviewUrl && !dubResult && (
                     <div className="space-y-4">
-                      {/* Video Preview — Sticky at top */}
+                      {/* Video Preview — Sticky at top, always visible */}
                       <div
                         className={box}
                         style={{
@@ -2171,19 +2208,27 @@ export default function TTSGenerator() {
                           borderColor: cardBorder,
                           boxShadow,
                           position: "sticky",
-                          top: "70px",
-                          zIndex: 40,
+                          top: "60px",
+                          zIndex: 45,
                         }}
                       >
-                        <div
-                          className={labelStyle}
-                          style={{
-                            background: labelBg,
-                            color: accent,
-                            borderColor: cardBorder,
-                          }}
-                        >
-                          {lang === "mm" ? "ဗီဒီယိုကြိုကြည့်" : "Video Preview"}
+                        <div className="flex items-center justify-between">
+                          <div
+                            className={labelStyle}
+                            style={{
+                              background: labelBg,
+                              color: accent,
+                              borderColor: cardBorder,
+                            }}
+                          >
+                            {lang === "mm" ? "ဗီဒီယိုကြိုကြည့်" : "Video Preview"}
+                          </div>
+                          <button
+                            onClick={() => { setDubVideoUrl(""); setDubPreviewUrl(""); setDubVideoFile(null); }}
+                            className="text-xs px-2 py-1 rounded hover:bg-red-500/20 text-red-400"
+                          >
+                            ✕
+                          </button>
                         </div>
                         <div className="flex justify-center mt-2">
                           {/* Preview: spinner → blob video → info card → HTML5 video */}
@@ -3238,23 +3283,27 @@ export default function TTSGenerator() {
                       </div>
 
                       {/* Generate Dubbing Button */}
-                      <button
+                      <motion.button
                         onClick={handleDubGenerate}
                         disabled={
                           startDubMutation.isPending ||
                           activeJobId !== null ||
                           dubPreviewUrl === "loading"
                         }
-                        className="w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 rounded-2xl text-white font-black uppercase tracking-widest transition-all disabled:opacity-50 hover:scale-[1.02] mt-2 shadow-lg text-sm sm:text-base"
+                        whileHover={{ scale: startDubMutation.isPending || activeJobId !== null ? 1 : 1.02 }}
+                        whileTap={{ scale: startDubMutation.isPending || activeJobId !== null ? 1 : 0.98 }}
+                        className="w-full relative overflow-hidden group flex items-center justify-center gap-3 py-4 sm:py-5 rounded-2xl text-white font-black uppercase tracking-wider transition-all disabled:opacity-50 mt-2 text-sm sm:text-base"
                         style={{
                           background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`,
-                          boxShadow: `0 4px 12px rgba(0,0,0,0.15)`,
                         }}
                       >
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                         {startDubMutation.isPending || activeJobId !== null ? (
                           <>
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            <span className="text-xs sm:text-sm">
+                            <div className="relative">
+                              <Loader2 className="w-6 h-6 animate-spin" />
+                            </div>
+                            <span className="relative z-10 text-xs sm:text-sm">
                               {lang === "mm"
                                 ? "ဖန်တီးနေသည်... (၃-၅ မိနစ်)"
                                 : "Generating... (3-5 min)"}
@@ -3262,13 +3311,29 @@ export default function TTSGenerator() {
                           </>
                         ) : (
                           <>
-                            <Wand2 className="w-5 h-5" />
-                            {lang === "mm"
-                              ? "AI ဖြင့် ဖန်တီးမည်"
-                              : "Generate with AI"}
+                            <div className="relative">
+                              <Wand2 className="w-6 h-6" />
+                              <div className="absolute -top-1 -right-1 w-2 h-2 bg-white rounded-full animate-ping" />
+                            </div>
+                            <span className="relative z-10">
+                              {lang === "mm"
+                                ? "AI ဖြင့် ဖန်တီးမည်"
+                                : "Generate with AI"}
+                            </span>
+                            <span 
+                              className="relative z-10 px-3 py-1.5 rounded-full text-[13px] font-black"
+                              style={{ 
+                                background: "#fff", 
+                                color: accent,
+                                boxShadow: "0 2px 8px rgba(0,0,0,0.3)"
+                              }}
+                            >
+                              10 credits
+                            </span>
+                            <Sparkles className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                           </>
                         )}
-                      </button>
+                      </motion.button>
 
                       {(startDubMutation.isPending || activeJobId !== null) && (
                         <div
@@ -3371,7 +3436,7 @@ export default function TTSGenerator() {
                         >
                           {lang === "mm"
                             ? "AI ဖန်တီးပြီး ဗီဒီယို"
-                            : "AI Generated Video"}
+                            : "Auto Creator Generated Video"}
                         </div>
                         <div className="flex justify-center mt-2">
                           <div
@@ -3445,8 +3510,8 @@ export default function TTSGenerator() {
 
           {/* === SETTINGS TAB === */}
           {secondaryTab === "settings" && (
-            <div className="max-w-xl mx-auto py-4 sm:py-8 animate-in fade-in zoom-in-95 duration-300">
-              <div className="text-center mb-6 sm:mb-8">
+            <div className="max-w-xl mx-auto py-2 sm:py-4 animate-in fade-in zoom-in-95 duration-300">
+              <div className="text-center mb-3 sm:mb-5">
                 <h2
                   className="text-2xl sm:text-3xl font-black uppercase tracking-widest mb-2"
                   style={{ color: accent }}
@@ -3620,7 +3685,7 @@ export default function TTSGenerator() {
 
           {/* === HISTORY TAB === */}
           {secondaryTab === "history" && (
-            <div className="max-w-3xl mx-auto py-4 sm:py-8 animate-in fade-in zoom-in-95 duration-300">
+            <div className="max-w-3xl mx-auto py-2 sm:py-4 animate-in fade-in zoom-in-95 duration-300">
               <div className="text-center mb-6">
                 <h2
                   className="text-2xl sm:text-3xl font-black uppercase tracking-widest mb-2"
@@ -3704,15 +3769,15 @@ export default function TTSGenerator() {
                               tts: "စာမှအသံ",
                               translate_file: "ဗီဒီယိုဘာသာပြန်",
                               translate_link: "Link ဘာသာပြန်",
-                              dub_file: "AI Video (ဖိုင်)",
-                              dub_link: "AI Video (Link)",
+                              dub_file: "Auto Creator (ဖိုင်)",
+                              dub_link: "Auto Creator (Link)",
                             }
                           : {
                               tts: "Text to Speech",
                               translate_file: "Video Translate",
                               translate_link: "Link Translate",
-                              dub_file: "AI Video (File)",
-                              dub_link: "AI Video (Link)",
+                              dub_file: "Auto Creator (File)",
+                              dub_link: "Auto Creator (Link)",
                             };
                       return labels[feat] || feat;
                     };
@@ -3809,7 +3874,7 @@ export default function TTSGenerator() {
 
           {/* === PLAN TAB === */}
           {secondaryTab === "plan" && (
-            <div className="max-w-3xl mx-auto py-4 sm:py-8 animate-in fade-in zoom-in-95 duration-300">
+            <div className="max-w-3xl mx-auto py-2 sm:py-4 animate-in fade-in zoom-in-95 duration-300">
               {/* Header */}
               <div className="text-center mb-8">
                 <h2
@@ -3849,17 +3914,6 @@ export default function TTSGenerator() {
                           (lang === "mm" ? "Plan မရှိ" : "No Plan")}
                     </span>
                   </div>
-                  {daysLeft !== null && (
-                    <span
-                      className="px-3 py-1.5 rounded-full text-xs font-black"
-                      style={{
-                        background: daysLeft > 4 ? "#16a34a20" : "#dc262620",
-                        color: daysLeft > 4 ? "#16a34a" : "#dc2626",
-                      }}
-                    >
-                      {daysLeft} {lang === "mm" ? "ရက်ကျန်" : "days left"}
-                    </span>
-                  )}
                 </div>
 
                 {/* Usage Progress Bars */}
@@ -4030,7 +4084,7 @@ export default function TTSGenerator() {
                         lang === "mm" ? "စာလုံး ၃၀,၀၀၀" : "30,000 chars",
                         lang === "mm" ? "ဗီဒီယို ၁၀/ရက်" : "10 videos/day",
                       ],
-                      color: "#8b5cf6",
+                      color: accent,
                       popular: true,
                     },
                     {
@@ -4146,7 +4200,7 @@ export default function TTSGenerator() {
 
           {/* === GUIDE TAB === */}
           {secondaryTab === "guide" && (
-            <div className="max-w-3xl mx-auto py-4 sm:py-8 animate-in fade-in zoom-in-95 duration-300">
+            <div className="max-w-3xl mx-auto py-2 sm:py-4 animate-in fade-in zoom-in-95 duration-300">
               {/* Header */}
               <div className="text-center mb-8">
                 <h2
@@ -4241,14 +4295,14 @@ export default function TTSGenerator() {
                           '① "ဗီဒီယိုဘာသာပြန်" tab ကို နှိပ်ပါ',
                           "② ဗီဒီယိုဖိုင် တင်ပါ (25MB အောက်) သို့ Link ထည့်ပါ",
                           '③ "မြန်မာဘာသာပြန်မည်" နှိပ်ပါ',
-                          "④ ၁-၃ မိနစ် စောင့်ပါ",
+                          "④ Wait...",
                           "⑤ ရလဒ်ကို ကြည့်ပါ / ကော်ပီကူးပါ",
                         ]
                       : [
                           '① Click the "Translate" tab',
                           "② Upload a video (under 25MB) or paste a link",
                           '③ Click "Translate to Myanmar"',
-                          "④ Wait 1-3 minutes",
+                          "④ Wait...",
                           "⑤ View or copy the translation result",
                         ]
                     ).map((step, i) => (
@@ -4263,7 +4317,7 @@ export default function TTSGenerator() {
                   </div>
                 </div>
 
-                {/* AI Video Guide */}
+                {/* Auto Creator Guide */}
                 <div
                   className="rounded-2xl border p-5 sm:p-7"
                   style={{
@@ -4291,7 +4345,7 @@ export default function TTSGenerator() {
                   <div className="space-y-2.5 pl-1">
                     {(lang === "mm"
                       ? [
-                          '① "AI Video" tab ကို နှိပ်ပါ',
+                          '① "Auto Creator" tab ကို နှိပ်ပါ',
                           "② ဗီဒီယိုဖိုင် တင်ပါ (25MB အောက်) သို့ Link ထည့်ပါ",
                           '③ ဗီဒီယို Preview ကြည့်ပြီး "ဆက်လုပ်မည်" နှိပ်ပါ',
                           "④ အသံ ရွေးပါ — Standard သို့ Premium Voice",
@@ -4301,7 +4355,7 @@ export default function TTSGenerator() {
                           "⑧ ရလဒ်ဗီဒီယိုကို Download ယူပါ",
                         ]
                       : [
-                          '① Click the "AI Video" tab',
+                          '① Click the "Auto Creator" tab',
                           "② Upload a video (under 25MB) or paste a link",
                           '③ Preview and click "Continue"',
                           "④ Select a voice — Standard or Premium",

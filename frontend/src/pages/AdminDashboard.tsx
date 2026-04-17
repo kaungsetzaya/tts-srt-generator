@@ -491,21 +491,7 @@ export default function AdminDashboard() {
   const [paymentSlipPreview, setPaymentSlipPreview] = useState("");
 
   const getDefaultDays = (plan: Plan): number => {
-    // Auto-calculate days based on 1 month from today (handles 28, 29, 30, 31 days)
-    const now = new Date();
-    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
-    const daysInMonth = Math.ceil((nextMonth.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
-    switch (plan) {
-      case "trial":
-        return 7;
-      case "starter":
-      case "creator":
-      case "pro":
-        return daysInMonth;
-      default:
-        return 30;
-    }
+    return 30;
   };
 
   const handlePlanSelect = (plan: Plan) => {
@@ -1178,7 +1164,6 @@ export default function AdminDashboard() {
                   >
                     <th className="text-left p-3">User</th>
                     <th className="text-left p-3">Plan</th>
-                    <th className="text-center p-3">Days</th>
                     <th className="text-center p-3">Gens</th>
                     <th className="text-left p-3">Last Active</th>
                     <th className="text-center p-3">Credits</th>
@@ -1188,7 +1173,6 @@ export default function AdminDashboard() {
                 </thead>
                 <tbody>
                   {filteredUsers.map((user: any) => {
-                    const days = daysLeft(user.subscription?.expiresAt);
                     const isBanned = !!user.banned;
                     const genCount = user.genCount ?? 0;
                     const displayName = user.name ?? "—";
@@ -1223,17 +1207,6 @@ export default function AdminDashboard() {
                             <span className="text-xs px-2 py-1 rounded-md bg-red-500/20 text-red-400 font-bold">
                               No Sub
                             </span>
-                          )}
-                        </td>
-                        <td className="p-3 text-center">
-                          {days !== null ? (
-                            <span
-                              className={`text-xs font-bold ${days <= 3 ? "text-red-400" : days <= 7 ? "text-yellow-400" : "text-green-400"}`}
-                            >
-                              {days}d
-                            </span>
-                          ) : (
-                            "—"
                           )}
                         </td>
                         <td className="p-3 text-center">
@@ -2049,12 +2022,6 @@ export default function AdminDashboard() {
                     </button>
                   ))}
                 </div>
-              </div>
-              <div className="p-3 border rounded-xl bg-white/5" style={{ borderColor: border }}>
-                <p className="text-[10px] uppercase tracking-[0.2em] opacity-50 mb-1">Auto Validity</p>
-                <p className="text-sm font-black" style={{ color: C_GOLD }}>
-                  {getDefaultDays(selectedPlan)} Days (Auto-calculated)
-                </p>
               </div>
               <div className="rounded-xl p-4 border" style={{ borderColor: border, background: cardBg }}>
                 <label className="text-xs uppercase tracking-wider opacity-70 block mb-3 flex items-center gap-2">
