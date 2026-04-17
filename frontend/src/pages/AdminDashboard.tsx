@@ -497,6 +497,28 @@ export default function AdminDashboard() {
   const [paymentSlipBase64, setPaymentSlipBase64] = useState("");
   const [paymentSlipPreview, setPaymentSlipPreview] = useState("");
 
+  const getDefaultDays = (plan: Plan): number => {
+    switch (plan) {
+      case "trial":
+        return 7;
+      case "1month":
+        return 30;
+      case "3month":
+        return 91;
+      case "6month":
+        return 182;
+      case "lifetime":
+        return 365;
+      default:
+        return 30;
+    }
+  };
+
+  const handlePlanSelect = (plan: Plan) => {
+    setSelectedPlan(plan);
+    setTrialDays(getDefaultDays(plan));
+  };
+
   const { data: me } = trpc.auth.me.useQuery();
   const { data: users, refetch } = trpc.admin.getUsers.useQuery();
   const { data: analytics } = trpc.admin.getAnalytics.useQuery();
@@ -1986,7 +2008,7 @@ export default function AdminDashboard() {
                   {(Object.keys(PLAN_LABELS) as Plan[]).map(plan => (
                     <button
                       key={plan}
-                      onClick={() => setSelectedPlan(plan)}
+                      onClick={() => handlePlanSelect(plan)}
                       className="py-2 px-3 border text-sm font-bold uppercase rounded-lg transition-all"
                       style={{
                         borderColor: selectedPlan === plan ? C : border,
@@ -2008,15 +2030,8 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <label className="text-xs uppercase tracking-wider opacity-70 block mb-2">
-                  Duration (Days) — {PLAN_LABELS[selectedPlan]} defaults to{" "}
-                  {"trial|starter|1month".includes(selectedPlan)
-                    ? "30"
-                    : "3month|creator".includes(selectedPlan)
-                      ? "90"
-                      : "6month".includes(selectedPlan)
-                        ? "180"
-                        : "3650"}
-                  d
+                  Duration (Days) — {PLAN_LABELS[selectedPlan]} (
+                  {getDefaultDays(selectedPlan)}d)
                 </label>
                 <input
                   type="number"
