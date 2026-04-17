@@ -105,7 +105,14 @@ export async function generateSpeechWithCharacter(
   pitch: number = 0
 ): Promise<GenerateResult> {
   const char = CHARACTER_VOICES[characterKey];
+  console.log(
+    `[CHARACTER TTS] Converting to ${characterKey} (${char.name}) using base voice ${char.base}`
+  );
+
   // Step 1: Generate base TTS with Thiha or Nilar (pitch is now configurable)
+  console.log(
+    `[CHARACTER TTS] Step 1: Generating base speech with ${char.base}...`
+  );
   const baseResult = await generateSpeech(
     text,
     char.base,
@@ -113,9 +120,21 @@ export async function generateSpeechWithCharacter(
     pitch,
     aspectRatio
   );
+  console.log(
+    `[CHARACTER TTS] Base speech generated: ${baseResult.audioBuffer.length} bytes, ${baseResult.durationMs}ms`
+  );
+
   // Step 2: Convert voice with murf.ai
   const murfApiKey = getMurfKey();
-  if (!murfApiKey) throw new Error("MURF_API_KEY not configured");
+  if (!murfApiKey) {
+    console.error("[CHARACTER TTS] MURF_API_KEY not configured");
+    throw new Error(
+      "MURF_API_KEY not configured. Please set the environment variable."
+    );
+  }
+  console.log(
+    `[CHARACTER TTS] Step 2: Converting voice with Murf.ai (key index: ${currentMurfKeyIndex})...`
+  );
 
   const { FormData, Blob } = await import("formdata-node");
   const form = new FormData();
@@ -127,18 +146,31 @@ export async function generateSpeechWithCharacter(
     "audio.mp3"
   );
 
+  console.log(
+    `[CHARACTER TTS] Sending to Murf API: voice_id=${char.murfId}, format=MP3`
+  );
   const response = await fetch("https://api.murf.ai/v1/voice-changer/convert", {
     method: "POST",
     headers: { "api-key": murfApiKey },
     body: form as any,
   });
 
+  console.log(`[CHARACTER TTS] Murf API response status: ${response.status}`);
   const result = (await response.json()) as any;
-  if (result.error_code) throw new Error(result.error_message);
+  if (result.error_code) {
+    console.error("[CHARACTER TTS] Murf API error:", result.error_message);
+    throw new Error(result.error_message);
+  }
 
   // Download converted audio
+  console.log(
+    `[CHARACTER TTS] Downloading converted audio from: ${result.audio_file}`
+  );
   const audioResponse = await fetch(result.audio_file);
   const convertedBuffer = Buffer.from(await audioResponse.arrayBuffer());
+  console.log(
+    `[CHARACTER TTS] Character voice conversion complete: ${convertedBuffer.length} bytes`
+  );
 
   return {
     audioBuffer: convertedBuffer,
