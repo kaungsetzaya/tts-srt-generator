@@ -91,7 +91,6 @@ export default function Landing() {
   const heroRef = useRef<HTMLDivElement>(null);
   const featRef = useRef<HTMLElement>(null);
   const [trans, setTrans] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === "dark";
   const C = isDark ? C_DARK : C_LIGHT;
@@ -110,21 +109,10 @@ export default function Landing() {
 
   useEffect(() => {
     document.documentElement.style.scrollBehavior = "smooth";
-    if (mobileMenuOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    const handleScroll = () => {
-      if (mobileMenuOpen) setMobileMenuOpen(false);
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => {
       document.documentElement.style.scrollBehavior = "";
-      document.body.style.overflow = "";
-      window.removeEventListener("scroll", handleScroll);
     };
-  }, [mobileMenuOpen]);
+  }, []);
 
   return (
     <div
@@ -157,7 +145,7 @@ export default function Landing() {
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
-        className="fixed top-3 left-3 right-3 md:left-1/2 md:-translate-x-1/2 z-50 px-4 py-2.5 md:px-6 md:py-3 rounded-2xl flex items-center justify-between md:justify-center gap-4"
+        className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-2xl flex items-center gap-4"
         style={{
           background: C.glass,
           backdropFilter: "blur(24px)",
@@ -165,20 +153,18 @@ export default function Landing() {
           boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
         }}
       >
-        <motion.span
-          whileHover={{ scale: 1.1, rotate: -3 }}
-          whileTap={{ scale: 0.95 }}
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.1 }}
-          className="text-xl md:text-2xl font-black tracking-tight cursor-pointer"
-          style={{ color: C.gold }}
-        >
-          LUMIX
-        </motion.span>
-
-        {/* Desktop Nav */}
-        <motion.div className="hidden md:flex items-center gap-6 lg:gap-8">
+        <motion.div className="flex items-center gap-8">
+          <motion.span
+            whileHover={{ scale: 1.1, rotate: -3 }}
+            whileTap={{ scale: 0.95 }}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+            className="text-2xl font-black tracking-tight cursor-pointer"
+            style={{ color: C.gold }}
+          >
+            LUMIX
+          </motion.span>
           <motion.button
             whileHover={{ scale: 1.15, y: -3, color: C.gold }}
             whileTap={{ scale: 0.95 }}
@@ -207,88 +193,13 @@ export default function Landing() {
           </motion.button>
           <motion.button
             onClick={go}
-            className="px-4 py-1.5 md:px-6 md:py-2 rounded-full text-xs font-bold uppercase tracking-[0.15em]"
+            className="px-6 py-2 rounded-full text-xs font-bold uppercase tracking-[0.15em]"
             style={{ background: C.gold, color: isDark ? C.dark : "#fff" }}
           >
             Login
           </motion.button>
         </motion.div>
-
-        {/* Mobile Menu Button */}
-        <motion.button
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden p-2 rounded-lg"
-          style={{ color: C.cream }}
-        >
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            {mobileMenuOpen ? (
-              <path d="M6 18L18 6M6 6l12 12" />
-            ) : (
-              <path d="M4 6h16M4 12h16M4 18h16" />
-            )}
-          </svg>
-        </motion.button>
       </motion.nav>
-
-      {/* Mobile Menu Dropdown */}
-      <motion.div
-        initial={false}
-        animate={{
-          height: mobileMenuOpen ? "auto" : 0,
-          opacity: mobileMenuOpen ? 1 : 0,
-        }}
-        transition={{ duration: 0.3 }}
-        className="fixed top-16 left-3 right-3 z-40 md:hidden overflow-hidden rounded-2xl"
-        style={{
-          background: C.glass,
-          backdropFilter: "blur(24px)",
-          border: `1px solid ${C.glassB}`,
-        }}
-      >
-        <div className="flex flex-col gap-2 p-4">
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={() => {
-              featRef.current?.scrollIntoView({ behavior: "smooth" });
-              setMobileMenuOpen(false);
-            }}
-            className="text-sm uppercase tracking-[0.2em] py-2 text-left px-3 rounded-lg transition-colors duration-200"
-            style={{ color: C.nude }}
-          >
-            Features
-          </motion.button>
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={() => {
-              nav("/plans");
-              setMobileMenuOpen(false);
-            }}
-            className="text-sm uppercase tracking-[0.2em] py-2 text-left px-3 rounded-lg transition-colors duration-200"
-            style={{ color: C.nude }}
-          >
-            Plans
-          </motion.button>
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={() => {
-              go();
-              setMobileMenuOpen(false);
-            }}
-            className="px-4 py-2.5 rounded-full text-sm font-bold uppercase tracking-[0.15em] text-center"
-            style={{ background: C.gold, color: isDark ? C.dark : "#fff" }}
-          >
-            Login
-          </motion.button>
-        </div>
-      </motion.div>
 
       {/* HERO - 3D floating */}
       <div
@@ -301,7 +212,7 @@ export default function Landing() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="mb-4 md:mb-6 inline-block px-3 md:px-4 py-1 md:py-1.5 rounded-full text-[10px] md:text-xs uppercase tracking-[0.15em] md:tracking-[0.3em] font-semibold"
+            className="mb-4 md:mb-6 inline-block px-3 md:px-4 py-1 md:py-1.5 rounded-full text-xs md:text-sm uppercase tracking-[0.3em] md:tracking-[0.5em] font-semibold"
             style={{
               background: C.glass,
               backdropFilter: "blur(12px)",
@@ -309,16 +220,16 @@ export default function Landing() {
               color: C.gold,
             }}
           >
-            Myanmar AI Platform
+            Myanmar AI Content Platform
           </motion.div>
           <div>
             <motion.h1
               initial={{ opacity: 0, y: 40, rotateX: 15 }}
               animate={{ opacity: 1, y: 0, rotateX: 0 }}
               transition={{ duration: 0.8, delay: 0.1 }}
-              className="font-black leading-[0.9] mb-1 md:mb-2"
+              className="font-black leading-[0.9] mb-2 md:mb-4"
               style={{
-                fontSize: "clamp(40px, 12vw, 170px)",
+                fontSize: "clamp(60px, 18vw, 220px)",
                 letterSpacing: "-0.03em",
                 color: C.cream,
               }}
@@ -329,9 +240,9 @@ export default function Landing() {
               initial={{ opacity: 0, y: 40, rotateX: 15 }}
               animate={{ opacity: 1, y: 0, rotateX: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
-              className="font-black leading-[0.9] mb-6 md:mb-8"
+              className="font-black leading-[0.9] mb-8 md:mb-12"
               style={{
-                fontSize: "clamp(40px, 12vw, 170px)",
+                fontSize: "clamp(60px, 18vw, 220px)",
                 letterSpacing: "-0.03em",
                 color: C.cream,
               }}
@@ -343,19 +254,19 @@ export default function Landing() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.35 }}
-            className="text-[10px] md:text-xs uppercase tracking-[0.1em] md:tracking-[0.2em] mb-2 md:mb-3 font-semibold"
+            className="text-xs md:text-sm uppercase tracking-[0.2em] md:tracking-[0.3em] mb-3 md:mb-4 font-semibold"
             style={{ color: C.gold }}
           >
-            Content Engine
+            Powering Your Content Engine
           </motion.p>
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.45 }}
-            className="text-xs md:text-sm max-w-md mx-auto mb-6 md:mb-10"
+            className="text-sm md:text-base max-w-md mx-auto mb-8 md:mb-12"
             style={{ color: C.nude }}
           >
-            AI Voice · Subtitles · Video
+            AI Voice · Smart Subtitles · Video-to-Burmese Translation
           </motion.p>
           <motion.button
             initial={{ opacity: 0, y: 20 }}
