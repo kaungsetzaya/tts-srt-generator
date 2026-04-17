@@ -95,22 +95,37 @@ export async function dubVideoFromBuffer(
       options.userApiKey
     );
 
-    // Assemble full Myanmar text from translated segments
+    // Assemble full Myanmar text from translated segments - one paragraph
     const myanmarText = translatedSegments
-      .map((seg: any) => seg.text)
+      .map((seg: any) => {
+        // Clean text: remove dots, extra spaces, non-Burmese characters
+        let text = seg.text || "";
+        text = text.replace(/\.{3,}/g, ""); // Remove ... or ....
+        text = text.replace(/[^\u1000-\u109F\uAA60-\uAA7F\s]/g, ""); // Keep only Burmese
+        text = text.replace(/\s+/g, " ").trim(); // Normalize spaces
+        return text;
+      })
       .filter(Boolean)
       .join(" ");
 
-    // Build SRT content from translated segments with timing
+    // Build SRT content from translated segments with timing - cleaned text
     let srtContent = "";
+    let srtIndex = 1;
     for (let i = 0; i < translatedSegments.length; i++) {
       const seg = translatedSegments[i];
-      if (seg.text.trim()) {
+      // Clean text: remove dots, non-Burmese
+      let cleanText = seg.text || "";
+      cleanText = cleanText.replace(/\.{3,}/g, "");
+      cleanText = cleanText.replace(/[^\u1000-\u109F\uAA60-\uAA7F\s]/g, "");
+      cleanText = cleanText.replace(/\s+/g, " ").trim();
+      
+      if (cleanText) {
         const startMs = Math.round(seg.start * 1000);
         const endMs = Math.round(seg.end * 1000);
         const startStr = `${pad(Math.floor(startMs / 3600000))}:${pad(Math.floor((startMs % 3600000) / 60000))}:${pad(Math.floor((startMs % 60000) / 1000))},${pad(startMs % 1000, 3)}`;
         const endStr = `${pad(Math.floor(endMs / 3600000))}:${pad(Math.floor((endMs % 3600000) / 60000))}:${pad(Math.floor((endMs % 60000) / 1000))},${pad(endMs % 1000, 3)}`;
-        srtContent += `${i + 1}\n${startStr} --> ${endStr}\n${seg.text}\n\n`;
+        srtContent += `${srtIndex}\n${startStr} --> ${endStr}\n${cleanText}\n\n`;
+        srtIndex++;
       }
     }
 

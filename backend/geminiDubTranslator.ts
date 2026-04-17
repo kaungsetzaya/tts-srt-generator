@@ -7,8 +7,14 @@ export async function geminiTranslateForDub(segments: any[], apiKey?: string) {
   );
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-lite" });
 
-  const prompt = `Translate the following segments to Myanmar language for video dubbing. Keep the meaning and tone. Return the result as a JSON array of objects with 'text' property.
-  Segments: ${JSON.stringify(segments.map(s => s.text))}`;
+  const prompt = `Translate the following English/other language segments to clean Myanmar (Burmese) language only. Rules:
+1. Output ONLY Burmese/Myanmar text - no English, no other languages
+2. NO "....." or "...." or any dots/suspension marks
+3. Write all text in ONE continuous paragraph (no line breaks within a segment)
+4. Keep natural speaking tone
+5. Return as JSON array with 'text' property for each segment
+
+Segments: ${JSON.stringify(segments.map(s => s.text))}`
 
   try {
     const result = await model.generateContent(prompt);
