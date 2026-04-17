@@ -41,11 +41,7 @@ type Plan =
   | "trial"
   | "starter"
   | "creator"
-  | "pro"
-  | "1month"
-  | "3month"
-  | "6month"
-  | "lifetime";
+  | "pro";
 type MainTab = "analytics" | "users" | "reports" | "settings";
 type TimeFrame = "week" | "month" | "year" | "all";
 type PaymentMethod =
@@ -59,33 +55,21 @@ type PaymentMethod =
 
 const PLAN_LABELS: Record<Plan, string> = {
   trial: "Trial (10cr)",
-  starter: "Starter (50cr)",
-  creator: "Creator (200cr)",
-  pro: "Pro (500cr)",
-  "1month": "1 Month (100cr)",
-  "3month": "3 Months (350cr)",
-  "6month": "6 Months (700cr)",
-  lifetime: "Lifetime (2000cr)",
+  starter: "Starter Pack (50cr)",
+  creator: "Creator Pack (200cr)",
+  pro: "Pro Pack (500cr)",
 };
 const PLAN_PRICE: Record<Plan, number> = {
   trial: 0,
   starter: 5000,
   creator: 15000,
   pro: 30000,
-  "1month": 5000,
-  "3month": 12000,
-  "6month": 20000,
-  lifetime: 50000,
 };
 const PLAN_CREDITS: Record<Plan, number> = {
   trial: 10,
   starter: 50,
   creator: 200,
   pro: 500,
-  "1month": 100,
-  "3month": 350,
-  "6month": 700,
-  lifetime: 2000,
 };
 const PAYMENT_METHODS: Record<PaymentMethod, string> = {
   kpay: "KBZ Pay",
@@ -261,7 +245,7 @@ function UserDetailDrawer({
               <StatBox
                 label="Total Audio Duration"
                 value={fmtDuration(data.totalDurationMs)}
-                color="#f472b6"
+                color={C_GOLD}
               />
             </div>
 
@@ -468,7 +452,6 @@ export default function AdminDashboard() {
   const [search, setSearch] = useState("");
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<Plan>("starter");
-  const [trialDays, setTrialDays] = useState(30);
   const [note, setNote] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("kpay");
   const [transactionId, setTransactionId] = useState("");
@@ -498,17 +481,18 @@ export default function AdminDashboard() {
   const [paymentSlipPreview, setPaymentSlipPreview] = useState("");
 
   const getDefaultDays = (plan: Plan): number => {
+    // Auto-calculate days based on 1 month from today (handles 28, 29, 30, 31 days)
+    const now = new Date();
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
+    const daysInMonth = Math.ceil((nextMonth.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
     switch (plan) {
       case "trial":
         return 7;
-      case "1month":
-        return 30;
-      case "3month":
-        return 91;
-      case "6month":
-        return 182;
-      case "lifetime":
-        return 365;
+      case "starter":
+      case "creator":
+      case "pro":
+        return daysInMonth;
       default:
         return 30;
     }
@@ -516,7 +500,6 @@ export default function AdminDashboard() {
 
   const handlePlanSelect = (plan: Plan) => {
     setSelectedPlan(plan);
-    setTrialDays(getDefaultDays(plan));
   };
 
   const { data: me } = trpc.auth.me.useQuery();
@@ -912,7 +895,7 @@ export default function AdminDashboard() {
                       style={{ borderColor: border }}
                     >
                       <p className="text-xs opacity-40 mb-1">Audio Generated</p>
-                      <p className="text-lg font-black text-pink-400">
+                    <p className="text-lg font-black" style={{ color: C_GOLD }}>
                         {fmtMs(voiceStats?.totalDurationMs ?? 0)}
                       </p>
                     </div>
@@ -1794,7 +1777,7 @@ export default function AdminDashboard() {
                   <p className="text-xs opacity-40 mb-1 uppercase tracking-wider">
                     Audio Duration
                   </p>
-                  <p className="text-2xl font-black text-pink-400">
+                  <p className="text-2xl font-black" style={{ color: C_GOLD }}>
                     {fmtMs(voiceStats?.totalDurationMs ?? 0)}
                   </p>
                 </div>
@@ -1816,7 +1799,7 @@ export default function AdminDashboard() {
                         ? Math.round((v.count / (voiceStats?.total ?? 1)) * 100)
                         : 0;
                     const isThiha = v.name === "thiha";
-                    const color = isThiha ? "#60a5fa" : "#f472b6";
+                    const color = isThiha ? C : C_GOLD;
                     return (
                       <div
                         key={v.name}
@@ -1925,8 +1908,8 @@ export default function AdminDashboard() {
                                 <span
                                   className="text-[10px] px-1.5 py-0.5 rounded font-bold uppercase"
                                   style={{
-                                    background: `${isMale ? "#60a5fa" : "#f472b6"}22`,
-                                    color: isMale ? "#60a5fa" : "#f472b6",
+                                    background: `${isMale ? C : C_GOLD}22`,
+                                    color: isMale ? C : C_GOLD,
                                   }}
                                 >
                                   Base: {ch.baseDisplayName}
@@ -2028,24 +2011,11 @@ export default function AdminDashboard() {
                   ))}
                 </div>
               </div>
-              <div>
-                <label className="text-xs uppercase tracking-wider opacity-70 block mb-2">
-                  Duration (Days) — {PLAN_LABELS[selectedPlan]} (
-                  {getDefaultDays(selectedPlan)}d)
-                </label>
-                <input
-                  type="number"
-                  min={1}
-                  max={3650}
-                  value={trialDays}
-                  onChange={e => setTrialDays(Number(e.target.value))}
-                  className="w-full border p-2 text-sm focus:outline-none text-center font-bold rounded-lg"
-                  style={{
-                    background: "rgba(0,0,0,0.4)",
-                    borderColor: border,
-                    color: C,
-                  }}
-                />
+              <div className="p-3 border rounded-xl bg-white/5" style={{ borderColor: border }}>
+                <p className="text-[10px] uppercase tracking-[0.2em] opacity-50 mb-1">Auto Validity</p>
+                <p className="text-sm font-black" style={{ color: C_GOLD }}>
+                  {getDefaultDays(selectedPlan)} Days (Auto-calculated)
+                </p>
               </div>
               <div>
                 <label className="text-xs uppercase tracking-wider opacity-70 block mb-2 flex items-center gap-2">
@@ -2192,17 +2162,7 @@ export default function AdminDashboard() {
                     giveSub.mutate({
                       userId: selectedUser,
                       plan: selectedPlan,
-                      days:
-                        selectedPlan === "trial"
-                          ? trialDays
-                          : trialDays ||
-                            Math.ceil(
-                              (selectedPlan === "starter"
-                                ? 1
-                                : selectedPlan === "creator"
-                                  ? 3
-                                  : 6) * 30.44
-                            ),
+                      days: getDefaultDays(selectedPlan),
                       note:
                         `${transactionId ? `TXN: ${transactionId}` : ""}${note ? ` | ${note}` : ""}`.trim() ||
                         undefined,
