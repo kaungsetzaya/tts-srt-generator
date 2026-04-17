@@ -37,7 +37,15 @@ import {
   Trash2,
 } from "lucide-react";
 
-type Plan = "trial" | "starter" | "creator" | "pro";
+type Plan =
+  | "trial"
+  | "starter"
+  | "creator"
+  | "pro"
+  | "1month"
+  | "3month"
+  | "6month"
+  | "lifetime";
 type MainTab = "analytics" | "users" | "reports" | "settings";
 type TimeFrame = "week" | "month" | "year" | "all";
 type PaymentMethod =
@@ -54,18 +62,30 @@ const PLAN_LABELS: Record<Plan, string> = {
   starter: "Starter (50cr)",
   creator: "Creator (200cr)",
   pro: "Pro (500cr)",
+  "1month": "1 Month (100cr)",
+  "3month": "3 Months (350cr)",
+  "6month": "6 Months (700cr)",
+  lifetime: "Lifetime (2000cr)",
 };
 const PLAN_PRICE: Record<Plan, number> = {
   trial: 0,
   starter: 5000,
   creator: 15000,
   pro: 30000,
+  "1month": 5000,
+  "3month": 12000,
+  "6month": 20000,
+  lifetime: 50000,
 };
 const PLAN_CREDITS: Record<Plan, number> = {
   trial: 10,
   starter: 50,
   creator: 200,
   pro: 500,
+  "1month": 100,
+  "3month": 350,
+  "6month": 700,
+  lifetime: 2000,
 };
 const PAYMENT_METHODS: Record<PaymentMethod, string> = {
   kpay: "KBZ Pay",
@@ -1153,7 +1173,8 @@ export default function AdminDashboard() {
                         <td className="p-3">
                           {user.subscription ? (
                             <span className="text-xs px-2 py-1 rounded-md bg-green-500/20 text-green-400 font-bold uppercase">
-                              {PLAN_LABELS[user.subscription.plan as Plan] ?? user.subscription.plan}
+                              {PLAN_LABELS[user.subscription.plan as Plan] ??
+                                user.subscription.plan}
                             </span>
                           ) : (
                             <span className="text-xs px-2 py-1 rounded-md bg-red-500/20 text-red-400 font-bold">
@@ -1184,7 +1205,10 @@ export default function AdminDashboard() {
                           {fmtTime(user.lastLoginAt)}
                         </td>
                         <td className="p-3 text-center">
-                          <span className="text-xs font-bold" style={{ color: C_GOLD }}>
+                          <span
+                            className="text-xs font-bold"
+                            style={{ color: C_GOLD }}
+                          >
                             💰 {user.credits ?? 0}
                           </span>
                         </td>
@@ -1308,9 +1332,7 @@ export default function AdminDashboard() {
                     className="flex items-center justify-between py-2 border-b border-white/5"
                   >
                     <div>
-                      <span className="font-bold">
-                        {user.name ?? "—"}
-                      </span>
+                      <span className="font-bold">{user.name ?? "—"}</span>
                       <span className="text-xs opacity-40 ml-2">
                         @{user.username ?? "—"}
                       </span>
@@ -1986,7 +2008,15 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <label className="text-xs uppercase tracking-wider opacity-70 block mb-2">
-                  Duration (Days) — {PLAN_LABELS[selectedPlan]} defaults to {selectedPlan === "trial" ? "3" : selectedPlan === "starter" ? "30" : selectedPlan === "creator" ? "90" : "180"}d
+                  Duration (Days) — {PLAN_LABELS[selectedPlan]} defaults to{" "}
+                  {"trial|starter|1month".includes(selectedPlan)
+                    ? "30"
+                    : "3month|creator".includes(selectedPlan)
+                      ? "90"
+                      : "6month".includes(selectedPlan)
+                        ? "180"
+                        : "3650"}
+                  d
                 </label>
                 <input
                   type="number"
@@ -1997,12 +2027,11 @@ export default function AdminDashboard() {
                   className="w-full border p-2 text-sm focus:outline-none text-center font-bold rounded-lg"
                   style={{
                     background: "rgba(0,0,0,0.4)",
-                      borderColor: border,
-                      color: C,
-                    }}
-                  />
-                </div>
-              )}
+                    borderColor: border,
+                    color: C,
+                  }}
+                />
+              </div>
               <div>
                 <label className="text-xs uppercase tracking-wider opacity-70 block mb-2 flex items-center gap-2">
                   <CreditCard className="w-3 h-3" /> Payment Method{" "}
@@ -2151,7 +2180,14 @@ export default function AdminDashboard() {
                       days:
                         selectedPlan === "trial"
                           ? trialDays
-                          : trialDays || Math.ceil((selectedPlan === "starter" ? 1 : selectedPlan === "creator" ? 3 : 6) * 30.44),
+                          : trialDays ||
+                            Math.ceil(
+                              (selectedPlan === "starter"
+                                ? 1
+                                : selectedPlan === "creator"
+                                  ? 3
+                                  : 6) * 30.44
+                            ),
                       note:
                         `${transactionId ? `TXN: ${transactionId}` : ""}${note ? ` | ${note}` : ""}`.trim() ||
                         undefined,

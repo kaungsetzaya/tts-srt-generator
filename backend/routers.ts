@@ -142,25 +142,34 @@ export const appRouter = t.router({
 
         // Calculate credits needed: Thiha/Nilar=1, Character=3
         const creditsNeeded = input.character ? 3 : 1;
-        
+
         // Check and deduct credits
         const db = await getDb();
         if (db) {
-          const [user] = await db.select().from(users).where(eq(users.id, ctx.user!.userId)).limit(1);
+          const [user] = await db
+            .select()
+            .from(users)
+            .where(eq(users.id, ctx.user!.userId))
+            .limit(1);
           const currentCredits = user?.credits ?? 0;
           if (currentCredits < creditsNeeded) {
             throw new TRPCError({
-              code: 'BAD_REQUEST',
+              code: "BAD_REQUEST",
               message: `Insufficient credits. Need ${creditsNeeded}, have ${currentCredits}`,
             });
           }
-          await db.update(users).set({ credits: currentCredits - creditsNeeded }).where(eq(users.id, ctx.user!.userId));
+          await db
+            .update(users)
+            .set({ credits: currentCredits - creditsNeeded })
+            .where(eq(users.id, ctx.user!.userId));
           await db.insert(creditTransactions).values({
             id: randomUUID(),
             userId: ctx.user!.userId,
             amount: -creditsNeeded,
-            type: 'tts',
-            description: input.character ? `TTS Character: ${input.character}` : `TTS Voice: ${voice}`,
+            type: "tts",
+            description: input.character
+              ? `TTS Character: ${input.character}`
+              : `TTS Voice: ${voice}`,
           });
         }
 
@@ -275,14 +284,32 @@ export const appRouter = t.router({
         // Deduct 10 credits for dub with thiha/nilar
         const db = await getDb();
         if (db) {
-          const [user] = await db.select().from(users).where(eq(users.id, ctx.user!.userId)).limit(1);
+          const [user] = await db
+            .select()
+            .from(users)
+            .where(eq(users.id, ctx.user!.userId))
+            .limit(1);
           const currentCredits = user?.credits ?? 0;
           const creditsNeeded = 10;
           if (currentCredits < creditsNeeded) {
-            throw new TRPCError({ code: 'BAD_REQUEST', message: `Insufficient credits. Need ${creditsNeeded}, have ${currentCredits}` });
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Insufficient credits. Need ${creditsNeeded}, have ${currentCredits}`,
+            });
           }
-          await db.update(users).set({ credits: currentCredits - creditsNeeded }).where(eq(users.id, ctx.user!.userId));
-          await db.insert(creditTransactions).values({ id: randomUUID(), userId: ctx.user!.userId, amount: -creditsNeeded, type: 'video_dub', description: `Video Dub: ${input.voice}` });
+          await db
+            .update(users)
+            .set({ credits: currentCredits - creditsNeeded })
+            .where(eq(users.id, ctx.user!.userId));
+          await db
+            .insert(creditTransactions)
+            .values({
+              id: randomUUID(),
+              userId: ctx.user!.userId,
+              amount: -creditsNeeded,
+              type: "video_dub",
+              description: `Video Dub: ${input.voice}`,
+            });
         }
         try {
           const buffer = Buffer.from(input.videoBase64, "base64");
@@ -311,14 +338,32 @@ export const appRouter = t.router({
         // Deduct 10 credits for dub with thiha/nilar
         const db = await getDb();
         if (db) {
-          const [user] = await db.select().from(users).where(eq(users.id, ctx.user!.userId)).limit(1);
+          const [user] = await db
+            .select()
+            .from(users)
+            .where(eq(users.id, ctx.user!.userId))
+            .limit(1);
           const currentCredits = user?.credits ?? 0;
           const creditsNeeded = 10;
           if (currentCredits < creditsNeeded) {
-            throw new TRPCError({ code: 'BAD_REQUEST', message: `Insufficient credits. Need ${creditsNeeded}, have ${currentCredits}` });
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Insufficient credits. Need ${creditsNeeded}, have ${currentCredits}`,
+            });
           }
-          await db.update(users).set({ credits: currentCredits - creditsNeeded }).where(eq(users.id, ctx.user!.userId));
-          await db.insert(creditTransactions).values({ id: randomUUID(), userId: ctx.user!.userId, amount: -creditsNeeded, type: 'video_dub', description: `Video Dub: ${input.voice}` });
+          await db
+            .update(users)
+            .set({ credits: currentCredits - creditsNeeded })
+            .where(eq(users.id, ctx.user!.userId));
+          await db
+            .insert(creditTransactions)
+            .values({
+              id: randomUUID(),
+              userId: ctx.user!.userId,
+              amount: -creditsNeeded,
+              type: "video_dub",
+              description: `Video Dub: ${input.voice}`,
+            });
         }
         try {
           return await dubVideoFromLink(input.url, {
@@ -345,14 +390,32 @@ export const appRouter = t.router({
         // Deduct 5 credits for video translate
         const db = await getDb();
         if (db) {
-          const [user] = await db.select().from(users).where(eq(users.id, ctx.user!.userId)).limit(1);
+          const [user] = await db
+            .select()
+            .from(users)
+            .where(eq(users.id, ctx.user!.userId))
+            .limit(1);
           const currentCredits = user?.credits ?? 0;
           const creditsNeeded = 5;
           if (currentCredits < creditsNeeded) {
-            throw new TRPCError({ code: 'BAD_REQUEST', message: `Insufficient credits. Need ${creditsNeeded}, have ${currentCredits}` });
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Insufficient credits. Need ${creditsNeeded}, have ${currentCredits}`,
+            });
           }
-          await db.update(users).set({ credits: currentCredits - creditsNeeded }).where(eq(users.id, ctx.user!.userId));
-          await db.insert(creditTransactions).values({ id: randomUUID(), userId: ctx.user!.userId, amount: -creditsNeeded, type: 'video_translate', description: `Video Translate` });
+          await db
+            .update(users)
+            .set({ credits: currentCredits - creditsNeeded })
+            .where(eq(users.id, ctx.user!.userId));
+          await db
+            .insert(creditTransactions)
+            .values({
+              id: randomUUID(),
+              userId: ctx.user!.userId,
+              amount: -creditsNeeded,
+              type: "video_translate",
+              description: `Video Translate`,
+            });
         }
         try {
           const buffer = Buffer.from(input.videoBase64, "base64");
@@ -377,14 +440,32 @@ export const appRouter = t.router({
         // Deduct 5 credits for video translate
         const db = await getDb();
         if (db) {
-          const [user] = await db.select().from(users).where(eq(users.id, ctx.user!.userId)).limit(1);
+          const [user] = await db
+            .select()
+            .from(users)
+            .where(eq(users.id, ctx.user!.userId))
+            .limit(1);
           const currentCredits = user?.credits ?? 0;
           const creditsNeeded = 5;
           if (currentCredits < creditsNeeded) {
-            throw new TRPCError({ code: 'BAD_REQUEST', message: `Insufficient credits. Need ${creditsNeeded}, have ${currentCredits}` });
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Insufficient credits. Need ${creditsNeeded}, have ${currentCredits}`,
+            });
           }
-          await db.update(users).set({ credits: currentCredits - creditsNeeded }).where(eq(users.id, ctx.user!.userId));
-          await db.insert(creditTransactions).values({ id: randomUUID(), userId: ctx.user!.userId, amount: -creditsNeeded, type: 'video_translate', description: `Video Translate` });
+          await db
+            .update(users)
+            .set({ credits: currentCredits - creditsNeeded })
+            .where(eq(users.id, ctx.user!.userId));
+          await db
+            .insert(creditTransactions)
+            .values({
+              id: randomUUID(),
+              userId: ctx.user!.userId,
+              amount: -creditsNeeded,
+              type: "video_translate",
+              description: `Video Translate`,
+            });
         }
         try {
           const result = await translateVideoLink(input.url);
@@ -463,14 +544,23 @@ export const appRouter = t.router({
       const db = await getDb();
       if (!db) return { active: false, plan: null, credits: 0 };
       try {
-        const [user] = await db.select().from(users).where(eq(users.id, ctx.user!.userId)).limit(1);
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, ctx.user!.userId))
+          .limit(1);
         const sub = await db.query.subscriptions.findFirst({
           where: (s: any, { eq, and, gt }: any) =>
             and(eq(s.userId, ctx.user!.userId), gt(s.expiresAt, new Date())),
           orderBy: (s: any, { desc }: any) => desc(s.createdAt),
         });
         return sub
-          ? { active: true, plan: sub.plan, expiresAt: sub.expiresAt, credits: user?.credits ?? 0 }
+          ? {
+              active: true,
+              plan: sub.plan,
+              expiresAt: sub.expiresAt,
+              credits: user?.credits ?? 0,
+            }
           : { active: false, plan: null, credits: user?.credits ?? 0 };
       } catch {
         return { active: false, plan: null, credits: 0 };
@@ -546,10 +636,10 @@ export const appRouter = t.router({
           const userGen = allGenCounts.find(g => g.userId === user.id);
           return {
             id: user.id,
-            name: user.telegramFirstName || user.name || 'Unknown',
-            username: user.telegramUsername || '',
-            email: user.email || '',
-            role: user.role || 'user',
+            name: user.telegramFirstName || user.name || "Unknown",
+            username: user.telegramUsername || "",
+            email: user.email || "",
+            role: user.role || "user",
             banned: !!user.bannedAt,
             credits: user.credits || 0,
             subscription: userSub || null,
@@ -646,15 +736,22 @@ export const appRouter = t.router({
         }
 
         // Add credits to user
-        const [user] = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, input.userId))
+          .limit(1);
         if (user) {
           const currentCredits = user.credits ?? 0;
-          await db.update(users).set({ credits: currentCredits + creditsToAdd }).where(eq(users.id, input.userId));
+          await db
+            .update(users)
+            .set({ credits: currentCredits + creditsToAdd })
+            .where(eq(users.id, input.userId));
           await db.insert(creditTransactions).values({
             id: randomUUID(),
             userId: input.userId,
             amount: creditsToAdd,
-            type: 'subscription',
+            type: "subscription",
             description: `Subscribe: ${input.plan} plan`,
           });
         }
@@ -725,10 +822,12 @@ export const appRouter = t.router({
     }),
     getServerHealth: adminProcedure.query(async () => {
       const mem = process.memoryUsage();
-      const { execSync } = await import('child_process');
+      const { execSync } = await import("child_process");
       let disk = "—";
       try {
-        const df = execSync('df -h / | tail -1 | awk \'{print $3}\'').toString().trim();
+        const df = execSync("df -h / | tail -1 | awk '{print $3}'")
+          .toString()
+          .trim();
         disk = df || "—";
       } catch {}
       return {
@@ -761,14 +860,16 @@ export const appRouter = t.router({
             .from(errorLogs)
             .orderBy(desc(errorLogs.createdAt))
             .limit(input.limit || 50);
-          
+
           // Split into failed generations and system logs
-          const failedGenerations = logs.filter((l: any) => l.type === 'generation' || l.severity === 'error');
+          const failedGenerations = logs.filter(
+            (l: any) => l.type === "generation" || l.severity === "error"
+          );
           const systemLogs = logs;
-          
+
           return { failedGenerations, systemLogs };
         } catch (e) {
-          console.error('[getErrorLogs Error]', e);
+          console.error("[getErrorLogs Error]", e);
           return { failedGenerations: [], systemLogs: [] };
         }
       }),
@@ -825,10 +926,11 @@ export const appRouter = t.router({
             .from(ttsConversions)
             .where(sql`voice IN ('thiha', 'nilar')`)
             .groupBy(ttsConversions.voice);
-          
+
           const baseVoices = baseVoiceDetails.map(r => ({
             name: r.voice,
-            displayName: r.voice === 'thiha' ? 'Thiha (Male)' : 'Nilar (Female)',
+            displayName:
+              r.voice === "thiha" ? "Thiha (Male)" : "Nilar (Female)",
             count: r.count,
             chars: Number(r.chars),
             durationMs: Number(r.duration),
@@ -844,14 +946,16 @@ export const appRouter = t.router({
               duration: sql`COALESCE(SUM(duration_ms), 0)`,
             })
             .from(ttsConversions)
-            .where(sql`character IS NOT NULL AND character != ''`)
+            .where(
+              sql`${ttsConversions.character} IS NOT NULL AND ${ttsConversions.character} != ''`
+            )
             .groupBy(ttsConversions.character, ttsConversions.voice);
-          
+
           const characters = charDetails.map(r => ({
             key: r.character,
             displayName: r.character,
-            base: r.voice || 'thiha',
-            baseDisplayName: r.voice === 'nilar' ? 'Nilar' : 'Thiha',
+            base: r.voice || "thiha",
+            baseDisplayName: r.voice === "nilar" ? "Nilar" : "Thiha",
             count: r.count,
             chars: Number(r.chars),
             durationMs: Number(r.duration),
@@ -956,13 +1060,22 @@ export const appRouter = t.router({
     }),
     getChurnStats: adminProcedure.query(async () => {
       const db = await getDb();
-      if (!db) return { churnRate: 0, newUsers: 0, lostUsers: 0, activeUsers: [], inactiveUsers: [], activeCount: 0, inactiveCount: 0 };
+      if (!db)
+        return {
+          churnRate: 0,
+          newUsers: 0,
+          lostUsers: 0,
+          activeUsers: [],
+          inactiveUsers: [],
+          activeCount: 0,
+          inactiveCount: 0,
+        };
       try {
         const [newUsersRow] = await db
           .select({ count: count() })
           .from(users)
           .where(sql`created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)`);
-        
+
         // Get active users (logged in last 7 days)
         const activeUsersList = await db
           .select()
@@ -970,30 +1083,32 @@ export const appRouter = t.router({
           .where(sql`last_login_at > DATE_SUB(NOW(), INTERVAL 7 DAY)`)
           .orderBy(desc(users.lastLoginAt))
           .limit(50);
-        
+
         // Get inactive users (no login in 30 days)
         const inactiveUsersList = await db
           .select()
           .from(users)
-          .where(sql`last_login_at < DATE_SUB(NOW(), INTERVAL 30 DAY) OR last_login_at IS NULL`)
+          .where(
+            sql`last_login_at < DATE_SUB(NOW(), INTERVAL 30 DAY) OR last_login_at IS NULL`
+          )
           .orderBy(desc(users.lastLoginAt))
           .limit(50);
-        
+
         // Get gen counts
         const genCounts = await db
           .select({ userId: ttsConversions.userId, count: count() })
           .from(ttsConversions)
           .groupBy(ttsConversions.userId);
-        
+
         const formatUser = (u: any) => ({
           id: u.id,
-          name: u.telegramFirstName || u.name || 'Unknown',
-          username: u.telegramUsername || '',
+          name: u.telegramFirstName || u.name || "Unknown",
+          username: u.telegramUsername || "",
           totalGens: genCounts.find(g => g.userId === u.id)?.count || 0,
           lastActive: u.lastLoginAt,
           credits: u.credits || 0,
         });
-        
+
         return {
           churnRate: 0,
           newUsers: newUsersRow?.count || 0,
@@ -1004,8 +1119,16 @@ export const appRouter = t.router({
           inactiveCount: inactiveUsersList.length,
         };
       } catch (e) {
-        console.error('[getChurnStats Error]', e);
-        return { churnRate: 0, newUsers: 0, lostUsers: 0, activeUsers: [], inactiveUsers: [], activeCount: 0, inactiveCount: 0 };
+        console.error("[getChurnStats Error]", e);
+        return {
+          churnRate: 0,
+          newUsers: 0,
+          lostUsers: 0,
+          activeUsers: [],
+          inactiveUsers: [],
+          activeCount: 0,
+          inactiveCount: 0,
+        };
       }
     }),
     onlineUsers: adminProcedure.query(async () => {
@@ -1026,71 +1149,114 @@ export const appRouter = t.router({
       .query(async ({ input }) => {
         const db = await getDb();
         const empty = {
-          totalGens: 0, recentGens: 0, totalChars: 0, totalDurationMs: 0,
+          totalGens: 0,
+          recentGens: 0,
+          totalChars: 0,
+          totalDurationMs: 0,
           statusBreakdown: { success: 0, fail: 0 },
-          features: [], voices: [], activeHours: [], daily: [], recentLogs: [],
+          features: [],
+          voices: [],
+          activeHours: [],
+          daily: [],
+          recentLogs: [],
           subscription: null as any,
         };
         if (!db) return empty;
         try {
           // 30-day stats
           const [stats30] = await db
-            .select({ count: count(), chars: sql`COALESCE(SUM(char_count),0)`, duration: sql`COALESCE(SUM(duration_ms),0)` })
+            .select({
+              count: count(),
+              chars: sql`COALESCE(SUM(char_count),0)`,
+              duration: sql`COALESCE(SUM(duration_ms),0)`,
+            })
             .from(ttsConversions)
-            .where(sql`user_id = ${input.userId} AND created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)`);
-          
+            .where(
+              sql`user_id = ${input.userId} AND created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)`
+            );
+
           // 7-day stats
           const [stats7] = await db
             .select({ count: count() })
             .from(ttsConversions)
-            .where(sql`user_id = ${input.userId} AND created_at > DATE_SUB(NOW(), INTERVAL 7 DAY)`);
-          
+            .where(
+              sql`user_id = ${input.userId} AND created_at > DATE_SUB(NOW(), INTERVAL 7 DAY)`
+            );
+
           // Success/Fail breakdown
           const statusRows = await db
-            .select({ status: sql`COALESCE(status, 'success')`, count: count() })
+            .select({
+              status: sql`COALESCE(status, 'success')`,
+              count: count(),
+            })
             .from(ttsConversions)
-            .where(sql`user_id = ${input.userId} AND created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)`)
+            .where(
+              sql`user_id = ${input.userId} AND created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)`
+            )
             .groupBy(sql`COALESCE(status, 'success')`);
-          
+
           const statusBreakdown: any = { success: 0, fail: 0 };
           statusRows.forEach((r: any) => {
-            if (r.status === 'fail') statusBreakdown.fail = r.count;
+            if (r.status === "fail") statusBreakdown.fail = r.count;
             else statusBreakdown.success = r.count;
           });
-          
+
           // Feature breakdown
           const featureRows = await db
             .select({ feature: sql`COALESCE(feature, 'tts')`, count: count() })
             .from(ttsConversions)
-            .where(sql`user_id = ${input.userId} AND created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)`)
+            .where(
+              sql`user_id = ${input.userId} AND created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)`
+            )
             .groupBy(sql`COALESCE(feature, 'tts')`);
-          const features = featureRows.map((r: any) => ({ feature: r.feature, count: r.count }));
-          
+          const features = featureRows.map((r: any) => ({
+            feature: r.feature,
+            count: r.count,
+          }));
+
           // Voice/character breakdown
           const voiceRows = await db
-            .select({ name: sql`COALESCE(character, voice, 'unknown')`, count: count() })
+            .select({
+              name: sql`COALESCE(character, voice, 'unknown')`,
+              count: count(),
+            })
             .from(ttsConversions)
-            .where(sql`user_id = ${input.userId} AND created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)`)
+            .where(
+              sql`user_id = ${input.userId} AND created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)`
+            )
             .groupBy(sql`COALESCE(character, voice, 'unknown')`);
-          const voices = voiceRows.map((r: any) => ({ name: String(r.name), count: r.count }));
-          
+          const voices = voiceRows.map((r: any) => ({
+            name: String(r.name),
+            count: r.count,
+          }));
+
           // Active hours
           const hourRows = await db
             .select({ hour: sql`HOUR(created_at)`, count: count() })
             .from(ttsConversions)
-            .where(sql`user_id = ${input.userId} AND created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)`)
+            .where(
+              sql`user_id = ${input.userId} AND created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)`
+            )
             .groupBy(sql`HOUR(created_at)`);
-          const activeHours = hourRows.map((r: any) => ({ hour: Number(r.hour), count: r.count }));
-          
+          const activeHours = hourRows.map((r: any) => ({
+            hour: Number(r.hour),
+            count: r.count,
+          }));
+
           // Daily breakdown
           const dailyRows = await db
             .select({ date: sql`DATE(created_at)`, count: count() })
             .from(ttsConversions)
-            .where(sql`user_id = ${input.userId} AND created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)`)
+            .where(
+              sql`user_id = ${input.userId} AND created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)`
+            )
             .groupBy(sql`DATE(created_at)`)
             .orderBy(sql`DATE(created_at)`);
-          const daily = dailyRows.map((r: any) => ({ date: String(r.date), count: r.count }));
-          
+          const daily = dailyRows.map((r: any) => ({
+            date: String(r.date),
+            count: r.count,
+          }));
+
           // Recent logs
           const recentLogs = await db
             .select()
@@ -1098,14 +1264,14 @@ export const appRouter = t.router({
             .where(eq(ttsConversions.userId, input.userId))
             .orderBy(desc(ttsConversions.createdAt))
             .limit(20);
-          
+
           // Subscription
           const [sub] = await db
             .select()
             .from(subscriptions)
             .where(sql`user_id = ${input.userId} AND expires_at > NOW()`)
             .limit(1);
-          
+
           return {
             totalGens: stats30?.count || 0,
             recentGens: stats7?.count || 0,
@@ -1123,14 +1289,14 @@ export const appRouter = t.router({
               character: l.character,
               charCount: l.charCount,
               durationMs: l.durationMs,
-              status: l.status || 'success',
+              status: l.status || "success",
               errorMsg: l.errorMsg,
               createdAt: l.createdAt,
             })),
             subscription: sub || null,
           };
         } catch (e) {
-          console.error('[getUserDetail Error]', e);
+          console.error("[getUserDetail Error]", e);
           return empty;
         }
       }),
@@ -1155,26 +1321,38 @@ export const appRouter = t.router({
 export type AppRouter = typeof appRouter;
 
 // Helper: Check and deduct credits
-async function deductCredits(userId: string, amount: number, type: string, description: string): Promise<boolean> {
+async function deductCredits(
+  userId: string,
+  amount: number,
+  type: string,
+  description: string
+): Promise<boolean> {
   const db = await getDb();
   if (!db) return false;
-  
+
   try {
     // Get user credits
-    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
     if (!user) return false;
-    
+
     const currentCredits = user.credits ?? 0;
     if (currentCredits < amount) {
       throw new TRPCError({
-        code: 'BAD_REQUEST',
+        code: "BAD_REQUEST",
         message: `Insufficient credits. Need ${amount}, have ${currentCredits}`,
       });
     }
-    
+
     // Deduct credits
-    await db.update(users).set({ credits: currentCredits - amount }).where(eq(users.id, userId));
-    
+    await db
+      .update(users)
+      .set({ credits: currentCredits - amount })
+      .where(eq(users.id, userId));
+
     // Log transaction
     await db.insert(creditTransactions).values({
       id: randomUUID(),
@@ -1183,27 +1361,39 @@ async function deductCredits(userId: string, amount: number, type: string, descr
       type,
       description,
     });
-    
+
     return true;
   } catch (e: any) {
-    if (e.code === 'BAD_REQUEST') throw e;
-    console.error('[Credit Error]', e);
+    if (e.code === "BAD_REQUEST") throw e;
+    console.error("[Credit Error]", e);
     return false;
   }
 }
 
 // Helper: Add credits
-async function addCredits(userId: string, amount: number, type: string, description: string): Promise<boolean> {
+async function addCredits(
+  userId: string,
+  amount: number,
+  type: string,
+  description: string
+): Promise<boolean> {
   const db = await getDb();
   if (!db) return false;
-  
+
   try {
-    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
     if (!user) return false;
-    
+
     const currentCredits = user.credits ?? 0;
-    await db.update(users).set({ credits: currentCredits + amount }).where(eq(users.id, userId));
-    
+    await db
+      .update(users)
+      .set({ credits: currentCredits + amount })
+      .where(eq(users.id, userId));
+
     await db.insert(creditTransactions).values({
       id: randomUUID(),
       userId,
@@ -1211,10 +1401,10 @@ async function addCredits(userId: string, amount: number, type: string, descript
       type,
       description,
     });
-    
+
     return true;
   } catch (e: any) {
-    console.error('[Credit Add Error]', e);
+    console.error("[Credit Add Error]", e);
     return false;
   }
 }

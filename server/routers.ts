@@ -371,7 +371,16 @@ export const appRouter = router({
       .input(
         z.object({
           userId: z.string(),
-          plan: z.enum(["trial", "1month", "3month", "6month", "lifetime"]),
+          plan: z.enum([
+            "trial",
+            "starter",
+            "creator",
+            "pro",
+            "1month",
+            "3month",
+            "6month",
+            "lifetime",
+          ]),
           trialDays: z.number().min(1).max(365).optional(),
           note: z.string().max(500).optional(),
           paymentMethod: z.string().max(30).optional(),
@@ -1436,15 +1445,23 @@ export const appRouter = router({
           console.error("[TTS ERROR]", error?.message || error);
           if (db) {
             const { nanoid } = await import("nanoid");
-            await db.insert(ttsConversions).values({
-              id: nanoid(10), userId: ctx.user.userId, feature: "tts",
-              voice: input.voice, character: input.character, charCount: cleanText.length,
-              status: "fail", errorMsg: (error?.message ?? "unknown").slice(0, 499),
-            }).catch(() => {});
+            await db
+              .insert(ttsConversions)
+              .values({
+                id: nanoid(10),
+                userId: ctx.user.userId,
+                feature: "tts",
+                voice: input.voice,
+                character: input.character,
+                charCount: cleanText.length,
+                status: "fail",
+                errorMsg: (error?.message ?? "unknown").slice(0, 499),
+              })
+              .catch(() => {});
           }
-          throw new Error(`Failed to generate audio: ${error?.message || "Please try again"}`);
-        }
-          throw new Error("Failed to generate audio. Please try again.");
+          throw new Error(
+            `Failed to generate audio: ${error?.message || "Please try again"}`
+          );
         }
       }),
 
