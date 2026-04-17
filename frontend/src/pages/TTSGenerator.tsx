@@ -462,6 +462,14 @@ export default function TTSGenerator() {
     return () => clearTimeout(timer);
   }, [dubVideoUrl, dubVideoFile]);
 
+  // Set audio source when generatedFiles.audioObjectUrl changes
+  useEffect(() => {
+    if (generatedFiles?.audioObjectUrl && audioRef.current) {
+      audioRef.current.src = generatedFiles.audioObjectUrl;
+      audioRef.current.load();
+    }
+  }, [generatedFiles?.audioObjectUrl]);
+
   // Light theme: Warm Cream, Dark: Deep Dark
   const bgGradient = isDark
     ? "linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%)"
@@ -495,27 +503,47 @@ export default function TTSGenerator() {
         aspectRatio,
         character: voiceMode === "character" ? character : undefined,
       });
-      if (result.success) {
-        const binary = atob(result.audioBase64);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-        const blob = new Blob([bytes], { type: result.mimeType });
-        const audioObjectUrl = URL.createObjectURL(blob);
-        setGeneratedFiles({
-          audioObjectUrl,
-          srtContent: result.srtContent,
-          durationMs: result.durationMs,
-        });
-        setTimeout(() => {
-          if (audioRef.current) {
-            audioRef.current.src = audioObjectUrl;
-            audioRef.current.load();
+      if (result.success && result.audioBase64) {
+        try {
+          const binary = atob(result.audioBase64);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++)
+            bytes[i] = binary.charCodeAt(i);
+          if (bytes.length === 0) {
+            showError(
+              lang === "mm"
+                ? "အသံ ဖန်တီး၍ မရပါ။ ထပ်ကြိုးစားပါ။"
+                : "Generated audio is empty. Please try again."
+            );
+            return;
           }
-        }, 100);
-        // Refresh usage counters
-        utils.subscription.myStatus.invalidate();
+          const blob = new Blob([bytes], {
+            type: result.mimeType || "audio/mpeg",
+          });
+          const audioObjectUrl = URL.createObjectURL(blob);
+          setGeneratedFiles({
+            audioObjectUrl,
+            srtContent: result.srtContent || "",
+            durationMs: result.durationMs || 0,
+          });
+          utils.subscription.myStatus.invalidate();
+        } catch (decodeErr: any) {
+          console.error("[TTS Decode Error]", decodeErr);
+          showError(
+            lang === "mm"
+              ? "အသံ ဖိုင် ပြင်ဆင်၍ မရပါ။"
+              : "Failed to process audio file."
+          );
+        }
+      } else {
+        showError(
+          lang === "mm"
+            ? "အသံ ဖန်တီး၍ မရပါ။ ထပ်ကြိုးစားပါ。"
+            : "No audio was generated. Please try again."
+        );
       }
     } catch (e: any) {
+      console.error("[TTS Generate Error]", e);
       showError(e?.message || "Failed");
     }
   };
@@ -4332,7 +4360,6 @@ export default function TTSGenerator() {
             </div>
           )}
         </div>
-        <audio ref={audioRef} className="hidden" />
       </div>
     </TTSGeneratorLayout>
   );

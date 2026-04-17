@@ -174,46 +174,76 @@ export async function generateSpeech(
 
   await fs.writeFile(tmpText, text, "utf8");
 
+  const pythonCmd = process.platform === "win32" ? "python" : "python3";
+
   await acquireSlot();
   try {
-    await execFileAsync(
-      "edge-tts",
-      [
-        "--voice",
-        voiceConfig.shortName,
-        "--rate",
-        rateStr,
-        `--pitch=${pitchStr}`,
-        "--file",
-        tmpText,
-        "--write-media",
-        audioPath,
-        "--write-subtitles",
-        srtPath,
-      ],
-      {
-        env: {
-          ...process.env,
-          PATH: process.env.PATH,
-          HTTPS_PROXY: (() => {
-            const h = process.env.EDGE_TTS_PROXY_HOST,
-              p = process.env.EDGE_TTS_PROXY_PORT,
-              u = process.env.EDGE_TTS_PROXY_USER,
-              s = process.env.EDGE_TTS_PROXY_PASS;
-            return h && p && u && s ? `http://${u}:${s}@${h}:${p}` : "";
-          })(),
-          HTTP_PROXY: (() => {
-            const h = process.env.EDGE_TTS_PROXY_HOST,
-              p = process.env.EDGE_TTS_PROXY_PORT,
-              u = process.env.EDGE_TTS_PROXY_USER,
-              s = process.env.EDGE_TTS_PROXY_PASS;
-            return h && p && u && s ? `http://${u}:${s}@${h}:${p}` : "";
-          })(),
-        },
-      }
+    console.log(
+      `[EDGE-TTS] Running: ${pythonCmd} -m edge_tts --voice ${voiceConfig.shortName} --rate ${rateStr} --pitch=${pitchStr}`
     );
+    try {
+      await execFileAsync(
+        pythonCmd,
+        [
+          "-m",
+          "edge_tts",
+          "--voice",
+          voiceConfig.shortName,
+          "--rate",
+          rateStr,
+          `--pitch=${pitchStr}`,
+          "--file",
+          tmpText,
+          "--write-media",
+          audioPath,
+          "--write-subtitles",
+          srtPath,
+        ],
+        {
+          timeout: 120000,
+          env: {
+            ...process.env,
+            PATH: process.env.PATH,
+            HTTPS_PROXY: (() => {
+              const h = process.env.EDGE_TTS_PROXY_HOST,
+                p = process.env.EDGE_TTS_PROXY_PORT,
+                u = process.env.EDGE_TTS_PROXY_USER,
+                s = process.env.EDGE_TTS_PROXY_PASS;
+              return h && p && u && s ? `http://${u}:${s}@${h}:${p}` : "";
+            })(),
+            HTTP_PROXY: (() => {
+              const h = process.env.EDGE_TTS_PROXY_HOST,
+                p = process.env.EDGE_TTS_PROXY_PORT,
+                u = process.env.EDGE_TTS_PROXY_USER,
+                s = process.env.EDGE_TTS_PROXY_PASS;
+              return h && p && u && s ? `http://${u}:${s}@${h}:${p}` : "";
+            })(),
+          },
+        }
+      );
+    } catch (execErr: any) {
+      console.error("[EDGE-TTS EXEC ERROR]", execErr?.message || execErr);
+      console.error("[EDGE-TTS STDERR]", execErr?.stderr?.toString());
+      console.error("[EDGE-TTS STDOUT]", execErr?.stdout?.toString());
+      throw new Error(
+        execErr?.message?.includes("ENOENT")
+          ? "edge-tts not found. Is it installed?"
+          : `edge-tts failed: ${execErr?.stderr?.toString() || execErr?.message || "Unknown error"}`
+      );
+    }
 
-    const audioBuffer = await fs.readFile(audioPath);
+    let audioBuffer: Buffer;
+    try {
+      audioBuffer = await fs.readFile(audioPath);
+    } catch (readErr: any) {
+      console.error("[edge-tts audio read error]", readErr?.message || readErr);
+      throw new Error("Failed to read generated audio file.");
+    }
+
+    if (!audioBuffer || audioBuffer.length === 0) {
+      console.error("[edge-tts] Generated audio file is empty");
+      throw new Error("Failed to generate audio.");
+    }
 
     let rawSrt = "";
     try {

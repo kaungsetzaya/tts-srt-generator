@@ -21,18 +21,46 @@ export async function generateVpsSpeech(
   await fs.mkdir(OUTPUT_DIR, { recursive: true }).catch(() => {});
   await fs.writeFile(tmpText, text, "utf8");
 
+  const pythonCmd = process.platform === "win32" ? "python" : "python3";
+
   try {
-    await execFileAsync("edge-tts", [
-      "--voice", voice,
-      "--rate", rate,
-      "--pitch", pitch,
-      "--file", tmpText,
-      "--write-media", audioPath,
-      "--write-subtitles", srtPath,
-    ], { timeout: 60000 });
+    try {
+      await execFileAsync(
+        pythonCmd,
+        [
+          "-m",
+          "edge_tts",
+          "--voice",
+          voice,
+          "--rate",
+          rate,
+          "--pitch",
+          pitch,
+          "--file",
+          tmpText,
+          "--write-media",
+          audioPath,
+          "--write-subtitles",
+          srtPath,
+        ],
+        { timeout: 60000 }
+      );
+    } catch (execErr: any) {
+      console.error("[VPS-TTS EXEC ERROR]", execErr?.message || execErr);
+      console.error("[VPS-TTS STDERR]", execErr?.stderr?.toString());
+      throw new Error(
+        execErr?.message?.includes("ENOENT")
+          ? "edge-tts not found. Is it installed?"
+          : `edge-tts failed: ${execErr?.stderr?.toString() || execErr?.message || "Unknown error"}`
+      );
+    }
 
     const audioBuffer = await fs.readFile(audioPath);
     const srtContent = await fs.readFile(srtPath, "utf8").catch(() => "");
+
+    if (!audioBuffer || audioBuffer.length === 0) {
+      throw new Error("Generated audio file is empty.");
+    }
 
     return { audioBuffer, srtContent };
   } finally {

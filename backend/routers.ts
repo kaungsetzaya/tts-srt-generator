@@ -17,7 +17,7 @@ import {
   errorLogs,
   settings,
 } from "../drizzle/schema";
-import { eq, desc, count, sql } from "drizzle-orm";
+import { eq, desc, count, sql, gt, and } from "drizzle-orm";
 import { SignJWT } from "jose";
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import superjson from "superjson";
@@ -122,10 +122,10 @@ export const appRouter = t.router({
 
   // ─── TTS ─────────────────────────────────
   tts: t.router({
-    generateAudio: t.procedure
+    generateAudio: protectedProcedure
       .input(
         z.object({
-          text: z.string(),
+          text: z.string().min(1, "Invalid text"),
           voice: z.enum(["thiha", "nilar"]).optional(),
           tone: z.number().optional(),
           speed: z.number().optional(),
@@ -133,14 +133,36 @@ export const appRouter = t.router({
           character: z.string().optional(),
         })
       )
-      .mutation(async ({ input }) => {
-        try {
-          const voice = input.voice || "thiha";
-          const rate = input.speed ?? 1.0;
-          const pitch = input.tone ?? 0;
-          const aspectRatio = input.aspectRatio || "16:9";
+      .mutation(async ({ input, ctx }) => {
+        // Check subscription
+        const db = await getDb();
+        if (!db)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
 
-          let result;
+        const isAdmin = ctx.user!.role === "admin";
+        if (!isAdmin) {
+          const sub = await db.query.subscriptions.findFirst({
+            where: (s: any, { eq, and, gt }: any) =>
+              and(eq(s.userId, ctx.user!.userId), gt(s.expiresAt, new Date())),
+          });
+          if (!sub) {
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message: "No active subscription",
+            });
+          }
+        }
+
+        const voice = input.voice || "thiha";
+        const rate = input.speed ?? 1.0;
+        const pitch = input.tone ?? 0;
+        const aspectRatio = input.aspectRatio || "16:9";
+
+        let result;
+        try {
           if (input.character) {
             result = await generateSpeechWithCharacter(
               input.text,
@@ -158,21 +180,48 @@ export const appRouter = t.router({
               aspectRatio
             );
           }
-
-          return {
-            success: true,
-            audioBase64: result.audioBuffer.toString("base64"),
-            mimeType: "audio/mpeg",
-            durationMs: result.durationMs,
-            srtContent: result.srtContent,
-          };
         } catch (error: any) {
-          console.error("[TTS Error]", error);
+          console.error("[TTS Error]", error?.message || error);
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: error.message || "Failed to generate audio.",
           });
         }
+
+        if (!result || !result.audioBuffer || result.audioBuffer.length === 0) {
+          console.error("[TTS Error] Empty audio buffer returned");
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to generate audio.",
+          });
+        }
+
+        // Record conversion
+        try {
+          const db = await getDb();
+          if (db) {
+            await db.insert(ttsConversions).values({
+              id: randomUUID(),
+              userId: ctx.user!.userId,
+              voice,
+              character: input.character || null,
+              text: input.text.slice(0, 500),
+              charCount: input.text.length,
+              durationMs: result.durationMs,
+              feature: "tts",
+            });
+          }
+        } catch (e) {
+          console.error("[TTS DB Log Error]", e);
+        }
+
+        return {
+          success: true,
+          audioBase64: result.audioBuffer.toString("base64"),
+          mimeType: "audio/mpeg",
+          durationMs: result.durationMs,
+          srtContent: result.srtContent,
+        };
       }),
   }),
 
