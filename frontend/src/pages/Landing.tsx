@@ -68,7 +68,7 @@ export default function Landing() {
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
-        className="fixed top-2 sm:top-4 left-2 sm:left-1/2 right-2 sm:right-auto sm:-translate-x-1/2 z-50 px-3 sm:px-6 py-2 sm:py-3 rounded-xl sm:rounded-2xl flex items-center justify-between sm:gap-4"
+        className="fixed top-2 sm:top-4 left-2 sm:left-1/2 right-2 sm:right-auto sm:-translate-x-1/2 z-50 px-3 sm:px-6 py-2 sm:py-3 rounded-xl sm:rounded-2xl flex items-center gap-2 sm:gap-4"
         style={{ background: C.glass, backdropFilter: "blur(24px)", border: `1px solid ${C.glassB}`, boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}
       >
         <motion.div className="flex items-center gap-2 sm:gap-8">
@@ -88,7 +88,7 @@ export default function Landing() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
             onClick={() => featRef.current?.scrollIntoView({ behavior: 'smooth' })} 
-                        className="text-[10px] sm:text-xs uppercase tracking-[0.15em] sm:tracking-[0.2em] transition-colors duration-200 hidden sm:block"
+                        className="text-[10px] sm:text-xs uppercase tracking-[0.1em] sm:tracking-[0.2em] transition-colors duration-200"
             style={{ color: C.nude }}
           >Features</motion.button>
           <motion.button 
@@ -98,7 +98,7 @@ export default function Landing() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
             onClick={() => nav("/plans")} 
-            className="text-[10px] sm:text-xs uppercase tracking-[0.15em] sm:tracking-[0.2em] transition-colors duration-200 hidden sm:block"
+            className="text-[10px] sm:text-xs uppercase tracking-[0.1em] sm:tracking-[0.2em] transition-colors duration-200"
             style={{ color: C.nude }}
           >Plans</motion.button>
           <motion.button 
