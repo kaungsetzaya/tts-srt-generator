@@ -301,15 +301,13 @@ export const appRouter = t.router({
             .update(users)
             .set({ credits: currentCredits - creditsNeeded })
             .where(eq(users.id, ctx.user!.userId));
-          await db
-            .insert(creditTransactions)
-            .values({
-              id: randomUUID(),
-              userId: ctx.user!.userId,
-              amount: -creditsNeeded,
-              type: "video_dub",
-              description: `Video Dub: ${input.voice}`,
-            });
+          await db.insert(creditTransactions).values({
+            id: randomUUID(),
+            userId: ctx.user!.userId,
+            amount: -creditsNeeded,
+            type: "video_dub",
+            description: `Video Dub: ${input.voice}`,
+          });
         }
         try {
           const buffer = Buffer.from(input.videoBase64, "base64");
@@ -355,15 +353,13 @@ export const appRouter = t.router({
             .update(users)
             .set({ credits: currentCredits - creditsNeeded })
             .where(eq(users.id, ctx.user!.userId));
-          await db
-            .insert(creditTransactions)
-            .values({
-              id: randomUUID(),
-              userId: ctx.user!.userId,
-              amount: -creditsNeeded,
-              type: "video_dub",
-              description: `Video Dub: ${input.voice}`,
-            });
+          await db.insert(creditTransactions).values({
+            id: randomUUID(),
+            userId: ctx.user!.userId,
+            amount: -creditsNeeded,
+            type: "video_dub",
+            description: `Video Dub: ${input.voice}`,
+          });
         }
         try {
           return await dubVideoFromLink(input.url, {
@@ -407,15 +403,13 @@ export const appRouter = t.router({
             .update(users)
             .set({ credits: currentCredits - creditsNeeded })
             .where(eq(users.id, ctx.user!.userId));
-          await db
-            .insert(creditTransactions)
-            .values({
-              id: randomUUID(),
-              userId: ctx.user!.userId,
-              amount: -creditsNeeded,
-              type: "video_translate",
-              description: `Video Translate`,
-            });
+          await db.insert(creditTransactions).values({
+            id: randomUUID(),
+            userId: ctx.user!.userId,
+            amount: -creditsNeeded,
+            type: "video_translate",
+            description: `Video Translate`,
+          });
         }
         try {
           const buffer = Buffer.from(input.videoBase64, "base64");
@@ -457,15 +451,13 @@ export const appRouter = t.router({
             .update(users)
             .set({ credits: currentCredits - creditsNeeded })
             .where(eq(users.id, ctx.user!.userId));
-          await db
-            .insert(creditTransactions)
-            .values({
-              id: randomUUID(),
-              userId: ctx.user!.userId,
-              amount: -creditsNeeded,
-              type: "video_translate",
-              description: `Video Translate`,
-            });
+          await db.insert(creditTransactions).values({
+            id: randomUUID(),
+            userId: ctx.user!.userId,
+            amount: -creditsNeeded,
+            type: "video_translate",
+            description: `Video Translate`,
+          });
         }
         try {
           const result = await translateVideoLink(input.url);
@@ -946,9 +938,7 @@ export const appRouter = t.router({
               duration: sql`COALESCE(SUM(duration_ms), 0)`,
             })
             .from(ttsConversions)
-            .where(
-              sql`${ttsConversions.character} IS NOT NULL AND ${ttsConversions.character} != ''`
-            )
+            .where(sql`\`character\` IS NOT NULL AND \`character\` != ''`)
             .groupBy(ttsConversions.character, ttsConversions.voice);
 
           const characters = charDetails.map(r => ({
