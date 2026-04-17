@@ -1,11 +1,7 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { randomBytes, randomUUID } from "crypto";
-import {
-  generateSpeech,
-  SUPPORTED_VOICES,
-  generateSpeechWithCharacter,
-} from "./tts";
+import { randomUUID } from "crypto";
+import { generateSpeech, generateSpeechWithCharacter } from "./tts";
 import { dubVideoFromBuffer, dubVideoFromLink } from "./videoDubber";
 import { translateVideo, translateVideoLink } from "./videoTranslator";
 import { isAllowedVideoUrl } from "./_core/security";
@@ -66,7 +62,7 @@ export const appRouter = t.router({
             message: "Database not available",
           });
 
-        const code = typeof input === "string" ? input : input.code;
+        const { code } = input;
         const user = await db.query.users.findFirst({
           where: (u: any, { eq }: any) => eq(u.telegramCode, code),
         });
@@ -143,35 +139,15 @@ export const appRouter = t.router({
         // Calculate credits needed: Thiha/Nilar=1, Character=3
         const creditsNeeded = input.character ? 3 : 1;
 
-        // Check and deduct credits
-        const db = await getDb();
-        if (db) {
-          const [user] = await db
-            .select()
-            .from(users)
-            .where(eq(users.id, ctx.user!.userId))
-            .limit(1);
-          const currentCredits = user?.credits ?? 0;
-          if (currentCredits < creditsNeeded) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: `Insufficient credits. Need ${creditsNeeded}, have ${currentCredits}`,
-            });
-          }
-          await db
-            .update(users)
-            .set({ credits: currentCredits - creditsNeeded })
-            .where(eq(users.id, ctx.user!.userId));
-          await db.insert(creditTransactions).values({
-            id: randomUUID(),
-            userId: ctx.user!.userId,
-            amount: -creditsNeeded,
-            type: "tts",
-            description: input.character
-              ? `TTS Character: ${input.character}`
-              : `TTS Voice: ${voice}`,
-          });
-        }
+        // Check and deduct credits using helper
+        await deductCredits(
+          ctx.user!.userId,
+          creditsNeeded,
+          "tts",
+          input.character
+            ? `TTS Character: ${input.character}`
+            : `TTS Voice: ${voice}`
+        );
 
         let result;
         try {
@@ -239,7 +215,7 @@ export const appRouter = t.router({
 
   // ─── DUB (legacy) ───────────────────────
   dub: t.router({
-    fromLink: t.procedure
+    fromLink: protectedProcedure
       .input(
         z.object({
           url: z.string(),
@@ -282,33 +258,12 @@ export const appRouter = t.router({
       )
       .mutation(async ({ input, ctx }) => {
         // Deduct 10 credits for dub with thiha/nilar
-        const db = await getDb();
-        if (db) {
-          const [user] = await db
-            .select()
-            .from(users)
-            .where(eq(users.id, ctx.user!.userId))
-            .limit(1);
-          const currentCredits = user?.credits ?? 0;
-          const creditsNeeded = 10;
-          if (currentCredits < creditsNeeded) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: `Insufficient credits. Need ${creditsNeeded}, have ${currentCredits}`,
-            });
-          }
-          await db
-            .update(users)
-            .set({ credits: currentCredits - creditsNeeded })
-            .where(eq(users.id, ctx.user!.userId));
-          await db.insert(creditTransactions).values({
-            id: randomUUID(),
-            userId: ctx.user!.userId,
-            amount: -creditsNeeded,
-            type: "video_dub",
-            description: `Video Dub: ${input.voice}`,
-          });
-        }
+        await deductCredits(
+          ctx.user!.userId,
+          10,
+          "video_dub",
+          `Video Dub: ${input.voice}`
+        );
         try {
           const buffer = Buffer.from(input.videoBase64, "base64");
           return await dubVideoFromBuffer(buffer, input.filename, {
@@ -333,34 +288,20 @@ export const appRouter = t.router({
         })
       )
       .mutation(async ({ input, ctx }) => {
-        // Deduct 10 credits for dub with thiha/nilar
-        const db = await getDb();
-        if (db) {
-          const [user] = await db
-            .select()
-            .from(users)
-            .where(eq(users.id, ctx.user!.userId))
-            .limit(1);
-          const currentCredits = user?.credits ?? 0;
-          const creditsNeeded = 10;
-          if (currentCredits < creditsNeeded) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: `Insufficient credits. Need ${creditsNeeded}, have ${currentCredits}`,
-            });
-          }
-          await db
-            .update(users)
-            .set({ credits: currentCredits - creditsNeeded })
-            .where(eq(users.id, ctx.user!.userId));
-          await db.insert(creditTransactions).values({
-            id: randomUUID(),
-            userId: ctx.user!.userId,
-            amount: -creditsNeeded,
-            type: "video_dub",
-            description: `Video Dub: ${input.voice}`,
+        // Validate URL
+        if (!isAllowedVideoUrl(input.url)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invalid or disallowed URL",
           });
         }
+        // Deduct 10 credits for dub with thiha/nilar
+        await deductCredits(
+          ctx.user!.userId,
+          10,
+          "video_dub",
+          `Video Dub: ${input.voice}`
+        );
         try {
           return await dubVideoFromLink(input.url, {
             voice: input.voice,
@@ -384,33 +325,12 @@ export const appRouter = t.router({
       .input(z.object({ videoBase64: z.string(), filename: z.string() }))
       .mutation(async ({ input, ctx }) => {
         // Deduct 5 credits for video translate
-        const db = await getDb();
-        if (db) {
-          const [user] = await db
-            .select()
-            .from(users)
-            .where(eq(users.id, ctx.user!.userId))
-            .limit(1);
-          const currentCredits = user?.credits ?? 0;
-          const creditsNeeded = 5;
-          if (currentCredits < creditsNeeded) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: `Insufficient credits. Need ${creditsNeeded}, have ${currentCredits}`,
-            });
-          }
-          await db
-            .update(users)
-            .set({ credits: currentCredits - creditsNeeded })
-            .where(eq(users.id, ctx.user!.userId));
-          await db.insert(creditTransactions).values({
-            id: randomUUID(),
-            userId: ctx.user!.userId,
-            amount: -creditsNeeded,
-            type: "video_translate",
-            description: `Video Translate`,
-          });
-        }
+        await deductCredits(
+          ctx.user!.userId,
+          5,
+          "video_translate",
+          "Video Translate"
+        );
         try {
           const buffer = Buffer.from(input.videoBase64, "base64");
           const result = await translateVideo(buffer, input.filename);
@@ -431,34 +351,20 @@ export const appRouter = t.router({
     translateLink: protectedProcedure
       .input(z.object({ url: z.string() }))
       .mutation(async ({ input, ctx }) => {
-        // Deduct 5 credits for video translate
-        const db = await getDb();
-        if (db) {
-          const [user] = await db
-            .select()
-            .from(users)
-            .where(eq(users.id, ctx.user!.userId))
-            .limit(1);
-          const currentCredits = user?.credits ?? 0;
-          const creditsNeeded = 5;
-          if (currentCredits < creditsNeeded) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: `Insufficient credits. Need ${creditsNeeded}, have ${currentCredits}`,
-            });
-          }
-          await db
-            .update(users)
-            .set({ credits: currentCredits - creditsNeeded })
-            .where(eq(users.id, ctx.user!.userId));
-          await db.insert(creditTransactions).values({
-            id: randomUUID(),
-            userId: ctx.user!.userId,
-            amount: -creditsNeeded,
-            type: "video_translate",
-            description: `Video Translate`,
+        // Validate URL
+        if (!isAllowedVideoUrl(input.url)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invalid or disallowed URL",
           });
         }
+        // Deduct 5 credits for video translate
+        await deductCredits(
+          ctx.user!.userId,
+          5,
+          "video_translate",
+          "Video Translate"
+        );
         try {
           const result = await translateVideoLink(input.url);
           return {
@@ -1340,40 +1246,41 @@ async function deductCredits(
   if (!db) return false;
 
   try {
-    // Get user credits
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
-    if (!user) return false;
+    await db.transaction(async tx => {
+      const [user] = await tx
+        .select()
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      if (!user) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+      }
 
-    const currentCredits = user.credits ?? 0;
-    if (currentCredits < amount) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: `Insufficient credits. Need ${amount}, have ${currentCredits}`,
+      const currentCredits = user.credits ?? 0;
+      if (currentCredits < amount) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Insufficient credits. Need ${amount}, have ${currentCredits}`,
+        });
+      }
+
+      await tx
+        .update(users)
+        .set({ credits: currentCredits - amount })
+        .where(eq(users.id, userId));
+
+      await tx.insert(creditTransactions).values({
+        id: randomUUID(),
+        userId,
+        amount: -amount,
+        type,
+        description,
       });
-    }
-
-    // Deduct credits
-    await db
-      .update(users)
-      .set({ credits: currentCredits - amount })
-      .where(eq(users.id, userId));
-
-    // Log transaction
-    await db.insert(creditTransactions).values({
-      id: randomUUID(),
-      userId,
-      amount: -amount,
-      type,
-      description,
     });
 
     return true;
   } catch (e: any) {
-    if (e.code === "BAD_REQUEST") throw e;
+    if (e.code === "BAD_REQUEST" || e.code === "NOT_FOUND") throw e;
     console.error("[Credit Error]", e);
     return false;
   }
