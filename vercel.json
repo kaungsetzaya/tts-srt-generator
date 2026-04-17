@@ -15,7 +15,7 @@
       "headers": [
         {
           "key": "Access-Control-Allow-Origin",
-          "value": "https://lumix-studio.vercel.app"
+          "value": "*"
         },
         {
           "key": "Access-Control-Allow-Credentials",
