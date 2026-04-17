@@ -95,33 +95,41 @@ const FEATURE_ICONS: Record<string, any> = {
 // ── Accent colors ──────────────────────────────────────────────
 const C = "#C06F30"; // copper
 const C_GOLD = "#F4B34F"; // gold
-const C_BG = "#0f0f0f"; // dark background
-const cardBg = "rgba(26,26,26,0.8)"; // card background
-const border = "rgba(192,111,48,0.25)";
+const C_BG = "#070707"; // deep black background
+const cardBg = "linear-gradient(145deg, rgba(20,18,16,0.95) 0%, rgba(14,12,10,0.98) 100%)"; // rich dark card
+const border = "rgba(192,111,48,0.2)";
+const glassBorder = "rgba(244,179,79,0.08)";
+const cardShadow = "0 4px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)";
 
 function StatBox({
   label,
   value,
   color = C,
   sub,
+  icon,
 }: {
   label: string;
   value: any;
   color?: string;
   sub?: string;
+  icon?: React.ReactNode;
 }) {
   return (
     <div
-      style={{ background: cardBg, borderColor: border }}
-      className="border p-4 rounded-xl"
+      style={{ background: cardBg, borderColor: border, boxShadow: cardShadow }}
+      className="border p-5 rounded-2xl relative overflow-hidden group hover:border-opacity-60 transition-all"
     >
-      <p className="text-xs uppercase tracking-wider opacity-50 mb-1">
+      <div
+        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+        style={{ background: `radial-gradient(circle at 50% 0%, ${color}08, transparent 70%)` }}
+      />
+      <p className="text-[10px] uppercase tracking-[0.2em] opacity-40 mb-3 font-medium">
         {label}
       </p>
-      <p className="text-2xl font-black" style={{ color }}>
+      <p className="text-3xl font-black tracking-tight" style={{ color }}>
         {value}
       </p>
-      {sub && <p className="text-xs opacity-40 mt-0.5">{sub}</p>}
+      {sub && <p className="text-[11px] opacity-30 mt-1.5 font-medium">{sub}</p>}
     </div>
   );
 }
@@ -646,6 +654,21 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen text-foreground" style={{ background: C_BG }}>
+      {/* Ambient glows */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] rounded-full blur-[180px]" style={{ background: "rgba(192,111,48,0.04)" }} />
+        <div className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] rounded-full blur-[180px]" style={{ background: "rgba(244,179,79,0.03)" }} />
+      </div>
+
+      {/* Grid overlay */}
+      <div
+        className="fixed inset-0 pointer-events-none z-0"
+        style={{
+          backgroundImage: `linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px)`,
+          backgroundSize: "60px 60px",
+        }}
+      />
+
       {/* User Detail Drawer */}
       {userDrawer && (
         <UserDetailDrawer
@@ -657,8 +680,8 @@ export default function AdminDashboard() {
 
       {/* Top Bar */}
       <div
-        className="sticky top-0 z-40 flex items-center justify-between px-6 py-3 border-b backdrop-blur-xl"
-        style={{ borderColor: border, background: "rgba(15,12,41,0.9)" }}
+        className="sticky top-0 z-40 flex items-center justify-between px-8 py-4 border-b backdrop-blur-2xl"
+        style={{ borderColor: "rgba(192,111,48,0.15)", background: "rgba(7,7,7,0.85)" }}
       >
         <div className="flex items-center gap-2">
           <Shield className="w-5 h-5" style={{ color: C }} />
@@ -670,16 +693,20 @@ export default function AdminDashboard() {
           </span>
         </div>
         <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full" style={{ background: `${C}15`, border: `1px solid ${border}` }}>
+            <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: C_GOLD }}>Live</span>
+          </div>
           <a
             href="/lumix"
-            className="text-xs px-3 py-1.5 border rounded-lg opacity-60 hover:opacity-100 transition-all uppercase tracking-wider"
+            className="text-[11px] px-4 py-2 border rounded-xl opacity-60 hover:opacity-100 transition-all uppercase tracking-wider font-bold"
             style={{ borderColor: border }}
           >
             App
           </a>
           <button
             onClick={() => logoutMutation.mutate()}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 border border-red-500/50 text-red-400 hover:bg-red-500/10 rounded-lg transition-all uppercase tracking-wider"
+            className="flex items-center gap-1.5 text-[11px] px-4 py-2 border border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500/60 rounded-xl transition-all uppercase tracking-wider font-bold"
           >
             <LogOut className="w-3 h-3" /> Logout
           </button>
@@ -687,54 +714,57 @@ export default function AdminDashboard() {
       </div>
 
       <div className="p-6 max-w-7xl mx-auto">
-        {/* Top KPI Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-          {[
-            {
-              label: "🟢 Online Now",
-              value: onlineStats?.onlineCount ?? 0,
-              color: "#4ade80",
-              sub: "Active in 15min",
-            },
-            {
-              label: "🎙️ TTS (Month)",
-              value: analytics?.totalConversions ?? 0,
-              color: C,
-              sub: `${analytics?.totalConversions ?? 0} total conversions`,
-            },
-            {
-              label: "🎬 Video (Month)",
-              value: analytics?.totalConversions ?? 0,
-              color: "#60a5fa",
-              sub: `${analytics?.activeSubs ?? 0} active subs`,
-            },
-            {
-              label: "Total Users",
-              value: analytics?.totalUsers ?? 0,
-              color: "#C06F30",
-              sub: `${analytics?.activeSubs ?? 0} active subs`,
-            },
-          ].map(({ label, value, color, sub }) => (
-            <div
-              key={label}
-              className="border rounded-xl p-4"
-              style={{ background: cardBg, borderColor: border }}
-            >
-              <p className="text-xs uppercase tracking-wider opacity-50 mb-1">
-                {label}
-              </p>
-              <p className="text-3xl font-black" style={{ color }}>
-                {value}
-              </p>
-              <p className="text-xs opacity-40 mt-0.5">{sub}</p>
-            </div>
-          ))}
-        </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            {[
+              {
+                label: "🟢 Online Now",
+                value: onlineStats?.onlineCount ?? 0,
+                color: "#4ade80",
+                sub: "Active in last 15min",
+              },
+              {
+                label: "🎙️ TTS (Month)",
+                value: analytics?.totalConversions ?? 0,
+                color: C,
+                sub: `${analytics?.totalConversions ?? 0} total conversions`,
+              },
+              {
+                label: "🎬 Video (Month)",
+                value: analytics?.totalConversions ?? 0,
+                color: C_GOLD,
+                sub: `${analytics?.activeSubs ?? 0} active subs`,
+              },
+              {
+                label: "Total Users",
+                value: analytics?.totalUsers ?? 0,
+                color: C,
+                sub: `${analytics?.activeSubs ?? 0} subscribed`,
+              },
+            ].map(({ label, value, color, sub }) => (
+              <div
+                key={label}
+                className="border rounded-2xl p-5 relative overflow-hidden group hover:border-opacity-60 transition-all"
+                style={{ background: cardBg, borderColor: border, boxShadow: cardShadow }}
+              >
+                <div
+                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+                  style={{ background: `radial-gradient(circle at 50% 0%, ${color}08, transparent 70%)` }}
+                />
+                <p className="text-[10px] uppercase tracking-[0.2em] opacity-40 mb-3 font-medium">
+                  {label}
+                </p>
+                <p className="text-3xl font-black tracking-tight" style={{ color }}>
+                  {value}
+                </p>
+                <p className="text-[11px] opacity-30 mt-1.5 font-medium">{sub}</p>
+              </div>
+            ))}
+          </div>
 
         {/* Main Tabs */}
         <div
-          className="flex gap-1 mb-6 border-b"
-          style={{ borderColor: border }}
+          className="flex gap-1 mb-8 border-b"
+          style={{ borderColor: "rgba(255,255,255,0.06)" }}
         >
           {(
             [
@@ -747,11 +777,15 @@ export default function AdminDashboard() {
             <button
               key={id}
               onClick={() => setTab(id)}
-              className={`flex items-center gap-2 px-5 py-2.5 text-sm font-bold uppercase tracking-wider border-b-2 transition-all -mb-px ${tab === id ? "border-[#C06F30] text-[#C06F30]" : "border-transparent opacity-50 hover:opacity-80"}`}
+              className={`flex items-center gap-2 px-5 py-3 text-[11px] font-black uppercase tracking-[0.15em] border-b-2 transition-all -mb-px ${
+                tab === id
+                  ? "border-[#C06F30] text-[#C06F30]"
+                  : "border-transparent opacity-30 hover:opacity-60"
+              }`}
             >
               <Icon className="w-4 h-4" /> {label}
               {id === "reports" && totalErrors > 0 && (
-                <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                <span className="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">
                   {totalErrors}
                 </span>
               )}
@@ -764,8 +798,8 @@ export default function AdminDashboard() {
           <div className="space-y-5">
             {/* Generation Overview */}
             <div
-              className="border rounded-xl p-6"
-              style={{ background: cardBg, borderColor: border }}
+              className="border rounded-2xl p-6"
+              style={{ background: cardBg, borderColor: border, boxShadow: cardShadow }}
             >
               <h3
                 className="font-bold uppercase tracking-wider mb-4 flex items-center gap-2"

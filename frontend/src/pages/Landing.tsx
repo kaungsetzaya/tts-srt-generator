@@ -5,16 +5,19 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { Moon, Sun } from "lucide-react";
 
 const C_DARK = {
-  bg: "#0f0f0f",
+  bg: "#060606",
   dark: "#1a1a1a",
   brick: "#861C1C",
   copper: "#C06F30",
   gold: "#F4B34F",
   cream: "#EBE6D8",
   nude: "#ECCEB6",
-  glass: "rgba(255,255,255,0.06)",
-  glassB: "rgba(255,255,255,0.12)",
-  glassH: "rgba(255,255,255,0.18)",
+  glass: "rgba(255,255,255,0.04)",
+  glassB: "rgba(255,255,255,0.08)",
+  glassH: "rgba(255,255,255,0.14)",
+  card: "linear-gradient(145deg, rgba(18,15,12,0.95) 0%, rgba(12,10,8,0.98) 100%)",
+  cardBorder: "rgba(244,179,79,0.08)",
+  cardShadow: "0 8px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)",
 };
 
 const C_LIGHT = {
@@ -122,13 +125,19 @@ export default function Landing() {
       {/* Ambient glow blobs */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div
-          className="absolute top-[20%] left-[30%] w-[500px] h-[500px] rounded-full blur-[150px]"
-          style={{ background: `${C.copper}15` }}
+          className="absolute top-[10%] left-[20%] w-[600px] h-[600px] rounded-full blur-[180px]"
+          style={{ background: `${C.copper}12` }}
         />
         <div
-          className="absolute bottom-[20%] right-[20%] w-[400px] h-[400px] rounded-full blur-[120px]"
-          style={{ background: `${C.gold}10` }}
+          className="absolute bottom-[10%] right-[15%] w-[500px] h-[500px] rounded-full blur-[150px]"
+          style={{ background: `${C.gold}0a` }}
         />
+        {isDark && (
+          <div
+            className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full blur-[250px]"
+            style={{ background: "rgba(192,111,48,0.04)" }}
+          />
+        )}
       </div>
 
       {/* Grid */}
@@ -365,10 +374,12 @@ export default function Landing() {
                   transition={{ duration: 0.4 }}
                   className="p-5 md:p-7 flex flex-col h-full rounded-2xl md:rounded-3xl cursor-default"
                   style={{
-                    background: C.glass,
+                    background: isDark
+                      ? (C_DARK as any).card
+                      : C.glass,
                     backdropFilter: "blur(20px)",
-                    border: `1px solid ${C.glassB}`,
-                    boxShadow: "0 16px 48px rgba(0,0,0,0.1)",
+                    border: `1px solid ${isDark ? C_DARK.cardBorder : C.glassB}`,
+                    boxShadow: isDark ? C_DARK.cardShadow : "0 16px 48px rgba(0,0,0,0.1)",
                     transform: `translateZ(${30 - i * 10}px)`,
                   }}
                 >
@@ -477,11 +488,11 @@ export default function Landing() {
             className="max-w-2xl mx-auto p-6 md:p-10 lg:p-14 rounded-2xl md:rounded-3xl"
             style={{
               background: isDark
-                ? "rgba(26,26,26,0.8)"
+                ? "linear-gradient(145deg, rgba(20,18,15,0.95) 0%, rgba(12,10,8,0.98) 100%)"
                 : "rgba(255,255,255,0.8)",
               backdropFilter: "blur(24px)",
-              border: `1px solid ${C.glassB}`,
-              boxShadow: "0 24px 64px rgba(0,0,0,0.1)",
+              border: `1px solid ${isDark ? "rgba(192,111,48,0.15)" : C.glassB}`,
+              boxShadow: isDark ? "0 24px 80px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.04)" : "0 24px 64px rgba(0,0,0,0.1)",
               color: C.cream,
             }}
           >
