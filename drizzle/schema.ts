@@ -77,3 +77,13 @@ export const settings = mysqlTable("settings", {
   value: varchar("value", { length: 500 }).notNull(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Credits tracking
+export const creditTransactions = mysqlTable("credit_transactions", {
+  id: varchar("id", { length: 36 }).primaryKey().default(""),
+  userId: varchar("user_id", { length: 36 }).notNull(),
+  amount: int("amount").notNull(), // positive = add, negative = deduct
+  type: varchar("type", { length: 50 }).notNull(), // 'trial', 'purchase', 'tts', 'video_translate', 'video_dub'
+  description: varchar("description", { length: 255 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});

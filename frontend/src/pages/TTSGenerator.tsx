@@ -977,14 +977,12 @@ export default function TTSGenerator() {
                 {isAdmin
                   ? t.admin
                   : subStatus?.active && daysLeft !== null
-                    ? `${subStatus.plan === "trial" ? (lang === "mm" ? "အစမ်းသုံး" : "Trial") : subStatus.plan} · ${daysLeft}d`
+                    ? `${subStatus.plan === "trial" ? (lang === "mm" ? "အစမ်းသုံး" : "Trial") : subStatus.plan} · ${daysLeft}d · 💰${subStatus?.credits ?? 0}`
                     : subStatus?.active
                       ? subStatus.plan
                       : me
-                        ? lang === "mm"
-                          ? "Subscription မရှိ"
-                          : t.noSub
-                        : t.noSub}
+                        ? (lang === "mm" ? "Subscription မရှိ · " : "No Sub · ") + `💰${subStatus?.credits ?? 0}`
+                        : `💰${subStatus?.credits ?? 0}`}
               </span>
             </div>
             {/* Username */}
