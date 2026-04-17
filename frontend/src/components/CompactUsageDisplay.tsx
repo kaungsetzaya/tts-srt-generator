@@ -55,9 +55,9 @@ export function CompactUsageDisplay({ subStatus, isCollapsed }: CompactUsageDisp
             </div>
           </div>
 
-          {/* AI Video */}
+          {/* Auto Creator */}
           <div className="p-2 rounded" style={{ background: "rgba(0,0,0,0.2)" }}>
-            <div className="opacity-60" style={{ fontSize: "9px" }}>AI Video</div>
+            <div className="opacity-60" style={{ fontSize: "9px" }}>Auto Creator</div>
             <div className="font-bold">
               {usage.aiVideo}/{limits.totalAiVideo}
               <span className={remainingAI <= 1 ? "text-red-400" : "text-green-400"}>
@@ -138,9 +138,9 @@ export function CompactUsageDisplay({ subStatus, isCollapsed }: CompactUsageDisp
             </div>
           </div>
 
-          {/* AI Video */}
+          {/* Auto Creator */}
           <div className="p-2 rounded" style={{ background: "rgba(0,0,0,0.2)" }}>
-            <div className="opacity-60" style={{ fontSize: "9px" }}>AI Video</div>
+            <div className="opacity-60" style={{ fontSize: "9px" }}>Auto Creator</div>
             <div className="font-bold">
               {usage.aiVideo}/{limits.dailyAiVideo}
             </div>

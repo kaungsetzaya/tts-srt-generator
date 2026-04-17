@@ -25,9 +25,9 @@ const T = {
       charDesc: "Ryan, Michelle စသည့် Character အသံများ",
       videoTitle: "Video Translation",
       videoDesc: "ဗီဒီယိုမှ မြန်မာဘာသာပြန်ခြင်း",
-      aiVideoTitle: "AI Video (Standard Voice)",
+      aiVideoTitle: "Auto Creator (Standard Voice)",
       aiVideoDesc: "AI ဖြင့် ဗီဒီယို ဖန်တီးခြင်း (Thiha/Nilar)",
-      aiVideoCharTitle: "AI Video (Character Voice)",
+      aiVideoCharTitle: "Auto Creator (Character Voice)",
       aiVideoCharDesc: "AI ဖြင့် ဗီဒီယို ဖန်တီးခြင်း (Character)",
     },
     limits: {
@@ -35,8 +35,8 @@ const T = {
       charLimitChar: "စာလုံးရေ ကန့်သတ်ချက် (Character)",
       maxVideoSize: "ဗီဒီယို အရွယ်အစား ကန့်သတ်ချက်",
       maxVideoDuration: "ဗီဒီယို အချိန် ကန့်သတ်ချက်",
-      aiVideoStdDuration: "AI Video အချိန် (Standard)",
-      aiVideoCharDuration: "AI Video အချိန် (Character)",
+      aiVideoStdDuration: "Auto Creator အချိန် (Standard)",
+      aiVideoCharDuration: "Auto Creator အချိန် (Character)",
     },
     contactAdmin: "Subscription ဝယ်ယူရန် Admin ကို ဆက်သွယ်ပါ",
     errorRefund: "❗ Error ဖြစ်ပွားပါက ထို attempt ကို ပြန်ပေးပါမည်",
@@ -59,9 +59,9 @@ const T = {
       charDesc: "Ryan, Michelle and other character voices",
       videoTitle: "Video Translation",
       videoDesc: "Translate video audio to Myanmar",
-      aiVideoTitle: "AI Video (Standard Voice)",
+      aiVideoTitle: "Auto Creator (Standard Voice)",
       aiVideoDesc: "Create AI dubbed videos with Thiha/Nilar",
-      aiVideoCharTitle: "AI Video (Character Voice)",
+      aiVideoCharTitle: "Auto Creator (Character Voice)",
       aiVideoCharDesc: "Create AI dubbed videos with characters",
     },
     limits: {
@@ -69,8 +69,8 @@ const T = {
       charLimitChar: "Character limit (Character)",
       maxVideoSize: "Max video size",
       maxVideoDuration: "Max video duration",
-      aiVideoStdDuration: "AI Video duration (Standard)",
-      aiVideoCharDuration: "AI Video duration (Character)",
+      aiVideoStdDuration: "Auto Creator duration (Standard)",
+      aiVideoCharDuration: "Auto Creator duration (Character)",
     },
     contactAdmin: "Contact Admin to purchase a subscription",
     errorRefund: "❗ Failed attempts are automatically refunded",
@@ -155,7 +155,7 @@ export default function TrialInfo() {
     <div className="min-h-screen font-sans transition-colors duration-500" style={{
       background: isDark 
         ? "linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%)"
-        : "linear-gradient(135deg, #E8E3CF 0%, #F5F0E6 50%, #E8E3CF 100%)",
+        : "linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 50%, #E2E8F0 100%)",
       color: textColor
     }}>
       {/* Header */}

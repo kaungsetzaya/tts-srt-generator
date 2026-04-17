@@ -37,6 +37,8 @@ interface TTSGeneratorLayoutProps {
   logoUrl?: string;
   isDark?: boolean;
   miniLogoUrl?: string;
+  lang?: "mm" | "en";
+  setLang?: (lang: "mm" | "en") => void;
 }
 
 export function TTSGeneratorLayout({
@@ -49,6 +51,8 @@ export function TTSGeneratorLayout({
   logoUrl,
   miniLogoUrl,
   isDark,
+  lang,
+  setLang,
 }: TTSGeneratorLayoutProps) {
   return (
     <SidebarProvider defaultOpen>
@@ -61,11 +65,13 @@ export function TTSGeneratorLayout({
           logoUrl={logoUrl}
           miniLogoUrl={miniLogoUrl}
           isDark={isDark}
+          lang={lang}
+          setLang={setLang}
         />
         <SidebarRail />
         <SidebarInset className="flex-1 flex flex-col min-h-screen">
-          <main className="flex-1 overflow-auto pb-20 md:pb-0 p-4 md:p-6">
-            <div className="max-w-6xl mx-auto">{children}</div>
+          <main className="flex-1 overflow-auto pb-20 md:pb-0">
+            <div>{children}</div>
           </main>
           <MobileBottomNavigation
             mainTab={mainTab}
@@ -88,6 +94,8 @@ interface TTSGeneratorSidebarProps {
   logoUrl?: string;
   miniLogoUrl?: string;
   isDark?: boolean;
+  lang?: "mm" | "en";
+  setLang?: (lang: "mm" | "en") => void;
 }
 
 function TTSGeneratorSidebar({
@@ -98,6 +106,8 @@ function TTSGeneratorSidebar({
   logoUrl,
   miniLogoUrl,
   isDark = true,
+  lang = "mm",
+  setLang,
 }: TTSGeneratorSidebarProps) {
   const sidebar = useSidebar();
   const isCollapsed = !sidebar.open;
@@ -122,8 +132,8 @@ function TTSGeneratorSidebar({
     },
     {
       id: "dubbing",
-      label: "AI Video",
-      labelEn: "AI Video",
+      label: "Auto Creator",
+      labelEn: "Auto Creator",
       icon: Wand2,
       type: "main" as const,
     },
@@ -168,7 +178,7 @@ function TTSGeneratorSidebar({
         {
           backgroundColor: isDark
             ? "rgba(15, 15, 15, 0.95)"
-            : "rgba(232, 227, 207, 0.95)",
+            : "rgba(255, 255, 255, 0.95)",
           borderRight: isDark
             ? "1px solid rgba(255,255,255,0.08)"
             : "1px solid rgba(0,0,0,0.08)",
@@ -369,6 +379,22 @@ function TTSGeneratorSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      {setLang && (
+        <div className="p-3 border-t" style={{ borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)" }}>
+          <button
+            onClick={() => setLang(lang === "mm" ? "en" : "mm")}
+            className="w-full py-2 px-3 rounded-lg font-bold text-xs uppercase tracking-widest transition-all"
+            style={{
+              border: `1px solid ${isDark ? "rgba(192,111,48,0.35)" : "rgba(192,111,48,0.15)"}`,
+              background: isDark ? "rgba(192,111,48,0.1)" : "rgba(255,255,255,0.7)",
+              color: isDark ? "#ECCEB6" : "#2B1D1C",
+            }}
+          >
+            {lang === "mm" ? "EN" : "MM"}
+          </button>
+        </div>
+      )}
     </Sidebar>
   );
 }
@@ -389,7 +415,7 @@ function MobileBottomNavigation({
   const mainNavItems = [
     { id: "tts" as const, icon: Mic, label: "TTS" },
     { id: "video" as const, icon: FileVideo, label: "Video" },
-    { id: "dubbing" as const, icon: Wand2, label: "AI Video" },
+    { id: "dubbing" as const, icon: Wand2, label: "Auto Creator" },
   ];
   const secondaryItems = [
     { id: "history", icon: History, label: "History" },
@@ -400,7 +426,7 @@ function MobileBottomNavigation({
     <div
       className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t backdrop-blur-xl"
       style={{
-        background: isDark ? "rgba(15,15,15,0.97)" : "rgba(232,227,207,0.97)",
+        background: isDark ? "rgba(15,15,15,0.97)" : "rgba(248,250,252,0.97)",
         borderColor: isDark ? "rgba(192,111,48,0.25)" : "rgba(192,111,48,0.15)",
         boxShadow: isDark
           ? "0 -4px 30px rgba(192,111,48,0.15)"

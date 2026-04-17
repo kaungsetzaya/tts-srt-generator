@@ -22,8 +22,8 @@ const T = {
     tts: "စာမှအသံ",
     translate_file: "ဗီဒီယိုဘာသာပြန်",
     translate_link: "Link ဘာသာပြန်",
-    dub_file: "AI Video (ဖိုင်)",
-    dub_link: "AI Video (Link)",
+    dub_file: "Auto Creator (ဖိုင်)",
+    dub_link: "Auto Creator (Link)",
   },
   en: {
     title: "Usage History",
@@ -40,8 +40,8 @@ const T = {
     tts: "Text to Speech",
     translate_file: "Video Translate",
     translate_link: "Link Translate",
-    dub_file: "AI Video (File)",
-    dub_link: "AI Video (Link)",
+    dub_file: "Auto Creator (File)",
+    dub_link: "Auto Creator (Link)",
   }
 };
 
@@ -90,7 +90,7 @@ export default function History() {
     <div className="min-h-screen font-sans transition-colors duration-500" style={{
       background: isDark 
         ? "linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%)"
-        : "linear-gradient(135deg, #E8E3CF 0%, #F5F0E6 50%, #E8E3CF 100%)",
+        : "linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 50%, #E2E8F0 100%)",
       color: textColor
     }}>
       {/* Header */}

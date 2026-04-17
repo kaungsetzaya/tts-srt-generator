@@ -15,7 +15,7 @@ const plans = [
       "50 Credits",
       "Access to Standard Voices (Thiha & Nilar)",
       "Video Translate (Script/SRT Extraction)",
-      "Basic AI Video Dubbing",
+      "Basic Auto Creator",
       "2.5 min / 25MB per task limit",
     ],
     cta: "Get Starter",
@@ -34,7 +34,7 @@ const plans = [
       "Everything in Starter",
       "Access to Premium Voices",
       "Priority Queue (Faster processing)",
-      "Premium AI Video Dubbing",
+      "Premium Auto Creator",
     ],
     cta: "Get Creator",
     popular: true,
@@ -63,8 +63,8 @@ const creditCosts = [
   { action: "TTS (Thiha/Nilar)", cost: "1", color: "#4ade80", icon: Play },
   { action: "TTS (Character Voices)", cost: "3", color: "#F4B34F", icon: Zap },
   { action: "Video Translate", cost: "5", color: "#C06F30", icon: Sparkles },
-  { action: "AI Video Dub (Thiha/Nilar)", cost: "10", color: "#C06F30", icon: Play },
-  { action: "AI Video Dub (Character)", cost: "15", color: "#F4B34F", icon: Crown },
+  { action: "Auto Creator (Thiha/Nilar)", cost: "10", color: "#C06F30", icon: Play },
+  { action: "Auto Creator (Character)", cost: "15", color: "#F4B34F", icon: Crown },
 ];
 
 export default function Plans() {
