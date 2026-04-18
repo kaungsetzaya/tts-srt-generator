@@ -636,14 +636,28 @@ export const appRouter = t.router({
       }
     }),
     update: adminProcedure
-      .input(z.object({ key: z.string(), value: z.string() }))
+      .input(z.union([
+        z.object({ key: z.string(), value: z.string() }),
+        z.object({}).passthrough(), // bulk update with any keys
+      ]))
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-        await db
-          .insert(settings)
-          .values({ keyName: input.key, value: input.value })
-          .onDuplicateKeyUpdate({ set: { value: input.value } });
+
+        // Bulk update: { autoTrialEnabled: true, trialCredits: 15, ... }
+        if ('key' in input && 'value' in input) {
+          await db
+            .insert(settings)
+            .values({ keyName: input.key, value: input.value })
+            .onDuplicateKeyUpdate({ set: { value: input.value } });
+        } else {
+          for (const [key, val] of Object.entries(input)) {
+            await db
+              .insert(settings)
+              .values({ keyName: key, value: String(val) })
+              .onDuplicateKeyUpdate({ set: { value: String(val) } });
+          }
+        }
         return { success: true };
       }),
   }),

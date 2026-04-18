@@ -523,12 +523,12 @@ export default function AdminDashboard() {
   const [trialEnabled, setTrialEnabled] = useState(false);
   trpc.settings.get.useQuery(undefined, {
     onSuccess: (d: any) => {
-      setAutoTrialEnabled(d.autoTrialEnabled);
+      setAutoTrialEnabled(d.autoTrialEnabled === 'true' || d.autoTrialEnabled === true);
       setAutoTrialDays(d.autoTrialDays);
       setTrialCredits(d.trialCredits || 15);
       setTrialStartDate(d.trialStartDate || "");
       setTrialEndDate(d.trialEndDate || "");
-      setTrialEnabled(d.trialEnabled || false);
+      setTrialEnabled(d.trialEnabled === 'true' || d.trialEnabled === true);
     },
   });
 
@@ -1598,7 +1598,11 @@ export default function AdminDashboard() {
                   </p>
                 </div>
                 <button
-                  onClick={() => setAutoTrialEnabled(!autoTrialEnabled)}
+                  onClick={() => {
+                    const newVal = !autoTrialEnabled;
+                    setAutoTrialEnabled(newVal);
+                    updateSettings.mutate({ autoTrialEnabled: newVal, trialCredits, trialEnabled, trialStartDate, trialEndDate });
+                  }}
                   className={`relative w-11 h-6 rounded-full transition-all ${autoTrialEnabled ? "" : "bg-gray-600"}`}
                   style={{ background: autoTrialEnabled ? C : undefined }}
                 >
@@ -1608,63 +1612,27 @@ export default function AdminDashboard() {
                 </button>
               </div>
               <div>
-                <p className="font-bold mb-3">Trial Duration</p>
+                <p className="font-bold mb-3">Trial Credits</p>
                 <div className="flex items-center gap-3">
                   <input
                     type="number"
-                    min={1}
-                    max={365}
-                    value={autoTrialDays}
-                    onChange={e => setAutoTrialDays(Number(e.target.value))}
-                    className="w-20 border p-2 text-center font-bold focus:outline-none rounded-lg"
+                    min={0}
+                    max={1000}
+                    value={trialCredits}
+                    onChange={e => setTrialCredits(Number(e.target.value))}
+                    className="w-24 border p-2 text-center font-bold focus:outline-none rounded-lg"
                     style={{
                       background: "rgba(0,0,0,0.3)",
                       borderColor: border,
                       color: C,
                     }}
                   />
-                  <span className="text-sm opacity-60">days</span>
-                  <div className="flex gap-2">
-                    {[1, 3, 7, 14, 30].map(d => (
-                      <button
-                        key={d}
-                        onClick={() => setAutoTrialDays(d)}
-                        className="px-3 py-1 text-xs font-bold border rounded-lg transition-all"
-                        style={{
-                          background: autoTrialDays === d ? C : "transparent",
-                          color: autoTrialDays === d ? "#000" : "#fff",
-                          borderColor: autoTrialDays === d ? C : border,
-                          opacity: autoTrialDays === d ? 1 : 0.5,
-                        }}
-                      >
-                        {d}d
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <p className="font-bold mb-3">Trial Credits</p>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="number"
-                      min={0}
-                      max={1000}
-                      value={trialCredits}
-                      onChange={e => setTrialCredits(Number(e.target.value))}
-                      className="w-24 border p-2 text-center font-bold focus:outline-none rounded-lg"
-                      style={{
-                        background: "rgba(0,0,0,0.3)",
-                        borderColor: border,
-                        color: C,
-                      }}
-                    />
-                    <span className="text-sm opacity-60">credits</span>
-                  </div>
+                  <span className="text-sm opacity-60">credits</span>
                 </div>
               </div>
               <div className="pt-4 border-t" style={{ borderColor: border }}>
                 <p className="font-bold mb-3">
-                  Trial ကာလ သတ်မှတ်ချက် (Trial Period)
+                  Trial Period
                 </p>
                 <div className="flex items-center gap-2 mb-3">
                   <input
@@ -1675,7 +1643,7 @@ export default function AdminDashboard() {
                     className="w-4 h-4 rounded"
                   />
                   <label htmlFor="trialEnabled" className="text-sm">
-                    Trial ကာလ ဖွင့်ထားမည် (Enable trial period)
+                    Enable trial period (users in this period get auto trial credits)
                   </label>
                 </div>
                 {trialEnabled && (
@@ -1683,7 +1651,7 @@ export default function AdminDashboard() {
                     <div className="flex items-center gap-3">
                       <div className="flex-1">
                         <label className="text-xs opacity-60 mb-1 block">
-                          စတင် ရက် (Start Date)
+                          Start Date
                         </label>
                         <input
                           type="date"
@@ -1699,7 +1667,7 @@ export default function AdminDashboard() {
                       </div>
                       <div className="flex-1">
                         <label className="text-xs opacity-60 mb-1 block">
-                          အဆုံး ရက် (End Date)
+                          End Date
                         </label>
                         <input
                           type="date"
@@ -1715,8 +1683,7 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                     <p className="text-xs opacity-50">
-                      💡 ဒီကာလအတွင်း ဝင်သော user တိုင်း auto trial ရမည် (All
-                      users joining in this period get auto trial)
+                      💡 All users who register within this period will receive trial credits automatically.
                     </p>
                   </div>
                 )}
@@ -1725,11 +1692,10 @@ export default function AdminDashboard() {
                 onClick={() =>
                   updateSettings.mutate({
                     autoTrialEnabled,
-                    autoTrialDays,
                     trialCredits,
+                    trialEnabled,
                     trialStartDate,
                     trialEndDate,
-                    trialEnabled,
                   })
                 }
                 disabled={updateSettings.isPending}
