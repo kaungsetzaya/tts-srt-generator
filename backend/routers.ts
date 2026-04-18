@@ -193,6 +193,9 @@ export const appRouter = t.router({
         );
 
         let result;
+        const userId = ctx.user!.userId;
+        const voiceName = input.character || voice;
+
         try {
           if (input.character) {
             result = await generateSpeechWithCharacter(
@@ -213,6 +216,13 @@ export const appRouter = t.router({
           }
         } catch (error: any) {
           console.error("[TTS Error]", error?.message || error);
+          // Refund credits on failure
+          await addCredits(
+            userId,
+            creditsNeeded,
+            "tts_refund",
+            `Refund: ${voiceName} TTS failed`
+          );
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: error.message || "Failed to generate audio.",
@@ -221,6 +231,13 @@ export const appRouter = t.router({
 
         if (!result || !result.audioBuffer || result.audioBuffer.length === 0) {
           console.error("[TTS Error] Empty audio buffer returned");
+          // Refund credits on empty result
+          await addCredits(
+            userId,
+            creditsNeeded,
+            "tts_refund",
+            `Refund: ${voiceName} TTS empty result`
+          );
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: "Failed to generate audio.",
@@ -300,9 +317,10 @@ export const appRouter = t.router({
         })
       )
       .mutation(async ({ input, ctx }) => {
+        const userId = ctx.user!.userId;
         // Deduct 10 credits for dub with thiha/nilar
         await deductCredits(
-          ctx.user!.userId,
+          userId,
           10,
           "video_dub",
           `Video Dub: ${input.voice}`
@@ -316,6 +334,13 @@ export const appRouter = t.router({
             srtEnabled: true,
           });
         } catch (error: any) {
+          // Refund credits on failure
+          await addCredits(
+            userId,
+            10,
+            "video_dub_refund",
+            `Refund: Video dub failed`
+          );
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: error.message || "Failed to dub video.",
@@ -331,6 +356,7 @@ export const appRouter = t.router({
         })
       )
       .mutation(async ({ input, ctx }) => {
+        const userId = ctx.user!.userId;
         // Validate URL
         if (!isAllowedVideoUrl(input.url)) {
           throw new TRPCError({
@@ -340,7 +366,7 @@ export const appRouter = t.router({
         }
         // Deduct 10 credits for dub with thiha/nilar
         await deductCredits(
-          ctx.user!.userId,
+          userId,
           10,
           "video_dub",
           `Video Dub: ${input.voice}`
@@ -353,6 +379,13 @@ export const appRouter = t.router({
             srtEnabled: true,
           });
         } catch (error: any) {
+          // Refund credits on failure
+          await addCredits(
+            userId,
+            10,
+            "video_dub_refund",
+            "Refund: Video dub failed"
+          );
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: error.message || "Failed to dub video.",
@@ -377,20 +410,40 @@ export const appRouter = t.router({
         }
         
         // Create job first
+        const userId = ctx.user!.userId;
         const jobId = randomUUID();
-        createJob("translate_file", { 
-          videoBase64: input.videoBase64, 
-          filename: input.filename,
-          userId: ctx.user!.userId 
-        });
         
-        // Deduct credits AFTER job is queued (will be refunded if fails)
-        await deductCredits(
-          ctx.user!.userId,
-          5,
-          "video_translate",
-          "Video Translate"
-        );
+        try {
+          createJob("translate_file", { 
+            videoBase64: input.videoBase64, 
+            filename: input.filename,
+            userId 
+          });
+        } catch (jobErr: any) {
+          // Refund if job creation fails
+          await addCredits(userId, 5, "video_translate_refund", "Refund: Job creation failed");
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: jobErr.message || "Failed to create translation job",
+          });
+        }
+        
+        // Deduct credits AFTER job is queued (will be refunded by processor if fails)
+        try {
+          await deductCredits(
+            userId,
+            5,
+            "video_translate",
+            "Video Translate"
+          );
+        } catch (creditErr: any) {
+          // Job already created, mark as failed
+          updateJob(jobId, { status: "failed", error: creditErr.message, progress: 0 });
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: creditErr.message || "Insufficient credits",
+          });
+        }
         
         return { jobId };
       }),
@@ -420,18 +473,38 @@ export const appRouter = t.router({
         }
         
         // Create job first
-        const jobId = createJob("translate_link", { 
-          url: input.url,
-          userId: ctx.user!.userId 
-        });
+        const userId = ctx.user!.userId;
         
-        // Deduct credits AFTER job is queued (will be refunded if fails)
-        await deductCredits(
-          ctx.user!.userId,
-          5,
-          "video_translate",
-          "Video Translate"
-        );
+        try {
+          var jobId = createJob("translate_link", { 
+            url: input.url,
+            userId 
+          });
+        } catch (jobErr: any) {
+          // Refund if job creation fails
+          await addCredits(userId, 5, "video_translate_refund", "Refund: Job creation failed");
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: jobErr.message || "Failed to create translation job",
+          });
+        }
+        
+        // Deduct credits AFTER job is queued (will be refunded by processor if fails)
+        try {
+          await deductCredits(
+            userId,
+            5,
+            "video_translate",
+            "Video Translate"
+          );
+        } catch (creditErr: any) {
+          // Job already created, mark as failed
+          updateJob(jobId, { status: "failed", error: creditErr.message, progress: 0 });
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: creditErr.message || "Insufficient credits",
+          });
+        }
         
         return { jobId };
       }),

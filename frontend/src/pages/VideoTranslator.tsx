@@ -1,5 +1,6 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
+import { queryClient } from "@/lib/queryClient";
 import { Loader2, Upload, Copy, Check, FileVideo, Languages } from "lucide-react";
 import { useLocation } from "wouter";
 
@@ -10,10 +11,38 @@ export default function VideoTranslator() {
   const [result, setResult] = useState<{ englishText: string; myanmarText: string; srtContent: string } | null>(null);
   const [editedText, setEditedText] = useState("");
   const [copied, setCopied] = useState(false);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [jobError, setJobError] = useState<string | null>(null);
+  const [jobProgress, setJobProgress] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const { data: me } = trpc.auth.me.useQuery();
   const translateMutation = trpc.video.translate.useMutation();
+  const getJobQuery = trpc.video.getTranslateJob.useQuery(
+    { jobId: jobId! },
+    { enabled: !!jobId, refetchInterval: 3000 }
+  );
+
+  useEffect(() => {
+    if (jobId && getJobQuery.data) {
+      if (getJobQuery.data.status === "completed" && getJobQuery.data.result) {
+        setResult({
+          englishText: getJobQuery.data.result.englishText,
+          myanmarText: getJobQuery.data.result.myanmarText,
+          srtContent: getJobQuery.data.result.srtContent,
+        });
+        setEditedText(getJobQuery.data.result.myanmarText);
+        setJobId(null);
+        setJobProgress(100);
+        queryClient.invalidateQueries({ queryKey: ["subscription", "myStatus"] });
+      } else if (getJobQuery.data.status === "failed") {
+        setJobError(getJobQuery.data.error || "Translation failed");
+        setJobId(null);
+      } else {
+        setJobProgress(getJobQuery.data.progress);
+      }
+    }
+  }, [jobId, getJobQuery.data]);
 
   const handleFile = (f: File) => {
     if (f.size > 25 * 1024 * 1024) { alert("Max file size is 25MB"); return; }
@@ -32,17 +61,20 @@ export default function VideoTranslator() {
 
   const handleTranslate = async () => {
     if (!file) return;
+    setJobError(null);
+    setResult(null);
     const reader = new FileReader();
     reader.onload = async () => {
       const base64 = (reader.result as string).split(",")[1];
       try {
         const res = await translateMutation.mutateAsync({ videoBase64: base64, filename: file.name });
-        if (res.success) {
-          setResult({ englishText: res.englishText, myanmarText: res.myanmarText, srtContent: res.srtContent });
-          setEditedText(res.myanmarText);
+        if (res.jobId) {
+          setJobId(res.jobId);
+          setJobProgress(10);
+          setJobError(null);
         }
       } catch (e: any) {
-        alert(e.message ?? "Translation failed");
+        setJobError(e.message || "Translation failed");
       }
     };
     reader.readAsDataURL(file);
@@ -118,7 +150,7 @@ export default function VideoTranslator() {
         </div>
 
         {/* Translate Button */}
-        {file && (
+        {file && !jobId && !result && (
           <button onClick={handleTranslate} disabled={isLoading}
             className="w-full py-4 font-black uppercase tracking-widest flex items-center justify-center gap-3 disabled:opacity-50 transition-all rounded-xl"
             style={{ background: isLoading ? "rgba(192,111,48,0.4)" : C }}>
@@ -130,16 +162,41 @@ export default function VideoTranslator() {
           </button>
         )}
 
-        {/* Processing animation — no tech details */}
-        {isLoading && (
+        {/* Processing animation */}
+        {(isLoading || jobId) && (
           <div className="border border-border bg-card p-8 rounded-xl text-center">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: C }} />
-              <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: C, animationDelay: "0.3s" }} />
-              <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: C, animationDelay: "0.6s" }} />
-            </div>
-            <p className="text-sm font-bold opacity-60">Translating your video...</p>
-            <p className="text-xs opacity-40 mt-2">Please wait</p>
+            {jobId && (
+              <>
+                <div className="flex items-center justify-center gap-3 mb-4">
+                  <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: C }} />
+                  <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: C, animationDelay: "0.3s" }} />
+                  <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: C, animationDelay: "0.6s" }} />
+                </div>
+                <p className="text-sm font-bold opacity-60">Translating your video...</p>
+                <p className="text-xs opacity-40 mt-2">Progress: {jobProgress}%</p>
+              </>
+            )}
+            {isLoading && !jobId && (
+              <>
+                <div className="flex items-center justify-center gap-3 mb-4">
+                  <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: C }} />
+                  <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: C, animationDelay: "0.3s" }} />
+                  <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: C, animationDelay: "0.6s" }} />
+                </div>
+                <p className="text-sm font-bold opacity-60">Translating your video...</p>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Error display */}
+        {jobError && (
+          <div className="border border-red-500/50 bg-red-500/10 p-6 rounded-xl text-center">
+            <p className="text-sm font-bold text-red-400">Error: {jobError}</p>
+            <button onClick={() => { setJobError(null); setFile(null); }}
+              className="mt-4 text-xs px-4 py-2 border border-border hover:bg-accent transition-all rounded-xl">
+              Try Again
+            </button>
           </div>
         )}
 

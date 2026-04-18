@@ -586,12 +586,11 @@ export default function TTSGenerator() {
           videoBase64: base64,
           filename: videoFile.name,
         });
-        if (res.success) {
+        if (res.jobId) {
           setVideoResult({
-            myanmarText: res.myanmarText,
-            srtContent: res.srtContent,
+            myanmarText: "",
+            srtContent: "",
           });
-          setEditedVideoText(res.myanmarText);
           utils.subscription.myStatus.invalidate();
         }
       } catch (e: any) {

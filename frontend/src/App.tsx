@@ -51,7 +51,9 @@ function Router() {
       </Route>
       <Route path={"/plans"} component={Plans} />
       <Route path={"/video"}>
-        {() => { window.location.href = '/lumix'; return null; }}
+        <AuthGuard>
+          <VideoTranslator />
+        </AuthGuard>
       </Route>
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
