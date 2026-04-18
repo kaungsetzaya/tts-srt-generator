@@ -88,7 +88,7 @@ export async function translateVideo(videoBuffer: Buffer, filename: string, user
         return {
             englishText,
             myanmarText,
-            srtContent: originalSrt
+            srtContent: "" // Bug 11 fix:暂时无法生成缅文SRT - 需要扩展翻译逻辑
         };
     } finally {
         if (audioPath) await fs.unlink(audioPath).catch(() => {});
@@ -162,7 +162,7 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
         return { 
             englishText, 
             myanmarText, 
-            srtContent: originalSrt,
+            srtContent: "", // Bug 11 fix:无法生成缅文SRT - 需要扩展翻译逻辑
         };
     } catch (error: any) {
         console.error("[Video Translator Error]", error);

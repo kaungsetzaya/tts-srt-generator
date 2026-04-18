@@ -66171,10 +66171,8 @@ async function generateSpeech(text2, voice = "thiha", rate = 1, pitch = 0, aspec
           "edge_tts",
           "--voice",
           voiceConfig.shortName,
-          "--rate",
-          rateStr,
-          "--pitch",
-          pitchStr,
+          `--rate=${rateStr}`,
+          `--pitch=${pitchStr}`,
           "--file",
           tmpText,
           "--write-media",
@@ -76064,7 +76062,8 @@ var appRouter = t.router({
         videoBase64: external_exports.string(),
         filename: external_exports.string(),
         voice: external_exports.enum(["thiha", "nilar"]),
-        speed: external_exports.number().optional()
+        speed: external_exports.number().optional(),
+        pitch: external_exports.number().optional()
       })
     ).mutation(async ({ input, ctx }) => {
       const userId = ctx.user.userId;
@@ -76079,7 +76078,7 @@ var appRouter = t.router({
         return await dubVideoFromBuffer(buffer, input.filename, {
           voice: input.voice,
           speed: input.speed ?? 1,
-          pitch: 0,
+          pitch: input.pitch ?? 0,
           srtEnabled: true
         });
       } catch (error48) {
@@ -76984,13 +76983,26 @@ async function handleTelegramUpdate(update) {
           telegramCodeExpiresAt: newExpiresAt
         }).where(eq(users.id, user.id));
       } else {
+        let trialCredits = 0;
+        try {
+          const settingsRows = await db.select().from(settings);
+          const settingsObj = {};
+          for (const r of settingsRows) settingsObj[r.keyName] = r.value;
+          const autoTrialEnabled = settingsObj.autoTrialEnabled === "true";
+          if (autoTrialEnabled) {
+            trialCredits = parseInt(settingsObj.trialCredits) || 15;
+          }
+        } catch {
+          trialCredits = 0;
+        }
         await db.insert(users).values({
           id: randomBytes2(16).toString("hex"),
           telegramId,
           telegramUsername: from.username || null,
           telegramFirstName: firstName,
           telegramCode: loginCode,
-          telegramCodeExpiresAt: newExpiresAt
+          telegramCodeExpiresAt: newExpiresAt,
+          credits: trialCredits
         });
       }
       const formattedMessage = `\u{1F44B} \u1019\u1004\u103A\u1039\u1002\u101C\u102C\u1015\u102B, ${firstName}!

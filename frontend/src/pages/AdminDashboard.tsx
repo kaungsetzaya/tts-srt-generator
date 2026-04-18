@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import {
   Loader2,
@@ -521,18 +521,17 @@ export default function AdminDashboard() {
   const [trialStartDate, setTrialStartDate] = useState("");
   const [trialEndDate, setTrialEndDate] = useState("");
   const [trialEnabled, setTrialEnabled] = useState(false);
-  trpc.settings.get.useQuery(undefined, {
-    refetchInterval: 1000, // Refetch every second to get latest settings
-    onSuccess: (d: any) => {
-      const autoTrial = d?.autoTrialEnabled;
-      setAutoTrialEnabled(autoTrial === 'true' || autoTrial === true);
-      setAutoTrialDays(d.autoTrialDays || 7);
-      setTrialCredits(d.trialCredits || 15);
-      setTrialStartDate(d.trialStartDate || "");
-      setTrialEndDate(d.trialEndDate || "");
-      setTrialEnabled(d.trialEnabled === 'true' || d.trialEnabled === true);
-    },
-  });
+  const { data: settingsData } = trpc.settings.get.useQuery(undefined);
+  useEffect(() => {
+    if (!settingsData) return;
+    const d = settingsData;
+    setAutoTrialEnabled(d.autoTrialEnabled === 'true' || d.autoTrialEnabled === true);
+    setAutoTrialDays(Number(d.autoTrialDays) || 7);
+    setTrialCredits(Number(d.trialCredits) || 15);
+    setTrialStartDate(d.trialStartDate || "");
+    setTrialEndDate(d.trialEndDate || "");
+    setTrialEnabled(d.trialEnabled === 'true' || d.trialEnabled === true);
+  }, [settingsData]);
 
   const logoutMutation = trpc.auth.logout.useMutation({
     onSuccess: () => {
@@ -562,11 +561,10 @@ export default function AdminDashboard() {
     onSuccess: () => refetch(),
   });
   const queryClient = trpc.useUtils();
+  const utils = trpc.useUtils();
   const updateSettings = trpc.settings.update.useMutation({
     onSuccess: () => {
-      // Invalidate and refetch settings
-      queryClient.settings.get.invalidate();
-      window.location.reload();
+      utils.settings.get.invalidate();
     },
   });
   const resolveError = trpc.adminStats.resolveError.useMutation({

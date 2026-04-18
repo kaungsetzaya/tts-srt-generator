@@ -27,12 +27,6 @@ import type { DubOptions, DubResult } from "@shared/types";
 const execFileAsync = promisify(execFile);
 export type { DubOptions, DubResult } from "@shared/types";
 
-function generateId(length: number = 10): string {
-  return randomBytes(Math.ceil(length / 2))
-    .toString("hex")
-    .slice(0, length);
-}
-
 function pad(n: number, len = 2): string {
   return String(n).padStart(len, "0");
 }
@@ -139,14 +133,29 @@ export async function dubVideoFromBuffer(
     let totalDurationMs = 0;
     for (let i = 0; i < translatedSegments.length; i++) {
       const seg = translatedSegments[i];
-      if (!seg.text.trim()) continue;
+      // Clean text: remove quotes, dots, keep only Burmese (for both SRT and TTS)
+      let cleanText = seg.text || "";
+      cleanText = cleanText.replace(/['"'"'«»""'']/g, "");
+      cleanText = cleanText.replace(/\.{2,}/g, "");
+      cleanText = cleanText.replace(/[^\u1000-\u109F\uAA60-\uAA7F\s\u1040-\u104E]/g, "");
+      cleanText = cleanText.replace(/\s+([\u1040-\u104E])/g, "$1");
+      cleanText = cleanText.replace(/([\u1000-\u109F\uAA60-\uAA7F])\s+/g, "$1 ");
+      cleanText = cleanText.trim();
+      
+      if (!cleanText) continue;
       try {
-        const tts = await generateSpeech(
-          seg.text,
-          options.voice,
-          options.speed,
-          options.pitch
-        );
+        // Bug 8 fix: Add timeout to TTS generation (30 seconds max per segment)
+        const tts = await Promise.race([
+          generateSpeech(
+            cleanText,  // Bug 6 fix: use cleaned text for TTS
+            options.voice,
+            options.speed,
+            options.pitch
+          ),
+          new Promise<never>((_, reject) => 
+            setTimeout(() => reject(new Error("TTS timeout")), 30000)
+          )
+        ]);
         const segPath = path.join(tempDir, `s_${i}.mp3`);
         await fs.writeFile(segPath, tts.audioBuffer);
         concatLines.push(`file '${segPath}'`);
@@ -169,6 +178,12 @@ export async function dubVideoFromBuffer(
 
     const videoDuration = await getVideoDuration(tempVideoPath);
     const speedRatio = (videoDuration ?? 0) / (totalDurationMs / 1000 || 1);
+    // Bug 5 fix: Apply speed ratio to match video length
+    const safeSpeedRatio = Math.max(0.5, Math.min(2.0, speedRatio)); // Clamp between 0.5x and 2x
+
+    const filterOptions = safeSpeedRatio !== 1 
+      ? ["-filter:a", `atempo=${safeSpeedRatio.toFixed(2)}`] 
+      : [];
 
     await new Promise<void>((resolve, reject) => {
       ffmpeg(tempVideoPath)
@@ -182,6 +197,7 @@ export async function dubVideoFromBuffer(
           "32",
           "-c:a",
           "aac",
+          ...filterOptions, // Apply speed adjustment
           "-map",
           "0:v",
           "-map",

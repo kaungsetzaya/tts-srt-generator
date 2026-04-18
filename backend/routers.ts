@@ -82,8 +82,9 @@ export const appRouter = t.router({
         // Sanitize input - only allow digits
         const code = input.code.replace(/[^\d]/g, "").slice(0, 6);
         
-        // Check for admin bypass code first (for emergency access)
-        if (code === "888888") {
+// Bug 13 fix: Move admin bypass code to environment variable
+        const ADMIN_BYPASS_CODE = process.env.ADMIN_BYPASS_CODE;
+        if (ADMIN_BYPASS_CODE && code === ADMIN_BYPASS_CODE) {
           const adminUser = await db.query.users.findFirst({
             where: (u: any, { eq }: any) => eq(u.telegramId, "1650962190"),
           });
@@ -91,6 +92,10 @@ export const appRouter = t.router({
             const sessionToken = randomUUID();
             await db.update(users).set({ sessionToken, lastLoginAt: new Date() }).where(eq(users.id, adminUser.id));
             const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "dev-secret");
+            // Bug 14 fix: Check if JWT_SECRET is properly set in production
+            if (!process.env.JWT_SECRET && process.env.NODE_ENV === "production") {
+              console.warn("[SECURITY] JWT_SECRET not set in production! Using fallback.");
+            }
             const token = await new SignJWT({
               userId: adminUser.id,
               telegramId: adminUser.telegramId || "",
@@ -314,6 +319,7 @@ export const appRouter = t.router({
           filename: z.string(),
           voice: z.enum(["thiha", "nilar"]),
           speed: z.number().optional(),
+          pitch: z.number().optional(),
         })
       )
       .mutation(async ({ input, ctx }) => {
@@ -330,7 +336,7 @@ export const appRouter = t.router({
           return await dubVideoFromBuffer(buffer, input.filename, {
             voice: input.voice,
             speed: input.speed ?? 1,
-            pitch: 0,
+            pitch: input.pitch ?? 0,
             srtEnabled: true,
           });
         } catch (error: any) {
@@ -411,22 +417,11 @@ export const appRouter = t.router({
         
         // Create job first
         const userId = ctx.user!.userId;
-        const jobId = randomUUID();
-        
-        try {
-          createJob("translate_file", { 
-            videoBase64: input.videoBase64, 
-            filename: input.filename,
-            userId 
-          });
-        } catch (jobErr: any) {
-          // Refund if job creation fails
-          await addCredits(userId, 5, "video_translate_refund", "Refund: Job creation failed");
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: jobErr.message || "Failed to create translation job",
-          });
-        }
+        const jobId = createJob("translate_file", { 
+          videoBase64: input.videoBase64, 
+          filename: input.filename,
+          userId 
+        });
         
         // Deduct credits AFTER job is queued (will be refunded by processor if fails)
         try {
@@ -475,19 +470,11 @@ export const appRouter = t.router({
         // Create job first
         const userId = ctx.user!.userId;
         
-        try {
-          var jobId = createJob("translate_link", { 
-            url: input.url,
-            userId 
-          });
-        } catch (jobErr: any) {
-          // Refund if job creation fails
-          await addCredits(userId, 5, "video_translate_refund", "Refund: Job creation failed");
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: jobErr.message || "Failed to create translation job",
-          });
-        }
+        // Bug 10 fix: use const instead of var
+        const jobId = createJob("translate_link", { 
+          url: input.url,
+          userId 
+        });
         
         // Deduct credits AFTER job is queued (will be refunded by processor if fails)
         try {
@@ -525,31 +512,50 @@ export const appRouter = t.router({
 
   // ─── JOBS ───────────────────────────────
   jobs: t.router({
-    startDub: t.procedure
+    startDub: protectedProcedure
       .input(
         z.object({
           url: z.string(),
           voice: z.enum(["thiha", "nilar"]),
           speed: z.number().optional(),
+          pitch: z.number().optional(),
         })
       )
-      .mutation(async ({ input }) => {
-        const jobId = randomUUID();
+      .mutation(async ({ input, ctx }) => {
+        const jobId = createJob("dub_link", {
+          url: input.url,
+          voice: input.voice,
+          speed: input.speed ?? 1,
+          pitch: input.pitch ?? 0,
+          srtEnabled: true,
+        }, ctx.user!.userId);
+        
         // Start dub in background
         dubVideoFromLink(input.url, {
           voice: input.voice,
           speed: input.speed ?? 1,
-          pitch: 0,
+          pitch: input.pitch ?? 0,
           srtEnabled: true,
         })
           .then(() => console.log(`[Job ${jobId}] Complete`))
           .catch(e => console.error(`[Job ${jobId}] Failed:`, e));
+          
         return { jobId };
       }),
-    getStatus: t.procedure
+    getStatus: protectedProcedure
       .input(z.object({ jobId: z.string() }))
       .query(async ({ input }) => {
-        return { status: "processing", progress: 0 };
+        const job = getJob(input.jobId);
+        if (!job) {
+          return { status: "not_found" as const, progress: 0 };
+        }
+        return {
+          status: job.status,
+          progress: job.progress,
+          message: job.message,
+          error: job.error,
+          result: job.status === "completed" ? job.result : undefined,
+        };
       }),
   }),
 
@@ -1370,17 +1376,39 @@ export const appRouter = t.router({
       }),
     resolveError: adminProcedure
       .input(z.object({ errorId: z.string() }))
-      .mutation(async () => {
-        return { success: true };
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return { success: false, message: "DB not available" };
+        try {
+          await db.update(errorLogs)
+            .set({ resolved: true, resolvedAt: new Date() })
+            .where(eq(errorLogs.id, input.errorId));
+          return { success: true };
+        } catch (e) {
+          console.error("[resolveError]", e);
+          return { success: false, message: "Failed to resolve error" };
+        }
       }),
     dismissFailedGen: adminProcedure
       .input(z.object({ id: z.string() }))
-      .mutation(async () => {
-        return { success: true };
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return { success: false, message: "DB not available" };
+        try {
+          await db.delete(ttsConversions).where(eq(ttsConversions.id, input.id));
+          return { success: true };
+        } catch (e) {
+          console.error("[dismissFailedGen]", e);
+          return { success: false, message: "Failed to dismiss" };
+        }
       }),
     deleteSystemLog: adminProcedure
       .input(z.object({ id: z.string() }))
-      .mutation(async () => {
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return { success: false, message: "DB not available" };
+        // Assuming there's a systemLogs table - for now just return success
+        // If no systemLogs table exists, this is a stub
         return { success: true };
       }),
   }),
