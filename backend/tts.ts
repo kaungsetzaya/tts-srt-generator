@@ -267,8 +267,9 @@ export async function generateSpeech(
 }
 
 function parseLastEndTime(srt: string): number {
+  const normalized = srt.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
   const matches = [
-    ...srt.matchAll(/\d{2}:\d{2}:\d{2},\d{3} --> (\d{2}:\d{2}:\d{2},\d{3})/g),
+    ...normalized.matchAll(/\d{2}:\d{2}:\d{2},\d{3} --> (\d{2}:\d{2}:\d{2},\d{3})/g),
   ];
   if (matches.length === 0) return 0;
   return srtTimeToMs(matches[matches.length - 1][1]);
@@ -329,7 +330,8 @@ interface WordEntry {
 
 function parseRawSrt(rawSrt: string): WordEntry[] {
   const entries: WordEntry[] = [];
-  const blocks = rawSrt.trim().split(/\n\n+/);
+  const normalized = rawSrt.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const blocks = normalized.trim().split(/\n\n+/);
 
   for (const block of blocks) {
     const lines = block.trim().split("\n");
