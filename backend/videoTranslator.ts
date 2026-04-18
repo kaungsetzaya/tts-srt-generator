@@ -44,15 +44,18 @@ async function extractAudio(videoBuffer: Buffer): Promise<string> {
 
 // ------------------ Whisper — Python script with faster-whisper ------------------
 async function transcribeLocalWhisper(audioPath: string): Promise<{ text: string, srt: string }> {
+    console.log(`[Translate] Starting transcription for: ${audioPath}`);
     const outputDir = path.dirname(audioPath);
     const baseName = path.parse(audioPath).name;
     const scriptPath = path.join(process.cwd(), "backend", "transcriber.py");
     const outputJson = path.join(outputDir, `${baseName}_transcription.json`);
 
+    console.log(`[Translate] Running: python3 ${scriptPath} ${audioPath} ${outputJson}`);
     // 🔐 Command Guard: execFile with argument array
     await execFileAsync("python3", [scriptPath, audioPath, outputJson], {
         timeout: 300000,
     });
+    console.log(`[Translate] Transcription done, reading: ${outputJson}`);
 
     // 🔐 Path traversal check
     if (!isPathWithinDir(outputJson, outputDir)) {
@@ -70,13 +73,23 @@ export async function translateVideo(videoBuffer: Buffer, filename: string, user
     let audioPath: string | null = null;
 
     try {
+        console.log(`[Translate] Step 1: Extracting audio from ${filename} (${videoBuffer.length} bytes)`);
         audioPath = await extractAudio(videoBuffer);
+        console.log(`[Translate] Step 2: Audio extracted to ${audioPath}`);
 
+        console.log(`[Translate] Step 3: Starting Whisper transcription...`);
         const { text: englishText, srt: originalSrt } = await transcribeLocalWhisper(audioPath);
+        console.log(`[Translate] Step 4: Transcription done, text length: ${englishText.length}`);
+
+        if (!englishText || !englishText.trim()) {
+            throw new Error("No speech detected in video.");
+        }
 
         // 🔐 Prompt Injection Guard
         const sanitizedText = sanitizeForAI(englishText);
+        console.log(`[Translate] Step 5: Starting Gemini translation...`);
         const { myanmar: myanmarText } = await geminiTranslate(sanitizedText, userApiKey);
+        console.log(`[Translate] Step 6: Translation done, myanmar text length: ${myanmarText.length}`);
 
         return {
             englishText,
@@ -173,13 +186,16 @@ import { users } from "../drizzle/schema";
 import { eq, sql } from "drizzle-orm";
 
 registerProcessor("translate_file", async (job) => {
+    console.log(`[TranslateJob] Starting translate_file job: ${job.id}`);
     const { videoBase64, filename, userId } = job.input;
     
     updateJob(job.id, { progress: 20, message: "Extracting audio..." });
     
     try {
+        console.log(`[TranslateJob] Calling translateVideo for: ${filename}`);
         const buffer = Buffer.from(videoBase64, "base64");
         const result = await translateVideo(buffer, filename);
+        console.log(`[TranslateJob] translateVideo result:`, result);
         
         updateJob(job.id, { 
             status: "completed", 
@@ -188,6 +204,7 @@ registerProcessor("translate_file", async (job) => {
             message: "Done"
         });
     } catch (error: any) {
+        console.error(`[TranslateJob] Error:`, error.message);
         // Refund credits on failure
         if (userId) {
             try {
