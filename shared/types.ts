@@ -76,8 +76,8 @@ export type CharacterKey =
 export interface DubOptions {
   voice: VoiceKey;
   character?: string;
-  speed: number;
-  pitch: number;
+  speed?: number;  // Hardcoded to 1.2 in backend
+  pitch?: number;  // Hardcoded to 0 in backend
   srtEnabled: boolean;
   srtFontSize?: number;
   srtColor?: string;

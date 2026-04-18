@@ -1039,8 +1039,8 @@ export const appRouter = router({
           const dubOpts: DubOptions = {
             voice: input.voice,
             character: input.character,
-            speed: input.speed,
-            pitch: input.pitch,
+            speed: 1.2,
+            pitch: 0,
             srtEnabled: input.srtEnabled,
             srtFontSize: input.srtFontSize,
             srtColor: input.srtColor,
@@ -1173,8 +1173,8 @@ export const appRouter = router({
           const dubOpts: DubOptions = {
             voice: input.voice,
             character: input.character,
-            speed: input.speed,
-            pitch: input.pitch,
+            speed: 1.2,
+            pitch: 0,
             srtEnabled: input.srtEnabled,
             srtFontSize: input.srtFontSize,
             srtColor: input.srtColor,

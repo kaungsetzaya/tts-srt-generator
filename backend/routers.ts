@@ -318,8 +318,6 @@ export const appRouter = t.router({
           videoBase64: z.string(),
           filename: z.string(),
           voice: z.enum(["thiha", "nilar"]),
-          speed: z.number().optional(),
-          pitch: z.number().optional(),
         })
       )
       .mutation(async ({ input, ctx }) => {
@@ -335,8 +333,8 @@ export const appRouter = t.router({
           const buffer = Buffer.from(input.videoBase64, "base64");
           return await dubVideoFromBuffer(buffer, input.filename, {
             voice: input.voice,
-            speed: input.speed ?? 1,
-            pitch: input.pitch ?? 0,
+            speed: 1.2,
+            pitch: 0,
             srtEnabled: true,
           });
         } catch (error: any) {
@@ -358,7 +356,6 @@ export const appRouter = t.router({
         z.object({
           url: z.string(),
           voice: z.enum(["thiha", "nilar"]),
-          speed: z.number().optional(),
         })
       )
       .mutation(async ({ input, ctx }) => {
@@ -380,7 +377,7 @@ export const appRouter = t.router({
         try {
           return await dubVideoFromLink(input.url, {
             voice: input.voice,
-            speed: input.speed ?? 1,
+            speed: 1.2,
             pitch: 0,
             srtEnabled: true,
           });
@@ -517,24 +514,22 @@ export const appRouter = t.router({
         z.object({
           url: z.string(),
           voice: z.enum(["thiha", "nilar"]),
-          speed: z.number().optional(),
-          pitch: z.number().optional(),
         })
       )
       .mutation(async ({ input, ctx }) => {
         const jobId = createJob("dub_link", {
           url: input.url,
           voice: input.voice,
-          speed: input.speed ?? 1,
-          pitch: input.pitch ?? 0,
+          speed: 1.2,
+          pitch: 0,
           srtEnabled: true,
         }, ctx.user!.userId);
         
         // Start dub in background
         dubVideoFromLink(input.url, {
           voice: input.voice,
-          speed: input.speed ?? 1,
-          pitch: input.pitch ?? 0,
+          speed: 1.2,
+          pitch: 0,
           srtEnabled: true,
         })
           .then(() => console.log(`[Job ${jobId}] Complete`))

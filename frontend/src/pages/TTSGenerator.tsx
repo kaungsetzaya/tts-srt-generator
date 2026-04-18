@@ -267,6 +267,11 @@ export default function TTSGenerator() {
   const [videoCopied, setVideoCopied] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Translation job polling state
+  const [translateJobId, setTranslateJobId] = useState<string | null>(null);
+  const [translateJobProgress, setTranslateJobProgress] = useState(0);
+  const [translateJobType, setTranslateJobType] = useState<"file" | "link">("file");
+
   // Video preview state for translate tab
   const [translatePreviewUrl, setTranslatePreviewUrl] = useState<string>("");
   const [translateVideoLoading, setTranslateVideoLoading] = useState(false);
@@ -557,19 +562,55 @@ export default function TTSGenerator() {
     setVideoResult(null);
   };
 
+  // Poll translation job status
+  const pollTranslateJob = (jobId: string, jobType: "file" | "link") => {
+    setTranslateJobId(jobId);
+    setTranslateJobProgress(10);
+    setTranslateJobType(jobType);
+
+    const endpoint = jobType === "file" ? "video.getTranslateJob" : "video.getTranslateLinkJob";
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(
+          `/api/trpc/${endpoint}?input=${encodeURIComponent(JSON.stringify({ json: { jobId } }))}`,
+          { credentials: "include" }
+        );
+        const json = await res.json();
+        const data = json.result?.data?.json || json.result?.data;
+        if (!data) return;
+
+        if (data.status === "completed" && data.result) {
+          clearInterval(pollInterval);
+          setVideoResult({
+            myanmarText: data.result.myanmarText,
+            srtContent: data.result.srtContent,
+          });
+          setEditedVideoText(data.result.myanmarText);
+          setTranslateJobId(null);
+          setTranslateJobProgress(100);
+          utils.subscription.myStatus.invalidate();
+        } else if (data.status === "failed") {
+          clearInterval(pollInterval);
+          showError(data.error || "Translation failed");
+          setTranslateJobId(null);
+          setTranslateJobProgress(0);
+        } else {
+          setTranslateJobProgress(data.progress || 20);
+        }
+      } catch (e: any) {
+        console.error("[TRANSLATE JOB POLL ERROR]", e);
+      }
+    }, 3000);
+  };
+
   const handleTranslate = async () => {
     if (videoUrl.trim()) {
       try {
         const res = await translateLinkMutation.mutateAsync({
           url: videoUrl.trim(),
         });
-        if (res.success) {
-          setVideoResult({
-            myanmarText: res.myanmarText,
-            srtContent: res.srtContent,
-          });
-          setEditedVideoText(res.myanmarText);
-          utils.subscription.myStatus.invalidate();
+        if (res.jobId) {
+          pollTranslateJob(res.jobId, "link");
         }
       } catch (e: any) {
         showError(e?.message || "Link Translation failed");
@@ -587,11 +628,7 @@ export default function TTSGenerator() {
           filename: videoFile.name,
         });
         if (res.jobId) {
-          setVideoResult({
-            myanmarText: "",
-            srtContent: "",
-          });
-          utils.subscription.myStatus.invalidate();
+          pollTranslateJob(res.jobId, "file");
         }
       } catch (e: any) {
         showError(e?.message || "Translation failed");
@@ -628,6 +665,8 @@ export default function TTSGenerator() {
     setVideoUrl("");
     setVideoResult(null);
     setEditedVideoText("");
+    setTranslateJobId(null);
+    setTranslateJobProgress(0);
   };
 
   // Video download from URL (for video tab)
@@ -664,36 +703,17 @@ export default function TTSGenerator() {
     amara: { base: "nilar" },
   };
   const handleDubGenerate = async () => {
-    const dubOpts = {
-      voice:
-        dubVoiceMode === "standard"
-          ? dubVoice
-          : ((CHARACTER_VOICES_MAP[dubCharacter]?.base || dubVoice) as
-              | "thiha"
-              | "nilar"),
-      character: dubVoiceMode === "character" ? dubCharacter : undefined,
-      speed: dubSpeed,
-      pitch: dubPitch,
-      srtEnabled,
-      srtFontSize,
-      srtColor,
-      srtDropShadow,
-      srtBlurBg,
-      srtMarginV,
-      srtBlurSize,
-      srtBlurColor,
-      srtFullWidth,
-      srtBorderRadius,
-    };
+    const dubVoiceToUse: "thiha" | "nilar" =
+      dubVoiceMode === "standard"
+        ? dubVoice
+        : ((CHARACTER_VOICES_MAP[dubCharacter]?.base || dubVoice) as "thiha" | "nilar");
 
     // Use job-based API for dubbing (handles long processing time)
     if (dubVideoUrl.trim()) {
       try {
         const res = await startDubMutation.mutateAsync({
-          videoBase64: btoa(dubVideoUrl.trim()),
-          filename: "video.mp4",
-          ...dubOpts,
-          srtBlurBg: false,
+          url: dubVideoUrl.trim(),
+          voice: dubVoiceToUse,
         });
         setActiveJobId(res.jobId);
         // Poll for job status
@@ -710,14 +730,13 @@ export default function TTSGenerator() {
     reader.onload = async () => {
       const base64 = (reader.result as string).split(",")[1];
       try {
-        const res = await startDubMutation.mutateAsync({
+        const res = await dubFileMutation.mutateAsync({
           videoBase64: base64,
           filename: dubVideoFile.name,
-          ...dubOpts,
+          voice: dubVoiceToUse,
         });
-        setActiveJobId(res.jobId);
-        // Poll for job status
-        pollJobStatus(res.jobId);
+        setDubResult(res as any);
+        utils.subscription.myStatus.invalidate();
       } catch (e: any) {
         console.error("[DUB FILE ERROR]", e);
         showError(e?.message || "Dubbing failed");
@@ -1829,12 +1848,13 @@ export default function TTSGenerator() {
 
                       {/* Video Preview removed from translate tab — not needed */}
 
-                      {(videoFile || videoUrl) && (
+                      {(videoFile || videoUrl) && !translateJobId && (
                         <button
                           onClick={handleTranslate}
                           disabled={
                             translateMutation.isPending ||
-                            translateLinkMutation.isPending
+                            translateLinkMutation.isPending ||
+                            !!translateJobId
                           }
                           className="w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 rounded-2xl text-white font-black uppercase tracking-widest transition-all disabled:opacity-50 hover:scale-[1.02] mt-4 shadow-lg text-sm sm:text-base relative"
                           style={{
@@ -1868,7 +1888,8 @@ export default function TTSGenerator() {
                       )}
 
                       {(translateMutation.isPending ||
-                        translateLinkMutation.isPending) && (
+                        translateLinkMutation.isPending ||
+                        !!translateJobId) && (
                         <div
                           className={box}
                           style={{
@@ -1902,7 +1923,7 @@ export default function TTSGenerator() {
                               className="text-sm font-bold"
                               style={{ color: subtextColor }}
                             >
-                              {t.translating}
+                              {t.translating} {translateJobId ? `(${translateJobProgress}%)` : ""}
                             </span>
                           </div>
                         </div>
@@ -2728,578 +2749,26 @@ export default function TTSGenerator() {
                         )}
                       </div>
 
-                      {/* ── ACCORDION: Speed & Pitch ── */}
-                      <div
-                        className={box}
-                        style={{
-                          background: cardBg,
-                          borderColor: cardBorder,
-                          boxShadow,
-                        }}
-                      >
-                        <button
-                          onClick={() =>
-                            setSpeedAccordionOpen(!speedAccordionOpen)
-                          }
-                          className="w-full flex items-center justify-between"
-                          style={{ marginTop: "-4px" }}
-                        >
-                          <div
-                            className={labelStyle}
-                            style={{
-                              background: labelBg,
-                              color: accent,
-                              borderColor: cardBorder,
-                            }}
-                          >
-                            {lang === "mm"
-                              ? "အမြန်နှုန်း / အသံနိမ့်မြင့်"
-                              : "Speed / Pitch"}
-                          </div>
-                          <ChevronDown
-                            className={`w-5 h-5 transition-transform duration-200 ${speedAccordionOpen ? "rotate-180" : ""}`}
-                            style={{ color: accent }}
-                          />
-                        </button>
-                        {speedAccordionOpen && (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                            <div>
-                              <p
-                                className="text-xs font-bold uppercase tracking-wider mb-2"
-                                style={{ color: subtextColor }}
-                              >
-                                {t.speed}
-                              </p>
-                              <Slider
-                                value={[dubSpeed]}
-                                onValueChange={v => setDubSpeed(v[0])}
-                                min={0.5}
-                                max={2.0}
-                                step={0.1}
-                                className="w-full"
-                              />
-                              <div className="flex justify-between items-center text-xs font-bold mt-3">
-                                <span style={{ color: subtextColor }}>
-                                  {t.slower}
-                                </span>
-                                <span style={{ color: accent }}>
-                                  {dubSpeed.toFixed(1)}x
-                                </span>
-                                <span style={{ color: subtextColor }}>
-                                  {t.faster}
-                                </span>
-                              </div>
-                            </div>
-                            <div>
-                              <p
-                                className="text-xs font-bold uppercase tracking-wider mb-2"
-                                style={{ color: subtextColor }}
-                              >
-                                {t.tone}
-                              </p>
-                              <Slider
-                                value={[dubPitch]}
-                                onValueChange={v => setDubPitch(v[0])}
-                                min={-20}
-                                max={20}
-                                step={1}
-                                className="w-full"
-                              />
-                              <div className="flex justify-between items-center text-xs font-bold mt-3">
-                                <span style={{ color: subtextColor }}>
-                                  {t.lower}
-                                </span>
-                                <span style={{ color: accent }}>
-                                  {dubPitch > 0 ? "+" : ""}
-                                  {dubPitch} Hz
-                                </span>
-                                <span style={{ color: subtextColor }}>
-                                  {t.higher}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* ── ACCORDION: SRT Settings ── */}
-                      <div
-                        className={box}
-                        style={{
-                          background: cardBg,
-                          borderColor: cardBorder,
-                          boxShadow,
-                        }}
-                      >
-                        <button
-                          onClick={() => setSrtAccordionOpen(!srtAccordionOpen)}
-                          className="w-full flex items-center justify-between"
-                          style={{ marginTop: "-4px" }}
-                        >
-                          <div
-                            className={labelStyle}
-                            style={{
-                              background: labelBg,
-                              color: accent,
-                              borderColor: cardBorder,
-                            }}
-                          >
-                            {lang === "mm"
-                              ? "စာတန်းထိုး ဆက်တင်"
-                              : "Subtitle Settings"}
-                          </div>
-                          <ChevronDown
-                            className={`w-5 h-5 transition-transform duration-200 ${srtAccordionOpen ? "rotate-180" : ""}`}
-                            style={{ color: accent }}
-                          />
-                        </button>
-                        {srtAccordionOpen && (
-                          <div className="space-y-4 mt-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                            <div className="flex items-center justify-between py-2">
-                              <div>
-                                <p className="font-bold text-sm">
-                                  {lang === "mm"
-                                    ? "စာတန်းထိုး ပြမည်"
-                                    : "Show Subtitles"}
-                                </p>
-                                <p
-                                  className="text-xs mt-0.5"
-                                  style={{ color: subtextColor }}
-                                >
-                                  {lang === "mm"
-                                    ? "SRT စာတန်းထိုး ဖွင့်/ပိတ်"
-                                    : "Toggle subtitle on/off"}
-                                </p>
-                              </div>
-                              <button
-                                onClick={() => setSrtEnabled(!srtEnabled)}
-                                className="relative w-14 h-7 sm:w-11 sm:h-6 rounded-full transition-all"
-                                style={{
-                                  background: srtEnabled
-                                    ? accent
-                                    : isDark
-                                      ? "rgba(255,255,255,0.15)"
-                                      : "#d1d5db",
-                                }}
-                              >
-                                <span
-                                  className={`absolute top-0.5 sm:top-0.5 w-6 h-6 sm:w-5 sm:h-5 rounded-full bg-white transition-all shadow-md ${srtEnabled ? "left-8 sm:left-6" : "left-0.5"}`}
-                                />
-                              </button>
-                            </div>
-
-                            {srtEnabled && (
-                              <div
-                                className="space-y-4 pt-3 border-t"
-                                style={{ borderColor: cardBorder }}
-                              >
-                                <div>
-                                  <p
-                                    className="text-xs font-bold uppercase tracking-wider mb-2"
-                                    style={{ color: subtextColor }}
-                                  >
-                                    {lang === "mm"
-                                      ? "စာအရွယ်အစား"
-                                      : "Text Size"}
-                                  </p>
-                                  <div className="flex items-center gap-3">
-                                    <Slider
-                                      value={[srtFontSize]}
-                                      onValueChange={v => setSrtFontSize(v[0])}
-                                      min={12}
-                                      max={48}
-                                      step={1}
-                                      className="flex-1"
-                                    />
-                                    <span
-                                      className="text-sm font-black min-w-[40px] text-right"
-                                      style={{ color: accent }}
-                                    >
-                                      {srtFontSize}px
-                                    </span>
-                                  </div>
-                                </div>
-
-                                <div>
-                                  <p
-                                    className="text-xs font-bold uppercase tracking-wider mb-2"
-                                    style={{ color: subtextColor }}
-                                  >
-                                    {lang === "mm" ? "စာအရောင်" : "Text Color"}
-                                  </p>
-                                  <div className="flex gap-2 flex-wrap">
-                                    {[
-                                      "#ffffff",
-                                      "#facc15",
-                                      "#4ade80",
-                                      "#60a5fa",
-                                      "#f472b6",
-                                      "#F4B34F",
-                                      "#fb923c",
-                                      "#f87171",
-                                    ].map(c => (
-                                      <button
-                                        key={c}
-                                        onClick={() => setSrtColor(c)}
-                                        className="w-8 h-8 rounded-lg border-2 transition-all hover:scale-110"
-                                        style={{
-                                          background: c,
-                                          borderColor:
-                                            srtColor === c
-                                              ? accent
-                                              : "transparent",
-                                          boxShadow:
-                                            srtColor === c
-                                              ? `0 0 10px ${c}`
-                                              : "none",
-                                        }}
-                                      />
-                                    ))}
-                                    <div className="relative">
-                                      <input
-                                        type="color"
-                                        value={srtColor}
-                                        onChange={e =>
-                                          setSrtColor(e.target.value)
-                                        }
-                                        className="w-8 h-8 rounded-lg cursor-pointer border-0 p-0"
-                                        style={{ background: "transparent" }}
-                                      />
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="flex items-center justify-between py-1">
-                                  <p
-                                    className="text-xs font-bold uppercase tracking-wider"
-                                    style={{ color: subtextColor }}
-                                  >
-                                    {lang === "mm"
-                                      ? "အရိပ်ထည့်မည်"
-                                      : "Drop Shadow"}
-                                  </p>
-                                  <button
-                                    onClick={() =>
-                                      setSrtDropShadow(!srtDropShadow)
-                                    }
-                                    className="relative w-11 h-6 rounded-full transition-all"
-                                    style={{
-                                      background: srtDropShadow
-                                        ? accent
-                                        : isDark
-                                          ? "rgba(255,255,255,0.15)"
-                                          : "#d1d5db",
-                                    }}
-                                  >
-                                    <span
-                                      className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all shadow ${srtDropShadow ? "left-6" : "left-0.5"}`}
-                                    />
-                                  </button>
-                                </div>
-
-                                <div className="flex items-center justify-between py-1">
-                                  <p
-                                    className="text-xs font-bold uppercase tracking-wider"
-                                    style={{ color: subtextColor }}
-                                  >
-                                    {lang === "mm"
-                                      ? "နောက်ခံ ဘောက်စ်"
-                                      : "Background Box"}
-                                  </p>
-                                  <button
-                                    onClick={() => setSrtBlurBg(!srtBlurBg)}
-                                    className="relative w-11 h-6 rounded-full transition-all"
-                                    style={{
-                                      background: srtBlurBg
-                                        ? accent
-                                        : isDark
-                                          ? "rgba(255,255,255,0.15)"
-                                          : "#d1d5db",
-                                    }}
-                                  >
-                                    <span
-                                      className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all shadow ${srtBlurBg ? "left-6" : "left-0.5"}`}
-                                    />
-                                  </button>
-                                </div>
-
-                                {srtBlurBg && (
-                                  <div
-                                    className="space-y-4 pl-2 border-l-2"
-                                    style={{ borderColor: accent40 }}
-                                  >
-                                    <div>
-                                      <p
-                                        className="text-xs font-bold uppercase tracking-wider mb-2"
-                                        style={{ color: subtextColor }}
-                                      >
-                                        {lang === "mm"
-                                          ? "ဘောက်စ် အရောင်"
-                                          : "Box Color"}
-                                      </p>
-                                      <div className="flex gap-2">
-                                        <button
-                                          onClick={() =>
-                                            setSrtBlurColor("black")
-                                          }
-                                          className="flex-1 py-2 px-3 rounded-xl border-2 text-xs font-bold transition-all"
-                                          style={{
-                                            borderColor:
-                                              srtBlurColor === "black"
-                                                ? accent
-                                                : cardBorder,
-                                            background:
-                                              srtBlurColor === "black"
-                                                ? isDark
-                                                  ? "rgba(192,111,48,0.15)"
-                                                  : "rgba(244,179,79,0.08)"
-                                                : "transparent",
-                                            color: textColor,
-                                          }}
-                                        >
-                                          ⬛ {lang === "mm" ? "အမဲ" : "Black"}
-                                        </button>
-                                        <button
-                                          onClick={() =>
-                                            setSrtBlurColor("white")
-                                          }
-                                          className="flex-1 py-2 px-3 rounded-xl border-2 text-xs font-bold transition-all"
-                                          style={{
-                                            borderColor:
-                                              srtBlurColor === "white"
-                                                ? accent
-                                                : cardBorder,
-                                            background:
-                                              srtBlurColor === "white"
-                                                ? isDark
-                                                  ? "rgba(192,111,48,0.15)"
-                                                  : "rgba(244,179,79,0.08)"
-                                                : "transparent",
-                                            color: textColor,
-                                          }}
-                                        >
-                                          ⬜ {lang === "mm" ? "အဖြူ" : "White"}
-                                        </button>
-                                      </div>
-                                    </div>
-
-                                    <div>
-                                      <p
-                                        className="text-xs font-bold uppercase tracking-wider mb-2"
-                                        style={{ color: subtextColor }}
-                                      >
-                                        {lang === "mm"
-                                          ? "ဝါးအဆင့်"
-                                          : "Blur Intensity"}
-                                      </p>
-                                      <div className="flex items-center gap-3">
-                                        <Slider
-                                          value={[srtBlurSize]}
-                                          onValueChange={v =>
-                                            setSrtBlurSize(v[0])
-                                          }
-                                          min={1}
-                                          max={20}
-                                          step={1}
-                                          className="flex-1"
-                                        />
-                                        <span
-                                          className="text-sm font-black min-w-[40px] text-right"
-                                          style={{ color: accent }}
-                                        >
-                                          {srtBlurSize}px
-                                        </span>
-                                      </div>
-                                    </div>
-
-                                    <div>
-                                      <p
-                                        className="text-xs font-bold uppercase tracking-wider mb-2"
-                                        style={{ color: subtextColor }}
-                                      >
-                                        {lang === "mm"
-                                          ? "ဘောက်စ် အမြင့်"
-                                          : "Box Height"}
-                                      </p>
-                                      <div className="flex items-center gap-3">
-                                        <Slider
-                                          value={[srtBoxPadding]}
-                                          onValueChange={v =>
-                                            setSrtBoxPadding(v[0])
-                                          }
-                                          min={2}
-                                          max={30}
-                                          step={1}
-                                          className="flex-1"
-                                        />
-                                        <span
-                                          className="text-sm font-black min-w-[40px] text-right"
-                                          style={{ color: accent }}
-                                        >
-                                          {srtBoxPadding}px
-                                        </span>
-                                      </div>
-                                    </div>
-
-                                    <div className="flex items-center justify-between py-1">
-                                      <div>
-                                        <p
-                                          className="text-xs font-bold uppercase tracking-wider"
-                                          style={{ color: subtextColor }}
-                                        >
-                                          {lang === "mm"
-                                            ? "ဘေးဘောင်အပြည့်"
-                                            : "Full Width Bar"}
-                                        </p>
-                                        <p
-                                          className="text-[10px] mt-0.5"
-                                          style={{ color: subtextColor }}
-                                        >
-                                          {lang === "mm"
-                                            ? "ဘေးတိုက် အစွန်ထိ ပြည့်အောင်"
-                                            : "Edge to edge"}
-                                        </p>
-                                      </div>
-                                      <button
-                                        onClick={() =>
-                                          setSrtFullWidth(!srtFullWidth)
-                                        }
-                                        className="relative w-11 h-6 rounded-full transition-all"
-                                        style={{
-                                          background: srtFullWidth
-                                            ? accent
-                                            : isDark
-                                              ? "rgba(255,255,255,0.15)"
-                                              : "#d1d5db",
-                                        }}
-                                      >
-                                        <span
-                                          className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all shadow ${srtFullWidth ? "left-6" : "left-0.5"}`}
-                                        />
-                                      </button>
-                                    </div>
-
-                                    {!srtFullWidth && (
-                                      <div>
-                                        <p
-                                          className="text-xs font-bold uppercase tracking-wider mb-2"
-                                          style={{ color: subtextColor }}
-                                        >
-                                          {lang === "mm"
-                                            ? "ထောင့် ပုံစံ"
-                                            : "Corner Style"}
-                                        </p>
-                                        <div className="flex gap-2">
-                                          <button
-                                            onClick={() =>
-                                              setSrtBorderRadius("rounded")
-                                            }
-                                            className="flex-1 py-2 px-3 rounded-xl border-2 text-xs font-bold transition-all"
-                                            style={{
-                                              borderColor:
-                                                srtBorderRadius === "rounded"
-                                                  ? accent
-                                                  : cardBorder,
-                                              background:
-                                                srtBorderRadius === "rounded"
-                                                  ? isDark
-                                                    ? "rgba(192,111,48,0.15)"
-                                                    : "rgba(244,179,79,0.08)"
-                                                  : "transparent",
-                                              color: textColor,
-                                            }}
-                                          >
-                                            ◉{" "}
-                                            {lang === "mm"
-                                              ? "အဝိုင်း"
-                                              : "Rounded"}
-                                          </button>
-                                          <button
-                                            onClick={() =>
-                                              setSrtBorderRadius("square")
-                                            }
-                                            className="flex-1 py-2 px-3 rounded-xl border-2 text-xs font-bold transition-all"
-                                            style={{
-                                              borderColor:
-                                                srtBorderRadius === "square"
-                                                  ? accent
-                                                  : cardBorder,
-                                              background:
-                                                srtBorderRadius === "square"
-                                                  ? isDark
-                                                    ? "rgba(192,111,48,0.15)"
-                                                    : "rgba(244,179,79,0.08)"
-                                                  : "transparent",
-                                              color: textColor,
-                                            }}
-                                          >
-                                            ◻{" "}
-                                            {lang === "mm"
-                                              ? "လေးထောင့်"
-                                              : "Square"}
-                                          </button>
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-
-                                <div>
-                                  <p
-                                    className="text-xs font-bold uppercase tracking-wider mb-2"
-                                    style={{ color: subtextColor }}
-                                  >
-                                    {lang === "mm"
-                                      ? "စာတန်း အနေအထား"
-                                      : "Subtitle Position"}
-                                  </p>
-                                  <div className="flex items-center gap-3">
-                                    <span className="text-[10px] opacity-50">
-                                      {lang === "mm" ? "အောက်" : "Bottom"}
-                                    </span>
-                                    <Slider
-                                      value={[srtMarginV]}
-                                      onValueChange={v => setSrtMarginV(v[0])}
-                                      min={5}
-                                      max={200}
-                                      step={5}
-                                      className="flex-1"
-                                    />
-                                    <span className="text-[10px] opacity-50">
-                                      {lang === "mm" ? "အထက်" : "Top"}
-                                    </span>
-                                  </div>
-                                  <p
-                                    className="text-xs text-center mt-1 font-bold"
-                                    style={{ color: accent }}
-                                  >
-                                    {lang === "mm" ? "အမြင့်" : "Position"}:{" "}
-                                    {srtMarginV}
-                                  </p>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
+                      {/* Speed/Pitch and SRT settings are now handled automatically by the backend */}
 
                       {/* Generate Dubbing Button */}
                       <motion.button
                         onClick={handleDubGenerate}
                         disabled={
                           startDubMutation.isPending ||
+                          dubFileMutation.isPending ||
                           activeJobId !== null ||
                           dubPreviewUrl === "loading"
                         }
-                        whileHover={{ scale: startDubMutation.isPending || activeJobId !== null ? 1 : 1.02 }}
-                        whileTap={{ scale: startDubMutation.isPending || activeJobId !== null ? 1 : 0.98 }}
+                        whileHover={{ scale: startDubMutation.isPending || dubFileMutation.isPending || activeJobId !== null ? 1 : 1.02 }}
+                        whileTap={{ scale: startDubMutation.isPending || dubFileMutation.isPending || activeJobId !== null ? 1 : 0.98 }}
                         className="w-full relative overflow-hidden group flex items-center justify-center gap-3 py-4 sm:py-5 rounded-2xl text-white font-black uppercase tracking-wider transition-all disabled:opacity-50 mt-2 text-sm sm:text-base"
                         style={{
                           background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`,
                         }}
                       >
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                        {startDubMutation.isPending || activeJobId !== null ? (
+                        {startDubMutation.isPending || dubFileMutation.isPending || activeJobId !== null ? (
                           <>
                             <div className="relative">
                               <Loader2 className="w-6 h-6 animate-spin" />

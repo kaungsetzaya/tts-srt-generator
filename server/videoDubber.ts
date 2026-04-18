@@ -367,14 +367,14 @@ export async function dubVideoFromBuffer(
         continue;
       }
 
-      // Generate TTS
+      // Generate TTS — hardcoded speed 1.2x, pitch 0
       let ttsResult;
       try {
         ttsResult = await generateSpeech(
           seg.text,
           options.voice as VoiceKey,
-          options.speed ?? 1.0,
-          options.pitch ?? 0
+          1.2,  // Fixed 1.2x speed for dubbing
+          0     // Fixed 0 pitch for dubbing
         );
       } catch (ttsErr) {
         console.error(`[Dubber] TTS failed for segment ${i}:`, ttsErr);
@@ -421,9 +421,19 @@ export async function dubVideoFromBuffer(
         }
       }
 
+      // Calculate actual final audio duration for accurate ASS timing
+      let actualEndMs: number;
+      if (ttsDurationMs > slotMs && slotMs > 100) {
+        // Audio was sped up to fit the slot
+        actualEndMs = segStartMs + slotMs;
+      } else {
+        // Audio fits — subtitle should only show while audio is playing
+        actualEndMs = segStartMs + ttsDurationMs;
+      }
+
       processed.push({
         startMs: segStartMs,
-        endMs: srtEndMs,
+        endMs: actualEndMs,
         text: seg.text,
         audioPath: finalSegAudioPath,
         ttsDurationMs,
