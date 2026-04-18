@@ -273,7 +273,7 @@ export default function Plans() {
             <div className="flex items-center justify-center p-4 mt-2 rounded-xl" style={{ background: "rgba(244,179,79,0.05)" }}>
               <p className="text-sm text-center">
                 <span className="opacity-70">Trial users get </span>
-                <span className="font-bold px-2 py-1 rounded bg-[#F4B34F]/20 text-[#F4B34F] mx-1">10 free credits</span>
+                <span className="font-bold px-2 py-1 rounded bg-[#F4B34F]/20 text-[#F4B34F] mx-1">15 free credits</span>
                 <span className="opacity-70"> to explore the platform risk-free.</span>
               </p>
             </div>

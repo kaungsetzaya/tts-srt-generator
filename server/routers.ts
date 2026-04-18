@@ -396,7 +396,7 @@ export const appRouter = router({
         let expiresAt: Date;
         let creditsToAdd: number;
         const planCredits: Record<string, number> = {
-          trial: 10,
+          trial: 15,
           starter: 50,
           creator: 200,
           pro: 500,
@@ -405,7 +405,7 @@ export const appRouter = router({
           "6month": 700,
           lifetime: 2000,
         };
-        creditsToAdd = planCredits[input.plan] ?? 10;
+        creditsToAdd = planCredits[input.plan] ?? 15;
         switch (input.plan) {
           case "trial":
             expiresAt = addDays(now, input.trialDays ?? 7);

@@ -55,7 +55,7 @@ type PaymentMethod =
   | "free";
 
 const PLAN_LABELS: Record<Plan, string> = {
-  trial: "Trial (10cr)",
+  trial: "Trial (15cr)",
   starter: "Starter Pack (50cr)",
   creator: "Creator Pack (200cr)",
   pro: "Pro Pack (500cr)",
@@ -67,7 +67,7 @@ const PLAN_PRICE: Record<Plan, number> = {
   pro: 30000,
 };
 const PLAN_CREDITS: Record<Plan, number> = {
-  trial: 10,
+  trial: 15,
   starter: 50,
   creator: 200,
   pro: 500,
