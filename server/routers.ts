@@ -1250,6 +1250,98 @@ export const appRouter = router({
       }),
   }),
 
+  // ─── JOBS (background dub link processing) ───
+  jobs: router({
+    startDub: publicProcedure
+      .input(z.object({
+        url: z.string(),
+        voice: z.enum(["thiha", "nilar"]),
+        character: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (!ctx.user) throw new Error("Please login first.");
+        if (!isAllowedVideoUrl(input.url))
+          throw new Error("ခွင့်ပြုထားသော Link များသာ သုံးနိုင်ပါသည်။");
+        if (input.character && !isValidCharacterId(input.character))
+          throw new Error("Invalid character voice.");
+
+        const db = await getDb();
+        if (ctx.user.role !== "admin" && db) {
+          const now = new Date();
+          const sub = await db.select().from(subscriptions)
+            .where(and(eq(subscriptions.userId, ctx.user.userId), gte(subscriptions.expiresAt, now)))
+            .limit(1);
+          const plan = sub.length > 0 ? sub[0].plan : null;
+          if (!plan) throw new Error("Subscription မရှိပါ။ Admin ကို ဆက်သွယ်ပါ။");
+          if (plan === "trial") {
+            const trialUsage = await getTrialTotalUsage(ctx.user.userId);
+            const trialLimits = getTrialLimits();
+            const isChar = !!(input.character && input.character.trim() !== "");
+            if (isChar && trialUsage.aiVideoChar >= trialLimits.totalAiVideoChar)
+              throw new Error("Trial ကာလအတွင်း AI Video (Character Voice) အကြိမ်အရေအတွက် ပြည့်သွားပါပြီ။");
+            if (!isChar && trialUsage.aiVideo >= trialLimits.totalAiVideo)
+              throw new Error("Trial ကာလအတွင်း AI Video အကြိမ်အရေအတွက် ပြည့်သွားပါပြီ။");
+          }
+        }
+
+        const jobId = `dub_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        createJobEntry(jobId);
+        const userId = ctx.user.userId;
+        const url = input.url;
+        const voice = input.voice;
+        const character = input.character;
+
+        // Run in background
+        (async () => {
+          updateJobEntry(jobId, { status: "processing", progress: 10 });
+          try {
+            const result = await dubVideoFromLink(url, {
+              voice,
+              character,
+              speed: 1.2,
+              pitch: 0,
+              srtEnabled: true,
+            });
+            updateJobEntry(jobId, { status: "completed", progress: 100, result });
+            if (db) {
+              await db.insert(ttsConversions).values({
+                id: nanoid(10), userId,
+                feature: "dub_link",
+                character: character || undefined,
+                status: "success",
+              }).catch(() => {});
+            }
+          } catch (error: any) {
+            updateJobEntry(jobId, { status: "failed", error: error.message || "Dubbing failed" });
+            if (db) {
+              await db.insert(ttsConversions).values({
+                id: nanoid(10), userId,
+                feature: "dub_link",
+                character: character || undefined,
+                status: "fail",
+                errorMsg: (error?.message ?? "unknown").slice(0, 499),
+              }).catch(() => {});
+            }
+          }
+        })().catch(err => console.error("[DubLinkJob]", err));
+
+        return { jobId };
+      }),
+
+    getStatus: publicProcedure
+      .input(z.object({ jobId: z.string() }))
+      .query(({ input }) => {
+        const job = getJobEntry(input.jobId);
+        if (!job) return { status: "not_found" as const, progress: 0, message: "Job not found" };
+        return {
+          status: job.status,
+          progress: job.progress ?? 0,
+          error: job.error,
+          result: job.status === "completed" ? job.result : undefined,
+        };
+      }),
+  }),
+
   subscription: router({
     myStatus: publicProcedure.query(async ({ ctx }) => {
       if (!ctx.user)

@@ -364,11 +364,11 @@ export default function TTSGenerator() {
 
   // Job-based mutations
   const startDubMutation = trpc.jobs.startDub.useMutation();
-  const jobStatusQuery = trpc.jobs.getStatus.useQuery(
-    { jobId: "" },
-    { enabled: false }
-  );
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const jobStatusQuery = trpc.jobs.getStatus.useQuery(
+    { jobId: activeJobId! },
+    { enabled: !!activeJobId, refetchInterval: 3000 }
+  );
 
   const isAdmin = me?.role === "admin";
   const hasActiveSub = isAdmin || subStatus?.active;
@@ -747,31 +747,24 @@ export default function TTSGenerator() {
     reader.readAsDataURL(dubVideoFile);
   };
 
-  // Poll job status
+  // React to dub job status changes
+  useEffect(() => {
+    if (!activeJobId || !jobStatusQuery.data) return;
+    const status = jobStatusQuery.data;
+    if (status.status === "completed" && status.result) {
+      setDubResult(status.result as any);
+      setActiveJobId(null);
+      utils.subscription.myStatus.invalidate();
+    } else if (status.status === "failed") {
+      showError(status.error || "Dubbing failed");
+      setActiveJobId(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeJobId, jobStatusQuery.data]);
+
+  // Poll job status — just set activeJobId and let tRPC query handle polling
   const pollJobStatus = (jobId: string) => {
-    const pollInterval = setInterval(async () => {
-      try {
-        const res = await fetch(
-          `/api/trpc/jobs.getStatus?input=${encodeURIComponent(JSON.stringify({ json: { jobId } }))}`,
-          { credentials: "include" }
-        );
-        const json = await res.json();
-        const status = json.result?.data;
-        if (!status) return;
-        if (status.status === "completed" && status.result) {
-          clearInterval(pollInterval);
-          setDubResult(status.result);
-          setActiveJobId(null);
-          utils.subscription.myStatus.invalidate();
-        } else if (status.status === "failed") {
-          clearInterval(pollInterval);
-          showError(status.error || "Dubbing failed");
-          setActiveJobId(null);
-        }
-      } catch (e: any) {
-        console.error("[JOB POLL ERROR]", e);
-      }
-    }, 3000); // Poll every 3 seconds
+    setActiveJobId(jobId);
   };
 
   const handleDubDownload = () => {
