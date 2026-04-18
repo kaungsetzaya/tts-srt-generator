@@ -475,7 +475,7 @@ export default function AdminDashboard() {
     cancelText?: string;
     variant?: "danger" | "warning" | "info";
   }>({ show: false, title: "", message: "", onConfirm: () => {} });
-  const [autoTrialEnabled, setAutoTrialEnabled] = useState(true);
+  const [autoTrialEnabled, setAutoTrialEnabled] = useState(false);
   const [autoTrialDays, setAutoTrialDays] = useState(7);
   const [trialCredits, setTrialCredits] = useState(15);
   const [timeframe, setTimeframe] = useState<TimeFrame>("month");
