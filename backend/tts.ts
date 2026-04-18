@@ -252,7 +252,7 @@ export async function generateSpeech(
     }
 
     const durationMs = parseLastEndTime(rawSrt);
-    const charsPerLine = aspectRatio === "9:16" ? 16 : 22;
+    const charsPerLine = aspectRatio === "9:16" ? 32 : 44; // doubled since 2 lines are now joined into 1
 
     // Use raw edge-tts timing data for accurate SRT timestamps
     const srtContent = buildSRTFromRaw(rawSrt, text, charsPerLine);
@@ -456,7 +456,7 @@ function buildSRTFromRaw(
     result.push(
       `${msToSrtTime(blocks[idx].startMs)} --> ${msToSrtTime(blocks[idx].endMs)}`
     );
-    result.push(blocks[idx].lines.join("\n"));
+    result.push(blocks[idx].lines.join(" "));
     result.push("");
   }
 
@@ -556,7 +556,7 @@ function buildSRT(
 
     result.push(`${idx + 1}`);
     result.push(`${msToSrtTime(startMs)} --> ${msToSrtTime(endMs)}`);
-    result.push(blocks[idx].join("\n"));
+    result.push(blocks[idx].join(" "));
     result.push("");
   }
 
