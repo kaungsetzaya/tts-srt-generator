@@ -477,6 +477,7 @@ export default function AdminDashboard() {
   }>({ show: false, title: "", message: "", onConfirm: () => {} });
   const [autoTrialEnabled, setAutoTrialEnabled] = useState(true);
   const [autoTrialDays, setAutoTrialDays] = useState(7);
+  const [trialCredits, setTrialCredits] = useState(15);
   const [timeframe, setTimeframe] = useState<TimeFrame>("month");
   const [userDrawer, setUserDrawer] = useState<{
     id: string;
@@ -524,6 +525,7 @@ export default function AdminDashboard() {
     onSuccess: (d: any) => {
       setAutoTrialEnabled(d.autoTrialEnabled);
       setAutoTrialDays(d.autoTrialDays);
+      setTrialCredits(d.trialCredits || 15);
       setTrialStartDate(d.trialStartDate || "");
       setTrialEndDate(d.trialEndDate || "");
       setTrialEnabled(d.trialEnabled || false);
@@ -1640,6 +1642,25 @@ export default function AdminDashboard() {
                     ))}
                   </div>
                 </div>
+                <div className="mt-4">
+                  <p className="font-bold mb-3">Trial Credits</p>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="number"
+                      min={0}
+                      max={1000}
+                      value={trialCredits}
+                      onChange={e => setTrialCredits(Number(e.target.value))}
+                      className="w-24 border p-2 text-center font-bold focus:outline-none rounded-lg"
+                      style={{
+                        background: "rgba(0,0,0,0.3)",
+                        borderColor: border,
+                        color: C,
+                      }}
+                    />
+                    <span className="text-sm opacity-60">credits</span>
+                  </div>
+                </div>
               </div>
               <div className="pt-4 border-t" style={{ borderColor: border }}>
                 <p className="font-bold mb-3">
@@ -1705,6 +1726,7 @@ export default function AdminDashboard() {
                   updateSettings.mutate({
                     autoTrialEnabled,
                     autoTrialDays,
+                    trialCredits,
                     trialStartDate,
                     trialEndDate,
                     trialEnabled,

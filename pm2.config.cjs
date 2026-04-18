@@ -9,6 +9,7 @@ module.exports = {
     },
     watch: false,
     instances: 1,
-    autorestart: true
+    autorestart: true,
+    exp_backoff_restart_delay: 100
   }]
 };

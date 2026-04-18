@@ -1901,6 +1901,7 @@ export const appRouter = router({
         return {
           autoTrialEnabled: true,
           autoTrialDays: 7,
+          trialCredits: 15,
           trialStartDate: null,
           trialEndDate: null,
           trialEnabled: false,
@@ -1910,6 +1911,7 @@ export const appRouter = router({
       return {
         autoTrialEnabled: map["auto_trial_enabled"] === "true",
         autoTrialDays: parseInt(map["auto_trial_days"] ?? "7"),
+        trialCredits: parseInt(map["trial_credits"] ?? "15"),
         trialStartDate: map["trial_start_date"] || null,
         trialEndDate: map["trial_end_date"] || null,
         trialEnabled: map["trial_enabled"] === "true",
@@ -1921,6 +1923,7 @@ export const appRouter = router({
         z.object({
           autoTrialEnabled: z.boolean().optional(),
           autoTrialDays: z.number().min(1).max(365).optional(),
+          trialCredits: z.number().min(0).max(1000).optional(),
           trialStartDate: z.string().optional(),
           trialEndDate: z.string().optional(),
           trialEnabled: z.boolean().optional(),
@@ -1951,6 +1954,17 @@ export const appRouter = router({
             })
             .onDuplicateKeyUpdate({
               set: { value: String(input.autoTrialDays) },
+            });
+        }
+        if (input.trialCredits !== undefined) {
+          await db
+            .insert(settings)
+            .values({
+              keyName: "trial_credits",
+              value: String(input.trialCredits),
+            })
+            .onDuplicateKeyUpdate({
+              set: { value: String(input.trialCredits) },
             });
         }
         if (input.trialStartDate !== undefined) {

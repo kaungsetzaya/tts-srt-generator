@@ -101,6 +101,8 @@ export async function handleTelegramUpdate(update: any) {
             if (startDate && endDate && today >= startDate && today <= endDate) {
               const trialDaysRow = await db.select().from(settings).where(eq(settings.keyName, "auto_trial_days")).limit(1);
               const trialDays = parseInt(trialDaysRow[0]?.value ?? "7");
+              const trialCreditsRow = await db.select().from(settings).where(eq(settings.keyName, "trial_credits")).limit(1);
+              const trialCredits = parseInt(trialCreditsRow[0]?.value ?? "15");
               const subId = nanoid(36);
               const trialExpiry = new Date(endDate); // Trial ends on period end date
               await db.insert(subscriptions).values({
@@ -112,9 +114,13 @@ export async function handleTelegramUpdate(update: any) {
                 createdByAdmin: "system",
                 note: "Auto trial " + trialDays + " days (existing user, trial period)",
               });
+              const [existingUser] = await db.select().from(users).where(eq(users.id, existingUserId)).limit(1);
+              if (existingUser) {
+                await db.update(users).set({ credits: (existingUser.credits ?? 0) + trialCredits }).where(eq(users.id, existingUserId));
+              }
               await sendMessage(chatId,
                 `👋 <b>မင်္ဂလာပါ, ${firstName}!</b>\n\n` +
-                `🎁 <b>Trial ${trialDays} ရက် ရရှိပါပြီ!</b> (${startDate} မှ ${endDate} ထိ)\n\n` +
+                `🎁 <b>Trial ${trialDays} ရက် + ${trialCredits} credits ရရှိပါပြီ!</b>\n\n` +
                 `🔑 သင့် login code:\n\n` +
                 `<code>${code}</code>\n\n` +
                 `⏰ Code သက်တမ်း: <b>၁၀ မိနစ်</b>\n` +
@@ -128,6 +134,8 @@ export async function handleTelegramUpdate(update: any) {
           // Fallback to original logic if no date range set
           const trialDaysRow = await db.select().from(settings).where(eq(settings.keyName, "auto_trial_days")).limit(1);
           const trialDays = parseInt(trialDaysRow[0]?.value ?? "7");
+          const trialCreditsRow = await db.select().from(settings).where(eq(settings.keyName, "trial_credits")).limit(1);
+          const trialCredits = parseInt(trialCreditsRow[0]?.value ?? "15");
           const subId = nanoid(36);
           const trialExpiry = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000);
           await db.insert(subscriptions).values({
@@ -139,9 +147,13 @@ export async function handleTelegramUpdate(update: any) {
             createdByAdmin: "system",
             note: "Auto trial " + trialDays + " days (existing user)",
           });
+          const [existingUser] = await db.select().from(users).where(eq(users.id, existingUserId)).limit(1);
+          if (existingUser) {
+            await db.update(users).set({ credits: (existingUser.credits ?? 0) + trialCredits }).where(eq(users.id, existingUserId));
+          }
           await sendMessage(chatId,
             `👋 <b>မင်္ဂလာပါ, ${firstName}!</b>\n\n` +
-            `🎁 <b>Trial ${trialDays} ရက် ရရှိပါပြီ!</b>\n\n` +
+            `🎁 <b>Trial ${trialDays} ရက် + ${trialCredits} credits ရရှိပါပြီ!</b>\n\n` +
             `🔑 သင့် login code:\n\n` +
             `<code>${code}</code>\n\n` +
             `⏰ Code သက်တမ်း: <b>၁၀ မိနစ်</b>\n` +
@@ -185,12 +197,14 @@ export async function handleTelegramUpdate(update: any) {
           const today = new Date().toISOString().split('T')[0];
 
           // Only give trial if today is within the trial period
-          if (startDate && endDate && today >= startDate && today <= endDate) {
+if (startDate && endDate && today >= startDate && today <= endDate) {
             const trialDaysRow = await db.select().from(settings).where(eq(settings.keyName, "auto_trial_days")).limit(1);
             const trialDays = parseInt(trialDaysRow[0]?.value ?? "7");
+            const trialCreditsRow = await db.select().from(settings).where(eq(settings.keyName, "trial_credits")).limit(1);
+            const trialCredits = parseInt(trialCreditsRow[0]?.value ?? "15");
             const subId = nanoid(36);
             const trialExpiry = new Date(endDate); // Trial ends on period end date
-            await db.insert(subscriptions).values({
+await db.insert(subscriptions).values({
               id: subId,
               userId: newUserId,
               plan: "trial",
@@ -199,24 +213,28 @@ export async function handleTelegramUpdate(update: any) {
               createdByAdmin: "system",
               note: "Auto trial " + trialDays + " days (trial period)",
             });
+            await db.update(users).set({ credits: trialCredits }).where(eq(users.id, newUserId));
           }
         } else {
-          // Original logic (no date range set)
-          const trialDaysRow = await db.select().from(settings).where(eq(settings.keyName, "auto_trial_days")).limit(1);
-          const trialDays = parseInt(trialDaysRow[0]?.value ?? "7");
-          const subId = nanoid(36);
-          const trialExpiry = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000);
-          await db.insert(subscriptions).values({
-            id: subId,
-            userId: newUserId,
-            plan: "trial",
-            startsAt: new Date(),
-            expiresAt: trialExpiry,
-            createdByAdmin: "system",
-            note: "Auto trial " + trialDays + " days",
-          });
+            // Original logic (no date range set)
+            const trialDaysRow = await db.select().from(settings).where(eq(settings.keyName, "auto_trial_days")).limit(1);
+            const trialDays = parseInt(trialDaysRow[0]?.value ?? "7");
+            const trialCreditsRow = await db.select().from(settings).where(eq(settings.keyName, "trial_credits")).limit(1);
+            const trialCredits = parseInt(trialCreditsRow[0]?.value ?? "15");
+            const subId = nanoid(36);
+            const trialExpiry = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000);
+            await db.insert(subscriptions).values({
+              id: subId,
+              userId: newUserId,
+              plan: "trial",
+              startsAt: new Date(),
+              expiresAt: trialExpiry,
+              createdByAdmin: "system",
+              note: "Auto trial " + trialDays + " days",
+            });
+            await db.update(users).set({ credits: trialCredits }).where(eq(users.id, newUserId));
+          }
         }
-      }
       await sendMessage(chatId,
         `🎉 <b>LUMIX へ ကြိုဆိုပါတယ်, ${firstName}!</b>\n\n` +
         `✅ သင့် account ကို ဖန်တီးပြီးပါပြီ!\n\n` +
