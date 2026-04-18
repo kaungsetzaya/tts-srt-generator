@@ -42,34 +42,27 @@ async function extractAudio(videoBuffer: Buffer): Promise<string> {
     });
 }
 
-// ------------------ Whisper — execFile with argument array ------------------
+// ------------------ Whisper — Python script with faster-whisper ------------------
 async function transcribeLocalWhisper(audioPath: string): Promise<{ text: string, srt: string }> {
     const outputDir = path.dirname(audioPath);
     const baseName = path.parse(audioPath).name;
+    const scriptPath = path.join(process.cwd(), "backend", "transcriber.py");
+    const outputJson = path.join(outputDir, `${baseName}_transcription.json`);
 
-    // 🔐 FFmpeg Command Guard: execFile with argument array
-    await execFileAsync("whisper", [
-        audioPath,
-        "--model", "base",
-        "--output_dir", outputDir,
-        "--output_format", "all"
-    ]);
-
-    const textPath = path.join(outputDir, `${baseName}.txt`);
-    const srtPath = path.join(outputDir, `${baseName}.srt`);
+    // 🔐 Command Guard: execFile with argument array
+    await execFileAsync("python3", [scriptPath, audioPath, outputJson], {
+        timeout: 300000,
+    });
 
     // 🔐 Path traversal check
-    if (!isPathWithinDir(textPath, outputDir) || !isPathWithinDir(srtPath, outputDir)) {
+    if (!isPathWithinDir(outputJson, outputDir)) {
         throw new Error("Invalid file path detected.");
     }
 
-    const text = await fs.readFile(textPath, 'utf-8');
-    const srt = await fs.readFile(srtPath, 'utf-8');
+    const data = JSON.parse(await fs.readFile(outputJson, "utf-8"));
+    await fs.unlink(outputJson).catch(() => {});
 
-    await fs.unlink(textPath).catch(() => {});
-    await fs.unlink(srtPath).catch(() => {});
-
-    return { text, srt };
+    return { text: data.text || "", srt: "" };
 }
 
 // ------------------ FILE UPLOAD ------------------
