@@ -142,6 +142,31 @@ export const appRouter = t.router({
           })
           .where(eq(users.id, user.id));
 
+        // █ Grant trial credits on first login (if no credit transactions yet)
+        try {
+          const existingTx = await db
+            .select()
+            .from(creditTransactions)
+            .where(eq(creditTransactions.userId, user.id))
+            .limit(1);
+          if (existingTx.length === 0) {
+            // First ever login — grant trial credits
+            const [settRow] = await db.select().from(settings).where(eq(settings.keyName, "trial_credits")).limit(1);
+            const trialCredits = parseInt((settRow?.value as string) ?? "15");
+            await db.update(users).set({ credits: (user.credits ?? 0) + trialCredits }).where(eq(users.id, user.id));
+            await db.insert(creditTransactions).values({
+              id: randomUUID(),
+              userId: user.id,
+              amount: trialCredits,
+              type: "trial",
+              description: `Trial credits on first login (+${trialCredits} credits)`,
+            });
+            console.log(`[Credits] Granted ${trialCredits} trial credits to new user ${user.id}`);
+          }
+        } catch (trialErr) {
+          console.error("[Credits] Trial grant failed:", trialErr);
+        }
+
         // Sign JWT
         const token = await new SignJWT({
           userId: user.id,
@@ -444,10 +469,11 @@ export const appRouter = t.router({
       .input(z.object({ jobId: z.string() }))
       .query(async ({ input }) => {
         const job = getJob(input.jobId);
-        if (!job) return { status: "failed", error: "Job not found", progress: 0 };
+        if (!job) return { status: "failed", error: "Job not found", progress: 0, message: "" };
         return {
           status: job.status,
           progress: job.progress,
+          message: job.message ?? "",
           error: job.error,
           result: job.status === "completed" ? job.result : undefined,
         };
@@ -497,10 +523,11 @@ export const appRouter = t.router({
       .input(z.object({ jobId: z.string() }))
       .query(async ({ input }) => {
         const job = getJob(input.jobId);
-        if (!job) return { status: "failed", error: "Job not found", progress: 0 };
+        if (!job) return { status: "failed", error: "Job not found", progress: 0, message: "" };
         return {
           status: job.status,
           progress: job.progress,
+          message: job.message ?? "",
           error: job.error,
           result: job.status === "completed" ? job.result : undefined,
         };
@@ -542,12 +569,12 @@ export const appRouter = t.router({
       .query(async ({ input }) => {
         const job = getJob(input.jobId);
         if (!job) {
-          return { status: "not_found" as const, progress: 0 };
+          return { status: "not_found" as const, progress: 0, message: "" };
         }
         return {
           status: job.status,
           progress: job.progress,
-          message: job.message,
+          message: job.message ?? "",
           error: job.error,
           result: job.status === "completed" ? job.result : undefined,
         };
@@ -570,6 +597,29 @@ export const appRouter = t.router({
             .orderBy(desc(ttsConversions.createdAt))
             .limit(100);
           return rows;
+        } catch {
+          return [];
+        }
+      }),
+    getCreditHistory: protectedProcedure
+      .input(z.object({ limit: z.number().min(1).max(200).default(50) }))
+      .query(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) return [];
+        try {
+          const txs = await db
+            .select()
+            .from(creditTransactions)
+            .where(eq(creditTransactions.userId, ctx.user!.userId))
+            .orderBy(desc(creditTransactions.createdAt))
+            .limit(input.limit);
+          return txs.map((row: typeof txs[0]) => ({
+            id: row.id,
+            amount: row.amount,
+            type: row.type,
+            description: row.description,
+            createdAt: row.createdAt,
+          }));
         } catch {
           return [];
         }
@@ -965,8 +1015,8 @@ export const appRouter = t.router({
             .from(ttsConversions)
             .groupBy(ttsConversions.voice);
           const voices = voiceRows
-            .filter(r => r.voice)
-            .map(r => ({ voice: r.voice, count: r.count }));
+            .filter((r: any) => r.voice)
+            .map((r: any) => ({ voice: r.voice, count: r.count }));
 
           // Feature usage stats (tts, videoUpload, videoLink, translation)
           const featureRows = await db
@@ -974,8 +1024,8 @@ export const appRouter = t.router({
             .from(ttsConversions)
             .groupBy(ttsConversions.feature);
           const features = featureRows
-            .filter(r => r.feature)
-            .map(r => ({ feature: r.feature, count: r.count }));
+            .filter((r: any) => r.feature)
+            .map((r: any) => ({ feature: r.feature, count: r.count }));
 
           // Total counts
           const [totalRow] = await db
@@ -998,7 +1048,7 @@ export const appRouter = t.router({
             .where(sql`voice IN ('thiha', 'nilar')`)
             .groupBy(ttsConversions.voice);
 
-          const baseVoices = baseVoiceDetails.map(r => ({
+          const baseVoices = baseVoiceDetails.map((r: any) => ({
             name: r.voice,
             displayName:
               r.voice === "thiha" ? "Thiha (Male)" : "Nilar (Female)",
@@ -1020,7 +1070,7 @@ export const appRouter = t.router({
             .where(sql`\`character\` IS NOT NULL AND \`character\` != ''`)
             .groupBy(ttsConversions.character, ttsConversions.voice);
 
-          const characters = charDetails.map(r => ({
+          const characters = charDetails.map((r: any) => ({
             key: r.character,
             displayName: r.character,
             base: r.voice || "thiha",
@@ -1031,7 +1081,7 @@ export const appRouter = t.router({
           }));
 
           return {
-            voices: voices.map(v => ({ name: v.voice, count: v.count })),
+            voices: voices.map((v: any) => ({ name: v.voice, count: v.count })),
             features,
             baseVoices,
             characters,
@@ -1093,7 +1143,7 @@ export const appRouter = t.router({
           .from(ttsConversions)
           .where(sql`created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)`)
           .groupBy(sql`HOUR(created_at)`);
-        const activeHours = hourRows.map(r => ({
+        const activeHours = hourRows.map((r: any) => ({
           hour: r.hour,
           count: r.count,
         }));
@@ -1105,7 +1155,7 @@ export const appRouter = t.router({
           .where(sql`created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)`)
           .groupBy(sql`DATE(created_at)`)
           .orderBy(sql`DATE(created_at)`);
-        const daily = dailyRows.map(r => ({ date: r.date, count: r.count }));
+        const daily = dailyRows.map((r: any) => ({ date: r.date, count: r.count }));
 
         return {
           today: todayRow?.count || 0,
@@ -1173,7 +1223,7 @@ export const appRouter = t.router({
           id: u.id,
           name: u.telegramFirstName || u.name || "Unknown",
           username: u.telegramUsername || "",
-          totalGens: genCounts.find(g => g.userId === u.id)?.count || 0,
+          totalGens: genCounts.find((g: any) => g.userId === u.id)?.count || 0,
           lastActive: u.lastLoginAt,
           credits: u.credits || 0,
         });
@@ -1422,7 +1472,7 @@ async function deductCredits(
   if (!db) return false;
 
   try {
-    await db.transaction(async tx => {
+    await db.transaction(async (tx: any) => {
       const [user] = await tx
         .select()
         .from(users)
