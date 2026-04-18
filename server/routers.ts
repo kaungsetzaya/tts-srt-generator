@@ -77,6 +77,25 @@ interface Job {
   createdAt: Date;
 }
 const jobs: Record<string, Job> = {};
+
+function createJobEntry(id: string): void {
+  jobs[id] = { id, status: "pending", progress: 0, createdAt: new Date() };
+}
+function updateJobEntry(id: string, updates: Partial<Job>): void {
+  if (jobs[id]) Object.assign(jobs[id], updates);
+}
+function getJobEntry(id: string): Job | undefined {
+  return jobs[id];
+}
+// Cleanup old jobs every 30 minutes
+setInterval(() => {
+  const oneHourAgo = Date.now() - 60 * 60 * 1000;
+  for (const id of Object.keys(jobs)) {
+    if (jobs[id].status !== "pending" && jobs[id].createdAt.getTime() < oneHourAgo) {
+      delete jobs[id];
+    }
+  }
+}, 30 * 60 * 1000);
 // --- End job store ---
 
 type TrialLimits = {
@@ -814,56 +833,39 @@ export const appRouter = router({
               );
           }
         }
-        try {
-          const result = await translateVideoLink(input.url);
-          if (db && ctx.user) {
-            const { nanoid: nid } = await import("nanoid");
-            await db
-              .insert(ttsConversions)
-              .values({
-                id: nid(10),
-                userId: ctx.user.userId,
+        // Create background job
+        const jobId = `tlink_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        createJobEntry(jobId);
+        const userId = ctx.user.userId;
+        const url = input.url;
+        // Run in background
+        (async () => {
+          updateJobEntry(jobId, { status: "processing", progress: 20 });
+          try {
+            const result = await translateVideoLink(url);
+            updateJobEntry(jobId, { status: "completed", progress: 100, result });
+            if (db) {
+              await db.insert(ttsConversions).values({
+                id: nanoid(10),
+                userId,
                 feature: "translate_link",
                 status: "success",
-              })
-              .catch(() => {});
-          }
-          return { success: true, ...result };
-        } catch (error: any) {
-          // Track failed attempt for trial refund
-          if (db && ctx.user) {
-            const { nanoid: nid } = await import("nanoid");
-            await db
-              .insert(ttsConversions)
-              .values({
-                id: nid(10),
-                userId: ctx.user.userId,
+              }).catch(() => {});
+            }
+          } catch (error: any) {
+            updateJobEntry(jobId, { status: "failed", error: error.message || "Translation failed" });
+            if (db) {
+              await db.insert(ttsConversions).values({
+                id: nanoid(10),
+                userId,
                 feature: "translate_link",
                 status: "fail",
                 errorMsg: (error?.message ?? "unknown").slice(0, 499),
-              })
-              .catch(() => {});
-          }
-          const rawMsg = error.message ?? "Link translation failed.";
-          let userMsg = rawMsg;
-          if (
-            rawMsg.includes("Command failed:") ||
-            rawMsg.includes("/tmp/") ||
-            rawMsg.includes("/root/")
-          ) {
-            if (rawMsg.includes("n challenge solving failed")) {
-              userMsg =
-                "YouTube ဗီဒီယိုကို ဒေါင်းလုတ်မရပါ။ Admin ကို ဆက်သွယ်ပါ။";
-            } else if (rawMsg.includes("Requested format is not available")) {
-              userMsg =
-                "ဗီဒီယို format ရနိုင်ခြင်းမရှိပါ။ တခြား link ဖြင့် ထပ်ကြိုးစားပါ။";
-            } else {
-              userMsg =
-                "ဗီဒီယိုကို ဒေါင်းလုတ်မရပါ။ Link ကို စစ်ပြီး ထပ်ကြိုးစားပါ။";
+              }).catch(() => {});
             }
           }
-          throw new Error(userMsg);
-        }
+        })().catch(err => console.error("[TranslateLinkJob]", err));
+        return { jobId };
       }),
     translate: publicProcedure
       .input(
@@ -903,62 +905,79 @@ export const appRouter = router({
               );
           }
         }
-        try {
-          const rawBase64 = input.videoBase64.includes(",")
-            ? input.videoBase64.split(",")[1]
-            : input.videoBase64;
-          const videoBuffer = Buffer.from(rawBase64, "base64");
-          if (videoBuffer.length > 25 * 1024 * 1024)
-            throw new Error(
-              "ဖိုင်အကြီးလွန်ပါသည်။ အများဆုံး 25MB အထိသာ တင်နိုင်ပါသည်။"
-            );
-          // 🔐 Magic bytes validation
-          if (!isValidVideoBuffer(videoBuffer))
-            throw new Error(
-              "ဗီဒီယို ဖိုင် format မမှန်ပါ။ MP4, MOV, AVI, MKV, WebM ဖိုင်များသာ တင်နိုင်ပါသည်။"
-            );
-          const result = await translateVideo(videoBuffer, input.filename);
-          if (db && ctx.user) {
-            const { nanoid: nid } = await import("nanoid");
-            await db
-              .insert(ttsConversions)
-              .values({
-                id: nid(10),
-                userId: ctx.user.userId,
+        const rawBase64 = input.videoBase64.includes(",")
+          ? input.videoBase64.split(",")[1]
+          : input.videoBase64;
+        const videoBuffer = Buffer.from(rawBase64, "base64");
+        if (videoBuffer.length > 25 * 1024 * 1024)
+          throw new Error(
+            "ဖိုင်အကြီးလွန်ပါသည်။ အများဆုံး 25MB အထိသာ တင်နိုင်ပါသည်။"
+          );
+        // 🔐 Magic bytes validation
+        if (!isValidVideoBuffer(videoBuffer))
+          throw new Error(
+            "ဗီဒီယို ဖိုင် format မမှန်ပါ။ MP4, MOV, AVI, MKV, WebM ဖိုင်များသာ တင်နိုင်ပါသည်။"
+          );
+        // Create background job and return immediately
+        const jobId = `tfile_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        createJobEntry(jobId);
+        const userId = ctx.user.userId;
+        const filename = input.filename;
+        // Run in background
+        (async () => {
+          updateJobEntry(jobId, { status: "processing", progress: 20 });
+          try {
+            const result = await translateVideo(videoBuffer, filename);
+            updateJobEntry(jobId, { status: "completed", progress: 100, result });
+            if (db) {
+              await db.insert(ttsConversions).values({
+                id: nanoid(10),
+                userId,
                 feature: "translate_file",
                 status: "success",
-              })
-              .catch(() => {});
-          }
-          return { success: true, ...result };
-        } catch (error: any) {
-          if (db && ctx.user) {
-            const { nanoid: nid } = await import("nanoid");
-            await db
-              .insert(ttsConversions)
-              .values({
-                id: nid(10),
-                userId: ctx.user.userId,
+              }).catch(() => {});
+            }
+          } catch (error: any) {
+            updateJobEntry(jobId, { status: "failed", error: error.message || "Translation failed" });
+            if (db) {
+              await db.insert(ttsConversions).values({
+                id: nanoid(10),
+                userId,
                 feature: "translate_file",
                 status: "fail",
                 errorMsg: (error?.message ?? "unknown").slice(0, 499),
-              })
-              .catch(() => {});
+              }).catch(() => {});
+            }
           }
-          const rawMsg = error.message ?? "Translation failed.";
-          let userMsg = rawMsg;
-          if (
-            rawMsg.includes("Command failed") ||
-            rawMsg.includes("/tmp/") ||
-            rawMsg.includes("/root/")
-          ) {
-            userMsg = "ဗီဒီယို ဘာသာပြန်၍ မရပါ။ ထပ်ကြိုးစားပါ။";
-          } else if (rawMsg.includes("Whisper")) {
-            userMsg =
-              "ဗီဒီယိုတွင် စကားပြောသံ ရှာမတွေ့ပါ။ အသံပါသော ဗီဒီယိုကို ထပ်ကြိုးစားပါ။";
-          }
-          throw new Error(userMsg);
-        }
+        })().catch(err => console.error("[TranslateFileJob]", err));
+        return { jobId };
+      }),
+
+    // ── Translate job status polling ──
+    getTranslateJob: publicProcedure
+      .input(z.object({ jobId: z.string() }))
+      .query(({ input }) => {
+        const job = getJobEntry(input.jobId);
+        if (!job) return { status: "failed" as const, error: "Job not found", progress: 0 };
+        return {
+          status: job.status,
+          progress: job.progress ?? 0,
+          error: job.error,
+          result: job.status === "completed" ? job.result : undefined,
+        };
+      }),
+
+    getTranslateLinkJob: publicProcedure
+      .input(z.object({ jobId: z.string() }))
+      .query(({ input }) => {
+        const job = getJobEntry(input.jobId);
+        if (!job) return { status: "failed" as const, error: "Job not found", progress: 0 };
+        return {
+          status: job.status,
+          progress: job.progress ?? 0,
+          error: job.error,
+          result: job.status === "completed" ? job.result : undefined,
+        };
       }),
 
     // ───── DUBBING: File Upload ─────
