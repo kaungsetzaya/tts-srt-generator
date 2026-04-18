@@ -364,6 +364,8 @@ export default function TTSGenerator() {
   const utils = trpc.useUtils();
   const { data: historyData, isLoading: historyLoading } =
     trpc.history.getMyHistory.useQuery({ limit: 100 });
+  const { data: creditHistory } =
+    trpc.history.getCreditHistory.useQuery({ limit: 100 });
   const { data: me } = trpc.auth.me.useQuery();
   const { data: subStatus, isLoading: subLoading } =
     trpc.subscription.myStatus.useQuery();
@@ -3404,6 +3406,90 @@ export default function TTSGenerator() {
                       </div>
                     );
                   })}
+                </div>
+              )}
+
+              {/* === CREDITS HISTORY === */}
+              {creditHistory && creditHistory.length > 0 && (
+                <div className="mt-8">
+                  {/* Header row with balance */}
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-base font-black uppercase tracking-wider" style={{ color: accent }}>
+                      💳 {lang === "mm" ? "Credits မှတ်တမ်း" : "Credits History"}
+                    </h3>
+                    <div
+                      className="text-sm font-bold px-3 py-1 rounded-full"
+                      style={{ background: accent15, color: accent }}
+                    >
+                      {lang === "mm" ? "လက်ကျန်" : "Balance"}: {subStatus?.credits ?? 0} credits
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    {creditHistory.map(tx => {
+                      const isPositive = (tx.amount ?? 0) > 0;
+                      const txTypeLabel = (type: string) => {
+                        const types: Record<string, string> = {
+                          trial: lang === "mm" ? "Trial Credits" : "Trial Credits",
+                          subscription: lang === "mm" ? "Plan Credits" : "Plan Credits",
+                          tts: lang === "mm" ? "TTS သုံးစွဲ" : "TTS Used",
+                          tts_character: lang === "mm" ? "Character TTS သုံးစွဲ" : "Character TTS Used",
+                          translate_file: lang === "mm" ? "ဗီဒီယိုဘာသာပြန် သုံးစွဲ" : "Video Translate Used",
+                          translate_link: lang === "mm" ? "Link ဘာသာပြန် သုံးစွဲ" : "Link Translate Used",
+                          dub_file: lang === "mm" ? "Dub ဖိုင် သုံးစွဲ" : "Dub File Used",
+                          dub_link: lang === "mm" ? "Dub Link သုံးစွဲ" : "Dub Link Used",
+                          refund_tts: "↩ Refund (TTS)",
+                          refund_tts_character: "↩ Refund (Character TTS)",
+                          refund_translate_file: "↩ Refund (Video Translate)",
+                          refund_translate_link: "↩ Refund (Link Translate)",
+                          refund_dub_file: "↩ Refund (Dub File)",
+                          refund_dub_link: "↩ Refund (Dub Link)",
+                        };
+                        return types[type] || type;
+                      };
+                      return (
+                        <div
+                          key={tx.id}
+                          className="flex items-center gap-3 p-3 rounded-2xl border"
+                          style={{ background: cardBg, borderColor: cardBorder, boxShadow }}
+                        >
+                          <div
+                            className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-base"
+                            style={{
+                              background: isPositive ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.12)",
+                            }}
+                          >
+                            {isPositive ? "⬆️" : "⬇️"}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-semibold truncate" style={{ color: textColor }}>
+                              {txTypeLabel(tx.type || "")}
+                            </div>
+                            {tx.description && (
+                              <div className="text-xs truncate" style={{ color: subtextColor }}>
+                                {tx.description}
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <div
+                              className="text-sm font-black"
+                              style={{ color: isPositive ? "#22c55e" : "#ef4444" }}
+                            >
+                              {isPositive ? "+" : ""}{tx.amount}
+                            </div>
+                            <div className="text-[10px]" style={{ color: subtextColor }}>
+                              {tx.createdAt
+                                ? new Date(tx.createdAt as any).toLocaleString(lang === "mm" ? "my-MM" : "en-US", {
+                                    month: "short", day: "2-digit",
+                                    hour: "numeric", minute: "2-digit", hour12: true,
+                                  })
+                                : "-"}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>

@@ -98,6 +98,64 @@ setInterval(() => {
 }, 30 * 60 * 1000);
 // --- End job store ---
 
+// ─── CREDIT SYSTEM ───────────────────────────────────────────────
+const CREDIT_COSTS = {
+  tts: 2,
+  tts_character: 2,
+  translate_file: 5,
+  translate_link: 5,
+  dub_file: 5,
+  dub_link: 5,
+} as const;
+
+async function deductCredits(
+  db: any,
+  userId: string,
+  amount: number,
+  type: string,
+  description: string
+): Promise<void> {
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  const balance = user?.credits ?? 0;
+  if (balance < amount) {
+    throw new Error(
+      `Credits မလုံလောက်ပါ။ လိုအပ်သည် ${amount} credits ။ လက်ကျန် ${balance} credits ။ Plan upgrade လုပ်ပါ။`
+    );
+  }
+  await db.update(users).set({ credits: balance - amount }).where(eq(users.id, userId));
+  await db.insert(creditTransactions).values({
+    id: nanoid(36),
+    userId,
+    amount: -amount,
+    type,
+    description,
+  });
+}
+
+async function refundCredits(
+  db: any,
+  userId: string,
+  amount: number,
+  type: string,
+  description: string
+): Promise<void> {
+  try {
+    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    const balance = user?.credits ?? 0;
+    await db.update(users).set({ credits: balance + amount }).where(eq(users.id, userId));
+    await db.insert(creditTransactions).values({
+      id: nanoid(36),
+      userId,
+      amount: +amount,
+      type,
+      description,
+    });
+  } catch (e) {
+    console.error("[RefundCredits] Failed to refund:", e);
+  }
+}
+// ─── END CREDIT SYSTEM ───────────────────────────────────────────
+
 type TrialLimits = {
   charLimitStandard: number; // Thiha/Nilar char limit per generation
   charLimitCharacter: number; // Other characters char limit per generation
@@ -318,16 +376,43 @@ export const appRouter = router({
         // DB: update sessionToken + lastLoginAt + clear the code
         try {
           const db2 = await getDb();
-          if (db2)
+          if (db2) {
             await db2
               .update(users)
               .set({
                 lastLoginAt: new Date(),
                 sessionToken: sessionToken,
-                telegramCode: null, // 🔐 One-time use: clear code after login
+                telegramCode: null,
                 telegramCodeExpiresAt: null,
               })
               .where(eq(users.id, user.id));
+
+            // ── Grant trial credits on very first login ──
+            const existingTx = await db2
+              .select()
+              .from(creditTransactions)
+              .where(eq(creditTransactions.userId, user.id))
+              .limit(1);
+            if (existingTx.length === 0) {
+              // First time — give trial credits from settings
+              const settingsRows = await db2.select().from(settings);
+              const settMap = Object.fromEntries(settingsRows.map((r: any) => [r.keyName, r.value]));
+              const trialCredits = parseInt(settMap["trial_credits"] ?? "15");
+              const currentCredits = user.credits ?? 0;
+              await db2
+                .update(users)
+                .set({ credits: currentCredits + trialCredits })
+                .where(eq(users.id, user.id));
+              await db2.insert(creditTransactions).values({
+                id: nanoid(36),
+                userId: user.id,
+                amount: trialCredits,
+                type: "trial",
+                description: `Trial credits on first login (+${trialCredits} credits)`,
+              });
+              console.log(`[Credits] Granted ${trialCredits} trial credits to new user ${user.id}`);
+            }
+          }
         } catch {}
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, token, {
@@ -838,6 +923,10 @@ export const appRouter = router({
         createJobEntry(jobId);
         const userId = ctx.user.userId;
         const url = input.url;
+        // Deduct credits BEFORE starting the background job
+        if (ctx.user.role !== "admin" && db) {
+          await deductCredits(db, userId, CREDIT_COSTS.translate_link, "translate_link", "Video translation (link)");
+        }
         // Run in background
         (async () => {
           updateJobEntry(jobId, { status: "processing", progress: 20 });
@@ -862,6 +951,10 @@ export const appRouter = router({
                 status: "fail",
                 errorMsg: (error?.message ?? "unknown").slice(0, 499),
               }).catch(() => {});
+              // Refund credits on failure
+              if (ctx.user!.role !== "admin") {
+                await refundCredits(db, userId, CREDIT_COSTS.translate_link, "refund_translate_link", `Refund: video translation (link) failed`);
+              }
             }
           }
         })().catch(err => console.error("[TranslateLinkJob]", err));
@@ -923,6 +1016,10 @@ export const appRouter = router({
         createJobEntry(jobId);
         const userId = ctx.user.userId;
         const filename = input.filename;
+        // Deduct credits BEFORE starting the background job
+        if (ctx.user.role !== "admin" && db) {
+          await deductCredits(db, userId, CREDIT_COSTS.translate_file, "translate_file", "Video translation (file)");
+        }
         // Run in background
         (async () => {
           updateJobEntry(jobId, { status: "processing", progress: 10 });
@@ -950,6 +1047,10 @@ export const appRouter = router({
                 status: "fail",
                 errorMsg: (error?.message ?? "unknown").slice(0, 499),
               }).catch(() => {});
+              // Refund credits on failure
+              if (ctx.user!.role !== "admin") {
+                await refundCredits(db, userId, CREDIT_COSTS.translate_file, "refund_translate_file", `Refund: video translation (file) failed`);
+              }
             }
           }
         })().catch(err => {
@@ -1061,6 +1162,10 @@ export const appRouter = router({
             );
           if (!isValidVideoBuffer(videoBuffer))
             throw new Error("ဗီဒီယို ဖိုင် format မမှန်ပါ။");
+          // Deduct credits before processing
+          if (ctx.user.role !== "admin" && db) {
+            await deductCredits(db, ctx.user.userId, CREDIT_COSTS.dub_file, "dub_file", "Video dub (file)");
+          }
           const dubOpts: DubOptions = {
             voice: input.voice,
             character: input.character,
@@ -1097,7 +1202,6 @@ export const appRouter = router({
           }
           return { success: true, ...result };
         } catch (error: any) {
-          // Track failure for trial refund
           if (db && ctx.user) {
             const { nanoid: nid } = await import("nanoid");
             await db
@@ -1111,6 +1215,10 @@ export const appRouter = router({
                 errorMsg: (error?.message ?? "unknown").slice(0, 499),
               })
               .catch(() => {});
+            // Refund credits on failure
+            if (ctx.user.role !== "admin") {
+              await refundCredits(db, ctx.user.userId, CREDIT_COSTS.dub_file, "refund_dub_file", "Refund: video dub (file) failed");
+            }
           }
           const rawMsg = error.message ?? "Dubbing failed.";
           let userMsg = rawMsg;
@@ -1296,6 +1404,12 @@ export const appRouter = router({
         const url = input.url;
         const voice = input.voice;
         const character = input.character;
+        const userRole = ctx.user.role;
+
+        // Deduct credits BEFORE starting background job
+        if (userRole !== "admin" && db) {
+          await deductCredits(db, userId, CREDIT_COSTS.dub_link, "dub_link", "Video dub (link)");
+        }
 
         // Run in background
         (async () => {
@@ -1327,6 +1441,10 @@ export const appRouter = router({
                 status: "fail",
                 errorMsg: (error?.message ?? "unknown").slice(0, 499),
               }).catch(() => {});
+              // Refund credits on failure
+              if (userRole !== "admin") {
+                await refundCredits(db, userId, CREDIT_COSTS.dub_link, "refund_dub_link", "Refund: video dub (link) failed");
+              }
             }
           }
         })().catch(err => console.error("[DubLinkJob]", err));
@@ -1396,6 +1514,9 @@ export const appRouter = router({
       const plan = result.length > 0 ? result[0].plan : null;
       const limits = getPlanLimits(plan);
       const usage = await getDailyUsage(ctx.user.userId);
+      // Fetch current credit balance
+      const [userRow] = await db.select().from(users).where(eq(users.id, ctx.user.userId)).limit(1);
+      const credits = userRow?.credits ?? 0;
 
       // For trial users, also return total usage
       let trialUsage = null;
@@ -1414,6 +1535,7 @@ export const appRouter = router({
           usage,
           trialUsage: null,
           trialLimits: null,
+          credits,
         };
       return {
         active: true,
@@ -1423,6 +1545,7 @@ export const appRouter = router({
         usage,
         trialUsage,
         trialLimits: trialLimitsData,
+        credits,
       };
     }),
   }),
@@ -1450,6 +1573,34 @@ export const appRouter = router({
           durationMs: h.durationMs,
           status: h.status,
           createdAt: h.createdAt,
+          // Credit cost hint for display
+          creditCost: h.status === "success"
+            ? (h.feature === "tts" ? CREDIT_COSTS.tts
+              : h.feature === "dub_file" || h.feature === "dub_link" ? CREDIT_COSTS.dub_file
+              : h.feature?.includes("translate") ? CREDIT_COSTS.translate_file
+              : 0)
+            : 0,
+        }));
+      }),
+
+    getCreditHistory: publicProcedure
+      .input(z.object({ limit: z.number().min(1).max(200).default(50) }))
+      .query(async ({ input, ctx }) => {
+        if (!ctx.user) throw new Error("Please login first.");
+        const db = await getDb();
+        if (!db) return [];
+        const txs = await db
+          .select()
+          .from(creditTransactions)
+          .where(eq(creditTransactions.userId, ctx.user.userId))
+          .orderBy(desc(creditTransactions.createdAt))
+          .limit(input.limit);
+        return txs.map(t => ({
+          id: t.id,
+          amount: t.amount,
+          type: t.type,
+          description: t.description,
+          createdAt: t.createdAt,
         }));
       }),
   }),
@@ -1551,6 +1702,12 @@ export const appRouter = router({
         // 🔐 Content sanitization - keep Myanmar punctuation for edge-tts
         const cleanText = sanitizeText(input.text).replace(/\0/g, "").trim();
         if (!cleanText) throw new Error("Invalid text input.");
+        // Deduct credits before generating
+        if (ctx.user.role !== "admin" && db) {
+          const isChar = !!(input.character && input.character.trim() !== "");
+          const cost = isChar ? CREDIT_COSTS.tts_character : CREDIT_COSTS.tts;
+          await deductCredits(db, ctx.user.userId, cost, isChar ? "tts_character" : "tts", `TTS ဖန်တီးမှု${isChar ? " (Character Voice)" : ""}`);
+        }
         try {
           let result;
           const isCharacter = !!(
@@ -1616,6 +1773,12 @@ export const appRouter = router({
                 errorMsg: (error?.message ?? "unknown").slice(0, 499),
               })
               .catch(() => {});
+            // Refund credits on TTS failure
+            if (ctx.user.role !== "admin") {
+              const isChar = !!(input.character && input.character.trim() !== "");
+              const cost = isChar ? CREDIT_COSTS.tts_character : CREDIT_COSTS.tts;
+              await refundCredits(db, ctx.user.userId, cost, isChar ? "refund_tts_character" : "refund_tts", "Refund: TTS generation failed");
+            }
           }
           throw new Error(
             `Failed to generate audio: ${error?.message || "Please try again"}`
