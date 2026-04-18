@@ -522,9 +522,11 @@ export default function AdminDashboard() {
   const [trialEndDate, setTrialEndDate] = useState("");
   const [trialEnabled, setTrialEnabled] = useState(false);
   trpc.settings.get.useQuery(undefined, {
+    refetchInterval: 1000, // Refetch every second to get latest settings
     onSuccess: (d: any) => {
-      setAutoTrialEnabled(d.autoTrialEnabled === 'true' || d.autoTrialEnabled === true);
-      setAutoTrialDays(d.autoTrialDays);
+      const autoTrial = d?.autoTrialEnabled;
+      setAutoTrialEnabled(autoTrial === 'true' || autoTrial === true);
+      setAutoTrialDays(d.autoTrialDays || 7);
       setTrialCredits(d.trialCredits || 15);
       setTrialStartDate(d.trialStartDate || "");
       setTrialEndDate(d.trialEndDate || "");
@@ -559,9 +561,11 @@ export default function AdminDashboard() {
   const banUser = trpc.admin.banUser.useMutation({
     onSuccess: () => refetch(),
   });
+  const queryClient = trpc.useUtils();
   const updateSettings = trpc.settings.update.useMutation({
     onSuccess: () => {
-      // Refetch settings after update - trigger reload of current page
+      // Invalidate and refetch settings
+      queryClient.settings.get.invalidate();
       window.location.reload();
     },
   });
