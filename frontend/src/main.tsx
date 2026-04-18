@@ -55,7 +55,7 @@ const BACKEND_URL = getBackendUrl();
 
 const trpcClient = trpc.createClient({
   links: [
-    httpBatchLink({
+    httpLink({
       url: BACKEND_URL ? `${BACKEND_URL}/api/trpc` : '/api/trpc',
       transformer: superjson,
       fetch(input, init) {
