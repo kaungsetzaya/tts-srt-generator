@@ -1,7 +1,7 @@
 import { randomBytes } from "crypto";
 import { getDb } from "./db";
 import { eq } from "drizzle-orm";
-import { users } from "../drizzle/schema";
+import { users, settings } from "../drizzle/schema";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
@@ -66,6 +66,21 @@ export async function handleTelegramUpdate(update: any) {
           telegramCodeExpiresAt: newExpiresAt,
         }).where(eq(users.id, user.id));
       } else {
+        // Check trial settings - give trial credits to new users if enabled
+        let trialCredits = 0;
+        try {
+          const settingsRows = await db.select().from(settings);
+          const settingsObj: Record<string, string> = {};
+          for (const r of settingsRows) settingsObj[r.keyName] = r.value;
+          
+          const autoTrialEnabled = settingsObj.autoTrialEnabled === 'true';
+          if (autoTrialEnabled) {
+            trialCredits = parseInt(settingsObj.trialCredits) || 15;
+          }
+        } catch {
+          trialCredits = 0; // default to 0 if settings failed
+        }
+
         await db.insert(users).values({
           id: randomBytes(16).toString("hex"),
           telegramId,
@@ -73,6 +88,7 @@ export async function handleTelegramUpdate(update: any) {
           telegramFirstName: firstName,
           telegramCode: loginCode,
           telegramCodeExpiresAt: newExpiresAt,
+          credits: trialCredits,
         });
       }
 
