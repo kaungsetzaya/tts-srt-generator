@@ -270,6 +270,7 @@ export default function TTSGenerator() {
   // Translation job polling state
   const [translateJobId, setTranslateJobId] = useState<string | null>(null);
   const [translateJobProgress, setTranslateJobProgress] = useState(0);
+  const [translateJobMessage, setTranslateJobMessage] = useState("");
   const [translateJobType, setTranslateJobType] = useState<"file" | "link">("file");
 
   // tRPC polling queries for translation jobs
@@ -613,6 +614,7 @@ export default function TTSGenerator() {
       showError(errMsg);
       setTranslateJobId(null);
       setTranslateJobProgress(0);
+      setTranslateJobMessage("");
       return;
     }
 
@@ -626,14 +628,18 @@ export default function TTSGenerator() {
       setEditedVideoText(activeTranslateJobData.result.myanmarText);
       setTranslateJobId(null);
       setTranslateJobProgress(100);
+      setTranslateJobMessage("");
       utils.subscription.myStatus.invalidate();
     } else if (activeTranslateJobData.status === "failed") {
       showError(activeTranslateJobData.error || "Translation failed. Please try again.");
       setTranslateJobId(null);
       setTranslateJobProgress(0);
+      setTranslateJobMessage("");
     } else {
-      // Still processing: update progress
-      setTranslateJobProgress(activeTranslateJobData.progress || 20);
+      // Still processing: update progress + message
+      const pct = activeTranslateJobData.progress ?? 0;
+      setTranslateJobProgress(pct > 0 ? pct : 10);
+      setTranslateJobMessage((activeTranslateJobData as any).message || "");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [translateJobId, activeTranslateJobData, activeTranslateJobError]);
@@ -1992,7 +1998,9 @@ export default function TTSGenerator() {
                               className="text-sm font-bold"
                               style={{ color: subtextColor }}
                             >
-                              {t.translating} {translateJobId ? `(${translateJobProgress}%)` : ""}
+                              {translateJobMessage
+                                ? `${translateJobMessage} (${translateJobProgress}%)`
+                                : `${t.translating} (${translateJobProgress}%)`}
                             </span>
                           </div>
                         </div>

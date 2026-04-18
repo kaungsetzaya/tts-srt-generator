@@ -1,4 +1,4 @@
-import { translateVideo, translateVideoLink } from "./videoTranslator";
+import { translateVideo, translateVideoLink, checkPythonAndWhisper } from "./videoTranslator";
 import {
   dubVideoFromBuffer,
   dubVideoFromLink,
@@ -74,6 +74,7 @@ interface Job {
   result?: any;
   error?: string;
   progress?: number;
+  message?: string;  // Current step description
   createdAt: Date;
 }
 const jobs: Record<string, Job> = {};
@@ -918,6 +919,9 @@ export const appRouter = router({
               );
           }
         }
+        // █ Pre-flight: verify Python + faster-whisper BEFORE creating the job
+        // This runs synchronously, so if it fails the user gets an immediate error
+        await checkPythonAndWhisper();
         // Create background job
         const jobId = `tlink_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         createJobEntry(jobId);
@@ -929,10 +933,12 @@ export const appRouter = router({
         }
         // Run in background
         (async () => {
-          updateJobEntry(jobId, { status: "processing", progress: 20 });
+          updateJobEntry(jobId, { status: "processing", progress: 10, message: "ဗီဒီယို Link စစ်ဆေးနေသည်..." });
           try {
-            const result = await translateVideoLink(url);
-            updateJobEntry(jobId, { status: "completed", progress: 100, result });
+            const result = await translateVideoLink(url, undefined, (pct, msg) => {
+              updateJobEntry(jobId, { progress: pct, message: msg });
+            });
+            updateJobEntry(jobId, { status: "completed", progress: 100, result, message: "ပြီးပါပြီ" });
             if (db) {
               await db.insert(ttsConversions).values({
                 id: nanoid(10),
@@ -1011,6 +1017,8 @@ export const appRouter = router({
           throw new Error(
             "ဗီဒီယို ဖိုင် format မမှန်ပါ။ MP4, MOV, AVI, MKV, WebM ဖိုင်များသာ တင်နိုင်ပါသည်။"
           );
+        // █ Pre-flight: verify Python + faster-whisper BEFORE creating the job
+        await checkPythonAndWhisper();
         // Create background job and return immediately
         const jobId = `tfile_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         createJobEntry(jobId);
@@ -1065,11 +1073,12 @@ export const appRouter = router({
       .input(z.object({ jobId: z.string() }))
       .query(({ input }) => {
         const job = getJobEntry(input.jobId);
-        if (!job) return { status: "failed" as const, error: "Job not found", progress: 0 };
+        if (!job) return { status: "failed" as const, error: "Job not found", progress: 0, message: "" };
         return {
           status: job.status,
           progress: job.progress ?? 0,
           error: job.error,
+          message: job.message ?? "",
           result: job.status === "completed" ? job.result : undefined,
         };
       }),
@@ -1078,11 +1087,12 @@ export const appRouter = router({
       .input(z.object({ jobId: z.string() }))
       .query(({ input }) => {
         const job = getJobEntry(input.jobId);
-        if (!job) return { status: "failed" as const, error: "Job not found", progress: 0 };
+        if (!job) return { status: "failed" as const, error: "Job not found", progress: 0, message: "" };
         return {
           status: job.status,
           progress: job.progress ?? 0,
           error: job.error,
+          message: job.message ?? "",
           result: job.status === "completed" ? job.result : undefined,
         };
       }),

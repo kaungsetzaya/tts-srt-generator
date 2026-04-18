@@ -39,6 +39,27 @@ async function extractAudio(videoBuffer: Buffer): Promise<string> {
     });
 }
 
+// ─── Pre-flight: check python3 + faster-whisper are available ─────────────────
+export async function checkPythonAndWhisper(): Promise<void> {
+    try {
+        const result = await execFileAsync(
+            "python3",
+            ["-c", "import faster_whisper; print('ok')"],
+            { timeout: 10000, killSignal: "SIGKILL" }
+        );
+        console.log("[Translate] Python check:", result.stdout?.trim());
+    } catch (err: any) {
+        const msg = err?.stderr || err?.message || String(err);
+        if (msg.includes("No module named") || msg.includes("ModuleNotFound")) {
+            throw new Error("Server: faster-whisper မထည့်သွင်းရသေးပါ။ Admin ကို ဆက်သွယ်ပါ။ (faster-whisper not installed)");
+        }
+        if (msg.includes("command not found") || msg.includes("ENOENT") || msg.includes("python3")) {
+            throw new Error("Server: Python3 မတွေ့ပါ။ Admin ကို ဆက်သွယ်ပါ။ (python3 not found)");
+        }
+        throw new Error(`Server: Python check failed — ${msg.slice(0, 200)}`);
+    }
+}
+
 // ------------------ Whisper — returns segments[] ------------------
 async function transcribeLocalWhisper(audioPath: string): Promise<{
     text: string;
@@ -47,13 +68,14 @@ async function transcribeLocalWhisper(audioPath: string): Promise<{
     console.log(`[Translate] Starting transcription for: ${audioPath}`);
     const outputDir = path.dirname(audioPath);
     const baseName = path.parse(audioPath).name;
-    // Use backend/transcriber.py (same script, works for both)
     const scriptPath = path.join(process.cwd(), "backend", "transcriber.py");
     const outputJson = path.join(outputDir, `${baseName}_transcription.json`);
 
     console.log(`[Translate] Running: python3 ${scriptPath} ${audioPath} ${outputJson}`);
     await execFileAsync("python3", [scriptPath, audioPath, outputJson], {
         timeout: 300000,
+        killSignal: "SIGKILL",  // Force-kill if timeout fires — not just SIGTERM
+        maxBuffer: 10 * 1024 * 1024,
     });
     console.log(`[Translate] Transcription done, reading: ${outputJson}`);
 
@@ -147,7 +169,7 @@ export async function translateVideo(
 }
 
 // ------------------ LINK VERSION ------------------
-export async function translateVideoLink(url: string, userApiKey?: string) {
+export async function translateVideoLink(url: string, userApiKey?: string, onProgress?: (pct: number, msg: string) => void) {
     if (!isAllowedVideoUrl(url)) {
         throw new Error("ခွင့်ပြုထားသော Link များသာ သုံးနိုင်ပါသည်။ YouTube, TikTok, Facebook Link သာ ထည့်ပါ။");
     }
@@ -161,6 +183,7 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
     }
 
     try {
+        onProgress?.(10, "ဗီဒီယို Link စစ်ဆေးနေသည်...");
         console.log(`[Video Translator] Attempting to download: ${url}`);
 
         let downloadUrl = "";
@@ -198,9 +221,13 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
             console.warn("[Cobalt API Error]", e.name === "AbortError" ? "Timeout" : e.message?.slice(0, 200));
         }
 
+        onProgress?.(20, "ဗီဒီယို ဒေါင်းလော့ဆွဲနေသည်...");
         if (downloadUrl) {
             console.log(`[Video Translator] Downloading via Cobalt URL...`);
-            await execFileAsync("curl", ["-s", "-L", "--max-time", "120", "-o", tempVideoPath, downloadUrl], { timeout: 130000 });
+            await execFileAsync("curl", ["-s", "-L", "--max-time", "120", "-o", tempVideoPath, downloadUrl], {
+                timeout: 130000,
+                killSignal: "SIGKILL",
+            });
         } else {
             // --- Fallback to yt-dlp ---
             console.log("[Video Translator] Cobalt unavailable, using yt-dlp fallback...");
@@ -208,10 +235,10 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
             const hasCookies = existsSync(cookiePath);
 
             try {
-                await execFileAsync("pip3", ["install", "--upgrade", "--pre", "yt-dlp"], { timeout: 90000 });
+                await execFileAsync("pip3", ["install", "--upgrade", "--pre", "yt-dlp"], { timeout: 90000, killSignal: "SIGKILL" });
                 console.log("[Video Translator] yt-dlp updated");
             } catch {
-                try { await execFileAsync("yt-dlp", ["-U"], { timeout: 30000 }); } catch {}
+                try { await execFileAsync("yt-dlp", ["-U"], { timeout: 30000, killSignal: "SIGKILL" }); } catch {}
             }
 
             const baseArgs = ["--no-check-certificates", "--no-playlist", "--no-warnings", "--geo-bypass", "--max-filesize", "50M"];
@@ -235,7 +262,10 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
                 try {
                     const isCookie = formatStrategies[i].includes("--cookies");
                     console.log(`[Video Translator] Strategy ${i + 1}/${formatStrategies.length} [${isCookie ? "Cookies" : "NoCookies"}]...`);
-                    await execFileAsync("yt-dlp", [...formatStrategies[i], "-o", tempVideoPath, url], { timeout: 300000 });
+                    await execFileAsync("yt-dlp", [...formatStrategies[i], "-o", tempVideoPath, url], {
+                        timeout: 180000,     // 3 min per strategy (was 5 min)
+                        killSignal: "SIGKILL",
+                    });
                     const checkStat = await fs.stat(tempVideoPath).catch(() => null);
                     if (checkStat && checkStat.size > 10000) {
                         dlSuccess = true;
@@ -261,6 +291,7 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
         }
         console.log(`[Video Translator] Video downloaded: ${Math.round(fileStat.size / 1024 / 1024 * 10) / 10}MB`);
 
+        onProgress?.(35, "Audio ထုတ်နေသည်...");
         console.log(`[Video Translator] Extracting Audio...`);
         await new Promise((resolve, reject) => {
             ffmpeg(tempVideoPath)
@@ -271,6 +302,7 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
                 .save(tempAudioPath);
         });
 
+        onProgress?.(50, "Whisper AI ဖြင့် အသံမှစာသားပြောင်းနေသည်...");
         console.log(`[Video Translator] Sending to local Whisper...`);
         const { text: englishText, segments } = await transcribeLocalWhisper(tempAudioPath);
 
@@ -278,6 +310,7 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
             throw new Error("Whisper could not detect any speech in this video.");
         }
 
+        onProgress?.(80, "Gemini AI ဖြင့် မြန်မာဘာသာပြန်နေသည်...");
         console.log(`[Video Translator] Translating with Gemini batch (${segments.length} segments)...`);
         const sanitizedSegments = segments.map((s, i) => ({
             index: i,
@@ -289,6 +322,7 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
         const myanmarText = translated.map(s => s.text).join(" ");
         const srtContent = buildMyanmarSRT(segments, translated.map(s => s.text));
 
+        onProgress?.(95, "ပြီးဆုံးနေသည်...");
         return { englishText, myanmarText, srtContent };
     } catch (error: any) {
         console.error("[Video Translator Error]", error);
