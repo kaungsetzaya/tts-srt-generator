@@ -6,7 +6,7 @@ import { tmpdir } from 'os';
 import ffmpeg from 'fluent-ffmpeg';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { geminiTranslate } from "./geminiTranslator";
+import { geminiTranslate, geminiTranslateBatch } from "./geminiTranslator";
 import { downloadVideo } from "./_core/multiDownloader";
 import { isAllowedVideoUrl, isPathWithinDir, sanitizeForAI } from "./_core/security";
 
@@ -65,7 +65,38 @@ async function transcribeLocalWhisper(audioPath: string): Promise<{ text: string
     const data = JSON.parse(await fs.readFile(outputJson, "utf-8"));
     await fs.unlink(outputJson).catch(() => {});
 
-    return { text: data.text || "", srt: "" };
+    return { text: data.text || "", segments: (data.segments || []) as { start: number; end: number; text: string }[] };
+}
+
+// ------------------ SRT Builder ------------------
+function msToSrtTime(ms: number): string {
+    const h = Math.floor(ms / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    const mil = ms % 1000;
+    return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")},${String(mil).padStart(3,"0")}`;
+}
+
+function buildMyanmarSRT(
+    segments: { start: number; end: number; text: string }[],
+    translatedTexts: string[]
+): string {
+    const lines: string[] = [];
+    for (let i = 0; i < segments.length; i++) {
+        const seg = segments[i];
+        const text = (translatedTexts[i] || "").trim();
+        if (!text) continue;
+        const startMs = Math.round(seg.start * 1000);
+        const endMs = Math.round(seg.end * 1000);
+        lines.push(`${lines.length / 4 + 1 | 0}`);
+        lines.push(`${msToSrtTime(startMs)} --> ${msToSrtTime(endMs)}`);
+        lines.push(text);
+        lines.push("");
+    }
+    // Re-number
+    let idx = 1;
+    const content = lines.map((l, i) => (i % 4 === 0 ? String(idx++) : l)).join("\n");
+    return content.replace(/\n/g, "\r\n");
 }
 
 // ------------------ FILE UPLOAD ------------------
@@ -78,23 +109,26 @@ export async function translateVideo(videoBuffer: Buffer, filename: string, user
         console.log(`[Translate] Step 2: Audio extracted to ${audioPath}`);
 
         console.log(`[Translate] Step 3: Starting Whisper transcription...`);
-        const { text: englishText, srt: originalSrt } = await transcribeLocalWhisper(audioPath);
-        console.log(`[Translate] Step 4: Transcription done, text length: ${englishText.length}`);
+        const { text: englishText, segments } = await transcribeLocalWhisper(audioPath);
+        console.log(`[Translate] Step 4: Transcription done, ${segments.length} segments`);
 
         if (!englishText || !englishText.trim()) {
             throw new Error("No speech detected in video.");
         }
 
         // 🔐 Prompt Injection Guard
-        const sanitizedText = sanitizeForAI(englishText);
-        console.log(`[Translate] Step 5: Starting Gemini translation...`);
-        const { myanmar: myanmarText } = await geminiTranslate(sanitizedText, userApiKey);
-        console.log(`[Translate] Step 6: Translation done, myanmar text length: ${myanmarText.length}`);
+        const sanitizedSegments = segments.map((s, i) => ({ index: i, start: s.start, end: s.end, text: s.text }));
+        console.log(`[Translate] Step 5: Starting Gemini batch translation...`);
+        const { translated } = await geminiTranslateBatch(sanitizedSegments, userApiKey);
+        const myanmarText = translated.map(s => s.text).join(" ");
+        console.log(`[Translate] Step 6: Translation done`);
+
+        const srtContent = buildMyanmarSRT(segments, translated.map(s => s.text));
 
         return {
             englishText,
             myanmarText,
-            srtContent: "" // Bug 11 fix:暂时无法生成缅文SRT - 需要扩展翻译逻辑
+            srtContent,
         };
     } finally {
         if (audioPath) await fs.unlink(audioPath).catch(() => {});
@@ -154,21 +188,22 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
         });
 
         console.log(`[Video Translator] Sending to local Whisper...`);
-        const { text: englishText, srt: originalSrt } = await transcribeLocalWhisper(tempAudioPath);
+        const { text: englishText, segments } = await transcribeLocalWhisper(tempAudioPath);
 
         if (!englishText || !englishText.trim()) {
             throw new Error("Whisper could not detect any speech in this video.");
         }
 
         console.log(`[Video Translator] Translating with Gemini...`);
-        // 🔐 Prompt Injection Guard
-        const sanitizedText = sanitizeForAI(englishText);
-        const { myanmar: myanmarText } = await geminiTranslate(sanitizedText, userApiKey);
+        const sanitizedSegments = segments.map((s, i) => ({ index: i, start: s.start, end: s.end, text: s.text }));
+        const { translated } = await geminiTranslateBatch(sanitizedSegments, userApiKey);
+        const myanmarText = translated.map(s => s.text).join(" ");
+        const srtContent = buildMyanmarSRT(segments, translated.map(s => s.text));
 
         return { 
             englishText, 
             myanmarText, 
-            srtContent: "", // Bug 11 fix:无法生成缅文SRT - 需要扩展翻译逻辑
+            srtContent,
         };
     } catch (error: any) {
         console.error("[Video Translator Error]", error);
