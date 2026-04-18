@@ -6,10 +6,12 @@ const dbConnectionString = process.env.DATABASE_URL;
 module.exports = {
   apps: [{
     name: "lumix",
-    script: "./dist/index.js",
+    script: "npx",
+    args: "tsx backend/_core/index.ts",
+    interpreter: "none",
     env: {
       NODE_ENV: "production",
-      DATABASE_URL: dbConnectionString, // Ensure DATABASE_URL is passed to the environment
+      DATABASE_URL: dbConnectionString,
     },
     instances: 1,
     autorestart: true,
