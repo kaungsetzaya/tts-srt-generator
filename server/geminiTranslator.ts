@@ -167,3 +167,77 @@ export async function getQuotaStatus(): Promise<Array<{ model: string; used: num
     return { model: m.name, used, limit: m.rpd, available: m.rpd - used };
   });
 }
+
+// ── Batch translation for video translation (segment-level) ──
+const BATCH_SIZE = 15;
+
+async function translateBatch(lines: string[], apiKey: string, modelId: string): Promise<string[] | null> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
+  const systemPrompt = `You are a professional Myanmar subtitle translator. Translate each line to Myanmar.
+Return EXACTLY the same number of lines as input, as a JSON array of strings.
+RULES: Only Myanmar text. No English. Transliterate names phonetically. No markdown.`;
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ parts: [{ text: `Translate these lines (JSON array):\n${JSON.stringify(lines)}` }] }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: { type: "ARRAY", items: { type: "STRING" } },
+        },
+      }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) return null;
+    const parsed = JSON.parse(text);
+    if (Array.isArray(parsed) && parsed.length === lines.length) return parsed;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function geminiTranslateBatch(
+  segments: { index: number; start: number; end: number; text: string }[],
+  userApiKey?: string
+): Promise<{ translated: { index: number; start: number; end: number; text: string }[] }> {
+  const apiKey = (userApiKey && userApiKey.trim() !== "") ? userApiKey.trim() : getSystemGeminiKey();
+  if (!apiKey) throw new Error("No Gemini API key available.");
+
+  const texts = segments.map(s => s.text);
+  const chunks: string[][] = [];
+  for (let i = 0; i < texts.length; i += BATCH_SIZE) {
+    chunks.push(texts.slice(i, i + BATCH_SIZE));
+  }
+
+  console.log(`[Gemini] Translating ${texts.length} segments in ${chunks.length} batches...`);
+
+  const translatedTexts: string[] = [];
+  const model = await getAvailableModel();
+  if (!model) throw new Error("All Gemini quotas exhausted for today.");
+
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    console.log(`[Gemini] Batch ${i + 1}/${chunks.length} (${chunk.length} lines)...`);
+    const result = await translateBatch(chunk, apiKey, model.id);
+    if (result && result.length === chunk.length) {
+      translatedTexts.push(...result);
+      await incrementQuota(model.id);
+    } else {
+      console.warn(`[Gemini] Batch ${i + 1} failed, using original text`);
+      translatedTexts.push(...chunk);
+    }
+  }
+
+  const translated = segments.map((seg, idx) => ({
+    ...seg,
+    text: translatedTexts[idx] || seg.text,
+  }));
+
+  return { translated };
+}

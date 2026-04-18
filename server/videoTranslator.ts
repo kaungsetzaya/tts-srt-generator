@@ -6,19 +6,17 @@ import { randomUUID } from 'crypto';
 import ffmpeg from 'fluent-ffmpeg';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { geminiTranslate } from "./geminiTranslator";
+import { geminiTranslateBatch } from "./geminiTranslator";
 import { isAllowedVideoUrl, isPathWithinDir, sanitizeForAI } from "./_core/security";
 
 const execFileAsync = promisify(execFile);
 
 // ------------------ Extract Audio ------------------
 async function extractAudio(videoBuffer: Buffer): Promise<string> {
-    // 🔐 UUID filenames
     const id = randomUUID();
     const tempVideoPath = path.join(tmpdir(), `vt_in_${id}.mp4`);
     const tempAudioPath = path.join(tmpdir(), `vt_aud_${id}.mp3`);
 
-    // 🔐 Path traversal check
     if (!isPathWithinDir(tempVideoPath, tmpdir()) || !isPathWithinDir(tempAudioPath, tmpdir())) {
         throw new Error("Invalid temp directory.");
     }
@@ -41,22 +39,24 @@ async function extractAudio(videoBuffer: Buffer): Promise<string> {
     });
 }
 
-// ------------------ Whisper — execFile with argument array ------------------
-async function transcribeLocalWhisper(audioPath: string): Promise<{ text: string, srt: string }> {
+// ------------------ Whisper — returns segments[] ------------------
+async function transcribeLocalWhisper(audioPath: string): Promise<{
+    text: string;
+    segments: { start: number; end: number; text: string }[];
+}> {
     console.log(`[Translate] Starting transcription for: ${audioPath}`);
     const outputDir = path.dirname(audioPath);
     const baseName = path.parse(audioPath).name;
+    // Use backend/transcriber.py (same script, works for both)
     const scriptPath = path.join(process.cwd(), "backend", "transcriber.py");
     const outputJson = path.join(outputDir, `${baseName}_transcription.json`);
 
     console.log(`[Translate] Running: python3 ${scriptPath} ${audioPath} ${outputJson}`);
-    // 🔐 Command Guard: execFile with argument array
     await execFileAsync("python3", [scriptPath, audioPath, outputJson], {
         timeout: 300000,
     });
     console.log(`[Translate] Transcription done, reading: ${outputJson}`);
 
-    // 🔐 Path traversal check
     if (!isPathWithinDir(outputJson, outputDir)) {
         throw new Error("Invalid file path detected.");
     }
@@ -64,7 +64,39 @@ async function transcribeLocalWhisper(audioPath: string): Promise<{ text: string
     const data = JSON.parse(await fs.readFile(outputJson, "utf-8"));
     await fs.unlink(outputJson).catch(() => {});
 
-    return { text: data.text || "", srt: "" };
+    return {
+        text: data.text || "",
+        segments: (data.segments || []) as { start: number; end: number; text: string }[],
+    };
+}
+
+// ------------------ SRT Builder ------------------
+function msToSrtTime(ms: number): string {
+    const h = Math.floor(ms / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    const mil = ms % 1000;
+    return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")},${String(mil).padStart(3,"0")}`;
+}
+
+function buildMyanmarSRT(
+    segments: { start: number; end: number; text: string }[],
+    translatedTexts: string[]
+): string {
+    const lines: string[] = [];
+    let idx = 1;
+    for (let i = 0; i < segments.length; i++) {
+        const seg = segments[i];
+        const text = (translatedTexts[i] || "").trim();
+        if (!text) continue;
+        const startMs = Math.round(seg.start * 1000);
+        const endMs = Math.round(seg.end * 1000);
+        lines.push(String(idx++));
+        lines.push(`${msToSrtTime(startMs)} --> ${msToSrtTime(endMs)}`);
+        lines.push(text);
+        lines.push("");
+    }
+    return lines.join("\r\n");
 }
 
 // ------------------ FILE UPLOAD ------------------
@@ -77,50 +109,50 @@ export async function translateVideo(videoBuffer: Buffer, filename: string, user
         console.log(`[Translate] Step 2: Audio extracted to ${audioPath}`);
 
         console.log(`[Translate] Step 3: Starting Whisper transcription...`);
-        const { text: englishText, srt: originalSrt } = await transcribeLocalWhisper(audioPath);
-        console.log(`[Translate] Step 4: Transcription done, text length: ${englishText.length}`);
+        const { text: englishText, segments } = await transcribeLocalWhisper(audioPath);
+        console.log(`[Translate] Step 4: Transcription done, ${segments.length} segments`);
 
         if (!englishText || !englishText.trim()) {
             throw new Error("No speech detected in video.");
         }
 
-        // 🔐 Prompt Injection Guard
-        const sanitizedText = sanitizeForAI(englishText);
-        console.log(`[Translate] Step 5: Starting Gemini translation...`);
-        const { myanmar: myanmarText } = await geminiTranslate(sanitizedText, userApiKey);
-        console.log(`[Translate] Step 6: Translation done, myanmar text length: ${myanmarText.length}`);
+        const sanitizedSegments = segments.map((s, i) => ({
+            index: i,
+            start: s.start,
+            end: s.end,
+            text: sanitizeForAI(s.text),
+        }));
 
-        return {
-            englishText,
-            myanmarText,
-            srtContent: originalSrt
-        };
+        console.log(`[Translate] Step 5: Starting Gemini batch translation...`);
+        const { translated } = await geminiTranslateBatch(sanitizedSegments, userApiKey);
+        const myanmarText = translated.map(s => s.text).join(" ");
+        console.log(`[Translate] Step 6: Translation done`);
+
+        const srtContent = buildMyanmarSRT(segments, translated.map(s => s.text));
+
+        return { englishText, myanmarText, srtContent };
     } finally {
         if (audioPath) await fs.unlink(audioPath).catch(() => {});
     }
 }
 
 // ------------------ LINK VERSION ------------------
-
 export async function translateVideoLink(url: string, userApiKey?: string) {
-    // 🔐 yt-dlp Domain Whitelist
     if (!isAllowedVideoUrl(url)) {
         throw new Error("ခွင့်ပြုထားသော Link များသာ သုံးနိုင်ပါသည်။ YouTube, TikTok, Facebook Link သာ ထည့်ပါ။");
     }
 
-    // 🔐 UUID filenames
     const id = randomUUID();
     const tempVideoPath = path.join(tmpdir(), `vt_dl_${id}.mp4`);
     const tempAudioPath = path.join(tmpdir(), `vt_dlaud_${id}.mp3`);
-    
-    // 🔐 Path traversal check
+
     if (!isPathWithinDir(tempVideoPath, tmpdir()) || !isPathWithinDir(tempAudioPath, tmpdir())) {
         throw new Error("Invalid temp directory.");
     }
 
     try {
         console.log(`[Video Translator] Attempting to download: ${url}`);
-        
+
         let downloadUrl = "";
 
         // --- Try Cobalt API v10 first ---
@@ -158,15 +190,13 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
 
         if (downloadUrl) {
             console.log(`[Video Translator] Downloading via Cobalt URL...`);
-            // 🔐 FFmpeg Command Guard: execFile with argument array
             await execFileAsync("curl", ["-s", "-L", "--max-time", "120", "-o", tempVideoPath, downloadUrl], { timeout: 130000 });
         } else {
             // --- Fallback to yt-dlp ---
             console.log("[Video Translator] Cobalt unavailable, using yt-dlp fallback...");
             const cookiePath = path.join(process.cwd(), 'cookies.txt');
             const hasCookies = existsSync(cookiePath);
-            
-            // ── STEP 1: Ensure yt-dlp is up-to-date ──
+
             try {
                 await execFileAsync("pip3", ["install", "--upgrade", "--pre", "yt-dlp"], { timeout: 90000 });
                 console.log("[Video Translator] yt-dlp updated");
@@ -174,55 +204,39 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
                 try { await execFileAsync("yt-dlp", ["-U"], { timeout: 30000 }); } catch {}
             }
 
-            // ── STEP 2: Smart download strategies — all using execFile ──
             const baseArgs = ["--no-check-certificates", "--no-playlist", "--no-warnings", "--geo-bypass", "--max-filesize", "50M"];
-            
             const formatStrategies: string[][] = [
                 ...(hasCookies ? [
                     [...baseArgs, "--cookies", cookiePath, "--extractor-args", "youtube:player_client=tv", "-f", "bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b", "--merge-output-format", "mp4"],
                     [...baseArgs, "--cookies", cookiePath, "--extractor-args", "youtube:player_client=web_creator", "-f", "bv*+ba/b", "--merge-output-format", "mp4"],
                     [...baseArgs, "--cookies", cookiePath, "-f", "b", "--recode-video", "mp4"],
                 ] : []),
-                // tv client — most reliable without cookies
                 [...baseArgs, "--extractor-args", "youtube:player_client=tv", "-f", "b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4"],
-                // mweb client
                 [...baseArgs, "--extractor-args", "youtube:player_client=mweb", "-f", "b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4"],
-                // android client
                 [...baseArgs, "--extractor-args", "youtube:player_client=android", "-f", "b[ext=mp4]/b", "--merge-output-format", "mp4"],
-                // web_creator client
                 [...baseArgs, "--extractor-args", "youtube:player_client=web_creator", "-f", "b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4"],
-                // generic fallback
                 [...baseArgs, "-f", "bv*+ba/b", "--merge-output-format", "mp4"],
                 [...baseArgs, "-f", "worst[ext=mp4]/worst", "--recode-video", "mp4"],
             ];
-            
+
             let dlSuccess = false;
             for (let i = 0; i < formatStrategies.length; i++) {
                 await fs.unlink(tempVideoPath).catch(() => {});
                 try {
                     const isCookie = formatStrategies[i].includes("--cookies");
-                    const groupLabel = isCookie ? "Web+Cookies" : "NoCookies";
-                    console.log(`[Video Translator] Strategy ${i + 1}/${formatStrategies.length} [${groupLabel}]...`);
-                    // 🔐 FFmpeg Command Guard: execFile prevents command injection
-                    await execFileAsync(
-                        "yt-dlp",
-                        [...formatStrategies[i], "-o", tempVideoPath, url],
-                        { timeout: 300000 }
-                    );
+                    console.log(`[Video Translator] Strategy ${i + 1}/${formatStrategies.length} [${isCookie ? "Cookies" : "NoCookies"}]...`);
+                    await execFileAsync("yt-dlp", [...formatStrategies[i], "-o", tempVideoPath, url], { timeout: 300000 });
                     const checkStat = await fs.stat(tempVideoPath).catch(() => null);
                     if (checkStat && checkStat.size > 10000) {
                         dlSuccess = true;
-                        console.log(`[Video Translator] ✅ Strategy ${i + 1} [${groupLabel}] success (${Math.round(checkStat.size / 1024)}KB)`);
+                        console.log(`[Video Translator] ✅ Strategy ${i + 1} success (${Math.round(checkStat.size / 1024)}KB)`);
                         break;
-                    } else {
-                        console.warn(`[Video Translator] Strategy ${i + 1} produced empty/tiny file (${checkStat?.size ?? 0} bytes)`);
                     }
                 } catch (e: any) {
-                    const msg = e.message?.slice(0, 300) ?? "";
-                    console.warn(`[Video Translator] Strategy ${i + 1} failed: ${msg}`);
+                    console.warn(`[Video Translator] Strategy ${i + 1} failed: ${e.message?.slice(0, 300)}`);
                 }
             }
-            
+
             if (!dlSuccess) {
                 throw new Error(
                     "ဗီဒီယိုကို ဒေါင်းလုတ်မရပါ။ YouTube bot detection ကြောင့် ဖြစ်နိုင်ပါသည်။\n" +
@@ -231,7 +245,6 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
             }
         }
 
-        // Verify file exists and has content
         const fileStat = await fs.stat(tempVideoPath).catch(() => null);
         if (!fileStat || fileStat.size < 1000) {
             throw new Error("Downloaded file is empty or too small. The video may be unavailable or restricted.");
@@ -249,22 +262,24 @@ export async function translateVideoLink(url: string, userApiKey?: string) {
         });
 
         console.log(`[Video Translator] Sending to local Whisper...`);
-        const { text: englishText, srt: originalSrt } = await transcribeLocalWhisper(tempAudioPath);
+        const { text: englishText, segments } = await transcribeLocalWhisper(tempAudioPath);
 
         if (!englishText || !englishText.trim()) {
             throw new Error("Whisper could not detect any speech in this video.");
         }
 
-        console.log(`[Video Translator] Translating with Gemini...`);
-        // 🔐 Prompt Injection Guard
-        const sanitizedText = sanitizeForAI(englishText);
-        const { myanmar: myanmarText } = await geminiTranslate(sanitizedText, userApiKey);
+        console.log(`[Video Translator] Translating with Gemini batch (${segments.length} segments)...`);
+        const sanitizedSegments = segments.map((s, i) => ({
+            index: i,
+            start: s.start,
+            end: s.end,
+            text: sanitizeForAI(s.text),
+        }));
+        const { translated } = await geminiTranslateBatch(sanitizedSegments, userApiKey);
+        const myanmarText = translated.map(s => s.text).join(" ");
+        const srtContent = buildMyanmarSRT(segments, translated.map(s => s.text));
 
-        return { 
-            englishText, 
-            myanmarText, 
-            srtContent: originalSrt,
-        };
+        return { englishText, myanmarText, srtContent };
     } catch (error: any) {
         console.error("[Video Translator Error]", error);
         throw new Error(`Failed to process link: ${error.message}`);
