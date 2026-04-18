@@ -272,6 +272,16 @@ export default function TTSGenerator() {
   const [translateJobProgress, setTranslateJobProgress] = useState(0);
   const [translateJobType, setTranslateJobType] = useState<"file" | "link">("file");
 
+  // tRPC polling queries for translation jobs (same pattern as VideoTranslator.tsx)
+  const translateFileJobQuery = trpc.video.getTranslateJob.useQuery(
+    { jobId: translateJobId! },
+    { enabled: !!translateJobId && translateJobType === "file", refetchInterval: 3000 }
+  );
+  const translateLinkJobQuery = trpc.video.getTranslateLinkJob.useQuery(
+    { jobId: translateJobId! },
+    { enabled: !!translateJobId && translateJobType === "link", refetchInterval: 3000 }
+  );
+
   // Video preview state for translate tab
   const [translatePreviewUrl, setTranslatePreviewUrl] = useState<string>("");
   const [translateVideoLoading, setTranslateVideoLoading] = useState(false);
@@ -562,45 +572,37 @@ export default function TTSGenerator() {
     setVideoResult(null);
   };
 
-  // Poll translation job status
+  // React to translation job query data (replaces raw fetch polling)
+  const activeTranslateJobData = translateJobType === "file"
+    ? translateFileJobQuery.data
+    : translateLinkJobQuery.data;
+
+  useEffect(() => {
+    if (!translateJobId || !activeTranslateJobData) return;
+    if (activeTranslateJobData.status === "completed" && activeTranslateJobData.result) {
+      setVideoResult({
+        myanmarText: activeTranslateJobData.result.myanmarText,
+        srtContent: activeTranslateJobData.result.srtContent,
+      });
+      setEditedVideoText(activeTranslateJobData.result.myanmarText);
+      setTranslateJobId(null);
+      setTranslateJobProgress(100);
+      utils.subscription.myStatus.invalidate();
+    } else if (activeTranslateJobData.status === "failed") {
+      showError(activeTranslateJobData.error || "Translation failed");
+      setTranslateJobId(null);
+      setTranslateJobProgress(0);
+    } else {
+      setTranslateJobProgress(activeTranslateJobData.progress || 20);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [translateJobId, activeTranslateJobData]);
+
+  // Poll translation job status — just set the jobId and let tRPC queries do the work
   const pollTranslateJob = (jobId: string, jobType: "file" | "link") => {
     setTranslateJobId(jobId);
     setTranslateJobProgress(10);
     setTranslateJobType(jobType);
-
-    const endpoint = jobType === "file" ? "video.getTranslateJob" : "video.getTranslateLinkJob";
-    const pollInterval = setInterval(async () => {
-      try {
-        const res = await fetch(
-          `/api/trpc/${endpoint}?input=${encodeURIComponent(JSON.stringify({ json: { jobId } }))}`,
-          { credentials: "include" }
-        );
-        const json = await res.json();
-        const data = json.result?.data?.json || json.result?.data;
-        if (!data) return;
-
-        if (data.status === "completed" && data.result) {
-          clearInterval(pollInterval);
-          setVideoResult({
-            myanmarText: data.result.myanmarText,
-            srtContent: data.result.srtContent,
-          });
-          setEditedVideoText(data.result.myanmarText);
-          setTranslateJobId(null);
-          setTranslateJobProgress(100);
-          utils.subscription.myStatus.invalidate();
-        } else if (data.status === "failed") {
-          clearInterval(pollInterval);
-          showError(data.error || "Translation failed");
-          setTranslateJobId(null);
-          setTranslateJobProgress(0);
-        } else {
-          setTranslateJobProgress(data.progress || 20);
-        }
-      } catch (e: any) {
-        console.error("[TRANSLATE JOB POLL ERROR]", e);
-      }
-    }, 3000);
   };
 
   const handleTranslate = async () => {
