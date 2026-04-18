@@ -925,9 +925,11 @@ export const appRouter = router({
         const filename = input.filename;
         // Run in background
         (async () => {
-          updateJobEntry(jobId, { status: "processing", progress: 20 });
+          updateJobEntry(jobId, { status: "processing", progress: 10 });
           try {
-            const result = await translateVideo(videoBuffer, filename);
+            const result = await translateVideo(videoBuffer, filename, undefined, (pct) => {
+              updateJobEntry(jobId, { progress: pct });
+            });
             updateJobEntry(jobId, { status: "completed", progress: 100, result });
             if (db) {
               await db.insert(ttsConversions).values({
@@ -938,6 +940,7 @@ export const appRouter = router({
               }).catch(() => {});
             }
           } catch (error: any) {
+            console.error("[TranslateFileJob] Error:", error);
             updateJobEntry(jobId, { status: "failed", error: error.message || "Translation failed" });
             if (db) {
               await db.insert(ttsConversions).values({
@@ -949,7 +952,10 @@ export const appRouter = router({
               }).catch(() => {});
             }
           }
-        })().catch(err => console.error("[TranslateFileJob]", err));
+        })().catch(err => {
+          console.error("[TranslateFileJob] Unhandled:", err);
+          updateJobEntry(jobId, { status: "failed", error: err?.message || "Unexpected error" });
+        });
         return { jobId };
       }),
 

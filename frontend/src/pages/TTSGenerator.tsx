@@ -272,14 +272,31 @@ export default function TTSGenerator() {
   const [translateJobProgress, setTranslateJobProgress] = useState(0);
   const [translateJobType, setTranslateJobType] = useState<"file" | "link">("file");
 
-  // tRPC polling queries for translation jobs (same pattern as VideoTranslator.tsx)
+  // tRPC polling queries for translation jobs
   const translateFileJobQuery = trpc.video.getTranslateJob.useQuery(
-    { jobId: translateJobId! },
-    { enabled: !!translateJobId && translateJobType === "file", refetchInterval: 3000 }
+    { jobId: translateJobId ?? "" },
+    {
+      enabled: !!translateJobId && translateJobType === "file",
+      refetchInterval: (data) => {
+        // Stop polling once done
+        if (data?.status === "completed" || data?.status === "failed") return false;
+        return 3000;
+      },
+      retry: false,
+      staleTime: 0,
+    }
   );
   const translateLinkJobQuery = trpc.video.getTranslateLinkJob.useQuery(
-    { jobId: translateJobId! },
-    { enabled: !!translateJobId && translateJobType === "link", refetchInterval: 3000 }
+    { jobId: translateJobId ?? "" },
+    {
+      enabled: !!translateJobId && translateJobType === "link",
+      refetchInterval: (data) => {
+        if (data?.status === "completed" || data?.status === "failed") return false;
+        return 3000;
+      },
+      retry: false,
+      staleTime: 0,
+    }
   );
 
   // Video preview state for translate tab
@@ -366,8 +383,16 @@ export default function TTSGenerator() {
   const startDubMutation = trpc.jobs.startDub.useMutation();
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const jobStatusQuery = trpc.jobs.getStatus.useQuery(
-    { jobId: activeJobId! },
-    { enabled: !!activeJobId, refetchInterval: 3000 }
+    { jobId: activeJobId ?? "" },
+    {
+      enabled: !!activeJobId,
+      refetchInterval: (data) => {
+        if (data?.status === "completed" || data?.status === "failed") return false;
+        return 3000;
+      },
+      retry: false,
+      staleTime: 0,
+    }
   );
 
   const isAdmin = me?.role === "admin";
@@ -572,13 +597,25 @@ export default function TTSGenerator() {
     setVideoResult(null);
   };
 
-  // React to translation job query data (replaces raw fetch polling)
-  const activeTranslateJobData = translateJobType === "file"
-    ? translateFileJobQuery.data
-    : translateLinkJobQuery.data;
+  // React to translation job query data — handles ALL states and errors
+  const activeTranslateJobQuery = translateJobType === "file" ? translateFileJobQuery : translateLinkJobQuery;
+  const activeTranslateJobData = activeTranslateJobQuery.data;
+  const activeTranslateJobError = activeTranslateJobQuery.error;
 
   useEffect(() => {
-    if (!translateJobId || !activeTranslateJobData) return;
+    if (!translateJobId) return;
+
+    // Handle network/server error from the polling request itself
+    if (activeTranslateJobError) {
+      const errMsg = (activeTranslateJobError as any)?.message || "Translation polling failed. Please try again.";
+      showError(errMsg);
+      setTranslateJobId(null);
+      setTranslateJobProgress(0);
+      return;
+    }
+
+    if (!activeTranslateJobData) return;
+
     if (activeTranslateJobData.status === "completed" && activeTranslateJobData.result) {
       setVideoResult({
         myanmarText: activeTranslateJobData.result.myanmarText,
@@ -589,20 +626,35 @@ export default function TTSGenerator() {
       setTranslateJobProgress(100);
       utils.subscription.myStatus.invalidate();
     } else if (activeTranslateJobData.status === "failed") {
-      showError(activeTranslateJobData.error || "Translation failed");
+      showError(activeTranslateJobData.error || "Translation failed. Please try again.");
       setTranslateJobId(null);
       setTranslateJobProgress(0);
     } else {
+      // Still processing: update progress
       setTranslateJobProgress(activeTranslateJobData.progress || 20);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [translateJobId, activeTranslateJobData]);
+  }, [translateJobId, activeTranslateJobData, activeTranslateJobError]);
+
+  // Timeout guard: if translation takes > 10 minutes, surface an error
+  useEffect(() => {
+    if (!translateJobId) return;
+    const timeout = setTimeout(() => {
+      if (translateJobId) {
+        showError("Translation timed out after 10 minutes. Please try a shorter video.");
+        setTranslateJobId(null);
+        setTranslateJobProgress(0);
+      }
+    }, 10 * 60 * 1000);
+    return () => clearTimeout(timeout);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [translateJobId]);
 
   // Poll translation job status — just set the jobId and let tRPC queries do the work
   const pollTranslateJob = (jobId: string, jobType: "file" | "link") => {
+    setTranslateJobType(jobType);
     setTranslateJobId(jobId);
     setTranslateJobProgress(10);
-    setTranslateJobType(jobType);
   };
 
   const handleTranslate = async () => {
@@ -747,20 +799,40 @@ export default function TTSGenerator() {
     reader.readAsDataURL(dubVideoFile);
   };
 
-  // React to dub job status changes
+  // React to dub job status changes — handles ALL states and errors
   useEffect(() => {
-    if (!activeJobId || !jobStatusQuery.data) return;
+    if (!activeJobId) return;
+    if (jobStatusQuery.error) {
+      const errMsg = (jobStatusQuery.error as any)?.message || "Dubbing status check failed. Please try again.";
+      showError(errMsg);
+      setActiveJobId(null);
+      return;
+    }
+    if (!jobStatusQuery.data) return;
     const status = jobStatusQuery.data;
     if (status.status === "completed" && status.result) {
       setDubResult(status.result as any);
       setActiveJobId(null);
       utils.subscription.myStatus.invalidate();
     } else if (status.status === "failed") {
-      showError(status.error || "Dubbing failed");
+      showError(status.error || "Dubbing failed. Please try again.");
       setActiveJobId(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeJobId, jobStatusQuery.data]);
+  }, [activeJobId, jobStatusQuery.data, jobStatusQuery.error]);
+
+  // Timeout guard: if dubbing takes > 15 minutes, surface an error
+  useEffect(() => {
+    if (!activeJobId) return;
+    const timeout = setTimeout(() => {
+      if (activeJobId) {
+        showError("Dubbing timed out after 15 minutes. Please try a shorter video.");
+        setActiveJobId(null);
+      }
+    }, 15 * 60 * 1000);
+    return () => clearTimeout(timeout);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeJobId]);
 
   // Poll job status — just set activeJobId and let tRPC query handle polling
   const pollJobStatus = (jobId: string) => {

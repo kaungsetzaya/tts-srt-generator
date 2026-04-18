@@ -100,17 +100,25 @@ function buildMyanmarSRT(
 }
 
 // ------------------ FILE UPLOAD ------------------
-export async function translateVideo(videoBuffer: Buffer, filename: string, userApiKey?: string) {
+export async function translateVideo(
+    videoBuffer: Buffer,
+    filename: string,
+    userApiKey?: string,
+    onProgress?: (pct: number) => void
+) {
     let audioPath: string | null = null;
 
     try {
         console.log(`[Translate] Step 1: Extracting audio from ${filename} (${videoBuffer.length} bytes)`);
+        onProgress?.(15);
         audioPath = await extractAudio(videoBuffer);
         console.log(`[Translate] Step 2: Audio extracted to ${audioPath}`);
 
         console.log(`[Translate] Step 3: Starting Whisper transcription...`);
+        onProgress?.(25);
         const { text: englishText, segments } = await transcribeLocalWhisper(audioPath);
         console.log(`[Translate] Step 4: Transcription done, ${segments.length} segments`);
+        onProgress?.(55);
 
         if (!englishText || !englishText.trim()) {
             throw new Error("No speech detected in video.");
@@ -124,9 +132,11 @@ export async function translateVideo(videoBuffer: Buffer, filename: string, user
         }));
 
         console.log(`[Translate] Step 5: Starting Gemini batch translation...`);
+        onProgress?.(60);
         const { translated } = await geminiTranslateBatch(sanitizedSegments, userApiKey);
         const myanmarText = translated.map(s => s.text).join(" ");
         console.log(`[Translate] Step 6: Translation done`);
+        onProgress?.(90);
 
         const srtContent = buildMyanmarSRT(segments, translated.map(s => s.text));
 
