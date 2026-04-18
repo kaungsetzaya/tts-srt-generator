@@ -559,7 +559,12 @@ export default function AdminDashboard() {
   const banUser = trpc.admin.banUser.useMutation({
     onSuccess: () => refetch(),
   });
-  const updateSettings = trpc.settings.update.useMutation();
+  const updateSettings = trpc.settings.update.useMutation({
+    onSuccess: () => {
+      // Refetch settings after update - trigger reload of current page
+      window.location.reload();
+    },
+  });
   const resolveError = trpc.adminStats.resolveError.useMutation({
     onSuccess: () => refetchErrors(),
   });

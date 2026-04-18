@@ -76319,10 +76319,20 @@ var appRouter = t.router({
         return {};
       }
     }),
-    update: adminProcedure.input(external_exports.object({ key: external_exports.string(), value: external_exports.string() })).mutation(async ({ input }) => {
+    update: adminProcedure.input(external_exports.union([
+      external_exports.object({ key: external_exports.string(), value: external_exports.string() }),
+      external_exports.object({}).passthrough()
+      // bulk update with any keys
+    ])).mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-      await db.insert(settings).values({ keyName: input.key, value: input.value }).onDuplicateKeyUpdate({ set: { value: input.value } });
+      if ("key" in input && "value" in input) {
+        await db.insert(settings).values({ keyName: input.key, value: input.value }).onDuplicateKeyUpdate({ set: { value: input.value } });
+      } else {
+        for (const [key, val] of Object.entries(input)) {
+          await db.insert(settings).values({ keyName: key, value: String(val) }).onDuplicateKeyUpdate({ set: { value: String(val) } });
+        }
+      }
       return { success: true };
     })
   }),
