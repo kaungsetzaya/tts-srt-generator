@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { geminiTranslate } from "./geminiTranslator";
+import { geminiTranslate } from "../geminiTranslator";
 
 async function runTest() {
     console.log("⏳ Testing Gemini Translation with .env API Key...");

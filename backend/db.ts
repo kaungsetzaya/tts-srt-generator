@@ -21,7 +21,14 @@ export async function getDb() {
   }
 
   try {
-    const pool = mysql.createPool(connectionString);
+    const pool = mysql.createPool({
+      uri: connectionString,
+      connectionLimit: 10,        // Max simultaneous connections (prevents VPS saturation)
+      waitForConnections: true,    // Queue requests when pool is full
+      queueLimit: 0,               // Unlimited queue (0 = no limit)
+      enableKeepAlive: true,       // Keep connections alive
+      keepAliveInitialDelay: 30000, // 30s keep-alive ping
+    });
     _db = drizzle(pool, { schema: fullSchema, mode: "default" });
     console.log("[DB] Connected to database");
     return _db;

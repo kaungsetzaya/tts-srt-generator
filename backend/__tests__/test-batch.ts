@@ -1,4 +1,4 @@
-import { geminiTranslateBatch } from "./geminiTranslator";
+import { geminiTranslateBatch } from "../geminiTranslator";
 import * as dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";

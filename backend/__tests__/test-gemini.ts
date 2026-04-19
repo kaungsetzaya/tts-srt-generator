@@ -1,4 +1,4 @@
-import { geminiTranslate } from "./geminiTranslator";
+import { geminiTranslate } from "../geminiTranslator";
 import * as dotenv from "dotenv";
 import path from "path";
 

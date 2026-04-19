@@ -229,7 +229,8 @@ export function updateJob(id: string, updates: Partial<Pick<Job, "status" | "pro
   persistJobUpdate(id, updates).catch(() => {});
 }
 
-export function cleanupOldJobs(): void {
+export async function cleanupOldJobs(): Promise<void> {
+  // ─── In-memory cleanup (1h TTL) ─────
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
   for (const [id, job] of jobs.entries()) {
     if (job.updatedAt < oneHourAgo) {
@@ -238,6 +239,20 @@ export function cleanupOldJobs(): void {
         jobs.delete(id);
       }
     }
+  }
+
+  // ─── DB cleanup (24h TTL for completed/failed jobs) ─────
+  try {
+    const { getDb } = await import("./db");
+    const { ttsJobs } = await import("../drizzle/schema");
+    const { sql } = await import("drizzle-orm");
+    const db = await getDb();
+    if (!db) return;
+    await db.delete(ttsJobs)
+      .where(sql`status IN ('completed', 'failed') AND updated_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)`);
+  } catch (e) {
+    // Non-fatal — DB cleanup is best-effort
+    console.warn("[Jobs] DB cleanup failed (non-fatal):", (e as any)?.message);
   }
 }
 

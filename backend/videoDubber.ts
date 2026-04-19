@@ -93,9 +93,14 @@ function buildAssContent(
     fullWidth?: boolean;
   }
 ): string {
-  const fontSize = (opts?.fontSize ?? 24) * 2.2; // Scale frontend size to 1080p
+  // Scale frontend preview size (designed for ~490px tall viewport) to 1080p render resolution.
+  // Factor: 1080 / 490 ≈ 2.2 — so a 24px font in the preview becomes ~53px in 1080p output.
+  const fontSize = (opts?.fontSize ?? 24) * 2.2;
   const fontColor = opts?.fontColor ?? "#ffffff";
-  const marginV = 240 + (opts?.marginV ?? 30) * 4; // Scale margin to 1080p accurately
+  // Bottom margin: 240px is the base offset from the bottom of a 1080p frame to avoid
+  // overlapping with common video player controls. The ×4 scaling converts the frontend's
+  // small marginV slider value (0–60px range) into 1080p-appropriate pixel offsets.
+  const marginV = 240 + (opts?.marginV ?? 30) * 4;
   const blurBg = opts?.blurBg ?? true;
   const blurSize = opts?.blurSize ?? 8;
   const blurColor = opts?.blurColor ?? "black";

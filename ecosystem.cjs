@@ -3,7 +3,7 @@ module.exports = {
     {
       name: "lumix",
       script: "node",
-      args: "node_modules/tsx/dist/cli.mjs backend/_core/index.ts",
+      args: "dist/index.cjs",
       cwd: "/root/tts-srt-generator",
       env: {
         NODE_ENV: "production",

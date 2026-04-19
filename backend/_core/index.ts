@@ -16,8 +16,17 @@ import {
   requestIdMiddleware,
   memoryGuardMiddleware,
 } from "./security";
+import { validateEnv } from "./env";
+import { recoverInterruptedJobs } from "../jobs";
+import { createHmac } from "crypto";
+import { promises as fs } from "fs";
 
 async function startServer() {
+  // ──────────────────────────────────────────
+  // 🔐 ENV VALIDATION — fail fast on missing vars
+  // ──────────────────────────────────────────
+  validateEnv();
+
   const app = express();
   const server = createServer(app);
 
@@ -96,11 +105,64 @@ async function startServer() {
   });
 
   // ──────────────────────────────────────────
-  // Video Downloads (public static folder)
+  // Video Downloads — Signed URL auth gate
+  // Previously public: any user could guess another's video URL.
+  // Now: /downloads/:token/:filename validates an HMAC signature.
   // ──────────────────────────────────────────
+  const DOWNLOAD_SECRET = process.env.JWT_SECRET || "fallback-download-secret";
   const downloadsDir = path.join(process.cwd(), 'static', 'downloads');
+
+  // Generate a signed download URL (called from routers when a dub job completes)
+  app.get('/downloads/:token/:filename', (req, res) => {
+    const { token, filename } = req.params;
+
+    // Validate token: HMAC(filename + expiry, secret)
+    // Token format: hex_signature-expiry_timestamp
+    const parts = token.split('-');
+    if (parts.length !== 2) {
+      res.status(403).json({ error: "Invalid download token" });
+      return;
+    }
+
+    const [signature, expiryStr] = parts;
+    const expiry = parseInt(expiryStr, 10);
+
+    if (isNaN(expiry) || Date.now() > expiry) {
+      res.status(403).json({ error: "Download link expired" });
+      return;
+    }
+
+    const expected = createHmac('sha256', DOWNLOAD_SECRET)
+      .update(`${filename}:${expiryStr}`)
+      .digest('hex')
+      .slice(0, 32);
+
+    if (signature !== expected) {
+      res.status(403).json({ error: "Invalid download signature" });
+      return;
+    }
+
+    // Serve the file
+    const filePath = path.join(downloadsDir, filename);
+    const resolved = path.resolve(filePath);
+    if (!resolved.startsWith(path.resolve(downloadsDir))) {
+      res.status(400).json({ error: "Invalid filename" });
+      return;
+    }
+
+    res.sendFile(resolved, (err) => {
+      if (err) {
+        console.error("[Download] File send error:", err);
+        if (!res.headersSent) {
+          res.status(404).json({ error: "File not found" });
+        }
+      }
+    });
+  });
+
+  // Legacy /downloads/* for backward compat during transition (1h cache)
   app.use('/downloads', express.static(downloadsDir, {
-    maxAge: '1h',  // Short cache for downloads
+    maxAge: '1h',
     etag: true,
   }));
 
@@ -122,8 +184,8 @@ async function startServer() {
   }));
 
   app.get("*", async (req, res) => {
-    const fs = await import("fs/promises");
-    let html = await fs.readFile(path.join(staticPath, "index.html"), "utf8");
+    const fsPromises = await import("fs/promises");
+    let html = await fsPromises.readFile(path.join(staticPath, "index.html"), "utf8");
     html = html.replace(
       "<title>LUMIX TTS</title>",
       `<title>LUMIX TTS</title>
@@ -160,6 +222,44 @@ async function startServer() {
   });
 
   // ──────────────────────────────────────────
+  // Job Recovery — mark interrupted jobs as failed on startup
+  // Without this, jobs stuck at "processing" after a restart
+  // stay that way forever and users see a permanent spinner.
+  // ──────────────────────────────────────────
+  await recoverInterruptedJobs();
+
+  // ──────────────────────────────────────────
+  // Download File Cleanup — delete dubbed videos older than 24h
+  // Without this, static/downloads/ grows unbounded on disk.
+  // ──────────────────────────────────────────
+  async function cleanDownloadFiles() {
+    try {
+      const dir = path.join(process.cwd(), 'static', 'downloads');
+      await fs.mkdir(dir, { recursive: true }).catch(() => {});
+      const files = await fs.readdir(dir);
+      const now = Date.now();
+      const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+      let cleaned = 0;
+      for (const file of files) {
+        try {
+          const filePath = path.join(dir, file);
+          const stat = await fs.stat(filePath);
+          if (now - stat.mtimeMs > TWENTY_FOUR_HOURS) {
+            await fs.unlink(filePath);
+            cleaned++;
+          }
+        } catch {}
+      }
+      if (cleaned > 0) {
+        console.log(`[Cleanup] Removed ${cleaned} old download files (>24h)`);
+      }
+    } catch {}
+  }
+
+  // Run cleanup every 30 minutes
+  setInterval(cleanDownloadFiles, 30 * 60 * 1000);
+
+  // ──────────────────────────────────────────
   // Startup
   // ──────────────────────────────────────────
   const port = parseInt(process.env.PORT || "3000");
@@ -168,9 +268,24 @@ async function startServer() {
     console.log(`[LUMIX] Environment: ${process.env.NODE_ENV || "development"}`);
     const webhookUrl = `https://choco.de5.net/webhook/telegram`;
     setWebhook(webhookUrl).catch(console.error);
-    // Initial temp file cleanup
+    // Initial cleanup runs
     cleanTempFiles();
+    cleanDownloadFiles();
   });
 }
 
 startServer().catch(console.error);
+
+// ─── Signed URL helper (exported for use by routers) ────────
+export function generateSignedDownloadUrl(filename: string): string {
+  const secret = process.env.JWT_SECRET || "fallback-download-secret";
+  const baseUrl = process.env.BASE_URL || "https://choco.de5.net";
+  // Links expire after 1 hour
+  const expiry = String(Date.now() + 60 * 60 * 1000);
+  const signature = createHmac('sha256', secret)
+    .update(`${filename}:${expiry}`)
+    .digest('hex')
+    .slice(0, 32);
+  const token = `${signature}-${expiry}`;
+  return `${baseUrl}/downloads/${token}/${filename}`;
+}

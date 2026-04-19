@@ -12,6 +12,16 @@ import { isAllowedVideoUrl, isPathWithinDir, sanitizeForAI } from "./_core/secur
 
 const execFileAsync = promisify(execFile);
 
+// Get video duration in seconds using ffprobe
+function getVideoDuration(filePath: string): Promise<number> {
+  return new Promise((resolve, reject) => {
+    ffmpeg.ffprobe(filePath, (err: any, metadata: any) => {
+      if (err) reject(err);
+      else resolve(metadata.format.duration || 0);
+    });
+  });
+}
+
 // ------------------ Extract Audio ------------------
 async function extractAudio(videoBuffer: Buffer): Promise<string> {
     // 🔐 UUID filenames
