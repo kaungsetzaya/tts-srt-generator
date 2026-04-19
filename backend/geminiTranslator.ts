@@ -87,7 +87,7 @@ async function translateBatch(
   apiKey: string,
   modelId: string
 ): Promise<string[] | null> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/${modelId}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
   
   // For single long text, use simple text; for batches use JSON array
   const isSingleLongText = lines.length === 1 && lines[0].length > 1000;
@@ -203,7 +203,7 @@ export async function geminiTranslate(
     if (getDailyCount(model.id) >= model.rpd) continue;
 
     for (const apiKey of allKeys) {
-      const url = `https://generativelanguage.googleapis.com/v1beta/${model.id}:generateContent?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model.id}:generateContent?key=${apiKey}`;
 
       try {
         const controller = new AbortController();
