@@ -54,6 +54,21 @@ function getVideoDuration(filePath: string): Promise<number> {
   });
 }
 
+function getVideoSize(filePath: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    ffmpeg.ffprobe(filePath, (err: any, metadata: any) => {
+      if (err) reject(err);
+      else {
+        const videoStream = metadata.streams?.find((s: any) => s.codec_type === "video");
+        resolve({
+          width: videoStream?.width || 1920,
+          height: videoStream?.height || 1080,
+        });
+      }
+    });
+  });
+}
+
 // ─── Myanmar Font ────────────────────────────────────────────────
 // Find Myanmar font on the system or use bundled fallback
 function getMyanmarFontPath(): string {
@@ -79,74 +94,94 @@ function getMyanmarFontPath(): string {
   return "";
 }
 
-// Build ASS subtitle style with Myanmar font embedded
-// ASS format gives us more control than SRT for font rendering
+// ─── Get actual video dimensions from probe ──────────────────────
+
+// Build ASS subtitle style — fixed blur, correct full-width, aspect-ratio-aware
 function buildAssContent(
   segments: Array<{ startMs: number; endMs: number; text: string }>,
   fontPath: string,
-  opts?: { 
-    fontSize?: number; 
-    fontColor?: string; 
-    marginV?: number; 
-    blurBg?: boolean; 
+  videoWidth: number,
+  videoHeight: number,
+  opts?: {
+    fontSize?: number;
+    fontColor?: string;
+    marginV?: number;
+    blurBg?: boolean;
     blurSize?: number;
     blurColor?: "black" | "white";
     boxPadding?: number;
     fullWidth?: boolean;
   }
 ): string {
-  // Scale frontend preview size (designed for ~490px tall viewport) to 1080p render resolution.
-  // Factor: 1080 / 490 ≈ 2.2 — so a 24px font in the preview becomes ~53px in 1080p output.
-  const fontSize = (opts?.fontSize ?? 24) * 2.2;
+  // ASS PlayRes matches actual video dimensions for correct subtitle positioning
+  const playResX = videoWidth;
+  const playResY = videoHeight;
+
+  // Scale font: reference design is 490px tall viewport → actual video height
+  const fontScaleFactor = videoHeight / 490;
+  const fontSize = Math.round((opts?.fontSize ?? 12) * fontScaleFactor * 2.0);
+
   const fontColor = opts?.fontColor ?? "#ffffff";
-  // Bottom margin: 240px is the base offset from the bottom of a 1080p frame to avoid
-  // overlapping with common video player controls. The ×4 scaling converts the frontend's
-  // small marginV slider value (0–60px range) into 1080p-appropriate pixel offsets.
-  const marginV = 240 + (opts?.marginV ?? 30) * 4;
+
+  // Bottom marginV scaled to actual video height
+  // User slider 0–60, map to 20px–200px at reference 1080p, then scale
+  const userMarginV = opts?.marginV ?? 30;
+  const baseMarginV = 80 + userMarginV * 3;
+  const marginV = Math.round(baseMarginV * (videoHeight / 1080));
+
   const blurBg = opts?.blurBg ?? true;
+  // blurSize slider: 1–20 range. Opacity: 1=~5%, 8=~40%, 20=~70% — not 85%
   const blurSize = opts?.blurSize ?? 8;
   const blurColor = opts?.blurColor ?? "black";
   const boxPadding = opts?.boxPadding ?? 4;
   const fullWidth = opts?.fullWidth ?? false;
 
-  // Convert hex color to ASS format (&HAABBGGRR)
-  const hex = fontColor.replace("#", "");
-  const r = parseInt(hex.substring(0, 2), 16);
-  const g = parseInt(hex.substring(2, 4), 16);
-  const b = parseInt(hex.substring(4, 6), 16);
+  // Convert hex font color to ASS &HAABBGGRR
+  const hex = (fontColor.replace("#", "") + "000000").substring(0, 6);
+  const r = parseInt(hex.substring(0, 2), 16) || 255;
+  const g = parseInt(hex.substring(2, 4), 16) || 255;
+  const b = parseInt(hex.substring(4, 6), 16) || 255;
   const assColor = `&H00${pad2(b)}${pad2(g)}${pad2(r)}`;
 
-  const fontName = fontPath
-    ? path.basename(fontPath, path.extname(fontPath))
-    : "Noto Sans Myanmar";
+  const fontName = fontPath ? path.basename(fontPath, path.extname(fontPath)) : "Noto Sans Myanmar";
 
-  // Calculate outline (stroke) or box padding
-  const borderStyle = blurBg ? 3 : 1;
-  const outline = blurBg ? (boxPadding * 2) : 1; 
-  
-  // Back color for blur box - black or white with opacity
-  const blurOpacity = Math.min(0.85, blurSize * 0.06);
-  const blurAlphaInt = Math.round((1 - blurOpacity) * 255);
-  const blurAlphaHex = blurAlphaInt.toString(16).padStart(2, "0").toUpperCase();
-  const blurColorHex = blurColor === "black" ? "000000" : "FFFFFF";
-  const backColor = `&H${blurAlphaHex}${blurColorHex}`;
+  // ── Blur / Background box ──
+  // ASS alpha: 0x00 = fully opaque, 0xFF = fully transparent
+  // blurSize:  1 = very transparent (~90% transparent), 20 = semi-opaque (~65% opaque)
+  // Formula: opacity% = blurSize / 20 * 0.65, then alpha = 255 - (opacity * 255)
+  let backColor = "&HFF000000"; // default: fully transparent (no box)
+  let borderStyle = 1; // 1 = outline+shadow
+  let outline = 1;
+  let shadow = 1;
 
-  // Alignment: 2 = bottom center, adapted for marginV
-  const alignment = 2;
+  if (blurBg) {
+    const opacityFraction = Math.min(0.72, (blurSize / 20) * 0.72); // max ~72% opaque
+    const alphaInt = Math.round((1 - opacityFraction) * 255);
+    const alphaHex = alphaInt.toString(16).padStart(2, "0").toUpperCase();
+    const bgHex = blurColor === "black" ? "000000" : "FFFFFF";
+    backColor = `&H${alphaHex}${bgHex}`;
+    borderStyle = 3; // 3 = opaque box
+    outline = Math.max(4, boxPadding * 3); // box padding in px
+    shadow = 0;
+  }
 
-  // For full width, use MarginL/MarginR to stretch
-  const marginL = fullWidth ? 80 : 20;
-  const marginR = fullWidth ? 80 : 20;
+  // ── Full width ──
+  // fullWidth = remove side margins so box stretches edge-to-edge
+  // WrapStyle 1 = end-of-line wrapping, won't center-shrink
+  const marginL = fullWidth ? 0 : Math.round(playResX * 0.04);
+  const marginR = fullWidth ? 0 : Math.round(playResX * 0.04);
+  const wrapStyle = fullWidth ? 1 : 0;
 
   const header = `[Script Info]
 ScriptType: v4.00+
-PlayResX: 1920
-PlayResY: 1080
+WrapStyle: ${wrapStyle}
+PlayResX: ${playResX}
+PlayResY: ${playResY}
 ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,${fontName},${fontSize},${assColor},&H000000FF,&H00000000,${backColor},-1,0,0,0,100,100,0,0,${borderStyle},${outline},1,${alignment},${marginL},${marginR},${marginV},1
+Style: Default,${fontName},${fontSize},${assColor},&H000000FF,&H00000000,${backColor},-1,0,0,0,100,100,0,0,${borderStyle},${outline},${shadow},2,${marginL},${marginR},${marginV},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -162,10 +197,12 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
   const events = segments
     .map(seg => {
+      // Escape commas (ASS delimiter) and convert newlines
       const cleanText = seg.text
         .replace(/\n/g, "\\N")
-        .replace(/,/g, "，"); // ASS uses comma as delimiter — escape
-      return `Dialogue: 0,${msToAssTime(seg.startMs)},${msToAssTime(seg.endMs)},Default,,${marginL},${marginR},${marginV},,${cleanText}`;
+        .replace(/,/g, "，");
+      // Events use 0,0,0 for margins — styling comes entirely from the Style line above
+      return `Dialogue: 0,${msToAssTime(seg.startMs)},${msToAssTime(seg.endMs)},Default,,0,0,0,,${cleanText}`;
     })
     .join("\n");
 
@@ -351,118 +388,90 @@ export async function dubVideoFromBuffer(
     console.log("[Dubber] Translating with Gemini (1 API call)...");
     const translatedSegments = await translateSegments(segments, options.userApiKey);
 
-    // ── Step 4: Get video duration (reuse from validation) ──
+    // ── Step 4: Get video dimensions + duration ──
     const videoDurationMs = Math.round(videoDurationSec * 1000);
+    const videoSize = await getVideoSize(tempVideoPath);
+    console.log(`[Dubber] Video: ${videoSize.width}x${videoSize.height}, ${videoDurationSec.toFixed(1)}s`);
 
-    // ── Step 5: Per-segment TTS + slot-based silence padding ──
-    console.log("[Dubber] Generating TTS per segment...");
+    // ── Step 5: Cumulative TTS generation — fixed 1.2x speed, 150ms tiny pauses ──
+    console.log("[Dubber] Generating TTS per segment (stable 1.2x)...");
+
+    const TINY_PAUSE_MS = 150; // small breath between lines
+    const FIXED_SPEED = 1.2;  // always 1.2x — never vary
 
     interface ProcessedSegment {
-      startMs: number;
-      endMs: number;   // = next segment start (for SRT)
+      startMs: number;  // in the dubbed audio track
+      endMs: number;    // in the dubbed audio track
       text: string;
       audioPath: string;
       ttsDurationMs: number;
     }
 
     const processed: ProcessedSegment[] = [];
-    const audioParts: string[] = []; // ordered list of audio files for concat
+    const audioParts: string[] = [];
+    let cursorMs = 0; // cumulative position in the dubbed audio track
 
     for (let i = 0; i < translatedSegments.length; i++) {
       const seg = translatedSegments[i];
-      const nextSeg = translatedSegments[i + 1];
 
-      const segStartMs = Math.round(seg.start * 1000);
-      // SRT end = next segment start, or video end for last segment
-      const srtEndMs = nextSeg
-        ? Math.round(nextSeg.start * 1000)
-        : videoDurationMs;
+      if (!seg.text.trim()) continue;
 
-      // Slot = how much time we have for this segment's audio
-      const slotMs = srtEndMs - segStartMs;
-
-      if (!seg.text.trim()) {
-        // Empty segment — fill with silence
-        if (slotMs > 0) {
-          const silPath = path.join(tempDir, `sil_empty_${i}.mp3`);
-          await generateSilence(slotMs, silPath);
-          audioParts.push(silPath);
-        }
-        continue;
-      }
-
-      // Generate TTS — use options speed/pitch (default to 1.2/0 for dubbing if not provided)
+      // Generate TTS at fixed speed — NEVER change speed per segment
       let ttsResult;
       try {
         ttsResult = await generateSpeech(
           seg.text,
           options.voice as VoiceKey,
-          options.speed ?? 1.2,
+          FIXED_SPEED,
           options.pitch ?? 0
         );
       } catch (ttsErr) {
         console.error(`[Dubber] TTS failed for segment ${i}:`, ttsErr);
-        // Fill with silence on TTS failure
-        if (slotMs > 0) {
-          const silPath = path.join(tempDir, `sil_fail_${i}.mp3`);
-          await generateSilence(slotMs, silPath);
-          audioParts.push(silPath);
-        }
         continue;
       }
 
-      // Write raw TTS audio
       const rawTtsPath = path.join(tempDir, `tts_raw_${i}.mp3`);
       await fs.writeFile(rawTtsPath, ttsResult.audioBuffer);
 
-      // Measure actual TTS duration
       const ttsDurationMs = await getAudioDurationMs(rawTtsPath);
 
-      let finalSegAudioPath = rawTtsPath;
+      // Subtitle timing is based on cumulative audio clock — not original Whisper timestamps
+      const subtitleStartMs = cursorMs;
+      const subtitleEndMs = cursorMs + ttsDurationMs;
 
-      if (ttsDurationMs > slotMs && slotMs > 100) {
-        // TTS longer than slot → speed up to fit
-        const ratio = ttsDurationMs / slotMs;
-        const clampedRatio = Math.min(ratio, 3.0); // max 3x speed up
-        console.log(`[Dubber] Segment ${i}: TTS ${ttsDurationMs}ms > slot ${slotMs}ms — speeding up ${clampedRatio.toFixed(2)}x`);
+      audioParts.push(rawTtsPath);
+      cursorMs += ttsDurationMs;
 
-        const sped = path.join(tempDir, `tts_sped_${i}.mp3`);
-        await speedUpAudio(rawTtsPath, sped, clampedRatio);
-        finalSegAudioPath = sped;
-
-        // Push sped-up audio (no silence — fills entire slot)
-        audioParts.push(finalSegAudioPath);
-      } else {
-        // TTS fits in slot → pad with silence after
-        const silenceDurationMs = Math.max(0, slotMs - ttsDurationMs);
-
-        audioParts.push(finalSegAudioPath);
-
-        if (silenceDurationMs > 50) {
-          const silPath = path.join(tempDir, `sil_${i}.mp3`);
-          await generateSilence(silenceDurationMs, silPath);
-          audioParts.push(silPath);
-        }
-      }
-
-      // Calculate actual final audio duration for accurate ASS timing
-      let actualEndMs: number;
-      if (ttsDurationMs > slotMs && slotMs > 100) {
-        // Audio was sped up to fit the slot
-        actualEndMs = segStartMs + slotMs;
-      } else {
-        // Audio fits — subtitle should only show while audio is playing
-        actualEndMs = segStartMs + ttsDurationMs;
+      // Add tiny pause between sentences (not after the very last segment)
+      if (i < translatedSegments.length - 1) {
+        const pausePath = path.join(tempDir, `pause_${i}.mp3`);
+        await generateSilence(TINY_PAUSE_MS, pausePath);
+        audioParts.push(pausePath);
+        cursorMs += TINY_PAUSE_MS;
       }
 
       processed.push({
-        startMs: segStartMs,
-        endMs: actualEndMs,
+        startMs: subtitleStartMs,
+        endMs: subtitleEndMs,
         text: seg.text,
-        audioPath: finalSegAudioPath,
+        audioPath: rawTtsPath,
         ttsDurationMs,
       });
     }
+
+    const totalDubbedMs = cursorMs;
+    console.log(`[Dubber] Dubbed audio: ${(totalDubbedMs/1000).toFixed(1)}s vs video: ${videoDurationSec.toFixed(1)}s`);
+
+    // ── Video speed adjustment: gently stretch/compress video to match dubbed audio ──
+    // Allowed range: video can be sped up 1.15x max or slowed 0.88x min
+    // ratio > 1 means dubbed audio is longer → slow video down (increase PTS)
+    // ratio < 1 means dubbed audio is shorter → speed video up (decrease PTS)
+    const videoAudioRatio = totalDubbedMs / videoDurationMs;
+    const MIN_VIDEO_SPEED = 0.88; // max 12% slower
+    const MAX_VIDEO_SPEED = 1.15; // max 15% faster
+    const clampedVideoSpeed = Math.max(MIN_VIDEO_SPEED, Math.min(MAX_VIDEO_SPEED, videoAudioRatio));
+    const needsVideoAdjust = Math.abs(clampedVideoSpeed - 1.0) > 0.02;
+    console.log(`[Dubber] Video speed factor: ${clampedVideoSpeed.toFixed(3)}x (original ratio: ${videoAudioRatio.toFixed(3)})`);
 
     // ── Step 6: Concat all audio parts into final dubbed audio ──
     console.log(`[Dubber] Concatenating ${audioParts.length} audio parts...`);
@@ -505,6 +514,8 @@ export async function dubVideoFromBuffer(
         text: s.text,
       })),
       fontPath,
+      videoSize.width,
+      videoSize.height,
       {
         fontSize: options.srtFontSize,
         fontColor: options.srtColor,
@@ -522,9 +533,39 @@ export async function dubVideoFromBuffer(
     console.log("[Dubber] Merging video + audio + subtitles...");
 
     await new Promise<void>((resolve, reject) => {
-      let cmd = ffmpeg(tempVideoPath)
+      // Build video filter chain
+      const vfFilters: string[] = [];
+
+      // If video speed adjustment needed, apply setpts filter
+      // setpts=PTS/speed_factor: speed>1 speeds up playback (fewer PTS per frame)
+      if (needsVideoAdjust) {
+        // To make video duration = dubbed audio duration:
+        //   videoSpeedFactor = videoDurationMs / totalDubbedMs
+        const videoSpeedFactor = videoDurationMs / totalDubbedMs;
+        const clampedFactor = Math.max(MAX_VIDEO_SPEED, Math.min(1 / MIN_VIDEO_SPEED, videoSpeedFactor));
+        vfFilters.push(`setpts=${(1 / clampedFactor).toFixed(4)}*PTS`);
+        console.log(`[Dubber] Adjusting video PTS by ${(1 / clampedFactor).toFixed(4)}x`);
+      }
+
+      // Subtitle filter (always last in chain)
+      if (fontPath && existsSync(fontPath)) {
+        // Escape colons/backslashes in path for ffmpeg vf syntax
+        const escapedAssPath = tempAssPath.replace(/\\/g, "/").replace(/:/g, "\\:");
+        const escapedFontsDir = path.dirname(fontPath).replace(/\\/g, "/").replace(/:/g, "\\:");
+        vfFilters.push(`ass='${escapedAssPath}':fontsdir='${escapedFontsDir}'`);
+        console.log(`[Dubber] Burning ASS subtitles with font: ${path.basename(fontPath)}`);
+      } else {
+        const escapedAssPath = tempAssPath.replace(/\\/g, "/").replace(/:/g, "\\:");
+        vfFilters.push(`subtitles='${escapedAssPath}'`);
+        console.warn("[Dubber] No Myanmar font found — subtitles may not render correctly!");
+      }
+
+      const vfString = vfFilters.join(",");
+
+      const cmd = ffmpeg(tempVideoPath)
         .input(tempFinalAudio)
         .outputOptions([
+          "-vf", vfString,
           "-c:v", "libx264",
           "-preset", "ultrafast",
           "-crf", "28",
@@ -534,24 +575,7 @@ export async function dubVideoFromBuffer(
           "-map", "1:a",
           "-shortest",
           "-movflags", "+faststart"
-        ]);
-
-      if (fontPath && existsSync(fontPath)) {
-        // Use ASS subtitles with Myanmar font
-        cmd = cmd.outputOptions([
-          "-vf", `ass=${tempAssPath}:fontsdir=${path.dirname(fontPath)}`,
-        ]);
-        console.log(`[Dubber] Burning ASS subtitles with font: ${path.basename(fontPath)}`);
-      } else {
-        // No Myanmar font — burn SRT without custom font (may show boxes)
-        cmd = cmd.outputOptions([
-          "-vf", `subtitles=${tempAssPath}`,
-        ]);
-        console.warn("[Dubber] No Myanmar font found — subtitles may not render correctly!");
-        console.warn("[Dubber] Run: bash backend/scripts/install-myanmar-fonts.sh");
-      }
-
-      cmd
+        ])
         .on("progress", (p: any) =>
           console.log(`[Dubber] FFmpeg ${Math.round(p.percent ?? 0)}%`)
         )

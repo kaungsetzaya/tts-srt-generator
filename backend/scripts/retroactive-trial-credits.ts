@@ -28,7 +28,7 @@ async function run() {
   for (const user of allUsers) {
     // Check if user already has a trial subscription history
     const userSubs = await db.select().from(subscriptions).where(eq(subscriptions.userId, user.id));
-    const hasTrial = userSubs.some(s => s.plan === "trial");
+    const hasTrial = userSubs.some((s: typeof userSubs[0]) => s.plan === "trial");
 
     if (hasTrial) {
       skippedHasTrial++;

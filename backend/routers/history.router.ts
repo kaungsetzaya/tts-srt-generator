@@ -77,7 +77,7 @@ export const historyRouter = t.router({
 
         // Combine and map to a unified shape
         const unified = [
-          ...tasks.map(t => ({
+          ...tasks.map((t: typeof tasks[0]) => ({
             id: t.id,
             origin: "task" as const,
             type: t.feature || "tts",
@@ -86,7 +86,7 @@ export const historyRouter = t.router({
             description: t.text?.slice(0, 100) || t.errorMsg || "",
             createdAt: t.createdAt!,
           })),
-          ...credits.map(c => ({
+          ...credits.map((c: typeof credits[0]) => ({
             id: c.id,
             origin: "credit" as const,
             type: c.type,
