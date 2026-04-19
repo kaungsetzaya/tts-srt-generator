@@ -77,7 +77,8 @@ export async function handleTelegramUpdate(update: any) {
           for (const r of settingsRows) settingsObj[r.keyName] = r.value;
           
           const autoTrialEnabled = settingsObj.autoTrialEnabled === 'true';
-          const isDateValid = !settingsObj.trialStartDate || !settingsObj.trialEndDate || 
+          const enforceDate = settingsObj.trialEnabled === 'true';
+          const isDateValid = !enforceDate || !settingsObj.trialStartDate || !settingsObj.trialEndDate || 
                               (new Date() >= new Date(settingsObj.trialStartDate) && new Date() <= new Date(settingsObj.trialEndDate));
                               
           if (autoTrialEnabled && isDateValid) {

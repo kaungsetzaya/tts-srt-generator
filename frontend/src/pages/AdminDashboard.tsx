@@ -62,9 +62,9 @@ const PLAN_LABELS: Record<Plan, string> = {
 };
 const PLAN_PRICE: Record<Plan, number> = {
   trial: 0,
-  starter: 5000,
-  creator: 15000,
-  pro: 30000,
+  starter: 15000,
+  creator: 35000,
+  pro: 75000,
 };
 const PLAN_CREDITS: Record<Plan, number> = {
   trial: 15,
