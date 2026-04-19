@@ -415,11 +415,56 @@ export const adminStatsRouter = t.router({
       }
     }),
 
+  deleteAllFailedGens: adminProcedure
+    .mutation(async () => {
+      const db = await getDb();
+      if (!db) return { success: false, message: "DB not available" };
+      try {
+        await db.delete(ttsConversions).where(eq(ttsConversions.status, "fail"));
+        return { success: true };
+      } catch (e) {
+        console.error("[deleteAllFailedGens]", e);
+        return { success: false, message: "Failed to dismiss all" };
+      }
+    }),
+
   deleteSystemLog: adminProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) return { success: false, message: "DB not available" };
-      return { success: true };
+      try {
+        await db.delete(errorLogs).where(eq(errorLogs.id, input.id));
+        return { success: true };
+      } catch (e) {
+        console.error("[deleteSystemLog]", e);
+        return { success: false, message: "Failed to delete log" };
+      }
+    }),
+
+  resolveAllErrors: adminProcedure
+    .mutation(async () => {
+      const db = await getDb();
+      if (!db) return { success: false, message: "DB not available" };
+      try {
+        await db.update(errorLogs).set({ resolved: true, resolvedAt: new Date() });
+        return { success: true };
+      } catch (e) {
+        console.error("[resolveAllErrors]", e);
+        return { success: false, message: "Failed to resolve all errors" };
+      }
+    }),
+
+  deleteAllSystemLogs: adminProcedure
+    .mutation(async () => {
+      const db = await getDb();
+      if (!db) return { success: false, message: "DB not available" };
+      try {
+        await db.delete(errorLogs);
+        return { success: true };
+      } catch (e) {
+        console.error("[deleteAllSystemLogs]", e);
+        return { success: false, message: "Failed to delete all logs" };
+      }
     }),
 });

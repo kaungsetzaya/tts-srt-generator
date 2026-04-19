@@ -83,7 +83,7 @@ export async function handleTelegramUpdate(update: any) {
           if (autoTrialEnabled && isDateValid) {
             isTrialActive = true;
             trialCredits = parseInt(settingsObj.trialCredits) || 15;
-            trialDays = parseInt(settingsObj.autoTrialDays) || 7;
+            trialDays = 3650; // Lifetime (10 years) for credit-based system
           }
         } catch {
           // default to no trial

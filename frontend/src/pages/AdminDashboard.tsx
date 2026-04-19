@@ -492,7 +492,7 @@ export default function AdminDashboard() {
   const [paymentSlipPreview, setPaymentSlipPreview] = useState("");
 
   const getDefaultDays = (plan: Plan): number => {
-    return plan === "trial" ? 7 : 30;
+    return 3650; // Lifetime (10 years) for credit-based system
   };
 
   const handlePlanSelect = (plan: Plan) => {
@@ -574,6 +574,15 @@ export default function AdminDashboard() {
     onSuccess: () => refetchErrors(),
   });
   const deleteSystemLog = trpc.adminStats.deleteSystemLog.useMutation({
+    onSuccess: () => refetchErrors(),
+  });
+  const deleteAllFailedGens = trpc.adminStats.deleteAllFailedGens.useMutation({
+    onSuccess: () => refetchErrors(),
+  });
+  const resolveAllErrors = trpc.adminStats.resolveAllErrors.useMutation({
+    onSuccess: () => refetchErrors(),
+  });
+  const deleteAllSystemLogs = trpc.adminStats.deleteAllSystemLogs.useMutation({
     onSuccess: () => refetchErrors(),
   });
   const deleteUser = trpc.admin.deleteUser.useMutation({
@@ -1428,12 +1437,26 @@ export default function AdminDashboard() {
               className="border rounded-xl p-6"
               style={{ background: cardBg, borderColor: border }}
             >
-              <h3 className="font-bold uppercase tracking-wider mb-4 flex items-center gap-2 text-red-400">
-                <AlertTriangle className="w-4 h-4" /> Failed Generations
-                <span className="text-xs font-normal opacity-40 ml-1">
-                  ({errorData?.failedGenerations?.length ?? 0} total)
-                </span>
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold uppercase tracking-wider flex items-center gap-2 text-red-400">
+                  <AlertTriangle className="w-4 h-4" /> Failed Generations
+                  <span className="text-xs font-normal opacity-40 ml-1">
+                    ({errorData?.failedGenerations?.length ?? 0} total)
+                  </span>
+                </h3>
+                {errorData?.failedGenerations && errorData.failedGenerations.length > 0 && (
+                  <button
+                    onClick={() => {
+                      if (confirm("Are you sure you want to delete ALL failed generations?")) {
+                        deleteAllFailedGens.mutate();
+                      }
+                    }}
+                    className="text-xs px-3 py-1 border border-red-500/40 text-red-400 hover:bg-red-500/20 rounded-lg transition-all flex items-center gap-1 font-bold"
+                  >
+                    <X className="w-3 h-3" /> Delete All
+                  </button>
+                )}
+              </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
@@ -1501,9 +1524,31 @@ export default function AdminDashboard() {
               className="border rounded-xl p-6"
               style={{ background: cardBg, borderColor: border }}
             >
-              <h3 className="font-bold uppercase tracking-wider mb-4 flex items-center gap-2 text-orange-400">
-                <Info className="w-4 h-4" /> System Error Logs
-              </h3>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+                <h3 className="font-bold uppercase tracking-wider flex items-center gap-2 text-orange-400">
+                  <Info className="w-4 h-4" /> System Error Logs
+                </h3>
+                {errorData?.systemLogs && errorData.systemLogs.length > 0 && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        if (confirm("Mark ALL system logs as resolved?")) resolveAllErrors.mutate();
+                      }}
+                      className="text-xs px-3 py-1 border border-green-500/40 text-green-400 hover:bg-green-500/20 rounded-lg transition-all font-bold flex items-center gap-1"
+                    >
+                      <Check className="w-3 h-3" /> Resolve All
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm("Delete ALL system logs permanently?")) deleteAllSystemLogs.mutate();
+                      }}
+                      className="text-xs px-3 py-1 border border-red-500/40 text-red-400 hover:bg-red-500/20 rounded-lg transition-all font-bold flex items-center gap-1"
+                    >
+                      <X className="w-3 h-3" /> Delete All
+                    </button>
+                  </div>
+                )}
+              </div>
               {errorData?.systemLogs?.length === 0 ? (
                 <p className="text-xs opacity-30 text-center py-6">
                   No system error logs
