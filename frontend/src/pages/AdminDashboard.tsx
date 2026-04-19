@@ -36,6 +36,9 @@ import {
   Calendar,
   Trash2,
   Sparkles,
+  History,
+  ArrowUpRight,
+  ArrowDownLeft,
 } from "lucide-react";
 
 type Plan =
@@ -43,7 +46,7 @@ type Plan =
   | "starter"
   | "creator"
   | "pro";
-type MainTab = "analytics" | "users" | "reports" | "settings";
+type MainTab = "analytics" | "users" | "reports" | "transactions" | "settings";
 type TimeFrame = "week" | "month" | "year" | "all";
 type PaymentMethod =
   | "kpay"
@@ -449,6 +452,72 @@ function UserDetailDrawer({
             </div>
           </div>
         )}
+
+        {/* ── USAGE HISTORY TAB ───────────────────────────── */}
+        {tab === "transactions" && (
+          <div className="space-y-5">
+             <div className="flex items-center justify-between">
+              <h2 className="font-black uppercase tracking-widest text-lg flex items-center gap-2" style={{ color: C }}>
+                <History className="w-5 h-5" /> Credit Usage History
+              </h2>
+              <button
+                onClick={() => refetchTransactions()}
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 border rounded-lg opacity-60 hover:opacity-100 transition-all font-bold"
+                style={{ borderColor: border }}
+              >
+                <RefreshCw className="w-3 h-3" /> Refresh
+              </button>
+            </div>
+
+            <div className="border rounded-xl overflow-hidden shadow-2xl" style={{ background: cardBg, borderColor: border }}>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b uppercase tracking-wider opacity-40" style={{ borderColor: border, background: "rgba(255,255,255,0.02)" }}>
+                    <th className="text-left p-4">Time</th>
+                    <th className="text-left p-4">User</th>
+                    <th className="text-left p-4">Type</th>
+                    <th className="text-left p-4">Description</th>
+                    <th className="text-right p-4">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {transactions?.map((t: any) => {
+                    const isPositive = t.amount > 0;
+                    return (
+                      <tr key={t.id} className="hover:bg-white/5 transition-colors group">
+                        <td className="p-4 opacity-40 whitespace-nowrap">{new Date(t.createdAt).toLocaleString("en-GB", { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'})}</td>
+                        <td className="p-4">
+                           <div className="flex flex-col">
+                             <span className="font-bold">{t.userName}</span>
+                             <span className="text-[10px] opacity-30">@{t.userUsername}</span>
+                           </div>
+                        </td>
+                        <td className="p-4">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase" style={{ background: "rgba(255,255,255,0.1)" }}>
+                            {t.type.replace("_", " ")}
+                          </span>
+                        </td>
+                        <td className="p-4 opacity-60 max-w-xs truncate">{t.description}</td>
+                        <td className="p-4 text-right">
+                          <div className={`flex items-center justify-end gap-1 font-black ${isPositive ? "text-green-400" : "text-amber-500"}`}>
+                             {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownLeft className="w-3 h-3" />}
+                             <span className="text-sm">{isPositive ? "+" : ""}{t.amount}</span>
+                             <span className="text-[10px] opacity-40 font-normal">credits</span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {!transactions?.length && (
+                    <tr>
+                      <td colSpan={5} className="p-12 text-center opacity-30 italic">No transactions found</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -519,6 +588,9 @@ export default function AdminDashboard() {
     undefined,
     { refetchInterval: 60000 }
   );
+  const { data: transactions, refetch: refetchTransactions } = trpc.admin.getTransactions.useQuery(undefined, {
+    enabled: tab === "transactions"
+  });
   const [trialStartDate, setTrialStartDate] = useState("");
   const [trialEndDate, setTrialEndDate] = useState("");
   const [trialEnabled, setTrialEnabled] = useState(false);
@@ -780,6 +852,7 @@ export default function AdminDashboard() {
               { id: "analytics", label: "Analytics", icon: BarChart3 },
               { id: "users", label: "Users", icon: Users },
               { id: "reports", label: "Error Reports", icon: Bug },
+              { id: "transactions", label: "Usage History", icon: History },
               { id: "settings", label: "Settings", icon: Settings },
             ] as const
           ).map(({ id, label, icon: Icon }) => (
@@ -1405,7 +1478,7 @@ export default function AdminDashboard() {
               </h2>
               <button
                 onClick={() => refetchErrors()}
-                className="flex items-center gap-1.5 text-xs px-3 py-1.5 border rounded-lg opacity-60 hover:opacity-100 transition-all"
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 border rounded-lg opacity-60 hover:opacity-100 transition-all font-bold"
                 style={{ borderColor: border }}
               >
                 <RefreshCw className="w-3 h-3" /> Refresh

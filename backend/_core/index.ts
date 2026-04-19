@@ -19,7 +19,7 @@ import {
 import { validateEnv } from "./env";
 import { recoverInterruptedJobs } from "../jobs";
 import { createHmac } from "crypto";
-import { promises as fs } from "fs";
+import { promises as fs, createReadStream, statSync } from "fs";
 
 async function startServer() {
   // ──────────────────────────────────────────
@@ -151,7 +151,6 @@ async function startServer() {
     }
 
     // Check file exists
-    const { createReadStream, statSync } = require('fs');
     let stat: any;
     try {
       stat = statSync(resolved);

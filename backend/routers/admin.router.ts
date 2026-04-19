@@ -7,7 +7,7 @@ import { t, adminProcedure } from "./trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
 import { users, subscriptions, ttsConversions, creditTransactions } from "../../drizzle/schema";
-import { eq, count, sql } from "drizzle-orm";
+import { eq, count, sql, desc } from "drizzle-orm";
 
 export const adminRouter = t.router({
   getUsers: adminProcedure.query(async () => {
@@ -253,5 +253,35 @@ export const adminRouter = t.router({
       disk,
       status: "ok",
     };
+  }),
+  getTransactions: adminProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) return [];
+    try {
+      const transactions = await db
+        .select({
+          id: creditTransactions.id,
+          userId: creditTransactions.userId,
+          amount: creditTransactions.amount,
+          type: creditTransactions.type,
+          description: creditTransactions.description,
+          createdAt: creditTransactions.createdAt,
+          userName: users.telegramFirstName,
+          userUsername: users.telegramUsername,
+        })
+        .from(creditTransactions)
+        .leftJoin(users, eq(creditTransactions.userId, users.id))
+        .orderBy(desc(creditTransactions.createdAt))
+        .limit(200);
+
+      return transactions.map((t: any) => ({
+        ...t,
+        userName: t.userName || "Unknown",
+        userUsername: t.userUsername || "anon",
+      }));
+    } catch (e) {
+      console.error("[getTransactions Error]", e);
+      return [];
+    }
   }),
 });
