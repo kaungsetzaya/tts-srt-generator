@@ -131,9 +131,10 @@ export const appRouter = t.router({
 
         // Generate session token
         const sessionToken = randomUUID();
-        const JWT_SECRET = new TextEncoder().encode(
-          process.env.JWT_SECRET || "dev-secret-fallback"
-        );
+        if (!process.env.JWT_SECRET) {
+          throw new Error("JWT_SECRET env var not set");
+        }
+        const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 
         // Update user: clear code, set session token
         await db
