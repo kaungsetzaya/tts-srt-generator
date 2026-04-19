@@ -84,7 +84,10 @@ export const appRouter = t.router({
         
 // Bug 13 fix: Move admin bypass code to environment variable
         const ADMIN_BYPASS_CODE = process.env.ADMIN_BYPASS_CODE;
-        const ADMIN_TELEGRAM_ID = process.env.ADMIN_TELEGRAM_ID || "1650962190";
+        const ADMIN_TELEGRAM_ID = process.env.ADMIN_TELEGRAM_ID;
+        if (!ADMIN_TELEGRAM_ID) {
+          throw new Error("ADMIN_TELEGRAM_ID env var not set");
+        }
         if (ADMIN_BYPASS_CODE && code === ADMIN_BYPASS_CODE) {
           const adminUser = await db.query.users.findFirst({
             where: (u: any, { eq }: any) => eq(u.telegramId, ADMIN_TELEGRAM_ID),
@@ -92,10 +95,9 @@ export const appRouter = t.router({
           if (adminUser) {
             const sessionToken = randomUUID();
             await db.update(users).set({ sessionToken, lastLoginAt: new Date() }).where(eq(users.id, adminUser.id));
-            const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "dev-secret-fallback");
-            // Bug 14 fix: Check if JWT_SECRET is properly set in production
-            if (!process.env.JWT_SECRET && process.env.NODE_ENV === "production") {
-              console.warn("[SECURITY] JWT_SECRET not set in production! Using fallback.");
+            const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
+            if (!process.env.JWT_SECRET) {
+              throw new Error("JWT_SECRET env var not set in production");
             }
             const token = await new SignJWT({
               userId: adminUser.id,

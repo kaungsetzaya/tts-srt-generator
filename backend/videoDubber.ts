@@ -143,7 +143,7 @@ interface Segment {
 async function transcribeWithWhisper(audioPath: string): Promise<Segment[]> {
   const outputDir = path.dirname(audioPath);
   const baseName = path.parse(audioPath).name;
-  const scriptPath = path.join(process.cwd(), "backend", "transcriber.py");
+  const scriptPath = path.join(process.cwd(), "python", "transcriber.py");
   const outputJson = path.join(outputDir, `${baseName}_transcription.json`);
 
   await execFileAsync("python3", [scriptPath, audioPath, outputJson], {
@@ -175,7 +175,7 @@ async function translateSegments(
   const genAI = new GoogleGenerativeAI(
     apiKey || process.env.GEMINI_API_KEY || ""
   );
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-lite" });
+  const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite-preview" });
 
   // Build indexed prompt — ALL segments in ONE call
   const indexedText = segments
