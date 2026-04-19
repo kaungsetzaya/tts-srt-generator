@@ -80,6 +80,17 @@ function applyBurmesePhonetics(text: string): string {
   return result;
 }
 
+function sanitizeTranslation(text: string): string {
+  // Strip common Gemini filler and markdown
+  let cleaned = text.replace(/ဤသည်မှာ သင်ပေးပို့.*?(ဖြေ|ပါသည်|ပြန်ဆိုထားပါသည်။)/g, ""); // "Here is the translation you requested..."
+  cleaned = cleaned.replace(/မြန်မာဘာသာဖြင့် အောက်ပါအတိုင်း.*?ပါသည်/g, ""); // "Here is the translation in Myanmar language..."
+  cleaned = cleaned.replace(/Here is the.*/gi, "");
+  cleaned = cleaned.replace(/\*\*ဇာတ်ညွှန်း[^\*]*\*\*/g, ""); 
+  cleaned = cleaned.replace(/\*\*.+?\*\*/g, ""); // remove bold tags 
+  cleaned = cleaned.replace(/[#_*\[\]]/g, ""); // remove other markdown chars
+  return cleaned.trim();
+}
+
 // Return string[] on success, or null on failure
 // Batch translation with JSON response schema - for VIDEO DUB (cinematic style)
 async function translateBatch(
@@ -93,15 +104,18 @@ async function translateBatch(
   const isSingleLongText = lines.length === 1 && lines[0].length > 1000;
   
   const systemPrompt = isSingleLongText
-    ? `You are a translator. Translate the video script EXACTLY word-for-word to Myanmar Burmese. Keep exact meaning. Output ONLY the translation in Myanmar. No explanation, no notes.`
-    : `You are a TTS narrator. Translate video script EXACTLY word-for-word to Myanmar.
-Keep exact meaning. Output must be speakable. No intro or outro.
-Return exact same number of lines as input.
-
+    ? `You are an expert translator. Translate the script EXACTLY word-for-word to Myanmar Burmese. Keep exact meaning.
 STRICT RULES:
-1. ONLY TRANSLATE: Output ONLY the translation. 
+1. Output ONLY the raw translation in Myanmar.
+2. NO conversational filler (e.g., "Here is the translation...").
+3. NO Markdown formatting (e.g., **, ##, \`\`\`).
+4. Output must be directly speakable by a TTS system.`
+    : `You are a TTS narrator. Translate video script EXACTLY word-for-word to Myanmar.
+STRICT RULES:
+1. ONLY TRANSLATE: Output ONLY the translation.
 2. ONLY MYANMAR: Output in Myanmar ONLY.
-3. CLEAN OUTPUT: JSON array ONLY. No intro/notes.`;
+3. NO FILLER: Do not say 'Here is the translation' or use Markdown.
+4. CLEAN OUTPUT: Return a JSON array ONLY. Return exact same number of lines as input.`;
 
   try {
     let body: any;
@@ -153,7 +167,7 @@ STRICT RULES:
       // For single very long text (which is our video translate case), just return as-is
       if (lines.length === 1) {
         console.log(`[Gemini] Single text mode - returning direct translation`);
-        return [text.trim()];
+        return [sanitizeTranslation(text)];
       }
       
       // For multiple texts, try to parse as JSON array
@@ -162,7 +176,7 @@ STRICT RULES:
 
         if (Array.isArray(parsedArray) && parsedArray.length === lines.length) {
           console.log(`[Gemini] Parsed successfully: ${parsedArray.length} items`);
-          return parsedArray;
+          return parsedArray.map(sanitizeTranslation);
         } else {
           console.log(
             `[Gemini] Length mismatch. Expected ${lines.length}, got ${parsedArray.length || 0}`
@@ -216,7 +230,12 @@ export async function geminiTranslate(
               {
                 parts: [
                   {
-                    text: `You are a TTS narrator. Translate this video script EXACTLY word-for-word to Myanmar. Keep exact meaning. Output must be speakable.\n${text}`,
+                    text: `You are a TTS narrator. Translate this video script EXACTLY word-for-word to Myanmar. Keep exact meaning. 
+STRICT RULES:
+1. ONLY return the raw Myanmar translation.
+2. NO conversational filler (e.g., "Here is the translation:").
+3. NO Markdown formatting (e.g., **, ##, \`\`\`).
+4. Output must be directly speakable by a TTS system.\n\n${text}`,
                   },
                 ],
               },
@@ -230,7 +249,8 @@ export async function geminiTranslate(
 
         if (res.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
           const translated = data.candidates[0].content.parts[0].text;
-          const myanmar = applyBurmesePhonetics(translated.trim());
+          const cleaned = sanitizeTranslation(translated);
+          const myanmar = applyBurmesePhonetics(cleaned);
           incrementQuota(model.id);
 
           const keyType = apiKey === userApiKey?.trim() ? "User" : "System";
