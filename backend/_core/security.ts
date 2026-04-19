@@ -20,12 +20,11 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "")
 const DEFAULT_ORIGIN = process.env.SITE_URL || "https://choco.de5.net";
 if (ALLOWED_ORIGINS.length === 0) ALLOWED_ORIGINS.push(DEFAULT_ORIGIN);
 
-// ✅ Vercel preview domains (*.vercel.app) အတွက် pattern-based allow
+// ✅ Vercel preview domains - RESTRICTED to known patterns
 const EXTRA_ALLOWED_PATTERNS: RegExp[] = [
-  /^https:\/\/[a-z0-9-]+\.vercel\.app$/,       // *.vercel.app
-  /^https:\/\/[a-z0-9-]+-[a-z0-9-]+\.vercel\.app$/, // double-hash vercel urls
-  /^https:\/\/[a-z0-9-]+\.projects\.vercel\.app$/, // *.projects.vercel.app
-  /^https:\/\/[a-z0-9-]+-[a-z0-9-]+\.projects\.vercel\.app$/, // double-hash *.projects.vercel.app
+  // Only specific known Vercel project patterns (not all subdomains)
+  /^https:\/\/[a-z0-9]{1,20}-[a-z0-9]{1,20}\.vercel\.app$/, // project-repo.vercel.app
+  /^https:\/\/[a-z0-9]{1,20}\.vercel\.app$/, // only single-name short projects
   /^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/, // cloudflare tunnel URLs
 ];
 

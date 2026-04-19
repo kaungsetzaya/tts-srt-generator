@@ -6,8 +6,8 @@ import type { Segment, TranslatedSegment } from "../../../shared/types/segment";
 // ═══════════════════════════════════════════════════════════════
 
 const MODELS = [
-  "models/gemini-3.1-flash-lite-preview",
-  "models/gemini-2.5-flash-lite",
+  "gemini-2.0-flash-exp",
+  "gemini-1.5-flash",
 ];
 
 const PHONETIC_MAP: Record<string, string> = {

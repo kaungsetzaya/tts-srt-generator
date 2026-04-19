@@ -604,8 +604,11 @@ function buildSRT(
   return result.join("\n");
 }
 
-export function generateSRT(text: string, rate: number = 1.0): string {
-  return buildSRT(text, rate, 40);
+export function generateSRT(text: string, durationMs: number = 0): string {
+  // Estimate duration if not provided: 400ms per word
+  const wordCount = text.trim().split(/\s+/).length;
+  const estDuration = durationMs || wordCount * 400;
+  return buildSRT(text, estDuration, 40);
 }
 
 export function formatSrtTime(ms: number): string {

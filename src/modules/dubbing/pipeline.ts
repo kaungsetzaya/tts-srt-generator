@@ -51,10 +51,15 @@ export class DubbingPipeline {
     // Step 7: Merge audio with video
     const finalVideo = await media.merge(videoBuffer, finalAudio, assContent);
 
+    // Calculate total TTS duration from segments
+    const totalDuration = translatedSegments.reduce((sum, seg) => {
+      return sum + (seg.end - seg.start) * 1000; // Convert seconds to ms
+    }, 0);
+
     return {
       videoBuffer: finalVideo,
       srtContent: assContent,
-      durationMs: ttsAudioBuffers.length * 1000, // Approximate
+      durationMs: totalDuration || 0,
     };
   }
 }

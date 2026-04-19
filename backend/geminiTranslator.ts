@@ -1,18 +1,18 @@
 import fs from "fs";
 import path from "path";
 
-// ✅ Models - verified with API
+// ✅ Models - verified with API (CORRECT IDs)
 const MODELS = [
   {
-    id: "models/gemini-3.1-flash-lite-preview",
-    name: "Gemini 3.1 Flash Lite",
+    id: "gemini-2.0-flash-exp",
+    name: "Gemini 2.0 Flash",
     rpd: 500,
     rpm: 15,
     primary: true,
   },
   {
-    id: "models/gemini-3-flash-preview",
-    name: "Gemini 3 Flash",
+    id: "gemini-1.5-flash",
+    name: "Gemini 1.5 Flash",
     rpd: 20,
     rpm: 5,
     primary: false,
