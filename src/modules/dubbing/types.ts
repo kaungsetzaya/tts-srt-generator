@@ -1,8 +1,11 @@
-import { Segment, TranslatedSegment, SrtCue, AudioResult } from "../../../shared/types/segment";
-import type { VoiceType } from "../../tts/types";
+import type { DubbingOptions as DubOptions } from "./types";
+
+export type VoiceType = "thiha" | "nilar";
 
 export interface DubbingOptions {
   voice: VoiceType;
+  speed?: number;
+  pitch?: number;
   srtEnabled?: boolean;
 }
 
@@ -16,4 +19,5 @@ export interface DubbingInput {
 export interface DubbingOutput {
   videoBuffer: Buffer;
   srtContent?: string;
+  durationMs: number;
 }

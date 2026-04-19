@@ -1,8 +1,7 @@
-import type { TranslationInput, TranslationOutput } from "./types";
-import { processAudio } from "./pipeline";
+// Translation Module - Public API
+// Input: video/audio → Output: translated text
 
-export async function translateAudio(input: TranslationInput): Promise<TranslationOutput> {
-  return processAudio(input);
-}
-
-export { type TranslationInput, type TranslationOutput } from "./types";
+export { TranslationPipeline, translationPipeline } from "./pipeline";
+export { whisper } from "./services/whisper";
+export { getGeminiService, translateText, translateSegments } from "./services/gemini";
+export type { TranslationInput, TranslationOutput, WhisperResult } from "./types";

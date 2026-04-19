@@ -1,8 +1,6 @@
-import type { TtsInput } from "./types";
-import { processText } from "./pipeline";
+// TTS Module - Public API
+// Input: text → Output: audio + optional SRT
 
-export async function generateTts(input: TtsInput) {
-  return processText(input);
-}
-
-export { type TtsInput, type TtsOutput, type VoiceType } from "./types";
+export { TtsPipeline, ttsPipeline } from "./pipeline";
+export { edgeTts } from "./services/edgeTts";
+export type { TtsInput, TtsOutput, VoiceType, TtsOptions } from "./types";

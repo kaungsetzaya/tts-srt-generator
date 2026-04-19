@@ -1,8 +1,6 @@
-import type { DubbingInput, DubbingOutput } from "./types";
-import { processDubbing } from "./pipeline";
+// Dubbing Module - Public API
+// Input: video → Output: dubbed video
 
-export async function dubVideo(input: DubbingInput): Promise<DubbingOutput> {
-  return processDubbing(input);
-}
-
-export { type DubbingInput, type DubbingOutput, type DubbingOptions } from "./types";
+export { DubbingPipeline, dubbingPipeline } from "./pipeline";
+export { buildAssSubtitle } from "./services/assBuilder";
+export type { DubbingInput, DubbingOutput, DubbingOptions } from "./types";

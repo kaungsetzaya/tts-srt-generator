@@ -1,6 +1,10 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { Segment, TranslatedSegment } from "../../../shared/types/segment";
 
+// ═══════════════════════════════════════════════════════════════
+// Gemini Translation Service (ONE SOURCE OF TRUTH)
+// ═══════════════════════════════════════════════════════════════
+
 const MODELS = [
   "models/gemini-3.1-flash-lite-preview",
   "models/gemini-2.5-flash-lite",
@@ -21,24 +25,21 @@ export class GeminiTranslationService {
     this.genAI = new GoogleGenerativeAI(apiKey);
   }
 
-  async translate(text: string): Promise<string> {
-    const prompt = `You are a translator. Translate EXACTLY word-for-word to Myanmar Burmese.
-Keep exact meaning. Output ONLY the translation in Myanmar.
-No explanation, no notes.
+  /** Translate FULL text to Myanmar (for Translation pipeline) */
+  async translateFull(text: string): Promise<string> {
+    const prompt = `You are a professional translator. Translate EXACTLY word-for-word to Myanmar Burmese.
+Keep exact meaning and tone. Output ONLY the translation in Myanmar script.
+No explanation, no notes, no intro or outro.
 
-TRANSLATE: ${text}`;
+TRANSLATE TO MYANMAR: ${text}`;
 
     for (const modelId of MODELS) {
       try {
         const model = this.genAI.getGenerativeModel({ model: modelId });
         const result = await model.generateContent(prompt);
-        const response = result.response;
-        let translated = response.text();
-
-        // Clean up response
-        translated = this.cleanResponse(translated);
-
-        return this.applyPhonetics(translated);
+        let translated = result.response.text();
+        
+        return this.applyPhonetics(this.cleanResponse(translated));
       } catch (e) {
         console.error(`[Gemini] Model ${modelId} failed:`, e);
         continue;
@@ -47,19 +48,19 @@ TRANSLATE: ${text}`;
     throw new Error("All Gemini models failed");
   }
 
+  /** Translate segments in batch (for Dubbing pipeline) - preserves timestamps */
   async translateBatch(segments: Segment[]): Promise<TranslatedSegment[]> {
-    // For dubbing: batch translate with timestamps preserved
     const lines = segments.map((s) => s.text);
     const prompt = `Translate these segments to Myanmar Burmese.
 Output ONLY translations as JSON array.
-Keep exact same number of lines.
+Keep exact same number of lines and order.
 
 STRICT RULES:
 1. ONLY TRANSLATE: Output ONLY translations.
 2. ONLY MYANMAR: Output in Myanmar script.
 3. CLEAN OUTPUT: JSON array ONLY. No notes.
 
-SEGMENTS: ${JSON.stringify(lines)}`;
+SEGMENTS TO TRANSLATE: ${JSON.stringify(lines)}`;
 
     for (const modelId of MODELS) {
       try {
@@ -84,7 +85,7 @@ SEGMENTS: ${JSON.stringify(lines)}`;
       }
     }
 
-    // Fallback: return original if all fail
+    // Fallback: return original text if all models fail
     return segments.map((seg) => ({
       ...seg,
       translatedText: seg.text,
@@ -92,7 +93,6 @@ SEGMENTS: ${JSON.stringify(lines)}`;
   }
 
   private cleanResponse(text: string): string {
-    // Remove markers like ```myanmar or ```, quotes, etc.
     return text
       .replace(/^```[a-z]*\n?/g, "")
       .replace(/```$/g, "")
@@ -123,9 +123,15 @@ export function getGeminiService(): GeminiTranslationService {
   return geminiInstance;
 }
 
-export async function translateWithGemini(
-  segments: Segment[],
-  _userApiKey?: string
+/** Translate full text (for Translation pipeline) */
+export async function translateText(text: string): Promise<string> {
+  const service = getGeminiService();
+  return service.translateFull(text);
+}
+
+/** Translate segments (for Dubbing pipeline) */
+export async function translateSegments(
+  segments: Segment[]
 ): Promise<TranslatedSegment[]> {
   const service = getGeminiService();
   return service.translateBatch(segments);

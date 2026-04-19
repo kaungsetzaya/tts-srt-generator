@@ -9,6 +9,10 @@ import type { TtsInput, TtsOutput } from "../types";
 
 const execFileAsync = promisify(execFile);
 
+// ═══════════════════════════════════════════════════════════════
+// Edge TTS Service
+// ═══════════════════════════════════════════════════════════════
+
 const VOICE_MAP: Record<string, string> = {
   thiha: "my-MM-ThihaNeural",
   nilar: "my-MM-NilarNeural",
@@ -19,6 +23,7 @@ export class EdgeTtsService {
   private running = 0;
   private readonly maxConcurrent = 3;
 
+  /** Throttled execution for concurrency control */
   private async throttle<T>(fn: () => Promise<T>): Promise<T> {
     if (this.running >= this.maxConcurrent) {
       await new Promise<void>((resolve) => this.queue.push(resolve));
@@ -33,6 +38,7 @@ export class EdgeTtsService {
     }
   }
 
+  /** Generate speech from text */
   async generate(input: TtsInput): Promise<TtsOutput> {
     return this.throttle(async () => {
       const voice = VOICE_MAP[input.options.voice] || VOICE_MAP.thiha;
@@ -46,18 +52,13 @@ export class EdgeTtsService {
 
       try {
         await execFileAsync("python", [
-          "-m",
-          "edge_tts",
-          "-t",
-          input.text,
-          "-v",
-          voice,
-          "-f",
-          srtPath,
+          "-m", "edge_tts",
+          "-t", input.text,
+          "-v", voice,
+          "-f", srtPath,
           "--rate=" + `+${rate}%`,
           "--pitch=" + `${pitch > 0 ? "+" : ""}${pitch}Hz`,
-          "-o",
-          audioPath,
+          "-o", audioPath,
         ]);
 
         const audioBuffer = await fs.readFile(audioPath);
@@ -81,6 +82,7 @@ export class EdgeTtsService {
     });
   }
 
+  /** Parse SRT content to cues */
   private parseSrt(content: string): SrtCue[] {
     const cues: SrtCue[] = [];
     const blocks = content.trim().split(/\n\n+/);
@@ -125,7 +127,3 @@ export class EdgeTtsService {
 }
 
 export const edgeTts = new EdgeTtsService();
-
-export async function generateSpeech(input: TtsInput): Promise<TtsOutput> {
-  return edgeTts.generate(input);
-}

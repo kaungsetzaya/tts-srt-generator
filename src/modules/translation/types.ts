@@ -1,5 +1,9 @@
 import { Segment } from "../../../shared/types/segment";
 
+// ═══════════════════════════════════════════════════════════════
+// Translation Types (VIDEO → TEXT ONLY)
+// ═══════════════════════════════════════════════════════════════
+
 export interface TranslationInput {
   audioBuffer: Buffer;
   userApiKey?: string;
@@ -8,6 +12,7 @@ export interface TranslationInput {
 export interface TranslationOutput {
   englishText: string;
   myanmarText: string;
+  // Optional segments fordubbing to reuse
   segments?: Segment[];
 }
 

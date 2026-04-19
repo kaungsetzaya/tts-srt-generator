@@ -1,6 +1,11 @@
 import type { TranslationInput, TranslationOutput } from "../types";
 import { whisper } from "./services/whisper";
-import { getGeminiService } from "./services/gemini";
+import { translateText } from "./services/gemini";
+
+// ═══════════════════════════════════════════════════════════════
+// Translation Pipeline (VIDEO → TEXT)
+// Input: audio → Whisper → Gemini → Output: translated text
+// ═══════════════════════════════════════════════════════════════
 
 export class TranslationPipeline {
   async process(input: TranslationInput): Promise<TranslationOutput> {
@@ -13,13 +18,13 @@ export class TranslationPipeline {
       throw new Error("No speech detected in video");
     }
 
-    // Step 2: Translate with Gemini (uses full text, not segmented)
-    const gemini = getGeminiService();
-    const myanmarText = await gemini.translate(whisperResult.text);
+    // Step 2: Translate FULL text with Gemini (not segmented)
+    const myanmarText = await translateText(whisperResult.text);
 
     return {
       englishText: whisperResult.text,
       myanmarText,
+      // Return segments for dubbing to reuse (optional)
       segments: whisperResult.segments,
     };
   }
