@@ -1176,10 +1176,10 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
           style={{ color: textColor }}
         >
         <JobProgressOverlay 
-          isVisible={Boolean(translateJobId) || Boolean(dubJobId) || generateMutation.isPending}
-          progress={translateJobId ? translateJobProgress : dubJobId ? dubJobProgress : generateMutation.isPending ? 85 : 0}
-          message={translateJobId ? translateJobMessage : dubJobId ? dubJobMessage : generateMutation.isPending ? (lang === "mm" ? "အသံ ဖန်တီးနေသည်..." : "Generating audio...") : ""}
-          title={translateJobId ? (lang === "mm" ? "ဗီဒီယို ဘာသာပြန်" : "Video Translation") : dubJobId ? "Auto Creator" : "Text to Speech"}
+          isVisible={Boolean(translateJobId) || Boolean(activeJobId) || generateMutation.isPending}
+          progress={translateJobId ? translateJobProgress : activeJobId ? ((jobStatusQuery.data as any)?.progress ?? 0) : generateMutation.isPending ? 85 : 0}
+          message={translateJobId ? translateJobMessage : activeJobId ? ((jobStatusQuery.data as any)?.message ?? "") : generateMutation.isPending ? (lang === "mm" ? "အသံ ဖန်တီးနေသည်..." : "Generating audio...") : ""}
+          title={translateJobId ? (lang === "mm" ? "ဗီဒီယို ဘာသာပြန်" : "Video Translation") : activeJobId ? "Auto Creator" : "Text to Speech"}
           isDark={isDark}
           accent={accent}
           lang={lang}
