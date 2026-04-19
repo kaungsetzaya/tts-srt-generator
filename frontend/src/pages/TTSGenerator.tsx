@@ -825,7 +825,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
           srtBoxPadding,
           srtFullWidth,
         });
-        setDubResult(res as any);
+        setActiveJobId(res.jobId);
         utils.subscription.myStatus.invalidate();
       } catch (e: any) {
         console.error("[DUB FILE ERROR]", e);

@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { getDb } from "../db";
 import { users, subscriptions, creditTransactions } from "../../drizzle/schema";
 import { eq, inArray } from "drizzle-orm";
