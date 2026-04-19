@@ -13,6 +13,7 @@ import {
   BarChart3,
   Ban,
   CheckCircle,
+  Check,
   Activity,
   Zap,
   HardDrive,

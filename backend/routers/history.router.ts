@@ -50,4 +50,58 @@ export const historyRouter = t.router({
         return [];
       }
     }),
+
+  getUnifiedHistory: protectedProcedure
+    .input(z.object({ limit: z.number().optional().default(50) }))
+    .query(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) return [];
+      try {
+        const limit = input.limit ?? 50;
+        
+        // Fetch tasks
+        const tasks = await db
+          .select()
+          .from(ttsConversions)
+          .where(eq(ttsConversions.userId, ctx.user!.userId))
+          .orderBy(desc(ttsConversions.createdAt))
+          .limit(limit);
+
+        // Fetch credit transactions
+        const credits = await db
+          .select()
+          .from(creditTransactions)
+          .where(eq(creditTransactions.userId, ctx.user!.userId))
+          .orderBy(desc(creditTransactions.createdAt))
+          .limit(limit);
+
+        // Combine and map to a unified shape
+        const unified = [
+          ...tasks.map(t => ({
+            id: t.id,
+            origin: "task" as const,
+            type: t.feature || "tts",
+            amount: 0,
+            status: t.status,
+            description: t.text?.slice(0, 100) || t.errorMsg || "",
+            createdAt: t.createdAt!,
+          })),
+          ...credits.map(c => ({
+            id: c.id,
+            origin: "credit" as const,
+            type: c.type,
+            amount: c.amount,
+            status: "success",
+            description: c.description || "",
+            createdAt: c.createdAt!,
+          }))
+        ];
+
+        // Sort by date desc
+        return unified.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, limit);
+      } catch (e) {
+        console.error("[getUnifiedHistory Error]", e);
+        return [];
+      }
+    }),
 });

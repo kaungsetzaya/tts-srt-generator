@@ -364,10 +364,8 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
 
   const [, navigate] = useLocation();
   const utils = trpc.useUtils();
-  const { data: historyData, isLoading: historyLoading } =
-    trpc.history.getMyHistory.useQuery({ limit: 100 });
-  const { data: creditHistory } =
-    trpc.history.getCreditHistory.useQuery({ limit: 100 });
+  const { data: unifiedHistory, isLoading: historyLoading } =
+    trpc.history.getUnifiedHistory.useQuery({ limit: 100 });
   const { data: me } = trpc.auth.me.useQuery();
   const { data: subStatus, isLoading: subLoading } =
     trpc.subscription.myStatus.useQuery();
@@ -3590,7 +3588,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                     }}
                   />
                 </div>
-              ) : !historyData || historyData.length === 0 ? (
+              ) : !unifiedHistory || unifiedHistory.length === 0 ? (
                 <div
                   className={box}
                   style={{
@@ -3638,9 +3636,14 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                   </div>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {historyData.map(item => {
-                    const featureLabel = (feat: string) => {
+                <div className="space-y-3">
+                  {unifiedHistory?.map((item: any) => {
+                    const isCredit = item.origin === "credit";
+                    const isTask = item.origin === "task";
+                    const isError = item.status === "fail";
+                    const isPositive = (item.amount || 0) > 0;
+                    
+                    const featureLabel = (type: string) => {
                       const labels: Record<string, string> =
                         lang === "mm"
                           ? {
@@ -3649,6 +3652,11 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                               translate_link: "Link ဘာသာပြန်",
                               dub_file: "Auto Creator (ဖိုင်)",
                               dub_link: "Auto Creator (Link)",
+                              TRIAL: "Trial Rewards",
+                              GEN_AUDIO: "TTS အသံဖန်တီးမှု",
+                              VIDEO_DUB: "Video Dubbing",
+                              SUBSCRIPTION: "Subscription",
+                              REFUND: "ပြန်အမ်းငွေ",
                             }
                           : {
                               tts: "Text to Speech",
@@ -3656,19 +3664,29 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                               translate_link: "Link Translate",
                               dub_file: "Auto Creator (File)",
                               dub_link: "Auto Creator (Link)",
+                              TRIAL: "Trial Credits",
+                              GEN_AUDIO: "TTS Generation",
+                              VIDEO_DUB: "Video Dubbing",
+                              SUBSCRIPTION: "Subscription",
+                              REFUND: "Refund",
                             };
-                      return labels[feat] || feat;
+                      return labels[type] || type.replace("_", " ");
                     };
-                    const featureEmoji = (feat: string) => {
-                      if (feat === "tts") return "🎙️";
-                      if (feat?.includes("translate")) return "📹";
-                      if (feat?.includes("dub")) return "🎬";
-                      return "📋";
+
+                    const featureEmoji = (type: string) => {
+                      if (type === "tts" || type === "GEN_AUDIO") return "🎙️";
+                      if (type?.includes("translate")) return "📹";
+                      if (type?.includes("dub") || type === "VIDEO_DUB") return "🎬";
+                      if (type === "SUBSCRIPTION") return "👑";
+                      if (type === "REFUND") return "♻️";
+                      if (type === "TRIAL") return "🎁";
+                      return "💰";
                     };
+
                     return (
                       <div
                         key={item.id}
-                        className="flex items-center gap-3 p-3 sm:p-4 rounded-2xl border backdrop-blur-xl transition-all"
+                        className="flex items-center gap-4 p-4 rounded-2xl border transition-all hover:bg-white/5"
                         style={{
                           background: cardBg,
                           borderColor: cardBorder,
@@ -3676,83 +3694,45 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                         }}
                       >
                         <div
-                          className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center"
+                          className="flex-shrink-0 w-11 h-11 rounded-2xl flex items-center justify-center text-xl"
                           style={{
-                            background:
-                              item.status === "fail"
-                                ? "rgba(220,38,38,0.2)"
-                                : accent15,
-                            color: item.status === "fail" ? "#ef4444" : accent,
+                            background: isError ? "rgba(220,38,38,0.15)" : isCredit ? (isPositive ? "rgba(34,197,94,0.15)" : "rgba(245,158,11,0.15)") : accent15,
+                            color: isError ? "#ef4444" : isCredit ? (isPositive ? "#22c55e" : "#f59e0b") : accent,
                           }}
                         >
-                          <span className="text-lg">
-                            {featureEmoji(item.feature || "tts")}
-                          </span>
+                          {featureEmoji(item.type)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span
-                              className="text-sm font-bold truncate"
-                              style={{ color: textColor }}
-                            >
-                              {featureLabel(item.feature || "tts")}
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <span className="font-bold text-sm sm:text-base truncate" style={{ color: textColor }}>
+                              {featureLabel(item.type)}
                             </span>
-                            <span
-                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.status === "success" ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}
-                            >
-                              {item.status === "success" ? "✓" : "✗"}
-                            </span>
-                          </div>
-                          <div
-                            className="flex items-center gap-3 text-xs"
-                            style={{ color: subtextColor }}
-                          >
-                            {item.voice && (
-                              <span>{item.character || item.voice}</span>
-                            )}
-                            {(item.charCount ?? 0) > 0 && (
-                              <span>
-                                {item.charCount?.toLocaleString()}{" "}
-                                {lang === "mm" ? "စာလုံး" : "chars"}
+                            {isCredit && (
+                              <span className={`text-sm font-black whitespace-nowrap ${isPositive ? "text-green-400" : "text-amber-500"}`}>
+                                {isPositive ? "+" : ""}{item.amount}
                               </span>
                             )}
-                            {(item.durationMs ?? 0) > 0 && (
-                              <span>
-                                {Math.floor((item.durationMs ?? 0) / 1000)}s
-                              </span>
+                            {isTask && !isError && (
+                               <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 font-bold uppercase tracking-wider">
+                                 {lang === "mm" ? "ပြီးစီး" : "Success"}
+                               </span>
+                            )}
+                            {isError && (
+                               <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 font-bold uppercase tracking-wider">
+                                 {lang === "mm" ? "မအောင်မြင်" : "Failed"}
+                               </span>
                             )}
                           </div>
-                        </div>
-                        <div className="text-right flex-shrink-0 flex flex-col items-end gap-1">
-                          <div
-                            className="text-xs font-semibold"
-                            style={{ color: subtextColor }}
-                          >
-                            {item.createdAt
-                              ? new Date(item.createdAt as any).toLocaleString(
-                                  lang === "mm" ? "my-MM" : "en-US",
-                                  {
-                                    month: "short",
-                                    day: "2-digit",
-                                    hour: "numeric",
-                                    minute: "2-digit",
-                                    hour12: true,
-                                  }
-                                )
-                              : "-"}
+                          <div className="flex items-center justify-between gap-4">
+                            <p className="text-xs truncate opacity-60" style={{ color: subtextColor }}>
+                              {item.description}
+                            </p>
+                            <span className="text-[10px] opacity-30 whitespace-nowrap">
+                              {new Date(item.createdAt).toLocaleString(lang === "mm" ? "my-MM" : "en-GB", { 
+                                day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+                              })}
+                            </span>
                           </div>
-                          {item.status === "success" && (
-                            <div 
-                              className="text-[10px] font-black px-2 py-0.5 rounded-full"
-                              style={{ 
-                                background: isDark ? "rgba(192,111,48,0.15)" : "rgba(192,111,48,0.1)", 
-                                color: accent 
-                              }}
-                            >
-                              -{item.feature?.includes("dub") || item.feature?.includes("translate") ? 5 : item.character ? 3 : 1} 
-                              {lang === "mm" ? " Credits" : " Credits"}
-                            </div>
-                          )}
                         </div>
                       </div>
                     );
@@ -3760,88 +3740,6 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                 </div>
               )}
 
-              {/* === CREDITS HISTORY === */}
-              {creditHistory && creditHistory.length > 0 && (
-                <div className="mt-8">
-                  {/* Header row with balance */}
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-base font-black uppercase tracking-wider" style={{ color: accent }}>
-                      💳 {lang === "mm" ? "Credits မှတ်တမ်း" : "Credits History"}
-                    </h3>
-                    <div
-                      className="text-sm font-bold px-3 py-1 rounded-full"
-                      style={{ background: accent15, color: accent }}
-                    >
-                      {lang === "mm" ? "လက်ကျန်" : "Balance"}: {subStatus?.credits ?? 0} credits
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    {creditHistory.map(tx => {
-                      const isPositive = (tx.amount ?? 0) > 0;
-                      const txTypeLabel = (type: string) => {
-                        const types: Record<string, string> = {
-                          trial: lang === "mm" ? "Trial Credits" : "Trial Credits",
-                          subscription: lang === "mm" ? "Plan Credits" : "Plan Credits",
-                          tts: lang === "mm" ? "TTS သုံးစွဲ" : "TTS Used",
-                          tts_character: lang === "mm" ? "Character TTS သုံးစွဲ" : "Character TTS Used",
-                          translate_file: lang === "mm" ? "ဗီဒီယိုဘာသာပြန် သုံးစွဲ" : "Video Translate Used",
-                          translate_link: lang === "mm" ? "Link ဘာသာပြန် သုံးစွဲ" : "Link Translate Used",
-                          dub_file: lang === "mm" ? "Dub ဖိုင် သုံးစွဲ" : "Dub File Used",
-                          dub_link: lang === "mm" ? "Dub Link သုံးစွဲ" : "Dub Link Used",
-                          refund_tts: "↩ Refund (TTS)",
-                          refund_tts_character: "↩ Refund (Character TTS)",
-                          refund_translate_file: "↩ Refund (Video Translate)",
-                          refund_translate_link: "↩ Refund (Link Translate)",
-                          refund_dub_file: "↩ Refund (Dub File)",
-                          refund_dub_link: "↩ Refund (Dub Link)",
-                        };
-                        return types[type] || type;
-                      };
-                      return (
-                        <div
-                          key={tx.id}
-                          className="flex items-center gap-3 p-3 rounded-2xl border"
-                          style={{ background: cardBg, borderColor: cardBorder, boxShadow }}
-                        >
-                          <div
-                            className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-base"
-                            style={{
-                              background: isPositive ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.12)",
-                            }}
-                          >
-                            {isPositive ? "⬆️" : "⬇️"}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-semibold truncate" style={{ color: textColor }}>
-                              {txTypeLabel(tx.type || "")}
-                            </div>
-                            {tx.description && (
-                              <div className="text-xs truncate" style={{ color: subtextColor }}>
-                                {tx.description}
-                              </div>
-                            )}
-                          </div>
-                          <div className="text-right flex-shrink-0">
-                            <div
-                              className="text-sm font-black"
-                              style={{ color: isPositive ? "#22c55e" : "#ef4444" }}
-                            >
-                              {isPositive ? "+" : ""}{tx.amount}
-                            </div>
-                            <div className="text-[10px]" style={{ color: subtextColor }}>
-                              {tx.createdAt
-                                ? new Date(tx.createdAt as any).toLocaleString(lang === "mm" ? "my-MM" : "en-US", {
-                                    month: "short", day: "2-digit",
-                                    hour: "numeric", minute: "2-digit", hour12: true,
-                                  })
-                                : "-"}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
               )}
             </div>
           )}
