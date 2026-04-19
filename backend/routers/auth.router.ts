@@ -15,7 +15,7 @@ const t = initTRPC.context<TrpcContext>().create({
 
 const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
   if (!ctx.user)
-    throw new TRPCError({ code: "UNAUTHORIZED", error: "Login required" });
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Login required" });
   return next({ ctx: { ...ctx, user: ctx.user } } as any);
 });
 
