@@ -23,7 +23,7 @@ export interface Job {
 // ─── In-memory cache (primary store for active/recent jobs) ─────
 const jobs = new Map<string, Job>();
 
-const MAX_CONCURRENT = 2;
+const MAX_CONCURRENT = 4;
 let activeJobs = 0;
 const waitingQueue: Array<() => void> = [];
 

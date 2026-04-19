@@ -4,6 +4,24 @@ import { promisify } from "util";
 
 const execFileAsync = promisify(execFile);
 
+export async function getVideoInfo(url: string): Promise<{ duration: number; filesize: number } | null> {
+  try {
+    const { stdout } = await execFileAsync("yt-dlp", [
+      "--dump-json",
+      "--no-download",
+      url
+    ], { timeout: 60000 });
+    const info = JSON.parse(stdout);
+    return {
+      duration: info.duration || 0,
+      filesize: info.filesize || info.filesize_approx || 0
+    };
+  } catch (error) {
+    console.error("[getVideoInfo Error]", error);
+    return null;
+  }
+}
+
 export async function downloadVideo(url: string, outputPath: string, options: { timeout?: number } = {}) {
   try {
     // Using yt-dlp for robust video downloading

@@ -165,7 +165,7 @@ export default defineConfig({
   root: path.resolve(import.meta.dirname, "frontend"),
   publicDir: path.resolve(import.meta.dirname, "frontend", "public"),
   build: {
-    outDir: path.resolve(import.meta.dirname, "dist/public"),
+    outDir: path.resolve(import.meta.dirname, "frontend/dist"),
     emptyOutDir: true,
   },
   server: {

@@ -88,45 +88,46 @@ async function translateBatch(
   modelId: string
 ): Promise<string[] | null> {
   const url = `https://generativelanguage.googleapis.com/v1beta/${modelId}:generateContent?key=${apiKey}`;
-
-  const systemPrompt = `You are a TTS narrator. Translate video script EXACTLY word-for-word to Myanmar.
+  
+  // For single long text, use simple text; for batches use JSON array
+  const isSingleLongText = lines.length === 1 && lines[0].length > 1000;
+  
+  const systemPrompt = isSingleLongText
+    ? `You are a translator. Translate the video script EXACTLY word-for-word to Myanmar Burmese. Keep exact meaning. Output ONLY the translation in Myanmar. No explanation, no notes.`
+    : `You are a TTS narrator. Translate video script EXACTLY word-for-word to Myanmar.
 Keep exact meaning. Output must be speakable. No intro or outro.
 Return exact same number of lines as input.
 
 STRICT RULES:
-1. ONLY TRANSLATE: Output ONLY the translation. Do NOT add any explanation, note, or intro text like "ဤသည်မှာ..." or "This is..." 
+1. ONLY TRANSLATE: Output ONLY the translation. 
 2. ONLY MYANMAR: Output in Myanmar ONLY.
-3. TRANSLITERATION: Use phonetic Myanmar (Car=ကား, Bus=ဘတ်စ်ကား, Zombie=ဇွန်ဘီး).
-4. DYNAMIC ENDINGS: Mix "ခဲ့တာပါ", "ပါတော့တယ်", "နေကြတာပါ", "သွားခဲ့ရတယ်", "လိုက်မိပါတယ်", "ကြတာပါ", "နေခဲ့တယ်".
-5. NO "ပါတယ်" repetition.
-6. SPOKEN STYLE: Natural conversational Myanmar.
-7. CLEAN OUTPUT: JSON array ONLY. No intro/notes.`;
+3. CLEAN OUTPUT: JSON array ONLY. No intro/notes.`;
 
   try {
+    let body: any;
+    
+    if (isSingleLongText) {
+      // Simple translation for single long text
+      body = {
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ parts: [{ text: `TRANSLATE TO MYANMAR:\n${lines[0]}` }] }],
+      };
+    } else {
+      // JSON array for batch
+      body = {
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ parts: [{ text: `TEXT TO TRANSLATE (JSON Array):\n${JSON.stringify(lines)}` }] }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: { type: "ARRAY", items: { type: "STRING" } },
+        },
+      };
+    }
+    
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: {
-          parts: [{ text: systemPrompt }],
-        },
-        contents: [
-          {
-            parts: [
-              {
-                text: `TEXT TO TRANSLATE (JSON Array):\n${JSON.stringify(lines)}`,
-              },
-            ],
-          },
-        ],
-        generationConfig: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: "ARRAY",
-            items: { type: "STRING" },
-          },
-        },
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!res.ok) {
@@ -138,13 +139,24 @@ STRICT RULES:
     }
 
     const data = await res.json();
+    console.log(`[Gemini] Raw API response:`, JSON.stringify(data).substring(0, 500));
 
     if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
       const text = data.candidates[0].content.parts[0].text;
+      console.log(`[Gemini] Text response: "${text?.substring(0, 200)}"`);
+      
+      // For single very long text (which is our video translate case), just return as-is
+      if (lines.length === 1) {
+        console.log(`[Gemini] Single text mode - returning direct translation`);
+        return [text.trim()];
+      }
+      
+      // For multiple texts, try to parse as JSON array
       try {
         const parsedArray = JSON.parse(text);
 
         if (Array.isArray(parsedArray) && parsedArray.length === lines.length) {
+          console.log(`[Gemini] Parsed successfully: ${parsedArray.length} items`);
           return parsedArray;
         } else {
           console.log(
@@ -152,12 +164,12 @@ STRICT RULES:
           );
           return null;
         }
-      } catch {
-        console.log("[Gemini] Failed to parse batch response as JSON");
+      } catch (e) {
+        console.log("[Gemini] Failed to parse batch response as JSON:", e);
         return null;
       }
     } else {
-      console.log("[Gemini] API returned empty response.");
+      console.log("[Gemini] API returned empty response. Full data:", JSON.stringify(data).substring(0, 300));
       return null;
     }
   } catch (err: any) {

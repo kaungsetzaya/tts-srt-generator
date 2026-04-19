@@ -252,10 +252,9 @@ export async function generateSpeech(
     }
 
     const durationMs = parseLastEndTime(rawSrt);
-    const charsPerLine = aspectRatio === "9:16" ? 32 : 44; // doubled since 2 lines are now joined into 1
 
     // Use raw edge-tts timing data for accurate SRT timestamps
-    const srtContent = buildSRTFromRaw(rawSrt, text, charsPerLine);
+    const srtContent = buildSRTFromRaw(rawSrt, text, aspectRatio);
 
     return { audioBuffer, rawSrt, srtContent, durationMs };
   } finally {
@@ -282,6 +281,7 @@ function srtTimeToMs(time: string): number {
 }
 
 function msToSrtTime(ms: number): string {
+  ms = Math.max(0, ms);
   const h = Math.floor(ms / 3600000);
   const m = Math.floor((ms % 3600000) / 60000);
   const s = Math.floor((ms % 60000) / 1000);
@@ -322,6 +322,19 @@ function graphemeLen(s: string): number {
   return [...segmenter.segment(s)].length;
 }
 
+// ─── Burmese SRT constants ───────────────────────────────────────────────────
+const BURMESE_SRT_CONFIG = {
+  "16:9": { charsPerLine: 20 },
+  "9:16": { charsPerLine: 14 },
+} as const;
+
+const MIN_CUE_MS = 800;   // minimum cue display duration (ms)
+const FRAME_GAP_MS = 42;  // inter-cue gap so editors see separate segments
+
+// ─── Burmese sentence boundary ───────────────────────────────────────────────
+// ။ = full stop (U+104B), ၊ = comma/clause separator (U+104A)
+const BURMESE_BOUNDARY_RE = /[။၊]/;
+
 interface WordEntry {
   startMs: number;
   endMs: number;
@@ -355,8 +368,9 @@ function parseRawSrt(rawSrt: string): WordEntry[] {
 function buildSRTFromRaw(
   rawSrt: string,
   originalText: string,
-  charsPerLine: number
+  aspectRatio: "9:16" | "16:9"
 ): string {
+  const { charsPerLine } = BURMESE_SRT_CONFIG[aspectRatio] ?? BURMESE_SRT_CONFIG["16:9"];
   const words = parseRawSrt(rawSrt);
 
   if (words.length === 0) {
@@ -369,94 +383,121 @@ function buildSRTFromRaw(
     .filter(t => t.length > 0);
   if (tokens.length === 0) return "";
 
-  const tokenEntries: { token: string; startMs: number; endMs: number }[] = [];
-  for (let i = 0; i < tokens.length; i++) {
-    if (i < words.length) {
-      tokenEntries.push({
-        token: tokens[i],
-        startMs: words[i].startMs,
-        endMs: words[i].endMs,
-      });
-    } else {
+  const tokenEntries: { token: string; startMs: number; endMs: number }[] = tokens.map(
+    (token, i) => {
+      if (i < words.length) {
+        return { token, startMs: words[i].startMs, endMs: words[i].endMs };
+      }
       const last = words[words.length - 1];
-      tokenEntries.push({
-        token: tokens[i],
-        startMs: last.endMs,
-        endMs: last.endMs + 200,
-      });
+      return { token, startMs: last.endMs, endMs: last.endMs + 200 };
     }
-  }
+  );
 
-  const segments: (typeof tokenEntries)[] = [];
+  // ── Step 1: group tokens into sentences at Burmese boundary characters ──
+  const sentences: (typeof tokenEntries)[] = [];
   let cur: typeof tokenEntries = [];
   for (const entry of tokenEntries) {
     cur.push(entry);
-    if (/[။၊]$/.test(entry.token)) {
-      segments.push(cur);
+    if (BURMESE_BOUNDARY_RE.test(entry.token)) {
+      sentences.push(cur);
       cur = [];
     }
   }
-  if (cur.length > 0) segments.push(cur);
+  if (cur.length > 0) sentences.push(cur);
 
-  const lines: { text: string; startMs: number; endMs: number }[] = [];
-  for (const seg of segments) {
-    let currentTokens: string[] = [];
-    let currentChars = 0;
-    let lineStartMs = seg[0].startMs;
-    let lineEndMs = seg[0].endMs;
+  // ── Step 2: within each sentence, wrap into display lines ──
+  interface DisplayLine {
+    text: string;
+    startMs: number;
+    endMs: number;
+    sentenceEnd: boolean;
+  }
+  const displayLines: DisplayLine[] = [];
 
-    for (const entry of seg) {
-      const tokenChars = graphemeLen(entry.token);
-      if (currentChars > 0 && currentChars + 1 + tokenChars > charsPerLine) {
-        lines.push({
-          text: currentTokens.join(" "),
-          startMs: lineStartMs,
-          endMs: lineEndMs,
+  for (const sentence of sentences) {
+    let lineTokens: string[] = [];
+    let lineChars = 0;
+    let lineStart = sentence[0].startMs;
+    let lineEnd = sentence[0].endMs;
+
+    for (const entry of sentence) {
+      const glen = graphemeLen(entry.token);
+      if (lineChars > 0 && lineChars + 1 + glen > charsPerLine) {
+        displayLines.push({
+          text: lineTokens.join(" "),
+          startMs: lineStart,
+          endMs: lineEnd,
+          sentenceEnd: false,
         });
-        currentTokens = [];
-        currentChars = 0;
-        lineStartMs = entry.startMs;
+        lineTokens = [];
+        lineChars = 0;
+        lineStart = entry.startMs;
       }
-      currentTokens.push(entry.token);
-      currentChars += (currentChars > 0 ? 1 : 0) + tokenChars;
-      lineEndMs = entry.endMs;
+      lineTokens.push(entry.token);
+      lineChars += (lineChars > 0 ? 1 : 0) + glen;
+      lineEnd = entry.endMs;
     }
-    if (currentTokens.length > 0) {
-      lines.push({
-        text: currentTokens.join(" "),
-        startMs: lineStartMs,
-        endMs: lineEndMs,
+    if (lineTokens.length > 0) {
+      displayLines.push({
+        text: lineTokens.join(" "),
+        startMs: lineStart,
+        endMs: lineEnd,
+        sentenceEnd: true,
       });
     }
   }
 
-  const blocks: { lines: string[]; startMs: number; endMs: number }[] = [];
+  // ── Step 3: pair display lines into 2-line cues ──
+  interface Cue {
+    lines: string[];
+    startMs: number;
+    endMs: number;
+  }
+  const cues: Cue[] = [];
   let i = 0;
-  while (i < lines.length) {
-    if (i + 1 < lines.length) {
-      blocks.push({
-        lines: [lines[i].text, lines[i + 1].text],
-        startMs: lines[i].startMs,
-        endMs: lines[i + 1].endMs,
+  while (i < displayLines.length) {
+    const first = displayLines[i];
+    if (!first.sentenceEnd && i + 1 < displayLines.length) {
+      const second = displayLines[i + 1];
+      cues.push({
+        lines: [first.text, second.text],
+        startMs: first.startMs,
+        endMs: second.endMs,
       });
       i += 2;
     } else {
-      blocks.push({
-        lines: [lines[i].text],
-        startMs: lines[i].startMs,
-        endMs: lines[i].endMs + 300,
+      cues.push({
+        lines: [first.text],
+        startMs: first.startMs,
+        endMs: first.endMs,
       });
       i++;
     }
   }
 
+  // ── Step 4: enforce minimum duration and inter-cue frame gap ──
+  for (let j = 0; j < cues.length; j++) {
+    const nextStart = j + 1 < cues.length ? cues[j + 1].startMs : Infinity;
+    const maxEnd = nextStart - FRAME_GAP_MS;
+
+    // ပြင်ဆင်ချက်: မူလကြာချိန် (သို့) အနည်းဆုံးကြာချိန် ထဲမှ ပိုများသောတန်ဖိုးကို ယူပါမည်
+    const desiredEnd = Math.max(cues[j].endMs, cues[j].startMs + MIN_CUE_MS);
+    cues[j].endMs = Math.min(desiredEnd, maxEnd);
+
+    // Safety floor: ensure endMs is always after startMs
+    if (cues[j].endMs <= cues[j].startMs) {
+      cues[j].endMs = cues[j].startMs + 100;
+    }
+  }
+
+  // ── Step 5: serialise to SRT ──
   const result: string[] = [];
-  for (let idx = 0; idx < blocks.length; idx++) {
+  for (let idx = 0; idx < cues.length; idx++) {
     result.push(`${idx + 1}`);
     result.push(
-      `${msToSrtTime(blocks[idx].startMs)} --> ${msToSrtTime(blocks[idx].endMs)}`
+      `${msToSrtTime(cues[idx].startMs)} --> ${msToSrtTime(cues[idx].endMs)}`
     );
-    result.push(blocks[idx].lines.join(" "));
+    result.push(cues[idx].lines.join("\n"));
     result.push("");
   }
 
@@ -474,38 +515,37 @@ function buildSRT(
     .filter(t => t.length > 0);
   if (tokens.length === 0) return "";
 
-  // Step 1: split into segments by sentence boundary (။ ၊)
-  // Each segment is an array of tokens belonging to one sentence
-  const segments: string[][] = [];
+  // ── Step 1: split into sentences at Burmese boundary characters ──
+  const sentences: string[][] = [];
   let cur: string[] = [];
   for (const token of tokens) {
     cur.push(token);
-    if (/[၊။]$/.test(token)) {
-      segments.push(cur);
+    if (BURMESE_BOUNDARY_RE.test(token)) {
+      sentences.push(cur);
       cur = [];
     }
   }
-  if (cur.length > 0) segments.push(cur);
+  if (cur.length > 0) sentences.push(cur);
 
-  // Step 2: within each segment, split into lines by charsPerLine
+  // ── Step 2: wrap each sentence into display lines ──
   const lines: string[] = [];
-  for (const seg of segments) {
+  for (const seg of sentences) {
     let current: string[] = [];
     let currentChars = 0;
     for (const token of seg) {
-      const tokenChars = graphemeLen(token);
-      if (currentChars > 0 && currentChars + 1 + tokenChars > charsPerLine) {
+      const glen = graphemeLen(token);
+      if (currentChars > 0 && currentChars + 1 + glen > charsPerLine) {
         lines.push(current.join(" "));
         current = [];
         currentChars = 0;
       }
       current.push(token);
-      currentChars += (currentChars > 0 ? 1 : 0) + tokenChars;
+      currentChars += (currentChars > 0 ? 1 : 0) + glen;
     }
     if (current.length > 0) lines.push(current.join(" "));
   }
 
-  // Step 3: simple 2-line blocks
+  // ── Step 3: pair into 2-line blocks ──
   const rawBlocks: string[][] = [];
   let i = 0;
   while (i < lines.length) {
@@ -518,7 +558,7 @@ function buildSRT(
     }
   }
 
-  // Merge any trailing solo block into previous
+  // Merge any trailing solo block into the previous one
   const blocks: string[][] = [];
   for (let j = 0; j < rawBlocks.length; j++) {
     if (
@@ -532,31 +572,32 @@ function buildSRT(
     }
   }
 
-  // Step 4: distribute duration by word count
-  const blockWordCounts = blocks.map(
-    b =>
-      b
-        .join(" ")
-        .split(/\s+/)
-        .filter(t => t.length > 0).length
+  // ── Step 4: distribute duration proportionally by grapheme count ──
+  const blockGLen = blocks.map(b =>
+    b
+      .join(" ")
+      .split(/\s+/)
+      .filter(t => t.length > 0)
+      .reduce((acc, t) => acc + graphemeLen(t), 0)
   );
-  const totalBlockWords = blockWordCounts.reduce((a, b) => a + b, 0);
+  const totalGLen = blockGLen.reduce((a, b) => a + b, 0);
 
   const result: string[] = [];
   let currentMs = 0;
 
   for (let idx = 0; idx < blocks.length; idx++) {
-    const blockDuration = Math.round(
-      (blockWordCounts[idx] / totalBlockWords) * durationMs
+    const blockDuration = Math.max(
+      MIN_CUE_MS,
+      Math.round((blockGLen[idx] / totalGLen) * durationMs)
     );
     const startMs = currentMs;
     const endMs =
       idx === blocks.length - 1 ? durationMs : currentMs + blockDuration;
-    currentMs = endMs;
+    currentMs = endMs + FRAME_GAP_MS;
 
     result.push(`${idx + 1}`);
     result.push(`${msToSrtTime(startMs)} --> ${msToSrtTime(endMs)}`);
-    result.push(blocks[idx].join(" "));
+    result.push(blocks[idx].join("\n"));
     result.push("");
   }
 
@@ -564,7 +605,7 @@ function buildSRT(
 }
 
 export function generateSRT(text: string, rate: number = 1.0): string {
-  return "";
+  return buildSRT(text, rate, 40);
 }
 
 export function formatSrtTime(ms: number): string {

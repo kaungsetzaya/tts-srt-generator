@@ -492,7 +492,7 @@ export default function AdminDashboard() {
   const [paymentSlipPreview, setPaymentSlipPreview] = useState("");
 
   const getDefaultDays = (plan: Plan): number => {
-    return 30;
+    return plan === "trial" ? 7 : 30;
   };
 
   const handlePlanSelect = (plan: Plan) => {

@@ -50,6 +50,7 @@ export const ttsConversions = mysqlTable("tts_conversions", {
   voice: varchar("voice", { length: 50 }),
   // For character voices (ryan, michelle, etc.)
   character: varchar("character", { length: 50 }),
+  text: text("text"),
   charCount: int("char_count").default(0),
   durationMs: int("duration_ms").default(0),
   // Video duration in seconds (for video feature)

@@ -330,11 +330,9 @@ export default function TTSGenerator() {
   const [videoLoading, setVideoLoading] = useState(false);
   const [dubVoice, setDubVoice] = useState<"thiha" | "nilar">("thiha");
   const [dubCharacter, setDubCharacter] = useState<string>("");
-  const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
-    "standard"
-  );
-  const [dubSpeed, setDubSpeed] = useState(1.0);
-  const [dubPitch, setDubPitch] = useState(0);
+const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
+      "standard"
+    );
 
   // Dubbing SRT overlay settings
   const [srtEnabled, setSrtEnabled] = useState(true);
@@ -2823,10 +2821,198 @@ export default function TTSGenerator() {
                               </div>
                             ))}
                           </div>
+)}
+                        </div>
+
+                      {/* ── ACCORDION: Subtitle (SRT) Settings ── */}
+                      <div
+                        className={box}
+                        style={{
+                          background: cardBg,
+                          borderColor: cardBorder,
+                          boxShadow,
+                        }}
+                      >
+                        <button
+                          onClick={() => setSrtAccordionOpen(!srtAccordionOpen)}
+                          className="w-full flex items-center justify-between"
+                          style={{ marginTop: "-4px" }}
+                        >
+                          <div
+                            className={labelStyle}
+                            style={{
+                              background: labelBg,
+                              color: accent,
+                              borderColor: cardBorder,
+                            }}
+                          >
+                            {lang === "mm" ? "စာတန်း အပြင်အင်များ" : "Subtitle Settings"}
+                          </div>
+                          <ChevronDown
+                            className={`w-5 h-5 transition-transform duration-200 ${srtAccordionOpen ? "rotate-180" : ""}`}
+                            style={{ color: accent }}
+                          />
+                        </button>
+                        {srtAccordionOpen && (
+                          <div className="space-y-4 mt-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                            {/* Enable/Disable SRT */}
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-bold" style={{ color: textColor }}>
+                                {lang === "mm" ? "စာတန်း ပါပါ" : "Enable Subtitles"}
+                              </span>
+                              <button
+                                onClick={() => setSrtEnabled(!srtEnabled)}
+                                className={`w-12 h-7 rounded-full transition-all ${srtEnabled ? "bg-green-500" : "bg-gray-400"}`}
+                              >
+                                <div
+                                  className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${srtEnabled ? "translate-x-6" : "translate-x-1"}`}
+                                />
+                              </button>
+                            </div>
+
+                            {/* Font Size */}
+                            <div>
+                              <div className="flex justify-between mb-1">
+                                <span className="text-xs font-bold" style={{ color: subtextColor }}>
+                                  {lang === "mm" ? "ဖောင်းပါး" : "Font Size"}
+                                </span>
+                                <span className="text-xs font-bold" style={{ color: subtextColor }}>
+                                  {srtFontSize}px
+                                </span>
+                              </div>
+                              <input
+                                type="range"
+                                min="12"
+                                max="48"
+                                value={srtFontSize}
+                                onChange={e => setSrtFontSize(Number(e.target.value))}
+                                className="w-full accent"
+                                style={{ accentColor: accent }}
+                              />
+                            </div>
+
+                            {/* Text Color */}
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold" style={{ color: subtextColor }}>
+                                {lang === "mm" ? "စာရောင်းအရောင်" : "Text Color"}
+                              </span>
+                              <input
+                                type="color"
+                                value={srtColor}
+                                onChange={e => setSrtColor(e.target.value)}
+                                className="w-8 h-8 rounded cursor-pointer"
+                              />
+                            </div>
+
+                            {/* Margin Top */}
+                            <div>
+                              <div className="flex justify-between mb-1">
+                                <span className="text-xs font-bold" style={{ color: subtextColor }}>
+                                  {lang === "mm" ? "အပေါ်စီး" : "Margin Top"}
+                                </span>
+                                <span className="text-xs font-bold" style={{ color: subtextColor }}>
+                                  {srtMarginV}%
+                                </span>
+                              </div>
+                              <input
+                                type="range"
+                                min="0"
+                                max="80"
+                                value={srtMarginV}
+                                onChange={e => setSrtMarginV(Number(e.target.value))}
+                                className="w-full accent"
+                                style={{ accentColor: accent }}
+                              />
+                            </div>
+
+                            {/* Blur Background */}
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-bold" style={{ color: textColor }}>
+                                {lang === "mm" ? "နောက်ခံ ပါးပါး" : "Blur Background"}
+                              </span>
+                              <button
+                                onClick={() => setSrtBlurBg(!srtBlurBg)}
+                                className={`w-12 h-7 rounded-full transition-all ${srtBlurBg ? "bg-green-500" : "bg-gray-400"}`}
+                              >
+                                <div
+                                  className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${srtBlurBg ? "translate-x-6" : "translate-x-1"}`}
+                                />
+                              </button>
+                            </div>
+
+                            {srtBlurBg && (
+                              <>
+                                {/* Blur Size */}
+                                <div>
+                                  <div className="flex justify-between mb-1">
+                                    <span className="text-xs font-bold" style={{ color: subtextColor }}>
+                                      {lang === "mm" ? "ပါးအား" : "Blur Amount"}
+                                    </span>
+                                    <span className="text-xs font-bold" style={{ color: subtextColor }}>
+                                      {srtBlurSize}
+                                    </span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min="0"
+                                    max="20"
+                                    value={srtBlurSize}
+                                    onChange={e => setSrtBlurSize(Number(e.target.value))}
+                                    className="w-full accent"
+                                    style={{ accentColor: accent }}
+                                  />
+                                </div>
+
+                                {/* Blur Color */}
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-bold" style={{ color: textColor }}>
+                                    {lang === "mm" ? "ပါးအရောင်" : "Blur Color"}
+                                  </span>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => setSrtBlurColor("black")}
+                                      className={`px-3 py-1 rounded text-xs font-bold ${srtBlurColor === "black" ? "ring-2" : ""}`}
+                                      style={{
+                                        background: "#1f1f1f",
+                                        color: "#fff",
+                                        ringColor: accent,
+                                      }}
+                                    >
+                                      မည်း
+                                    </button>
+                                    <button
+                                      onClick={() => setSrtBlurColor("white")}
+                                      className={`px-3 py-1 rounded text-xs font-bold ${srtBlurColor === "white" ? "ring-2" : ""}`}
+                                      style={{
+                                        background: "#fff",
+                                        color: "#000",
+                                        ringColor: accent,
+                                      }}
+                                    >
+                                     စွက်
+                                    </button>
+                                  </div>
+                                </div>
+                              </>
+                            )}
+
+                            {/* Full Width */}
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-bold" style={{ color: textColor }}>
+                                {lang === "mm" ? "ပြည့်ပါးပါး" : "Full Width"}
+                              </span>
+                              <button
+                                onClick={() => setSrtFullWidth(!srtFullWidth)}
+                                className={`w-12 h-7 rounded-full transition-all ${srtFullWidth ? "bg-green-500" : "bg-gray-400"}`}
+                              >
+                                <div
+                                  className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${srtFullWidth ? "translate-x-6" : "translate-x-1"}`}
+                                />
+                              </button>
+                            </div>
+                          </div>
                         )}
                       </div>
-
-                      {/* Speed/Pitch and SRT settings are now handled automatically by the backend */}
 
                       {/* Generate Dubbing Button */}
                       <motion.button

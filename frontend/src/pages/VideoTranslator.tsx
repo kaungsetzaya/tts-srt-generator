@@ -27,11 +27,11 @@ export default function VideoTranslator() {
     if (jobId && getJobQuery.data) {
       if (getJobQuery.data.status === "completed" && getJobQuery.data.result) {
         setResult({
-          englishText: getJobQuery.data.result.englishText,
-          myanmarText: getJobQuery.data.result.myanmarText,
-          srtContent: getJobQuery.data.result.srtContent,
+          englishText: getJobQuery.data.result.englishText || "",
+          myanmarText: getJobQuery.data.result.myanmarText || "",
+          srtContent: getJobQuery.data.result.srtContent || "",
         });
-        setEditedText(getJobQuery.data.result.myanmarText);
+        setEditedText(getJobQuery.data.result.myanmarText || "");
         setJobId(null);
         setJobProgress(100);
         queryClient.invalidateQueries({ queryKey: ["subscription", "myStatus"] });

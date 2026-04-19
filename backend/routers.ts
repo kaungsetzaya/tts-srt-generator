@@ -803,6 +803,7 @@ export const appRouter = t.router({
           days: z.number(),
           note: z.string().optional(),
           paymentMethod: z.string().optional(),
+          paymentSlip: z.string().optional(),
         })
       )
       .mutation(async ({ input }) => {
@@ -838,6 +839,8 @@ export const appRouter = t.router({
               expiresAt: newExpires,
               plan: input.plan,
               note: input.note || existing.note,
+              paymentMethod: input.paymentMethod || existing.paymentMethod,
+              paymentSlip: input.paymentSlip || existing.paymentSlip,
             })
             .where(eq(subscriptions.id, existing.id));
         } else {
@@ -849,6 +852,8 @@ export const appRouter = t.router({
             startsAt: new Date(),
             expiresAt: new Date(Date.now() + input.days * 86400000),
             note: input.note,
+            paymentMethod: input.paymentMethod ?? null,
+            paymentSlip: input.paymentSlip ?? null,
           });
         }
 

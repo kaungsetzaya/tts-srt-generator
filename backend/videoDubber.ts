@@ -8,7 +8,7 @@ import ffmpeg from "fluent-ffmpeg";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { downloadVideo } from "./_core/multiDownloader";
+import { downloadVideo, getVideoInfo } from "./_core/multiDownloader";
 import { generateSpeech, type VoiceKey } from "./tts";
 import { isAllowedVideoUrl } from "./_core/security";
 import type { DubOptions, DubResult } from "@shared/types";
@@ -307,7 +307,19 @@ export async function dubVideoFromBuffer(
   try {
     // ── Write video to disk ──
     await fs.writeFile(tempVideoPath, videoBuffer);
-    console.log(`[Dubber] Video written: ${Math.round(videoBuffer.length / 1024 / 1024)}MB`);
+    const videoSizeMB = videoBuffer.length / 1024 / 1024;
+    console.log(`[Dubber] Video written: ${Math.round(videoSizeMB)}MB`);
+
+    // ── Validate video size (25MB limit) ──
+    if (videoSizeMB > 25) {
+      throw new Error("Video too large. Max 25MB.");
+    }
+
+    // ── Validate video length (2min30sec = 150sec limit) ──
+    const videoDurationSec = await getVideoDuration(tempVideoPath);
+    if (videoDurationSec > 150) {
+      throw new Error("Video too long. Max 2min 30sec.");
+    }
 
     // ── Step 1: Extract audio ──
     console.log("[Dubber] Extracting audio...");
@@ -326,8 +338,7 @@ export async function dubVideoFromBuffer(
     console.log("[Dubber] Translating with Gemini (1 API call)...");
     const translatedSegments = await translateSegments(segments, options.userApiKey);
 
-    // ── Step 4: Get video duration ──
-    const videoDurationSec = await getVideoDuration(tempVideoPath);
+    // ── Step 4: Get video duration (reuse from validation) ──
     const videoDurationMs = Math.round(videoDurationSec * 1000);
 
     // ── Step 5: Per-segment TTS + slot-based silence padding ──
@@ -367,14 +378,14 @@ export async function dubVideoFromBuffer(
         continue;
       }
 
-      // Generate TTS — hardcoded speed 1.2x, pitch 0
+      // Generate TTS — use options speed/pitch (default to 1.2/0 for dubbing if not provided)
       let ttsResult;
       try {
         ttsResult = await generateSpeech(
           seg.text,
           options.voice as VoiceKey,
-          1.2,  // Fixed 1.2x speed for dubbing
-          0     // Fixed 0 pitch for dubbing
+          options.speed ?? 1.2,
+          options.pitch ?? 0
         );
       } catch (ttsErr) {
         console.error(`[Dubber] TTS failed for segment ${i}:`, ttsErr);
@@ -577,6 +588,19 @@ export async function dubVideoFromLink(
   const tempVideoPath = path.join(tmpdir(), `dl_${id}.mp4`);
 
   try {
+    // Validate video info before downloading
+    console.log(`[Dubber] Checking video info: ${url}`);
+    const info = await getVideoInfo(url);
+    if (!info) {
+      throw new Error("Could not get video info. Check URL.");
+    }
+    if (info.duration > 150) {
+      throw new Error("Video too long. Max 2min 30sec.");
+    }
+    if (info.filesize > 25 * 1024 * 1024) {
+      throw new Error("Video too large. Max 25MB.");
+    }
+
     console.log(`[Dubber] Downloading: ${url}`);
     await downloadVideo(url, tempVideoPath, { timeout: 300000 });
 

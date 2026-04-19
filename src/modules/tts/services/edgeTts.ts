@@ -1,4 +1,4 @@
-import { execFile, execFileSync } from "child_process";
+import { execFile } from "child_process";
 import { promisify } from "util";
 import * as fs from "fs/promises";
 import * as path from "path";
@@ -125,3 +125,7 @@ export class EdgeTtsService {
 }
 
 export const edgeTts = new EdgeTtsService();
+
+export async function generateSpeech(input: TtsInput): Promise<TtsOutput> {
+  return edgeTts.generate(input);
+}

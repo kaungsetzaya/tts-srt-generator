@@ -6,7 +6,7 @@ import { tmpdir } from 'os';
 import ffmpeg from 'fluent-ffmpeg';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { geminiTranslate, geminiTranslateBatch } from "./geminiTranslator";
+import { geminiTranslate } from "./geminiTranslator";
 import { downloadVideo } from "./_core/multiDownloader";
 import { isAllowedVideoUrl, isPathWithinDir, sanitizeForAI } from "./_core/security";
 
@@ -127,11 +127,28 @@ export async function translateVideo(
     userApiKey?: string,
     onProgress?: (pct: number, msg: string) => void
 ) {
+    const videoSizeMB = videoBuffer.length / 1024 / 1024;
+    if (videoSizeMB > 25) {
+        throw new Error("Video too large. Max 25MB.");
+    }
+
     let audioPath: string | null = null;
+    let videoPath: string | null = null;
 
     try {
+        // Write temp video for duration check
+        const id = randomUUID();
+        videoPath = path.join(tmpdir(), `vt_${id}.mp4`);
+        await fs.writeFile(videoPath, videoBuffer);
+
+        // Check duration
+        const duration = await getVideoDuration(videoPath);
+        if (duration > 150) {
+            throw new Error("Video too long. Max 2min 30sec.");
+        }
+
         onProgress?.(15, "Audio ထုတ်နေသည်...");
-        console.log(`[Translate] Step 1: Extracting audio from ${filename} (${videoBuffer.length} bytes)`);
+        console.log(`[Translate] Step 1: Extracting audio from ${filename} (${Math.round(videoSizeMB)}MB`);
         audioPath = await extractAudio(videoBuffer);
         console.log(`[Translate] Step 2: Audio extracted to ${audioPath}`);
 
@@ -144,24 +161,25 @@ export async function translateVideo(
             throw new Error("No speech detected in video.");
         }
 
-        // 🔐 Prompt Injection Guard
+        // 🔐 Prompt Injection Guard - Translate ALL at once as paragraph
+        if (!englishText || englishText.trim().length === 0) {
+            throw new Error("No English text to translate.");
+        }
+        
         onProgress?.(70, "Gemini AI ဖြင့် မြန်မာဘာသာပြန်နေသည်...");
-        const sanitizedSegments = segments.map((s, i) => ({ index: i, start: s.start, end: s.end, text: s.text }));
-        console.log(`[Translate] Step 5: Starting Gemini batch translation...`);
-        const { translated } = await geminiTranslateBatch(sanitizedSegments, userApiKey);
-        const myanmarText = translated.map(s => s.text).join(" ");
-        console.log(`[Translate] Step 6: Translation done`);
-
-        onProgress?.(95, "SRT ဖန်တီးနေသည်...");
-        const srtContent = buildMyanmarSRT(segments, translated.map(s => s.text));
-
+        console.log(`[Translate] English text: "${englishText.substring(0, 100)}..."`);
+        
+        const { myanmar } = await geminiTranslate(englishText, userApiKey);
+        
+        console.log(`[Translate] Myanmar result: "${myanmar.substring(0, 100)}..."`);
+        
         return {
-            englishText,
-            myanmarText,
-            srtContent,
+            englishText: englishText,
+            myanmarText: myanmar,
         };
     } finally {
         if (audioPath) await fs.unlink(audioPath).catch(() => {});
+        if (videoPath) await fs.unlink(videoPath).catch(() => {});
     }
 }
 
@@ -171,6 +189,19 @@ export async function translateVideoLink(url: string, userApiKey?: string, onPro
     // 🔐 yt-dlp Domain Whitelist
     if (!isAllowedVideoUrl(url)) {
         throw new Error("ခွင့်ပြုထားသော Link များသာ သုံးနိုင်ပါသည်။ YouTube, TikTok, Facebook Link သာ ထည့်ပါ။");
+    }
+
+    // Check video info before downloading
+    const { getVideoInfo } = await import("./_core/multiDownloader");
+    const info = await getVideoInfo(url);
+    if (!info) {
+        throw new Error("Could not get video info. Check URL.");
+    }
+    if (info.duration > 150) {
+        throw new Error("Video too long. Max 2min 30sec.");
+    }
+    if (info.filesize > 25 * 1024 * 1024) {
+        throw new Error("Video too large. Max 25MB.");
     }
 
     // 🔐 UUID filenames
@@ -226,18 +257,20 @@ export async function translateVideoLink(url: string, userApiKey?: string, onPro
         if (!englishText || !englishText.trim()) {
             throw new Error("Whisper could not detect any speech in this video.");
         }
+        
+        console.log(`[Video Translator] English: "${englishText.substring(0, 100)}..."`);
 
         onProgress?.(80, "Gemini AI ဖြင့် မြန်မာဘာသာပြန်နေသည်...");
         console.log(`[Video Translator] Translating with Gemini...`);
-        const sanitizedSegments = segments.map((s, i) => ({ index: i, start: s.start, end: s.end, text: s.text }));
-        const { translated } = await geminiTranslateBatch(sanitizedSegments, userApiKey);
-        const myanmarText = translated.map(s => s.text).join(" ");
-        const srtContent = buildMyanmarSRT(segments, translated.map(s => s.text));
+        
+        // Translate ALL at once using geminiTranslate (simple call)
+        const { myanmar } = await geminiTranslate(englishText, userApiKey);
+        
+        console.log(`[Video Translator] Myanmar: "${myanmar.substring(0, 100)}..."`);
 
         return { 
             englishText, 
-            myanmarText, 
-            srtContent,
+            myanmarText: myanmar, 
         };
     } catch (error: any) {
         console.error("[Video Translator Error]", error);
