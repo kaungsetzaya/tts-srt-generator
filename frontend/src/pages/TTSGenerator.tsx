@@ -3014,6 +3014,30 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                         )}
                       </div>
 
+                      {/* SRT Toggle - Always Visible */}
+                      <div
+                        className={box}
+                        style={{
+                          background: cardBg,
+                          borderColor: cardBorder,
+                          boxShadow,
+                        }}
+                      >
+                        <div className="flex items-center justify-between py-2">
+                          <span className="text-sm font-bold" style={{ color: textColor }}>
+                            {lang === "mm" ? "စာတန်း ပါပါ" : "Enable Subtitles"}
+                          </span>
+                          <button
+                            onClick={() => setSrtEnabled(!srtEnabled)}
+                            className={`w-12 h-7 rounded-full transition-all ${srtEnabled ? "bg-green-500" : "bg-gray-400"}`}
+                          >
+                            <div
+                              className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${srtEnabled ? "translate-x-6" : "translate-x-1"}`}
+                            />
+                          </button>
+                        </div>
+                      </div>
+
                       {/* Generate Dubbing Button */}
                       <motion.button
                         onClick={handleDubGenerate}
