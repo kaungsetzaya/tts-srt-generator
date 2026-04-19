@@ -70,6 +70,7 @@ export const errorLogs = mysqlTable("error_logs", {
   stackTrace: text("stack_trace"),
   severity: varchar("severity", { length: 10 }).default("error"),
   resolved: boolean("resolved").default(false),
+  resolvedAt: timestamp("resolved_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -87,4 +88,19 @@ export const creditTransactions = mysqlTable("credit_transactions", {
   type: varchar("type", { length: 50 }).notNull(), // 'trial', 'purchase', 'tts', 'video_translate', 'video_dub'
   description: varchar("description", { length: 255 }),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Persistent job storage (survives server restarts)
+export const ttsJobs = mysqlTable("tts_jobs", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  type: varchar("type", { length: 30 }).notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("pending"),
+  progress: int("progress").notNull().default(0),
+  message: varchar("message", { length: 500 }).default(""),
+  inputJson: text("input_json"),
+  resultJson: text("result_json"),
+  error: varchar("error", { length: 1000 }),
+  userId: varchar("user_id", { length: 36 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });

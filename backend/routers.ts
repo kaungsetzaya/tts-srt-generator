@@ -7,7 +7,7 @@ import { translateVideo, translateVideoLink } from "./videoTranslator";
 import { isAllowedVideoUrl } from "./_core/security";
 import { getDb } from "./db";
 import { checkRateLimit, clearRateLimit } from "./_core/rateLimit";
-import { createJob, getJob, updateJob } from "./jobs";
+import { createJob, getJob, getJobAsync, updateJob, recoverInterruptedJobs } from "./jobs";
 import {
   users,
   ttsConversions,
@@ -468,7 +468,8 @@ export const appRouter = t.router({
     getTranslateJob: protectedProcedure
       .input(z.object({ jobId: z.string() }))
       .query(async ({ input }) => {
-        const job = getJob(input.jobId);
+        // Use async version to fall back to DB if job not in memory (e.g. after restart)
+        const job = await getJobAsync(input.jobId);
         if (!job) return { status: "failed", error: "Job not found", progress: 0, message: "" };
         return {
           status: job.status,
@@ -522,7 +523,8 @@ export const appRouter = t.router({
     getTranslateLinkJob: protectedProcedure
       .input(z.object({ jobId: z.string() }))
       .query(async ({ input }) => {
-        const job = getJob(input.jobId);
+        // Use async version to fall back to DB if job not in memory (e.g. after restart)
+        const job = await getJobAsync(input.jobId);
         if (!job) return { status: "failed", error: "Job not found", progress: 0, message: "" };
         return {
           status: job.status,
@@ -544,30 +546,41 @@ export const appRouter = t.router({
         })
       )
       .mutation(async ({ input, ctx }) => {
+        const userId = ctx.user!.userId;
+
+        // Validate URL first
+        if (!isAllowedVideoUrl(input.url)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invalid or disallowed URL",
+          });
+        }
+
+        // Deduct 10 credits upfront
+        await deductCredits(
+          userId,
+          10,
+          "video_dub",
+          `Video Dub Link: ${input.voice}`
+        );
+
+        // createJob will auto-trigger the registered dub_link processor
         const jobId = createJob("dub_link", {
           url: input.url,
           voice: input.voice,
           speed: 1.2,
           pitch: 0,
           srtEnabled: true,
-        }, ctx.user!.userId);
-        
-        // Start dub in background
-        dubVideoFromLink(input.url, {
-          voice: input.voice,
-          speed: 1.2,
-          pitch: 0,
-          srtEnabled: true,
-        })
-          .then(() => console.log(`[Job ${jobId}] Complete`))
-          .catch(e => console.error(`[Job ${jobId}] Failed:`, e));
-          
+          userId,
+        }, userId);
+
         return { jobId };
       }),
     getStatus: protectedProcedure
       .input(z.object({ jobId: z.string() }))
       .query(async ({ input }) => {
-        const job = getJob(input.jobId);
+        // Use async version to fall back to DB if job not in memory (e.g. after restart)
+        const job = await getJobAsync(input.jobId);
         if (!job) {
           return { status: "not_found" as const, progress: 0, message: "" };
         }
@@ -629,9 +642,9 @@ export const appRouter = t.router({
   // ─── SUBSCRIPTION ───────────────────────
   subscription: t.router({
     myStatus: t.procedure.query(async ({ ctx }) => {
-      if (!ctx.user) return { active: false, plan: null, credits: 0 };
+      if (!ctx.user) return { active: false, plan: null, credits: 0, expiresAt: null, renewsAt: null };
       const db = await getDb();
-      if (!db) return { active: false, plan: null, credits: 0 };
+      if (!db) return { active: false, plan: null, credits: 0, expiresAt: null, renewsAt: null };
       try {
         const [user] = await db
           .select()
@@ -648,11 +661,12 @@ export const appRouter = t.router({
               active: true,
               plan: sub.plan,
               expiresAt: sub.expiresAt,
+              renewsAt: null,
               credits: user?.credits ?? 0,
             }
-          : { active: false, plan: null, credits: user?.credits ?? 0 };
+          : { active: false, plan: null, expiresAt: null, renewsAt: null, credits: user?.credits ?? 0 };
       } catch {
-        return { active: false, plan: null, credits: 0 };
+        return { active: false, plan: null, credits: 0, expiresAt: null, renewsAt: null };
       }
     }),
   }),
@@ -797,7 +811,7 @@ export const appRouter = t.router({
 
         // Credits per plan
         const planCredits: Record<string, number> = {
-          trial: 10,
+          trial: 15,
           starter: 50,
           creator: 200,
           pro: 500,
@@ -912,6 +926,13 @@ export const appRouter = t.router({
           planCounts: [],
         };
       try {
+        const PLAN_PRICE: Record<string, number> = {
+          trial: 0,
+          starter: 5000,
+          creator: 15000,
+          pro: 30000,
+        };
+
         const [totalUsersRow] = await db.select({ count: count() }).from(users);
         const [activeSubsRow] = await db
           .select({ count: count() })
@@ -923,13 +944,27 @@ export const appRouter = t.router({
         const planRows = await db
           .select({ plan: subscriptions.plan, count: count() })
           .from(subscriptions)
+          .where(sql`payment_method IS NOT NULL AND payment_method != 'free' AND created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)`)
           .groupBy(subscriptions.plan);
+
+        // Calculate real monthly revenue from paid subscriptions
+        const revenue = planRows.reduce(
+          (sum: number, p: any) => sum + (PLAN_PRICE[p.plan] ?? 0) * p.count,
+          0
+        );
+
+        // All-time plan counts (for plan distribution chart)
+        const allPlanRows = await db
+          .select({ plan: subscriptions.plan, count: count() })
+          .from(subscriptions)
+          .groupBy(subscriptions.plan);
+
         return {
           totalUsers: totalUsersRow?.count || 0,
           activeSubs: activeSubsRow?.count || 0,
           totalConversions: totalConvRow?.count || 0,
-          revenue: 0,
-          planCounts: planRows,
+          revenue,
+          planCounts: allPlanRows,
         };
       } catch {
         return {
@@ -976,9 +1011,15 @@ export const appRouter = t.router({
         const db = await getDb();
         if (!db) return { failedGenerations: [], systemLogs: [] };
         try {
+          // Apply onlyUnresolved filter — was previously ignored
           const logs = await db
             .select()
             .from(errorLogs)
+            .where(
+              input.onlyUnresolved
+                ? eq(errorLogs.resolved, false)
+                : sql`1=1`
+            )
             .orderBy(desc(errorLogs.createdAt))
             .limit(input.limit || 50);
 
@@ -996,7 +1037,7 @@ export const appRouter = t.router({
       }),
     getVoiceStats: adminProcedure
       .input(z.object({ timeframe: z.string().optional() }))
-      .query(async () => {
+      .query(async ({ input }) => {
         const db = await getDb();
         if (!db)
           return {
@@ -1009,10 +1050,18 @@ export const appRouter = t.router({
             totalDurationMs: 0,
           };
         try {
+          // Build timeframe filter
+          const tfDays: Record<string, number> = { week: 7, month: 30, year: 365 };
+          const days = input.timeframe ? tfDays[input.timeframe] : undefined;
+          const dateFilter = days
+            ? sql`created_at > DATE_SUB(NOW(), INTERVAL ${days} DAY)`
+            : sql`1=1`;
+
           // Voice usage stats (thiha/nilar)
           const voiceRows = await db
             .select({ voice: ttsConversions.voice, count: count() })
             .from(ttsConversions)
+            .where(dateFilter)
             .groupBy(ttsConversions.voice);
           const voices = voiceRows
             .filter((r: any) => r.voice)
@@ -1022,6 +1071,7 @@ export const appRouter = t.router({
           const featureRows = await db
             .select({ feature: ttsConversions.feature, count: count() })
             .from(ttsConversions)
+            .where(dateFilter)
             .groupBy(ttsConversions.feature);
           const features = featureRows
             .filter((r: any) => r.feature)
@@ -1034,7 +1084,8 @@ export const appRouter = t.router({
               chars: sql`SUM(char_count)`,
               duration: sql`SUM(duration_ms)`,
             })
-            .from(ttsConversions);
+            .from(ttsConversions)
+            .where(dateFilter);
 
           // Base voices (Thiha/Nilar breakdown) with displayName, chars, durationMs
           const baseVoiceDetails = await db
@@ -1045,7 +1096,9 @@ export const appRouter = t.router({
               duration: sql`COALESCE(SUM(duration_ms), 0)`,
             })
             .from(ttsConversions)
-            .where(sql`voice IN ('thiha', 'nilar')`)
+            .where(days
+              ? sql`voice IN ('thiha', 'nilar') AND created_at > DATE_SUB(NOW(), INTERVAL ${days} DAY)`
+              : sql`voice IN ('thiha', 'nilar')`)
             .groupBy(ttsConversions.voice);
 
           const baseVoices = baseVoiceDetails.map((r: any) => ({
@@ -1067,7 +1120,9 @@ export const appRouter = t.router({
               duration: sql`COALESCE(SUM(duration_ms), 0)`,
             })
             .from(ttsConversions)
-            .where(sql`\`character\` IS NOT NULL AND \`character\` != ''`)
+            .where(days
+              ? sql`\`character\` IS NOT NULL AND \`character\` != '' AND created_at > DATE_SUB(NOW(), INTERVAL ${days} DAY)`
+              : sql`\`character\` IS NOT NULL AND \`character\` != ''`)
             .groupBy(ttsConversions.character, ttsConversions.voice);
 
           const characters = charDetails.map((r: any) => ({
@@ -1457,6 +1512,40 @@ export const appRouter = t.router({
         return { success: true };
       }),
   }),
+
+  // ─── BROWSER ERROR LOGGING ─────────────────────────
+  // Called by frontend/src/main.tsx via window.onerror and unhandledrejection
+  // This was previously missing, causing 404 errors on every browser-side crash
+  logBrowserError: t.procedure
+    .input(
+      z.object({
+        errorMessage: z.string().max(2000),
+        source: z.enum(["window.onerror", "unhandledrejection", "react_error_boundary"]),
+        stackTrace: z.string().max(5000).optional(),
+        url: z.string().max(500).optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) return { success: false };
+      try {
+        await db.insert(errorLogs).values({
+          id: randomUUID(),
+          userId: ctx.user?.userId ?? null,
+          feature: "browser",
+          errorCode: input.source,
+          errorMessage: input.errorMessage,
+          stackTrace: input.stackTrace ?? null,
+          severity: "error",
+          resolved: false,
+        });
+        return { success: true };
+      } catch (e) {
+        // Silently swallow — browser error logging should never break the app
+        console.error("[logBrowserError]", e);
+        return { success: false };
+      }
+    }),
 });
 
 export type AppRouter = typeof appRouter;

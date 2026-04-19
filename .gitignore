@@ -128,3 +128,7 @@ output/
 cookies.txt
 tmp_video/
 .env
+# PM2 ecosystem files can contain hardcoded secrets
+ecosystem.cjs
+# Static downloads generated at runtime
+static/downloads/

@@ -587,3 +587,58 @@ export async function dubVideoFromLink(
     await fs.unlink(tempVideoPath).catch(() => {});
   }
 }
+
+// ─── Job Processor Registration ──────────────────────────────────
+// Must be at the bottom so dubVideoFromLink is defined first
+import { registerProcessor, updateJob } from "./jobs";
+import { getDb } from "./db";
+import { users } from "../drizzle/schema";
+import { eq, sql } from "drizzle-orm";
+
+registerProcessor("dub_link", async (job) => {
+  const { url, voice, speed, pitch, srtEnabled, userId } = job.input;
+
+  updateJob(job.id, { progress: 5, message: "ဗီဒီယို Download လုပ်နေသည်..." });
+
+  try {
+    updateJob(job.id, { progress: 15, message: "ဗီဒီယို Download ပြီးပါပြီ၊ Audio ထုတ်နေသည်..." });
+
+    const result = await dubVideoFromLink(url, {
+      voice,
+      speed: speed ?? 1.2,
+      pitch: pitch ?? 0,
+      srtEnabled: srtEnabled ?? true,
+    });
+
+    updateJob(job.id, {
+      status: "completed",
+      progress: 100,
+      result,
+      message: "ပြီးပါပြီ",
+    });
+  } catch (error: any) {
+    console.error(`[DubJob ${job.id}] Error:`, error.message);
+
+    // Refund credits on failure
+    if (userId) {
+      try {
+        const db = await getDb();
+        if (db) {
+          await db
+            .update(users)
+            .set({ credits: sql`credits + ${10}` })
+            .where(eq(users.id, userId));
+          console.log(`[DubJob] Refunded 10 credits to user ${userId}`);
+        }
+      } catch (refundErr) {
+        console.error("[DubJob] Refund failed:", refundErr);
+      }
+    }
+
+    updateJob(job.id, {
+      status: "failed",
+      error: error.message || "Dub failed",
+      message: "Failed",
+    });
+  }
+});

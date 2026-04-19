@@ -7,16 +7,16 @@ Full-stack Myanmar TTS generator with AI video dubbing capabilities.
 ```
 tts-srt-generator/
 ├── frontend/          # Vite + React frontend (deploys to Vercel)
-│   ├── src/
-│   ├── public/
-│   ├── package.json
-│   └── vite.config.ts
 ├── backend/           # Express + tRPC server (deploys to VPS)
-│   ├── server/        # API routes and core logic
-│   ├── shared/        # Shared types and utilities
-│   ├── drizzle/       # Database schema and migrations
-│   └── scripts/       # Utility scripts
-└── vercel.json        # Vercel deployment config
+│   ├── _core/        # Core server logic
+│   └── *.ts          # API routers and services
+├── shared/            # Shared types and constants
+├── drizzle/          # Database schema and migrations
+├── dist/             # Build output
+├── output/           # Generated files
+├── docs/              # Documentation
+├── scripts/           # Utility scripts
+└── [config files]
 ```
 
 ## 🚀 Deployment
@@ -45,12 +45,18 @@ Frontend proxies API calls to backend:
 - `/api/*` → `https://choco.de5.net/api/*`
 - `/trpc/*` → `https://choco.de5.net/trpc/*`
 
-## 📦 Monorepo Migration
+## 🛠️ Development
 
-This project was recently restructured from a single-folder layout to separate frontend/backend folders for easier deployment.
+```bash
+# Install dependencies
+pnpm install
 
-### Migration Notes:
-- Frontend code moved from `client/` to `frontend/`
-- Backend code moved from `server/` to `backend/`
-- Shared types and utilities are in `backend/shared/`
-- Database migrations are in `backend/drizzle/`
+# Run type check
+pnpm run check
+
+# Run tests
+pnpm run test
+
+# Format code
+pnpm run format
+```

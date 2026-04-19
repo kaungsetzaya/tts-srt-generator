@@ -1,5 +1,0 @@
-{
-  "imports": {
-    "@shared/*": "./dist/shared/*.js"
-  }
-}

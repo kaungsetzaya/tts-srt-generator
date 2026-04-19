@@ -6,6 +6,11 @@ import { appRouter } from "./routers";
 import { createContext } from "./_core/context";
 import { randomBytes } from "crypto";
 import type { TrpcContext } from "./_core/context";
+// Import videoDubber to trigger dub_link processor registration (side-effect)
+import "./videoDubber";
+// Import videoTranslator to trigger translate_file/translate_link processor registration
+import "./videoTranslator";
+import { recoverInterruptedJobs } from "./jobs";
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -83,6 +88,8 @@ export function startServer() {
   app.listen(port, () => {
     console.log(`[LUMIX] Server running on http://0.0.0.0:${port}/`);
     console.log(`[LUMIX] Environment: ${process.env.NODE_ENV || "development"}`);
+    // Mark any in-flight jobs from previous run as failed
+    recoverInterruptedJobs().catch(e => console.warn("[Jobs] Recovery error:", e));
   });
 }
 
