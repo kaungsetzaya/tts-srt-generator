@@ -66,7 +66,7 @@ async function transcribeLocalWhisper(audioPath: string): Promise<{ text: string
     console.log(`[Translate] Starting transcription for: ${audioPath}`);
     const outputDir = path.dirname(audioPath);
     const baseName = path.parse(audioPath).name;
-    const scriptPath = path.join(process.cwd(), "backend", "transcriber.py");
+    const scriptPath = path.join(process.cwd(), "python", "transcriber.py");
     const outputJson = path.join(outputDir, `${baseName}_transcription.json`);
 
     console.log(`[Translate] Running: python3 ${scriptPath} ${audioPath} ${outputJson}`);

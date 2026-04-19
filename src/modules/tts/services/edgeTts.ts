@@ -42,8 +42,16 @@ export class EdgeTtsService {
   async generate(input: TtsInput): Promise<TtsOutput> {
     return this.throttle(async () => {
       const voice = VOICE_MAP[input.options.voice] || VOICE_MAP.thiha;
-      const rate = (input.options.speed ?? 1.0) * 125;
+      const speed = input.options.speed ?? 1.0;
       const pitch = input.options.pitch ?? 0;
+      
+      // Myanmar TTS voices naturally speak slowly, apply 1.25x boost
+      const MYANMAR_SPEED_MULTIPLIER = 1.25;
+      const actualRate = speed * MYANMAR_SPEED_MULTIPLIER;
+      const ratePercent = Math.round((actualRate - 1.0) * 100);
+      const rateStr = ratePercent >= 0 ? `+${ratePercent}%` : `${ratePercent}%`;
+      
+      const pitchStr = pitch >= 0 ? `+${pitch}Hz` : `${pitch}Hz`;
 
       const id = randomUUID();
       const tempDir = tmpdir();
@@ -51,13 +59,13 @@ export class EdgeTtsService {
       const srtPath = path.join(tempDir, `tts_${id}.srt`);
 
       try {
-        await execFileAsync("python", [
+        await execFileAsync("python3", [
           "-m", "edge_tts",
           "-t", input.text,
           "-v", voice,
           "-f", srtPath,
-          "--rate=" + `+${rate}%`,
-          "--pitch=" + `${pitch > 0 ? "+" : ""}${pitch}Hz`,
+          "--rate=" + rateStr,
+          "--pitch=" + pitchStr,
           "-o", audioPath,
         ]);
 

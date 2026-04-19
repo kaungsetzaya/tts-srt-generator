@@ -1,5 +1,3 @@
-import type { DubbingOptions as DubOptions } from "./types";
-
 export type VoiceType = "thiha" | "nilar";
 
 export interface DubbingOptions {
@@ -20,4 +18,5 @@ export interface DubbingOutput {
   videoBuffer: Buffer;
   srtContent?: string;
   durationMs: number;
+  myanmarText?: string;
 }

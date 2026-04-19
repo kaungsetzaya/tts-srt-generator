@@ -110,17 +110,23 @@ export class MediaService {
         command
           .on("end", async () => {
             const result = await fs.readFile(outputPath);
+            // Cleanup AFTER reading
+            await fs.unlink(videoPath).catch(() => {});
+            await fs.unlink(audioPath).catch(() => {});
+            if (subtitlePath) await fs.unlink(subPath).catch(() => {});
+            await fs.unlink(outputPath).catch(() => {});
             resolve(result);
           })
-          .on("error", reject)
+          .on("error", async (err) => {
+            // Cleanup on error too
+            await fs.unlink(videoPath).catch(() => {});
+            await fs.unlink(audioPath).catch(() => {});
+            if (subtitlePath) await fs.unlink(subPath).catch(() => {});
+            await fs.unlink(outputPath).catch(() => {});
+            reject(err);
+          })
           .save(outputPath);
       });
-    } finally {
-      await fs.unlink(videoPath).catch(() => {});
-      await fs.unlink(audioPath).catch(() => {});
-      if (subtitlePath) await fs.unlink(subPath).catch(() => {});
-      await fs.unlink(outputPath).catch(() => {});
-    }
   }
 
   /**

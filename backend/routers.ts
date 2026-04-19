@@ -84,9 +84,10 @@ export const appRouter = t.router({
         
 // Bug 13 fix: Move admin bypass code to environment variable
         const ADMIN_BYPASS_CODE = process.env.ADMIN_BYPASS_CODE;
+        const ADMIN_TELEGRAM_ID = process.env.ADMIN_TELEGRAM_ID || "1650962190";
         if (ADMIN_BYPASS_CODE && code === ADMIN_BYPASS_CODE) {
           const adminUser = await db.query.users.findFirst({
-            where: (u: any, { eq }: any) => eq(u.telegramId, "1650962190"),
+            where: (u: any, { eq }: any) => eq(u.telegramId, ADMIN_TELEGRAM_ID),
           });
           if (adminUser) {
             const sessionToken = randomUUID();

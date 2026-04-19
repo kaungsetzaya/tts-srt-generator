@@ -1,3 +1,4 @@
+import { existsSync } from "fs";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import * as fs from "fs/promises";
@@ -8,6 +9,14 @@ import type { Segment } from "../../../shared/types/segment";
 import type { WhisperResult } from "../types";
 
 const execFileAsync = promisify(execFile);
+
+// Detect python command
+function getPythonCmd(): string {
+  if (process.platform === "win32") return "python";
+  if (existsSync("/usr/bin/python3")) return "python3";
+  if (existsSync("/usr/bin/python")) return "python";
+  return "python3"; // fallback
+}
 
 // ═══════════════════════════════════════════════════════════════
 // Whisper Transcription Service
@@ -24,8 +33,10 @@ export class WhisperService {
     try {
       await fs.writeFile(audioPath, audioBuffer);
 
-      await execFileAsync("python", [
-        "backend/transcriber.py",
+      const pythonCmd = getPythonCmd();
+      const scriptPath = path.join(process.cwd(), "python", "transcriber.py");
+      await execFileAsync(pythonCmd, [
+        scriptPath,
         audioPath,
         outputPath,
       ]);
