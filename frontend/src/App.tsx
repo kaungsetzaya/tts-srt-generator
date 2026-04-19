@@ -14,6 +14,8 @@ import History from "./pages/History";
 import TrialInfo from "./pages/TrialInfo";
 import Plans from "./pages/Plans";
 import AuthGuard from "./components/AuthGuard";
+import MaintenanceOverlay from "./components/MaintenanceOverlay";
+import { trpc } from "./lib/trpc";
 
 function Router() {
   const [location] = useLocation();
@@ -64,12 +66,27 @@ function Router() {
 }
 
 function App() {
+  const [location] = useLocation();
+  const { data: settings, isLoading } = trpc.settings.get.useQuery();
+
+  const isMaintenance = settings?.maintenanceModeEnabled === "true";
+  const isSafeRoute = location.startsWith("/admin") || location.startsWith("/login");
+
+  // Prevent flash while checking maintenance status (unless it's a safe route)
+  if (isLoading && !isSafeRoute) {
+    return <div className="fixed inset-0 bg-background flex items-center justify-center"></div>;
+  }
+
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark" switchable={true}>
         <TooltipProvider>
           <Toaster />
-          <Router />
+          {isMaintenance && !isSafeRoute ? (
+             <MaintenanceOverlay />
+          ) : (
+             <Router />
+          )}
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

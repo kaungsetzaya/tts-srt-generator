@@ -478,6 +478,7 @@ export default function AdminDashboard() {
   const [autoTrialEnabled, setAutoTrialEnabled] = useState(false);
   const [autoTrialDays, setAutoTrialDays] = useState(7);
   const [trialCredits, setTrialCredits] = useState(15);
+  const [maintenanceModeEnabled, setMaintenanceModeEnabled] = useState(false);
   const [timeframe, setTimeframe] = useState<TimeFrame>("month");
   const [userDrawer, setUserDrawer] = useState<{
     id: string;
@@ -531,6 +532,7 @@ export default function AdminDashboard() {
     setTrialStartDate(d.trialStartDate || "");
     setTrialEndDate(d.trialEndDate || "");
     setTrialEnabled(d.trialEnabled === 'true' || d.trialEnabled === true);
+    setMaintenanceModeEnabled(d.maintenanceModeEnabled === 'true' || d.maintenanceModeEnabled === true);
   }, [settingsData]);
 
   const logoutMutation = trpc.auth.logout.useMutation({
@@ -1639,6 +1641,47 @@ export default function AdminDashboard() {
               >
                 Settings
               </h2>
+
+              {/* Maintenance Mode Settings */}
+              <div
+                className="flex items-center justify-between py-4 border-b border-red-500/20 bg-red-500/5 px-4 rounded-xl mb-4"
+              >
+                <div>
+                  <p className="font-bold text-red-400 flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4" /> Under Maintenance Mode
+                  </p>
+                  <p className="text-xs opacity-60 mt-1 max-w-[250px]">
+                    Block non-admin users from accessing the app. Only Admins can bypass this.
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    const newVal = !maintenanceModeEnabled;
+                    if (newVal) {
+                      setConfirmModal({
+                        show: true,
+                        title: "Enable Maintenance Mode?",
+                        message: "Standard users will be immediately locked out of the app. Admins will still be able to log in and use this dashboard. Are you absolutely sure?",
+                        variant: "danger",
+                        confirmText: "Yes, Lock It Down",
+                        onConfirm: () => {
+                          setMaintenanceModeEnabled(true);
+                          updateSettings.mutate({ maintenanceModeEnabled: true });
+                          setConfirmModal({ ...confirmModal, show: false });
+                        }
+                      });
+                    } else {
+                      setMaintenanceModeEnabled(false);
+                      updateSettings.mutate({ maintenanceModeEnabled: false });
+                    }
+                  }}
+                  className={`relative w-11 h-6 rounded-full transition-all ${maintenanceModeEnabled ? "bg-red-500" : "bg-gray-600"}`}
+                >
+                  <span
+                    className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all shadow ${maintenanceModeEnabled ? "left-6" : "left-0.5"}`}
+                  />
+                </button>
+              </div>
               <div
                 className="flex items-center justify-between py-4 border-b"
                 style={{ borderColor: border }}
