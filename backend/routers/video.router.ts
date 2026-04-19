@@ -1,13 +1,16 @@
 /**
  * Video Router — file/link dubbing and translation with job system
+ * 
+ * CRITICAL: Credits are deducted BEFORE job creation to prevent the race
+ * condition where a job auto-dispatches before credits are checked.
  */
 import { z } from "zod";
 import { t, protectedProcedure } from "./trpc";
 import { TRPCError } from "@trpc/server";
 import { isAllowedVideoUrl } from "../_core/security";
-import { dubVideoFromBuffer, dubVideoFromLink } from "../videoDubber";
 import { createJob, getJobAsync, updateJob } from "../jobs";
 import { deductCredits, addCredits } from "./credits";
+import { checkPythonAndWhisper } from "../videoTranslator";
 
 export const videoRouter = t.router({
   dubFile: protectedProcedure
@@ -16,6 +19,8 @@ export const videoRouter = t.router({
         videoBase64: z.string(),
         filename: z.string(),
         voice: z.enum(["thiha", "nilar"]),
+        speed: z.number().optional().default(1.2),
+        pitch: z.number().optional().default(0),
         srtEnabled: z.boolean().optional().default(true),
         srtFontSize: z.number().optional().default(24),
         srtColor: z.string().optional().default("#ffffff"),
@@ -30,8 +35,8 @@ export const videoRouter = t.router({
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.user!.userId;
 
-      // Size check — reject >25MB before deducting credits
-      const videoSize = input.videoBase64.length * 0.75; // base64 → bytes approx
+      // ── Gate 1: Size check (no credits spent yet) ──
+      const videoSize = input.videoBase64.length * 0.75;
       if (videoSize > 25 * 1024 * 1024) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -39,14 +44,27 @@ export const videoRouter = t.router({
         });
       }
 
+      // ── Gate 2: Pre-flight environment check ──
+      try {
+        await checkPythonAndWhisper();
+      } catch (envErr: any) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: envErr.message || "Server environment not ready",
+        });
+      }
+
+      // ── Gate 3: Deduct credits BEFORE creating job ──
       await deductCredits(userId, 10, "video_dub", `Video Dub: ${input.voice}`);
+
+      // ── Gate 4: Create job (auto-dispatches to processor) ──
       try {
         const jobId = createJob("dub_file", {
           videoBase64: input.videoBase64,
           filename: input.filename,
           voice: input.voice,
-          speed: 1.2,
-          pitch: 0,
+          speed: input.speed,
+          pitch: input.pitch,
           srtEnabled: input.srtEnabled,
           srtFontSize: input.srtFontSize,
           srtColor: input.srtColor,
@@ -61,10 +79,11 @@ export const videoRouter = t.router({
 
         return { jobId };
       } catch (error: any) {
-        await addCredits(userId, 10, "video_dub_refund", `Refund: Video dub failed`);
+        // Job creation failed — refund immediately
+        await addCredits(userId, 10, "video_dub_refund", `Refund: Video dub job creation failed`);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: error.message || "Failed to dub video.",
+          message: error.message || "Failed to start dub job.",
         });
       }
     }),
@@ -74,29 +93,68 @@ export const videoRouter = t.router({
       z.object({
         url: z.string(),
         voice: z.enum(["thiha", "nilar"]),
+        speed: z.number().optional().default(1.2),
+        pitch: z.number().optional().default(0),
+        srtEnabled: z.boolean().optional().default(true),
+        srtFontSize: z.number().optional().default(24),
+        srtColor: z.string().optional().default("#ffffff"),
+        srtMarginV: z.number().optional().default(30),
+        srtBlurBg: z.boolean().optional().default(true),
+        srtBlurSize: z.number().optional().default(8),
+        srtBlurColor: z.enum(["black", "white"]).optional().default("black"),
+        srtBoxPadding: z.number().optional().default(4),
+        srtFullWidth: z.boolean().optional().default(false),
       })
     )
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.user!.userId;
+
+      // ── Gate 1: URL validation ──
       if (!isAllowedVideoUrl(input.url)) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Invalid or disallowed URL",
+          message: "Invalid or disallowed URL. YouTube, TikTok, Facebook only.",
         });
       }
-      await deductCredits(userId, 10, "video_dub", `Video Dub: ${input.voice}`);
+
+      // ── Gate 2: Pre-flight environment check ──
       try {
-        return await dubVideoFromLink(input.url, {
-          voice: input.voice,
-          speed: 1.2,
-          pitch: 0,
-          srtEnabled: true,
+        await checkPythonAndWhisper();
+      } catch (envErr: any) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: envErr.message || "Server environment not ready",
         });
+      }
+
+      // ── Gate 3: Deduct credits BEFORE creating job ──
+      await deductCredits(userId, 10, "video_dub", `Video Dub Link: ${input.voice}`);
+
+      // ── Gate 4: Create job ──
+      try {
+        const jobId = createJob("dub_link", {
+          url: input.url,
+          voice: input.voice,
+          speed: input.speed,
+          pitch: input.pitch,
+          srtEnabled: input.srtEnabled,
+          srtFontSize: input.srtFontSize,
+          srtColor: input.srtColor,
+          srtMarginV: input.srtMarginV,
+          srtBlurBg: input.srtBlurBg,
+          srtBlurSize: input.srtBlurSize,
+          srtBlurColor: input.srtBlurColor,
+          srtBoxPadding: input.srtBoxPadding,
+          srtFullWidth: input.srtFullWidth,
+          userId,
+        }, userId);
+
+        return { jobId };
       } catch (error: any) {
-        await addCredits(userId, 10, "video_dub_refund", "Refund: Video dub failed");
+        await addCredits(userId, 10, "video_dub_refund", "Refund: Dub link job creation failed");
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: error.message || "Failed to dub video.",
+          message: error.message || "Failed to start dub job.",
         });
       }
     }),
@@ -110,6 +168,9 @@ export const videoRouter = t.router({
   translate: protectedProcedure
     .input(z.object({ videoBase64: z.string(), filename: z.string() }))
     .mutation(async ({ input, ctx }) => {
+      const userId = ctx.user!.userId;
+
+      // ── Gate 1: Size check ──
       const videoSize = input.videoBase64.length * 0.75;
       if (videoSize > 25 * 1024 * 1024) {
         throw new TRPCError({
@@ -117,23 +178,26 @@ export const videoRouter = t.router({
           message: "File too large. Max 25MB.",
         });
       }
+
+      // ── Gate 2: Pre-flight check ──
+      try {
+        await checkPythonAndWhisper();
+      } catch (envErr: any) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: envErr.message || "Server environment not ready",
+        });
+      }
+
+      // ── Gate 3: Deduct credits BEFORE creating job ──
+      await deductCredits(userId, 5, "video_translate", "Video Translate");
       
-      const userId = ctx.user!.userId;
+      // ── Gate 4: Create job ──
       const jobId = createJob("translate_file", { 
         videoBase64: input.videoBase64, 
         filename: input.filename,
         userId 
-      });
-      
-      try {
-        await deductCredits(userId, 5, "video_translate", "Video Translate");
-      } catch (creditErr: any) {
-        updateJob(jobId, { status: "failed", error: creditErr.message, progress: 0 });
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: creditErr.message || "Insufficient credits",
-        });
-      }
+      }, userId);
       
       return { jobId };
     }),
@@ -142,7 +206,7 @@ export const videoRouter = t.router({
     .input(z.object({ jobId: z.string() }))
     .query(async ({ input }) => {
       const job = await getJobAsync(input.jobId);
-      if (!job) return { status: "failed", error: "Job not found", progress: 0, message: "" };
+      if (!job) return { status: "failed" as const, error: "Job not found", progress: 0, message: "" };
       return {
         status: job.status,
         progress: job.progress,
@@ -155,28 +219,34 @@ export const videoRouter = t.router({
   translateLink: protectedProcedure
     .input(z.object({ url: z.string() }))
     .mutation(async ({ input, ctx }) => {
+      const userId = ctx.user!.userId;
+
+      // ── Gate 1: URL validation ──
       if (!isAllowedVideoUrl(input.url)) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Invalid or disallowed URL",
+          message: "Invalid or disallowed URL. YouTube, TikTok, Facebook only.",
         });
       }
+
+      // ── Gate 2: Pre-flight check ──
+      try {
+        await checkPythonAndWhisper();
+      } catch (envErr: any) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: envErr.message || "Server environment not ready",
+        });
+      }
+
+      // ── Gate 3: Deduct credits BEFORE creating job ──
+      await deductCredits(userId, 5, "video_translate", "Video Translate Link");
       
-      const userId = ctx.user!.userId;
+      // ── Gate 4: Create job ──
       const jobId = createJob("translate_link", { 
         url: input.url,
         userId 
-      });
-      
-      try {
-        await deductCredits(userId, 5, "video_translate", "Video Translate");
-      } catch (creditErr: any) {
-        updateJob(jobId, { status: "failed", error: creditErr.message, progress: 0 });
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: creditErr.message || "Insufficient credits",
-        });
-      }
+      }, userId);
       
       return { jobId };
     }),
@@ -185,7 +255,7 @@ export const videoRouter = t.router({
     .input(z.object({ jobId: z.string() }))
     .query(async ({ input }) => {
       const job = await getJobAsync(input.jobId);
-      if (!job) return { status: "failed", error: "Job not found", progress: 0, message: "" };
+      if (!job) return { status: "failed" as const, error: "Job not found", progress: 0, message: "" };
       return {
         status: job.status,
         progress: job.progress,

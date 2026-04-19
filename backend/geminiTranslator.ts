@@ -124,11 +124,16 @@ STRICT RULES:
       };
     }
     
+    // 60s timeout prevents pipeline hangs if Gemini is unresponsive
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000);
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
 
     if (!res.ok) {
       const errorText = await res.text();
@@ -173,7 +178,8 @@ STRICT RULES:
       return null;
     }
   } catch (err: any) {
-    console.log(`[Gemini] Batch translate request error: ${err.message}`);
+    const reason = err.name === 'AbortError' ? 'Request timed out (60s)' : err.message;
+    console.log(`[Gemini] Batch translate error (${modelId}): ${reason}`);
     return null;
   }
 }
@@ -200,6 +206,8 @@ export async function geminiTranslate(
       const url = `https://generativelanguage.googleapis.com/v1beta/${model.id}:generateContent?key=${apiKey}`;
 
       try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 60000);
         const res = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -214,7 +222,9 @@ export async function geminiTranslate(
               },
             ],
           }),
+          signal: controller.signal,
         });
+        clearTimeout(timeout);
 
         const data = await res.json();
 

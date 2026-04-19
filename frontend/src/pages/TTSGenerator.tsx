@@ -437,12 +437,12 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
   const darkBrown = "#2B1D1C";
   const subColor = accent;
 
-  // Premium color scheme for light mode - Modern Slate
-  const lightBg = "#F8FAFC";
+  // Premium color scheme for light mode — Warm Sand & Copper
+  const lightBg = "#FBF8F4";
   const lightCardBg = "#FFFFFF";
-  const lightCardBorder = "#E2E8F0";
-  const lightText = "#1E293B";
-  const lightSubtext = "#64748B";
+  const lightCardBorder = "rgba(192,111,48,0.12)";
+  const lightText = "#2B1D1C";
+  const lightSubtext = "#8B7355";
 
   // Helper: hex color + opacity → 8-digit hex
   const withOpacity = (color: string, opacity: number) => {
@@ -460,6 +460,23 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
   const accent30 = withOpacity(accent, 0.3);
   const accent40 = withOpacity(accent, 0.4);
   const accent80 = withOpacity(accent, 0.8);
+
+  // ─── Premium theme-aware derived values ───
+  const bgColor = isDark ? "#0f0f0f" : lightBg;
+  const textColor = isDark ? cream : lightText;
+  const subtextColor = isDark ? peach : lightSubtext;
+  const cardBg = isDark ? "rgba(255,255,255,0.04)" : lightCardBg;
+  const cardBorder = isDark ? "rgba(255,255,255,0.08)" : lightCardBorder;
+  const boxShadow = isDark
+    ? "0 4px 24px rgba(0,0,0,0.3)"
+    : "0 8px 32px rgba(192,111,48,0.06), 0 2px 8px rgba(0,0,0,0.03), inset 0 1px 0 rgba(255,255,255,0.9)";
+  const inputBg = isDark ? "rgba(255,255,255,0.06)" : "#F8F4EE";
+  const inputBorder = isDark ? "rgba(255,255,255,0.1)" : "rgba(192,111,48,0.15)";
+
+  // 3D Panel styles (for subtitle settings)
+  const panelStyle = isDark
+    ? { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 8px 32px rgba(0,0,0,0.4)" }
+    : { background: "linear-gradient(160deg, #FFFFFF 0%, #FFF9F2 100%)", border: "1px solid rgba(192,111,48,0.15)", boxShadow: "0 16px 48px rgba(192,111,48,0.08), 0 4px 16px rgba(0,0,0,0.04), inset 0 2px 0 rgba(255,255,255,0.95)" };
 
   // Auto-preview video for translate tab when URL changes
   useEffect(() => {
@@ -511,25 +528,17 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
     }
   }, [generatedFiles?.audioObjectUrl]);
 
-  // Light theme: Premium Modern, Dark: Deep Dark
+  // Light theme: Premium Warm Gradient, Dark: Keep Deep Dark
   const bgGradient = isDark
     ? "linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%)"
-    : "linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 50%, #E2E8F0 100%)";
+    : "linear-gradient(180deg, #FBF8F4 0%, #F8F4EE 50%, #F5F0EA 100%)";
 
-  // Card backgrounds — light uses soft white glass
-  const cardBg = isDark ? "rgba(15,15,15,0.85)" : "rgba(255,255,255,0.95)";
-  const cardBorder = isDark ? "rgba(192,111,48,0.2)" : "rgba(148,163,184,0.2)";
-  const textColor = isDark ? "#EBE6D8" : "#1E293B";
-  const subtextColor = isDark ? "rgba(236,206,182,0.7)" : "#64748B";
-  const labelBg = isDark ? "rgba(192,111,48,0.15)" : "rgba(255,255,255,0.95)";
-  const inputBg = isDark ? "rgba(15,15,15,0.6)" : "#FFFFFF";
-  const inputBorder = isDark ? "rgba(192,111,48,0.2)" : "rgba(148,163,184,0.3)";
+  // (cardBg, cardBorder, textColor, subtextColor, inputBg, inputBorder, boxShadow 
+  //  are defined in the premium theme block above — do not redeclare here)
+  const labelBg = isDark ? "rgba(192,111,48,0.15)" : "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(251,248,244,0.98))";
 
   const box =
     "relative border p-4 md:p-5 pt-8 backdrop-blur-xl transition-all duration-300 rounded-2xl mt-6";
-  const boxShadow = isDark
-    ? "0 4px 20px rgba(0,0,0,0.3)"
-    : "0 2px 12px rgba(0,0,0,0.05)";
   const labelStyle =
     "absolute -top-3.5 left-4 px-3 py-1 text-xs uppercase tracking-widest font-black rounded-lg z-10 border";
 
@@ -2845,210 +2854,279 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
 )}
                         </div>
 
-                      {/* Premium Subtitle Settings */}
+                      {/* ═══ Premium 3D Subtitle Settings Panel ═══ */}
                       <div
-                        className={box}
+                        className="panel-floating p-5"
                         style={{
-                          background: cardBg,
-                          borderColor: cardBorder,
-                          boxShadow,
+                          ...panelStyle,
+                          borderRadius: 20,
                         }}
                       >
-                        {/* Header with Toggle */}
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-2">
-                            <Subtitles className="w-4 h-4" style={{ color: accent }} />
-                            <span className="text-sm font-bold" style={{ color: textColor }}>
-                              {lang === "mm" ? "စာတန်း" : "Subtitles"}
-                            </span>
+                        {/* Panel Header with Toggle */}
+                        <div className="flex items-center justify-between mb-5">
+                          <div className="flex items-center gap-2.5">
+                            <div
+                              className="w-8 h-8 rounded-xl flex items-center justify-center"
+                              style={{
+                                background: isDark ? "rgba(192,111,48,0.2)" : "linear-gradient(135deg, rgba(192,111,48,0.12), rgba(244,179,79,0.08))",
+                                border: `1px solid ${isDark ? "rgba(192,111,48,0.3)" : "rgba(192,111,48,0.15)"}`,
+                              }}
+                            >
+                              <Subtitles className="w-4 h-4" style={{ color: accent }} />
+                            </div>
+                            <div>
+                              <span className="text-sm font-bold block" style={{ color: textColor }}>
+                                {lang === "mm" ? "စာတန်း ဆက်တင်" : "Subtitle Settings"}
+                              </span>
+                              <span className="text-[10px]" style={{ color: subtextColor }}>
+                                {lang === "mm" ? "စာတန်းပုံစံ ပြင်ဆင်ရန်" : "Customize appearance"}
+                              </span>
+                            </div>
                           </div>
                           <button
                             onClick={() => setSrtEnabled(!srtEnabled)}
-                            className={`relative w-14 h-7 rounded-full transition-all duration-300 ${srtEnabled ? "bg-green-500" : "bg-gray-300"}`}
+                            className={`relative w-14 h-7 rounded-full transition-all duration-300 ${srtEnabled ? "" : ""}`}
                             style={{
-                              boxShadow: srtEnabled ? "0 0 12px rgba(34, 197, 94, 0.5)" : "none"
+                              background: srtEnabled
+                                ? "linear-gradient(135deg, #C06F30, #F4B34F)"
+                                : isDark ? "rgba(255,255,255,0.1)" : "#E5E0D8",
+                              boxShadow: srtEnabled ? "0 2px 12px rgba(192,111,48,0.3)" : "inset 0 1px 3px rgba(0,0,0,0.1)",
                             }}
                           >
                             <div
-                              className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 ${srtEnabled ? "translate-x-7" : "translate-x-0.5"}`}
+                              className={`absolute top-0.5 w-6 h-6 bg-white rounded-full transition-transform duration-300 ${srtEnabled ? "translate-x-7" : "translate-x-0.5"}`}
+                              style={{
+                                boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+                              }}
                             />
                           </button>
                         </div>
 
-                        {/* Settings - Always visible */}
-                        <div className="space-y-4">
+                        {/* Settings Groups */}
+                        <div className="space-y-5">
                           
-                          {/* Font Size */}
+                          {/* ── Group: Text ── */}
                           <div>
-                            <div className="flex justify-between items-center mb-2">
-                              <span className="text-xs font-semibold" style={{ color: subtextColor }}>
-                                {lang === "mm" ? "ဖောင်းပါး" : "Text Size"}
-                              </span>
-                              <span className="text-xs font-bold px-2 py-0.5 rounded" style={{ background: accent + "20", color: accent }}>
-                                {srtFontSize}px
-                              </span>
+                            <div className="section-header">
+                              <span>✦</span>
+                              <span>{lang === "mm" ? "စာသား" : "TEXT"}</span>
                             </div>
-                            <input
-                              type="range"
-                              min="12"
-                              max="56"
-                              value={srtFontSize}
-                              onChange={e => setSrtFontSize(Number(e.target.value))}
-                              className="w-full h-2 rounded-full appearance-none cursor-pointer"
-                              style={{ accentColor: accent }}
-                            />
-                          </div>
 
-                          {/* Text Color */}
-                          <div>
-                            <span className="text-xs font-semibold block mb-2" style={{ color: subtextColor }}>
-                              {lang === "mm" ? "စာရောင်းအရောင်" : "Text Color"}
-                            </span>
-                            <div className="flex gap-2 flex-wrap">
-                              {["#ffffff", "#000000", "#fbbf24", "#ef4444", "#3b82f6", "#22c55e", "#a855f7", "#ec4899"].map(color => (
-                                <button
-                                  key={color}
-                                  onClick={() => setSrtColor(color)}
-                                  className={`w-8 h-8 rounded-full border-2 transition-all ${srtColor === color ? "scale-110 ring-2" : "hover:scale-105"}`}
-                                  style={{ 
-                                    background: color,
-                                    borderColor: srtColor === color ? accent : "transparent",
-                                    ringColor: accent
+                            {/* Font Size */}
+                            <div className="mb-4">
+                              <div className="flex justify-between items-center mb-2.5">
+                                <span className="text-xs font-semibold" style={{ color: subtextColor }}>
+                                  {lang === "mm" ? "စာလုံးအရွယ်" : "Text Size"}
+                                </span>
+                                <span
+                                  className="text-xs font-bold px-2.5 py-1 rounded-lg"
+                                  style={{
+                                    background: isDark ? "rgba(192,111,48,0.2)" : "linear-gradient(135deg, rgba(192,111,48,0.08), rgba(244,179,79,0.08))",
+                                    color: accent,
+                                    border: `1px solid ${isDark ? "rgba(192,111,48,0.3)" : "rgba(192,111,48,0.15)"}`,
                                   }}
-                                />
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Box Settings */}
-                          <div className="grid grid-cols-2 gap-3">
-                            {/* Box Height */}
-                            <div>
-                              <div className="flex justify-between items-center mb-2">
-                                <span className="text-xs font-semibold" style={{ color: subtextColor }}>
-                                  {lang === "mm" ? "အမြင့်" : "Box Height"}
-                                </span>
-                                <span className="text-xs font-bold" style={{ color: accent }}>
-                                  {srtBoxPadding}px
+                                >
+                                  {srtFontSize}px
                                 </span>
                               </div>
                               <input
                                 type="range"
-                                min="2"
-                                max="20"
-                                value={srtBoxPadding}
-                                onChange={e => setSrtBoxPadding(Number(e.target.value))}
-                                className="w-full h-2 rounded-full appearance-none cursor-pointer"
-                                style={{ accentColor: accent }}
+                                min="12"
+                                max="56"
+                                value={srtFontSize}
+                                onChange={e => setSrtFontSize(Number(e.target.value))}
+                                className="premium-slider w-full"
                               />
                             </div>
 
-                            {/* Position */}
+                            {/* Text Color */}
                             <div>
-                              <div className="flex justify-between items-center mb-2">
-                                <span className="text-xs font-semibold" style={{ color: subtextColor }}>
-                                  {lang === "mm" ? "အပါး" : "Position"}
-                                </span>
-                                <span className="text-xs font-bold" style={{ color: accent }}>
-                                  {srtMarginV}%
-                                </span>
+                              <span className="text-xs font-semibold block mb-2.5" style={{ color: subtextColor }}>
+                                {lang === "mm" ? "စာအရောင်" : "Text Color"}
+                              </span>
+                              <div className="flex gap-2.5 flex-wrap">
+                                {["#ffffff", "#000000", "#fbbf24", "#ef4444", "#3b82f6", "#22c55e", "#a855f7", "#ec4899"].map(color => (
+                                  <button
+                                    key={color}
+                                    onClick={() => setSrtColor(color)}
+                                    className={`color-swatch ${srtColor === color ? "active" : ""}`}
+                                    style={{ 
+                                      background: color,
+                                      borderColor: srtColor === color ? accent : "transparent",
+                                    }}
+                                  />
+                                ))}
                               </div>
-                              <input
-                                type="range"
-                                min="5"
-                                max="80"
-                                value={srtMarginV}
-                                onChange={e => setSrtMarginV(Number(e.target.value))}
-                                className="w-full h-2 rounded-full appearance-none cursor-pointer"
-                                style={{ accentColor: accent }}
-                              />
                             </div>
                           </div>
 
-                          {/* Background Blur */}
-                          <div className="flex items-center justify-between py-2">
-                            <span className="text-xs font-semibold" style={{ color: subtextColor }}>
-                              {lang === "mm" ? "နောက်ခံ ပါးပါး" : "Background Blur"}
-                            </span>
-                            <button
-                              onClick={() => setSrtBlurBg(!srtBlurBg)}
-                              className={`relative w-12 h-6 rounded-full transition-all duration-300 ${srtBlurBg ? "bg-green-500" : "bg-gray-300"}`}
-                            >
-                              <div
-                                className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${srtBlurBg ? "translate-x-6" : "translate-x-0.5"}`}
-                              />
-                            </button>
-                          </div>
+                          {/* ── Group: Layout ── */}
+                          <div>
+                            <div className="section-header">
+                              <span>◈</span>
+                              <span>{lang === "mm" ? "အနေအထား" : "LAYOUT"}</span>
+                            </div>
 
-                          {srtBlurBg && (
-                            <div className="space-y-3 pl-2 border-l-2" style={{ borderColor: accent + "30" }}>
-                              {/* Blur Opacity */}
+                            <div className="grid grid-cols-2 gap-4">
+                              {/* Box Height */}
                               <div>
                                 <div className="flex justify-between items-center mb-2">
                                   <span className="text-xs font-semibold" style={{ color: subtextColor }}>
-                                    {lang === "mm" ? "ပါးအား" : "Blur Opacity"}
+                                    {lang === "mm" ? "အမြင့်" : "Height"}
                                   </span>
                                   <span className="text-xs font-bold" style={{ color: accent }}>
-                                    {srtBlurSize}
+                                    {srtBoxPadding}px
                                   </span>
                                 </div>
                                 <input
                                   type="range"
-                                  min="0"
+                                  min="2"
                                   max="20"
-                                  value={srtBlurSize}
-                                  onChange={e => setSrtBlurSize(Number(e.target.value))}
-                                  className="w-full h-2 rounded-full appearance-none cursor-pointer"
-                                  style={{ accentColor: accent }}
+                                  value={srtBoxPadding}
+                                  onChange={e => setSrtBoxPadding(Number(e.target.value))}
+                                  className="premium-slider w-full"
                                 />
                               </div>
 
-                              {/* Blur Color */}
-                              <div className="flex items-center justify-between">
-                                <span className="text-xs font-semibold" style={{ color: subtextColor }}>
-                                  {lang === "mm" ? "ပါးအရောင်" : "Blur Color"}
-                                </span>
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() => setSrtBlurColor("black")}
-                                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${srtBlurColor === "black" ? "ring-2" : ""}`}
-                                    style={{
-                                      background: "#1f1f1f",
-                                      color: "#fff",
-                                      ringColor: accent
-                                    }}
-                                  >
-                                    {lang === "mm" ? "မည်း" : "Black"}
-                                  </button>
-                                  <button
-                                    onClick={() => setSrtBlurColor("white")}
-                                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${srtBlurColor === "white" ? "ring-2" : ""}`}
-                                    style={{
-                                      background: "#fff",
-                                      color: "#000",
-                                      ringColor: accent
-                                    }}
-                                  >
-                                    {lang === "mm" ? "စွက်" : "White"}
-                                  </button>
+                              {/* Position */}
+                              <div>
+                                <div className="flex justify-between items-center mb-2">
+                                  <span className="text-xs font-semibold" style={{ color: subtextColor }}>
+                                    {lang === "mm" ? "အနေအထား" : "Position"}
+                                  </span>
+                                  <span className="text-xs font-bold" style={{ color: accent }}>
+                                    {srtMarginV}%
+                                  </span>
                                 </div>
+                                <input
+                                  type="range"
+                                  min="5"
+                                  max="80"
+                                  value={srtMarginV}
+                                  onChange={e => setSrtMarginV(Number(e.target.value))}
+                                  className="premium-slider w-full"
+                                />
                               </div>
                             </div>
-                          )}
 
-                          {/* Full Width */}
-                          <div className="flex items-center justify-between py-2">
-                            <span className="text-xs font-semibold" style={{ color: subtextColor }}>
-                              {lang === "mm" ? "ပြည့်ပါးပါး" : "Full Width"}
-                            </span>
-                            <button
-                              onClick={() => setSrtFullWidth(!srtFullWidth)}
-                              className={`relative w-12 h-6 rounded-full transition-all duration-300 ${srtFullWidth ? "bg-green-500" : "bg-gray-300"}`}
-                            >
-                              <div
-                                className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${srtFullWidth ? "translate-x-6" : "translate-x-0.5"}`}
-                              />
-                            </button>
+                            {/* Full Width Toggle */}
+                            <div className="flex items-center justify-between mt-3 py-2.5 px-3 rounded-xl" style={{
+                              background: isDark ? "rgba(255,255,255,0.03)" : "rgba(192,111,48,0.03)",
+                              border: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "rgba(192,111,48,0.08)"}`,
+                            }}>
+                              <span className="text-xs font-semibold" style={{ color: subtextColor }}>
+                                {lang === "mm" ? "အပြည့်အစုံ" : "Full Width"}
+                              </span>
+                              <button
+                                onClick={() => setSrtFullWidth(!srtFullWidth)}
+                                className="relative w-12 h-6 rounded-full transition-all duration-300"
+                                style={{
+                                  background: srtFullWidth
+                                    ? "linear-gradient(135deg, #C06F30, #F4B34F)"
+                                    : isDark ? "rgba(255,255,255,0.1)" : "#E5E0D8",
+                                  boxShadow: srtFullWidth ? "0 2px 8px rgba(192,111,48,0.25)" : "inset 0 1px 3px rgba(0,0,0,0.1)",
+                                }}
+                              >
+                                <div
+                                  className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${srtFullWidth ? "translate-x-6" : "translate-x-0.5"}`}
+                                />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* ── Group: Background ── */}
+                          <div>
+                            <div className="section-header">
+                              <span>❖</span>
+                              <span>{lang === "mm" ? "နောက်ခံ" : "BACKGROUND"}</span>
+                            </div>
+
+                            {/* Background Blur Toggle */}
+                            <div className="flex items-center justify-between py-2.5 px-3 rounded-xl mb-3" style={{
+                              background: isDark ? "rgba(255,255,255,0.03)" : "rgba(192,111,48,0.03)",
+                              border: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "rgba(192,111,48,0.08)"}`,
+                            }}>
+                              <span className="text-xs font-semibold" style={{ color: subtextColor }}>
+                                {lang === "mm" ? "နောက်ခံ Blur" : "Background Blur"}
+                              </span>
+                              <button
+                                onClick={() => setSrtBlurBg(!srtBlurBg)}
+                                className="relative w-12 h-6 rounded-full transition-all duration-300"
+                                style={{
+                                  background: srtBlurBg
+                                    ? "linear-gradient(135deg, #C06F30, #F4B34F)"
+                                    : isDark ? "rgba(255,255,255,0.1)" : "#E5E0D8",
+                                  boxShadow: srtBlurBg ? "0 2px 8px rgba(192,111,48,0.25)" : "inset 0 1px 3px rgba(0,0,0,0.1)",
+                                }}
+                              >
+                                <div
+                                  className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${srtBlurBg ? "translate-x-6" : "translate-x-0.5"}`}
+                                />
+                              </button>
+                            </div>
+
+                            {srtBlurBg && (
+                              <div className="space-y-3 pl-3 ml-1" style={{
+                                borderLeft: `2px solid ${isDark ? "rgba(192,111,48,0.2)" : "rgba(192,111,48,0.12)"}`,
+                              }}>
+                                {/* Blur Opacity */}
+                                <div>
+                                  <div className="flex justify-between items-center mb-2">
+                                    <span className="text-xs font-semibold" style={{ color: subtextColor }}>
+                                      {lang === "mm" ? "Blur အား" : "Blur Intensity"}
+                                    </span>
+                                    <span className="text-xs font-bold" style={{ color: accent }}>
+                                      {srtBlurSize}
+                                    </span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min="0"
+                                    max="20"
+                                    value={srtBlurSize}
+                                    onChange={e => setSrtBlurSize(Number(e.target.value))}
+                                    className="premium-slider w-full"
+                                  />
+                                </div>
+
+                                {/* Blur Color */}
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-semibold" style={{ color: subtextColor }}>
+                                    {lang === "mm" ? "Blur အရောင်" : "Blur Color"}
+                                  </span>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => setSrtBlurColor("black")}
+                                      className="px-4 py-1.5 rounded-xl text-xs font-bold transition-all"
+                                      style={{
+                                        background: srtBlurColor === "black"
+                                          ? "linear-gradient(135deg, #1f1f1f, #333)"
+                                          : isDark ? "rgba(255,255,255,0.05)" : "#F0EBE3",
+                                        color: srtBlurColor === "black" ? "#fff" : subtextColor,
+                                        border: `1px solid ${srtBlurColor === "black" ? accent : "transparent"}`,
+                                        boxShadow: srtBlurColor === "black" ? `0 2px 8px rgba(192,111,48,0.2)` : "none",
+                                      }}
+                                    >
+                                      {lang === "mm" ? "မည်း" : "Dark"}
+                                    </button>
+                                    <button
+                                      onClick={() => setSrtBlurColor("white")}
+                                      className="px-4 py-1.5 rounded-xl text-xs font-bold transition-all"
+                                      style={{
+                                        background: srtBlurColor === "white"
+                                          ? "linear-gradient(135deg, #fff, #F5F0EA)"
+                                          : isDark ? "rgba(255,255,255,0.05)" : "#F0EBE3",
+                                        color: srtBlurColor === "white" ? "#2B1D1C" : subtextColor,
+                                        border: `1px solid ${srtBlurColor === "white" ? accent : "transparent"}`,
+                                        boxShadow: srtBlurColor === "white" ? `0 2px 8px rgba(192,111,48,0.2)` : "none",
+                                      }}
+                                    >
+                                      {lang === "mm" ? "ဖြူ" : "Light"}
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
 
                         </div>

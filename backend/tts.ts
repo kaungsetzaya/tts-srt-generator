@@ -176,7 +176,8 @@ export async function generateSpeech(
 
   const pythonCmd = process.platform === "win32" ? "python" : "python3";
 
-  await acquireSlot();
+  // Note: slot acquisition is now handled by the caller (router or job processor)
+  // via the centralized queue in jobs.ts
   try {
     console.log(
       `[EDGE-TTS] Running: ${pythonCmd} -m edge_tts --voice ${voiceConfig.shortName} --rate ${rateStr} --pitch=${pitchStr}`
@@ -258,7 +259,6 @@ export async function generateSpeech(
 
     return { audioBuffer, rawSrt, srtContent, durationMs };
   } finally {
-    releaseSlot();
     await fs.unlink(tmpText).catch(() => {});
     await fs.unlink(audioPath).catch(() => {});
     await fs.unlink(srtPath).catch(() => {});
@@ -293,29 +293,8 @@ function pad(n: number, len = 2): string {
   return String(n).padStart(len, "0");
 }
 
-// Concurrency queue — max 3 simultaneous edge-tts calls
-let activeRequests = 0;
-const MAX_CONCURRENT = 3;
-const waitQueue: Array<() => void> = [];
-
-async function acquireSlot(): Promise<void> {
-  if (activeRequests < MAX_CONCURRENT) {
-    activeRequests++;
-    return;
-  }
-  return new Promise(resolve =>
-    waitQueue.push(() => {
-      activeRequests++;
-      resolve();
-    })
-  );
-}
-
-function releaseSlot(): void {
-  activeRequests--;
-  const next = waitQueue.shift();
-  if (next) next();
-}
+// Concurrency is now managed by the centralized queue in jobs.ts
+// Callers (tts.router.ts, videoDubber.ts) acquire/release slots there.
 
 const segmenter = new Intl.Segmenter("my", { granularity: "grapheme" });
 function graphemeLen(s: string): number {

@@ -9,6 +9,7 @@ import { getDb } from "../db";
 import { ttsConversions } from "../../drizzle/schema";
 import { generateSpeech, generateSpeechWithCharacter } from "../tts";
 import { deductCredits, addCredits } from "./credits";
+import { acquireSlot, releaseSlot } from "../jobs";
 
 export const ttsRouter = t.router({
   generateAudio: protectedProcedure
@@ -41,6 +42,8 @@ export const ttsRouter = t.router({
           : `TTS Voice: ${voice}`
       );
 
+      // Acquire a slot from the centralized queue (shared with dub/translate jobs)
+      await acquireSlot();
       let result;
       try {
         if (input.character) {
@@ -67,6 +70,8 @@ export const ttsRouter = t.router({
           code: "INTERNAL_SERVER_ERROR",
           message: error.message || "Failed to generate audio.",
         });
+      } finally {
+        releaseSlot();
       }
 
       if (!result || !result.audioBuffer || result.audioBuffer.length === 0) {
