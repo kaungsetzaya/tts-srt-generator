@@ -781,6 +781,9 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
           srtMarginV,
           srtBlurBg,
           srtBlurSize,
+          srtBlurColor,
+          srtBoxPadding,
+          srtFullWidth,
         });
         setActiveJobId(res.jobId);
         // Poll for job status
@@ -807,6 +810,9 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
           srtMarginV,
           srtBlurBg,
           srtBlurSize,
+          srtBlurColor,
+          srtBoxPadding,
+          srtFullWidth,
         });
         setDubResult(res as any);
         utils.subscription.myStatus.invalidate();
@@ -964,8 +970,168 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
     });
   };
 
-  // Determine if the nav should be sticky - make it always sticky for better UX
-  const shouldNavStick = true;
+  // Header is now in layout, always sticky
+
+  const headerBar = (
+    <div
+      className="backdrop-blur-2xl border-b flex items-center justify-between py-2 sm:py-2.5 w-full"
+      style={{
+        borderColor: isDark
+          ? "rgba(192,111,48,0.15)"
+          : "rgba(244,179,79,0.08)",
+        background: isDark
+          ? "rgba(15,15,15,0.97)"
+          : "rgba(245,240,230,0.95)",
+        boxShadow: isDark
+          ? "0 4px 30px rgba(192,111,48,0.12)"
+          : "0 1px 12px rgba(244,179,79,0.06)",
+      }}
+    >
+      <div className="flex items-center gap-1.5 sm:gap-2 ml-auto">
+        {subLoading ? (
+          <div className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl">
+            <div className="w-16 h-4 rounded animate-pulse" style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }} />
+            <div className="w-8 h-4 rounded animate-pulse" style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }} />
+          </div>
+        ) : (
+        <div
+          className="hidden md:flex items-center gap-4 px-4 py-2 rounded-xl text-xs font-semibold relative overflow-hidden"
+          style={{
+            background: hasActiveSub 
+              ? "linear-gradient(135deg, rgba(192,111,48,0.25) 0%, rgba(244,179,79,0.15) 50%, rgba(192,111,48,0.25) 100%)"
+              : isDark 
+                ? "rgba(75,85,99,0.3)" 
+                : "rgba(229,231,235,0.5)",
+            border: `1px solid ${hasActiveSub ? "rgba(244,179,79,0.5)" : "rgba(156,163,175,0.3)"}`,
+          }}
+        >
+          {hasActiveSub && (
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" style={{ animationDuration: "2s" }} />
+          )}
+          {hasActiveSub ? (
+            <>
+              <div className="relative z-10 flex items-center gap-2">
+                <span 
+                  className="px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider"
+                  style={{
+                    background: "linear-gradient(135deg, #C06F30 0%, #F4B34F 100%)",
+                    color: "#fff",
+                    boxShadow: "0 2px 8px rgba(192,111,48,0.4)",
+                  }}
+                >
+                  {subStatus?.plan === "trial" ? (lang === "mm" ? "အစမ်း" : "Trial") : subStatus?.plan}
+                </span>
+              </div>
+              <div className="relative z-10 flex-1 h-2 max-w-[100px] rounded-full overflow-hidden" style={{ background: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.1)" }}>
+                <motion.div 
+                  className="h-full rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min(100, ((subStatus?.credits ?? 0) / (planLimits?.maxCredits ?? 800)) * 100)}%` }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                  style={{
+                    background: "linear-gradient(90deg, #C06F30, #F4B34F, #FCD34D)",
+                    boxShadow: "0 0 10px rgba(244,179,79,0.5)",
+                  }}
+                />
+              </div>
+              <div className="relative z-10 flex items-center gap-2 font-bold" style={{ color: isDark ? "#F4B34F" : "#B45309" }}>
+                <span>{subStatus?.credits ?? 0}</span>
+                <span className="text-xs opacity-70 uppercase">credits</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <span className="relative z-10 text-sm font-medium" style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
+                {me ? (lang === "mm" ? "အမျိုးသမီး" : "Free") : ""}
+              </span>
+              <div className="relative z-10 flex-1 h-2 max-w-[100px] rounded-full overflow-hidden" style={{ background: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)" }}>
+                <div 
+                  className="h-full rounded-full"
+                  style={{
+                    width: "0%",
+                    background: isDark ? "#4B5563" : "#9CA3AF",
+                  }}
+                />
+              </div>
+              <span className="relative z-10" style={{ color: isDark ? "#6B7280" : "#9CA3AF" }}>
+                {subStatus?.credits ?? 0}
+              </span>
+            </>
+          )}
+        </div>
+        )}
+        <span
+          className="hidden md:inline text-xs font-bold px-2.5 py-1 rounded-full"
+          style={{
+            background: isDark
+              ? "rgba(192,111,48,0.1)"
+              : "rgba(244,179,79,0.06)",
+            color: accent,
+          }}
+        >
+          @{(me as any)?.username || me?.name}
+        </span>
+        <div
+          className="w-px h-5 mx-0.5"
+          style={{
+            background: isDark
+              ? "rgba(192,111,48,0.3)"
+              : "rgba(192,111,48,0.12)",
+          }}
+        />
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setLang(lang === "mm" ? "en" : "mm")}
+          className="px-2.5 py-1 text-xs font-black rounded-lg uppercase tracking-widest transition-all"
+          style={{
+            border: `1px solid ${isDark ? "rgba(192,111,48,0.35)" : "rgba(192,111,48,0.15)"}`,
+            background: isDark
+              ? "rgba(192,111,48,0.1)"
+              : "rgba(255,255,255,0.7)",
+            color: textColor,
+          }}
+        >
+          {lang === "mm" ? "EN" : "MM"}
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={toggleTheme}
+          className="p-1.5 rounded-lg transition-all flex items-center justify-center"
+          style={{
+            border: `1px solid ${isDark ? "rgba(192,111,48,0.35)" : "rgba(192,111,48,0.15)"}`,
+            background: isDark
+              ? "rgba(192,111,48,0.1)"
+              : "rgba(255,255,255,0.7)",
+            color: textColor,
+          }}
+        >
+          {isDark ? (
+            <Sun className="w-4 h-4" />
+          ) : (
+            <Moon className="w-4 h-4" />
+          )}
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => logoutMutation.mutate()}
+          className="flex items-center gap-1.5 text-xs px-2.5 sm:px-3 py-1.5 rounded-lg font-bold uppercase tracking-wider transition-all"
+          style={{
+            border: "1px solid rgba(239,68,68,0.3)",
+            background: isDark
+              ? "rgba(239,68,68,0.08)"
+              : "rgba(239,68,68,0.05)",
+            color: "#ef4444",
+          }}
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">{t.logout}</span>
+        </motion.button>
+      </div>
+    </div>
+  );
 
   return (
     <TTSGeneratorLayout
@@ -977,11 +1143,12 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
       isDark={isDark}
       lang={lang}
       setLang={setLang}
+      headerBar={headerBar}
     >
       <div
-        className="h-full relative transition-colors duration-500 font-sans"
-        style={{ color: textColor }}
-      >
+          className="h-full relative transition-colors duration-500 font-sans"
+          style={{ color: textColor }}
+        >
         {/* Error Toast */}
         {errorToast && (
           <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-top-4 duration-300 max-w-[90vw]">
@@ -1044,166 +1211,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
           />
         </div>
 
-        {/* ═══ TOP CONTROLS BAR ═══ */}
-        <div
-          className={`${shouldNavStick ? "sticky top-0" : ""} z-50 backdrop-blur-2xl border-b flex items-center justify-between py-2 sm:py-2.5 w-full`}
-          style={{
-            borderColor: isDark
-              ? "rgba(192,111,48,0.15)"
-              : "rgba(244,179,79,0.08)",
-            background: isDark
-              ? "rgba(15,15,15,0.97)"
-              : "rgba(245,240,230,0.95)",
-            boxShadow: isDark
-              ? "0 4px 30px rgba(192,111,48,0.12)"
-              : "0 1px 12px rgba(244,179,79,0.06)",
-          }}
-        >
-          <div className="flex items-center gap-1.5 sm:gap-2 ml-auto">
-            {/* Premium Subscription Bar */}
-            <div
-              className="hidden md:flex items-center gap-4 px-4 py-2 rounded-xl text-xs font-semibold relative overflow-hidden"
-              style={{
-                background: hasActiveSub 
-                  ? "linear-gradient(135deg, rgba(192,111,48,0.25) 0%, rgba(244,179,79,0.15) 50%, rgba(192,111,48,0.25) 100%)"
-                  : isDark 
-                    ? "rgba(75,85,99,0.3)" 
-                    : "rgba(229,231,235,0.5)",
-                border: `1px solid ${hasActiveSub ? "rgba(244,179,79,0.5)" : "rgba(156,163,175,0.3)"}`,
-              }}
-            >
-              {hasActiveSub && (
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" style={{ animationDuration: "2s" }} />
-              )}
-              {hasActiveSub ? (
-                <>
-                  <div className="relative z-10 flex items-center gap-2">
-                    <span 
-                      className="px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider"
-                      style={{
-                        background: "linear-gradient(135deg, #C06F30 0%, #F4B34F 100%)",
-                        color: "#fff",
-                        boxShadow: "0 2px 8px rgba(192,111,48,0.4)",
-                      }}
-                    >
-                      {subStatus?.plan === "trial" ? (lang === "mm" ? "အစမ်း" : "Trial") : subStatus?.plan}
-                    </span>
-                  </div>
-                  <div className="relative z-10 flex-1 h-2 max-w-[100px] rounded-full overflow-hidden" style={{ background: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.1)" }}>
-                    <motion.div 
-                      className="h-full rounded-full"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${Math.min(100, ((subStatus?.credits ?? 0) / (planLimits?.maxCredits ?? 800)) * 100)}%` }}
-                      transition={{ duration: 0.8, ease: "easeOut" }}
-                      style={{
-                        background: "linear-gradient(90deg, #C06F30, #F4B34F, #FCD34D)",
-                        boxShadow: "0 0 10px rgba(244,179,79,0.5)",
-                      }}
-                    />
-                  </div>
-                  <div className="relative z-10 flex items-center gap-2 font-bold" style={{ color: isDark ? "#F4B34F" : "#B45309" }}>
-                    <span>{subStatus?.credits ?? 0}</span>
-                    <span className="text-xs opacity-70 uppercase">credits</span>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <span className="relative z-10 text-sm font-medium" style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
-                    {me ? (lang === "mm" ? "အမျိုးသမီး" : "Free") : ""}
-                  </span>
-                  <div className="relative z-10 flex-1 h-2 max-w-[100px] rounded-full overflow-hidden" style={{ background: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)" }}>
-                    <div 
-                      className="h-full rounded-full"
-                      style={{
-                        width: "0%",
-                        background: isDark ? "#4B5563" : "#9CA3AF",
-                      }}
-                    />
-                  </div>
-                  <span className="relative z-10" style={{ color: isDark ? "#6B7280" : "#9CA3AF" }}>
-                    {subStatus?.credits ?? 0}
-                  </span>
-                </>
-              )}
-            </div>
-            {/* Username */}
-            <span
-              className="hidden md:inline text-xs font-bold px-2.5 py-1 rounded-full"
-              style={{
-                background: isDark
-                  ? "rgba(192,111,48,0.1)"
-                  : "rgba(244,179,79,0.06)",
-                color: accent,
-              }}
-            >
-              @{(me as any)?.username || me?.name}
-            </span>
-            {/* Divider */}
-            <div
-              className="w-px h-5 mx-0.5"
-              style={{
-                background: isDark
-                  ? "rgba(192,111,48,0.3)"
-                  : "rgba(192,111,48,0.12)",
-              }}
-            />
-            {/* Lang toggle */}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setLang(lang === "mm" ? "en" : "mm")}
-              className="px-2.5 py-1 text-xs font-black rounded-lg uppercase tracking-widest transition-all"
-              style={{
-                border: `1px solid ${isDark ? "rgba(192,111,48,0.35)" : "rgba(192,111,48,0.15)"}`,
-                background: isDark
-                  ? "rgba(192,111,48,0.1)"
-                  : "rgba(255,255,255,0.7)",
-                color: textColor,
-              }}
-            >
-              {lang === "mm" ? "EN" : "MM"}
-            </motion.button>
-            {/* Theme toggle */}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={toggleTheme}
-              className="p-1.5 rounded-lg transition-all flex items-center justify-center"
-              style={{
-                border: `1px solid ${isDark ? "rgba(192,111,48,0.35)" : "rgba(192,111,48,0.15)"}`,
-                background: isDark
-                  ? "rgba(192,111,48,0.1)"
-                  : "rgba(255,255,255,0.7)",
-                color: textColor,
-              }}
-            >
-              {isDark ? (
-                <Sun className="w-4 h-4" />
-              ) : (
-                <Moon className="w-4 h-4" />
-              )}
-            </motion.button>
-            {/* Logout */}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => logoutMutation.mutate()}
-              className="flex items-center gap-1.5 text-xs px-2.5 sm:px-3 py-1.5 rounded-lg font-bold uppercase tracking-wider transition-all"
-              style={{
-                border: "1px solid rgba(239,68,68,0.3)",
-                background: isDark
-                  ? "rgba(239,68,68,0.08)"
-                  : "rgba(239,68,68,0.05)",
-                color: "#ef4444",
-              }}
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{t.logout}</span>
-            </motion.button>
-          </div>
-        </div>
-
-        <div className="relative z-10 py-3 sm:py-4 md:py-5 pt-12 sm:pt-14 md:pt-16">
+        <div className="relative z-10 py-3 sm:py-4 md:py-5 pt-4 sm:pt-5">
           {/* Main Tab Content - Only show when no secondary tab is active */}
           {!secondaryTab && (
             <>
@@ -2867,13 +2875,14 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                           </button>
                         </div>
 
-                        {/* Settings - Only show when enabled */}
-                        <div className={`space-y-4 transition-all duration-300 ${srtEnabled ? "opacity-100" : "opacity-40 pointer-events-none"}`}>
+                        {/* Settings - Always visible */}
+                        <div className="space-y-4">
+                          
                           {/* Font Size */}
                           <div>
                             <div className="flex justify-between items-center mb-2">
-                              <span className="text-xs font-medium" style={{ color: subtextColor }}>
-                                {lang === "mm" ? "ဖောင်းပါး" : "Size"}
+                              <span className="text-xs font-semibold" style={{ color: subtextColor }}>
+                                {lang === "mm" ? "ဖောင်းပါး" : "Text Size"}
                               </span>
                               <span className="text-xs font-bold px-2 py-0.5 rounded" style={{ background: accent + "20", color: accent }}>
                                 {srtFontSize}px
@@ -2881,79 +2890,167 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                             </div>
                             <input
                               type="range"
-                              min="14"
-                              max="42"
+                              min="12"
+                              max="56"
                               value={srtFontSize}
                               onChange={e => setSrtFontSize(Number(e.target.value))}
-                              className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
-                              style={{ 
-                                accentColor: accent,
-                                background: isDark ? "#374151" : "#e5e7eb"
-                              }}
+                              className="w-full h-2 rounded-full appearance-none cursor-pointer"
+                              style={{ accentColor: accent }}
                             />
                           </div>
 
-                          {/* Text Color & Blur */}
+                          {/* Text Color */}
+                          <div>
+                            <span className="text-xs font-semibold block mb-2" style={{ color: subtextColor }}>
+                              {lang === "mm" ? "စာရောင်းအရောင်" : "Text Color"}
+                            </span>
+                            <div className="flex gap-2 flex-wrap">
+                              {["#ffffff", "#000000", "#fbbf24", "#ef4444", "#3b82f6", "#22c55e", "#a855f7", "#ec4899"].map(color => (
+                                <button
+                                  key={color}
+                                  onClick={() => setSrtColor(color)}
+                                  className={`w-8 h-8 rounded-full border-2 transition-all ${srtColor === color ? "scale-110 ring-2" : "hover:scale-105"}`}
+                                  style={{ 
+                                    background: color,
+                                    borderColor: srtColor === color ? accent : "transparent",
+                                    ringColor: accent
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Box Settings */}
                           <div className="grid grid-cols-2 gap-3">
+                            {/* Box Height */}
                             <div>
-                              <span className="text-xs font-medium block mb-2" style={{ color: subtextColor }}>
-                                {lang === "mm" ? "စာရောင်း" : "Color"}
-                              </span>
-                              <div className="flex gap-2">
-                                {["#ffffff", "#000000", "#fbbf24", "#ef4444", "#3b82f6"].map(color => (
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="text-xs font-semibold" style={{ color: subtextColor }}>
+                                  {lang === "mm" ? "အမြင့်" : "Box Height"}
+                                </span>
+                                <span className="text-xs font-bold" style={{ color: accent }}>
+                                  {srtBoxPadding}px
+                                </span>
+                              </div>
+                              <input
+                                type="range"
+                                min="2"
+                                max="20"
+                                value={srtBoxPadding}
+                                onChange={e => setSrtBoxPadding(Number(e.target.value))}
+                                className="w-full h-2 rounded-full appearance-none cursor-pointer"
+                                style={{ accentColor: accent }}
+                              />
+                            </div>
+
+                            {/* Position */}
+                            <div>
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="text-xs font-semibold" style={{ color: subtextColor }}>
+                                  {lang === "mm" ? "အပါး" : "Position"}
+                                </span>
+                                <span className="text-xs font-bold" style={{ color: accent }}>
+                                  {srtMarginV}%
+                                </span>
+                              </div>
+                              <input
+                                type="range"
+                                min="5"
+                                max="80"
+                                value={srtMarginV}
+                                onChange={e => setSrtMarginV(Number(e.target.value))}
+                                className="w-full h-2 rounded-full appearance-none cursor-pointer"
+                                style={{ accentColor: accent }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Background Blur */}
+                          <div className="flex items-center justify-between py-2">
+                            <span className="text-xs font-semibold" style={{ color: subtextColor }}>
+                              {lang === "mm" ? "နောက်ခံ ပါးပါး" : "Background Blur"}
+                            </span>
+                            <button
+                              onClick={() => setSrtBlurBg(!srtBlurBg)}
+                              className={`relative w-12 h-6 rounded-full transition-all duration-300 ${srtBlurBg ? "bg-green-500" : "bg-gray-300"}`}
+                            >
+                              <div
+                                className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${srtBlurBg ? "translate-x-6" : "translate-x-0.5"}`}
+                              />
+                            </button>
+                          </div>
+
+                          {srtBlurBg && (
+                            <div className="space-y-3 pl-2 border-l-2" style={{ borderColor: accent + "30" }}>
+                              {/* Blur Opacity */}
+                              <div>
+                                <div className="flex justify-between items-center mb-2">
+                                  <span className="text-xs font-semibold" style={{ color: subtextColor }}>
+                                    {lang === "mm" ? "ပါးအား" : "Blur Opacity"}
+                                  </span>
+                                  <span className="text-xs font-bold" style={{ color: accent }}>
+                                    {srtBlurSize}
+                                  </span>
+                                </div>
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max="20"
+                                  value={srtBlurSize}
+                                  onChange={e => setSrtBlurSize(Number(e.target.value))}
+                                  className="w-full h-2 rounded-full appearance-none cursor-pointer"
+                                  style={{ accentColor: accent }}
+                                />
+                              </div>
+
+                              {/* Blur Color */}
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-semibold" style={{ color: subtextColor }}>
+                                  {lang === "mm" ? "ပါးအရောင်" : "Blur Color"}
+                                </span>
+                                <div className="flex gap-2">
                                   <button
-                                    key={color}
-                                    onClick={() => setSrtColor(color)}
-                                    className={`w-7 h-7 rounded-full border-2 transition-transform ${srtColor === color ? "scale-110" : "hover:scale-105"}`}
-                                    style={{ 
-                                      background: color,
-                                      borderColor: srtColor === color ? accent : "transparent"
+                                    onClick={() => setSrtBlurColor("black")}
+                                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${srtBlurColor === "black" ? "ring-2" : ""}`}
+                                    style={{
+                                      background: "#1f1f1f",
+                                      color: "#fff",
+                                      ringColor: accent
                                     }}
-                                  />
-                                ))}
+                                  >
+                                    {lang === "mm" ? "မည်း" : "Black"}
+                                  </button>
+                                  <button
+                                    onClick={() => setSrtBlurColor("white")}
+                                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${srtBlurColor === "white" ? "ring-2" : ""}`}
+                                    style={{
+                                      background: "#fff",
+                                      color: "#000",
+                                      ringColor: accent
+                                    }}
+                                  >
+                                    {lang === "mm" ? "စွက်" : "White"}
+                                  </button>
+                                </div>
                               </div>
                             </div>
-                            <div>
-                              <span className="text-xs font-medium block mb-2" style={{ color: subtextColor }}>
-                                {lang === "mm" ? "နောက်ခံ" : "Background"}
-                              </span>
-                              <button
-                                onClick={() => setSrtBlurBg(!srtBlurBg)}
-                                className="text-xs font-medium px-3 py-1.5 rounded-lg border"
-                                style={{ 
-                                  borderColor: cardBorder,
-                                  background: srtBlurBg ? accent + "20" : "transparent",
-                                  color: srtBlurBg ? accent : textColor
-                                }}
-                              >
-                                {srtBlurBg ? "On" : "Off"}
-                              </button>
-                            </div>
+                          )}
+
+                          {/* Full Width */}
+                          <div className="flex items-center justify-between py-2">
+                            <span className="text-xs font-semibold" style={{ color: subtextColor }}>
+                              {lang === "mm" ? "ပြည့်ပါးပါး" : "Full Width"}
+                            </span>
+                            <button
+                              onClick={() => setSrtFullWidth(!srtFullWidth)}
+                              className={`relative w-12 h-6 rounded-full transition-all duration-300 ${srtFullWidth ? "bg-green-500" : "bg-gray-300"}`}
+                            >
+                              <div
+                                className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${srtFullWidth ? "translate-x-6" : "translate-x-0.5"}`}
+                              />
+                            </button>
                           </div>
 
-                          {/* Margin */}
-                          <div>
-                            <div className="flex justify-between items-center mb-2">
-                              <span className="text-xs font-medium" style={{ color: subtextColor }}>
-                                {lang === "mm" ? "အပေါ်စီး" : "Position"}
-                              </span>
-                              <span className="text-xs font-bold" style={{ color: subtextColor }}>
-                                {srtMarginV}%
-                              </span>
-                            </div>
-                            <input
-                              type="range"
-                              min="5"
-                              max="75"
-                              value={srtMarginV}
-                              onChange={e => setSrtMarginV(Number(e.target.value))}
-                              className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
-                              style={{ 
-                                accentColor: accent,
-                                background: isDark ? "#374151" : "#e5e7eb"
-                              }}
-                            />
-                          </div>
                         </div>
                       </div>
 

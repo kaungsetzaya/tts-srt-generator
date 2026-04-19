@@ -82,11 +82,25 @@ function getMyanmarFontPath(): string {
 function buildAssContent(
   segments: Array<{ startMs: number; endMs: number; text: string }>,
   fontPath: string,
-  opts?: { fontSize?: number; fontColor?: string; marginV?: number; blurBg?: boolean; blurSize?: number }
+  opts?: { 
+    fontSize?: number; 
+    fontColor?: string; 
+    marginV?: number; 
+    blurBg?: boolean; 
+    blurSize?: number;
+    blurColor?: "black" | "white";
+    boxPadding?: number;
+    fullWidth?: boolean;
+  }
 ): string {
-  const fontSize = opts?.fontSize ?? 52;
+  const fontSize = (opts?.fontSize ?? 24) * 2.2; // Scale frontend size to 1080p
   const fontColor = opts?.fontColor ?? "#ffffff";
-  const marginV = opts?.marginV ?? 40;
+  const marginV = 240 + (opts?.marginV ?? 30) * 4; // Scale margin to 1080p accurately
+  const blurBg = opts?.blurBg ?? true;
+  const blurSize = opts?.blurSize ?? 8;
+  const blurColor = opts?.blurColor ?? "black";
+  const boxPadding = opts?.boxPadding ?? 4;
+  const fullWidth = opts?.fullWidth ?? false;
 
   // Convert hex color to ASS format (&HAABBGGRR)
   const hex = fontColor.replace("#", "");
@@ -99,6 +113,24 @@ function buildAssContent(
     ? path.basename(fontPath, path.extname(fontPath))
     : "Noto Sans Myanmar";
 
+  // Calculate outline (stroke) or box padding
+  const borderStyle = blurBg ? 3 : 1;
+  const outline = blurBg ? (boxPadding * 2) : 1; 
+  
+  // Back color for blur box - black or white with opacity
+  const blurOpacity = Math.min(0.85, blurSize * 0.06);
+  const blurAlphaInt = Math.round((1 - blurOpacity) * 255);
+  const blurAlphaHex = blurAlphaInt.toString(16).padStart(2, "0").toUpperCase();
+  const blurColorHex = blurColor === "black" ? "000000" : "FFFFFF";
+  const backColor = `&H${blurAlphaHex}${blurColorHex}`;
+
+  // Alignment: 2 = bottom center, adapted for marginV
+  const alignment = 2;
+
+  // For full width, use MarginL/MarginR to stretch
+  const marginL = fullWidth ? 80 : 20;
+  const marginR = fullWidth ? 80 : 20;
+
   const header = `[Script Info]
 ScriptType: v4.00+
 PlayResX: 1920
@@ -107,7 +139,7 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,${fontName},${fontSize},${assColor},&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,2,1,2,20,20,${marginV},1
+Style: Default,${fontName},${fontSize},${assColor},&H000000FF,&H00000000,${backColor},-1,0,0,0,100,100,0,0,${borderStyle},${outline},1,${alignment},${marginL},${marginR},${marginV},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -126,7 +158,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
       const cleanText = seg.text
         .replace(/\n/g, "\\N")
         .replace(/,/g, "，"); // ASS uses comma as delimiter — escape
-      return `Dialogue: 0,${msToAssTime(seg.startMs)},${msToAssTime(seg.endMs)},Default,,0,0,0,,${cleanText}`;
+      return `Dialogue: 0,${msToAssTime(seg.startMs)},${msToAssTime(seg.endMs)},Default,,${marginL},${marginR},${marginV},,${cleanText}`;
     })
     .join("\n");
 
@@ -513,6 +545,9 @@ export async function dubVideoFromBuffer(
         marginV: options.srtMarginV,
         blurBg: options.srtBlurBg,
         blurSize: options.srtBlurSize,
+        blurColor: options.srtBlurColor,
+        boxPadding: options.srtBoxPadding,
+        fullWidth: options.srtFullWidth,
       }
     );
     await fs.writeFile(tempAssPath, assContent, "utf-8");

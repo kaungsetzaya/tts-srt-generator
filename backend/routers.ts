@@ -353,6 +353,9 @@ export const appRouter = t.router({
           srtMarginV: z.number().optional().default(30),
           srtBlurBg: z.boolean().optional().default(true),
           srtBlurSize: z.number().optional().default(8),
+          srtBlurColor: z.enum(["black", "white"]).optional().default("black"),
+          srtBoxPadding: z.number().optional().default(4),
+          srtFullWidth: z.boolean().optional().default(false),
         })
       )
       .mutation(async ({ input, ctx }) => {
@@ -376,6 +379,9 @@ export const appRouter = t.router({
             srtMarginV: input.srtMarginV,
             srtBlurBg: input.srtBlurBg,
             srtBlurSize: input.srtBlurSize,
+            srtBlurColor: input.srtBlurColor,
+            srtBoxPadding: input.srtBoxPadding,
+            srtFullWidth: input.srtFullWidth,
             userId,
           }, userId);
 
@@ -567,6 +573,9 @@ export const appRouter = t.router({
           srtMarginV: z.number().optional().default(30),
           srtBlurBg: z.boolean().optional().default(true),
           srtBlurSize: z.number().optional().default(8),
+          srtBlurColor: z.enum(["black", "white"]).optional().default("black"),
+          srtBoxPadding: z.number().optional().default(4),
+          srtFullWidth: z.boolean().optional().default(false),
         })
       )
       .mutation(async ({ input, ctx }) => {
@@ -597,6 +606,9 @@ export const appRouter = t.router({
           srtMarginV: input.srtMarginV,
           srtBlurBg: input.srtBlurBg,
           srtBlurSize: input.srtBlurSize,
+          srtBlurColor: input.srtBlurColor,
+          srtBoxPadding: input.srtBoxPadding,
+          srtFullWidth: input.srtFullWidth,
           userId,
         }, userId);
 

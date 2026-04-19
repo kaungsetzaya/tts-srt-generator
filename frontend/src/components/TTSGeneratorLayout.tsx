@@ -39,6 +39,7 @@ interface TTSGeneratorLayoutProps {
   miniLogoUrl?: string;
   lang?: "mm" | "en";
   setLang?: (lang: "mm" | "en") => void;
+  headerBar?: ReactNode;
 }
 
 export function TTSGeneratorLayout({
@@ -53,36 +54,44 @@ export function TTSGeneratorLayout({
   isDark,
   lang,
   setLang,
+  headerBar,
 }: TTSGeneratorLayoutProps) {
   return (
-    <SidebarProvider defaultOpen>
-      <div className="flex min-h-screen w-full">
-        <TTSGeneratorSidebar
-          currentTab={currentSecondaryTab}
-          onTabChange={onTabChange}
-          mainTab={mainTab}
-          setMainTab={setMainTab}
-          logoUrl={logoUrl}
-          miniLogoUrl={miniLogoUrl}
-          isDark={isDark}
-          lang={lang}
-          setLang={setLang}
-        />
-        <SidebarRail />
-        <SidebarInset className="flex-1 flex flex-col min-h-screen">
-          <main className="flex-1 overflow-auto pb-20 md:pb-0">
-            <div>{children}</div>
-          </main>
-          <MobileBottomNavigation
+    <>
+      {headerBar && (
+        <header className="fixed top-0 left-0 right-0 z-[100] will-change-transform" style={{ marginLeft: 'var(--sidebar-width-icon, 4rem)' }}>
+          {headerBar}
+        </header>
+      )}
+      <SidebarProvider defaultOpen>
+        <div className="flex min-h-screen w-full">
+          <TTSGeneratorSidebar
+            currentTab={currentSecondaryTab}
+            onTabChange={onTabChange}
             mainTab={mainTab}
             setMainTab={setMainTab}
-            currentSecondaryTab={currentSecondaryTab}
-            onTabChange={onTabChange}
+            logoUrl={logoUrl}
+            miniLogoUrl={miniLogoUrl}
             isDark={isDark}
+            lang={lang}
+            setLang={setLang}
           />
-        </SidebarInset>
-      </div>
-    </SidebarProvider>
+          <SidebarRail />
+          <SidebarInset className="flex-1 flex flex-col min-h-screen pt-16">
+            <main className="flex-1 overflow-auto pb-20 md:pb-0">
+              <div>{children}</div>
+            </main>
+            <MobileBottomNavigation
+              mainTab={mainTab}
+              setMainTab={setMainTab}
+              currentSecondaryTab={currentSecondaryTab}
+              onTabChange={onTabChange}
+              isDark={isDark}
+            />
+          </SidebarInset>
+        </div>
+      </SidebarProvider>
+    </>
   );
 }
 
