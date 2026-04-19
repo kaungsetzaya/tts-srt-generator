@@ -694,6 +694,9 @@ registerProcessor("dub_link", async (job) => {
       srtMarginV: job.input.srtMarginV,
       srtBlurBg: job.input.srtBlurBg,
       srtBlurSize: job.input.srtBlurSize,
+      srtBlurColor: job.input.srtBlurColor,
+      srtBoxPadding: job.input.srtBoxPadding,
+      srtFullWidth: job.input.srtFullWidth,
     });
 
     updateJob(job.id, {
@@ -748,6 +751,9 @@ registerProcessor("dub_file", async (job) => {
       srtMarginV: job.input.srtMarginV,
       srtBlurBg: job.input.srtBlurBg,
       srtBlurSize: job.input.srtBlurSize,
+      srtBlurColor: job.input.srtBlurColor,
+      srtBoxPadding: job.input.srtBoxPadding,
+      srtFullWidth: job.input.srtFullWidth,
     });
 
     updateJob(job.id, {
