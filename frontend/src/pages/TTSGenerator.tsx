@@ -28,6 +28,7 @@ import {
   History as HistoryIcon,
   Zap,
   ExternalLink,
+  Subtitles,
   Star,
 } from "lucide-react";
 import { useLocation } from "wouter";
@@ -774,6 +775,12 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
         const res = await startDubMutation.mutateAsync({
           url: dubVideoUrl.trim(),
           voice: dubVoiceToUse,
+          srtEnabled,
+          srtFontSize,
+          srtColor,
+          srtMarginV,
+          srtBlurBg,
+          srtBlurSize,
         });
         setActiveJobId(res.jobId);
         // Poll for job status
@@ -794,6 +801,12 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
           videoBase64: base64,
           filename: dubVideoFile.name,
           voice: dubVoiceToUse,
+          srtEnabled,
+          srtFontSize,
+          srtColor,
+          srtMarginV,
+          srtBlurBg,
+          srtBlurSize,
         });
         setDubResult(res as any);
         utils.subscription.myStatus.invalidate();
@@ -2824,7 +2837,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
 )}
                         </div>
 
-                      {/* SRT Settings - Always Visible */}
+                      {/* Premium Subtitle Settings */}
                       <div
                         className={box}
                         style={{
@@ -2833,61 +2846,96 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                           boxShadow,
                         }}
                       >
-                        <div className="space-y-4">
-                          {/* Enable/Disable */}
-                          <div className="flex items-center justify-between">
+                        {/* Header with Toggle */}
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-2">
+                            <Subtitles className="w-4 h-4" style={{ color: accent }} />
                             <span className="text-sm font-bold" style={{ color: textColor }}>
-                              {lang === "mm" ? "စာတန်း ပါပါ" : "Enable Subtitles"}
+                              {lang === "mm" ? "စာတန်း" : "Subtitles"}
                             </span>
-                            <button
-                              onClick={() => setSrtEnabled(!srtEnabled)}
-                              className={`w-12 h-7 rounded-full transition-all ${srtEnabled ? "bg-green-500" : "bg-gray-400"}`}
-                            >
-                              <div
-                                className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${srtEnabled ? "translate-x-6" : "translate-x-1"}`}
-                              />
-                            </button>
                           </div>
+                          <button
+                            onClick={() => setSrtEnabled(!srtEnabled)}
+                            className={`relative w-14 h-7 rounded-full transition-all duration-300 ${srtEnabled ? "bg-green-500" : "bg-gray-300"}`}
+                            style={{
+                              boxShadow: srtEnabled ? "0 0 12px rgba(34, 197, 94, 0.5)" : "none"
+                            }}
+                          >
+                            <div
+                              className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 ${srtEnabled ? "translate-x-7" : "translate-x-0.5"}`}
+                            />
+                          </button>
+                        </div>
 
+                        {/* Settings - Only show when enabled */}
+                        <div className={`space-y-4 transition-all duration-300 ${srtEnabled ? "opacity-100" : "opacity-40 pointer-events-none"}`}>
                           {/* Font Size */}
                           <div>
-                            <div className="flex justify-between mb-1">
-                              <span className="text-xs font-bold" style={{ color: subtextColor }}>
-                                {lang === "mm" ? "ဖောင်းပါး" : "Font Size"}
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-xs font-medium" style={{ color: subtextColor }}>
+                                {lang === "mm" ? "ဖောင်းပါး" : "Size"}
                               </span>
-                              <span className="text-xs font-bold" style={{ color: subtextColor }}>
+                              <span className="text-xs font-bold px-2 py-0.5 rounded" style={{ background: accent + "20", color: accent }}>
                                 {srtFontSize}px
                               </span>
                             </div>
                             <input
                               type="range"
-                              min="12"
-                              max="48"
+                              min="14"
+                              max="42"
                               value={srtFontSize}
                               onChange={e => setSrtFontSize(Number(e.target.value))}
-                              className="w-full accent"
-                              style={{ accentColor: accent }}
+                              className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+                              style={{ 
+                                accentColor: accent,
+                                background: isDark ? "#374151" : "#e5e7eb"
+                              }}
                             />
                           </div>
 
-                          {/* Text Color */}
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold" style={{ color: subtextColor }}>
-                              {lang === "mm" ? "စာရောင်းအရောင်" : "Text Color"}
-                            </span>
-                            <input
-                              type="color"
-                              value={srtColor}
-                              onChange={e => setSrtColor(e.target.value)}
-                              className="w-8 h-8 rounded cursor-pointer"
-                            />
+                          {/* Text Color & Blur */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <span className="text-xs font-medium block mb-2" style={{ color: subtextColor }}>
+                                {lang === "mm" ? "စာရောင်း" : "Color"}
+                              </span>
+                              <div className="flex gap-2">
+                                {["#ffffff", "#000000", "#fbbf24", "#ef4444", "#3b82f6"].map(color => (
+                                  <button
+                                    key={color}
+                                    onClick={() => setSrtColor(color)}
+                                    className={`w-7 h-7 rounded-full border-2 transition-transform ${srtColor === color ? "scale-110" : "hover:scale-105"}`}
+                                    style={{ 
+                                      background: color,
+                                      borderColor: srtColor === color ? accent : "transparent"
+                                    }}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-xs font-medium block mb-2" style={{ color: subtextColor }}>
+                                {lang === "mm" ? "နောက်ခံ" : "Background"}
+                              </span>
+                              <button
+                                onClick={() => setSrtBlurBg(!srtBlurBg)}
+                                className="text-xs font-medium px-3 py-1.5 rounded-lg border"
+                                style={{ 
+                                  borderColor: cardBorder,
+                                  background: srtBlurBg ? accent + "20" : "transparent",
+                                  color: srtBlurBg ? accent : textColor
+                                }}
+                              >
+                                {srtBlurBg ? "On" : "Off"}
+                              </button>
+                            </div>
                           </div>
 
-                          {/* Margin Top */}
+                          {/* Margin */}
                           <div>
-                            <div className="flex justify-between mb-1">
-                              <span className="text-xs font-bold" style={{ color: subtextColor }}>
-                                {lang === "mm" ? "အပေါ်စီး" : "Margin Top"}
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-xs font-medium" style={{ color: subtextColor }}>
+                                {lang === "mm" ? "အပေါ်စီး" : "Position"}
                               </span>
                               <span className="text-xs font-bold" style={{ color: subtextColor }}>
                                 {srtMarginV}%
@@ -2895,99 +2943,16 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                             </div>
                             <input
                               type="range"
-                              min="0"
-                              max="80"
+                              min="5"
+                              max="75"
                               value={srtMarginV}
                               onChange={e => setSrtMarginV(Number(e.target.value))}
-                              className="w-full accent"
-                              style={{ accentColor: accent }}
+                              className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+                              style={{ 
+                                accentColor: accent,
+                                background: isDark ? "#374151" : "#e5e7eb"
+                              }}
                             />
-                          </div>
-
-                          {/* Blur Background */}
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-bold" style={{ color: textColor }}>
-                              {lang === "mm" ? "နောက်ခံ ပါးပါး" : "Blur Background"}
-                            </span>
-                            <button
-                              onClick={() => setSrtBlurBg(!srtBlurBg)}
-                              className={`w-12 h-7 rounded-full transition-all ${srtBlurBg ? "bg-green-500" : "bg-gray-400"}`}
-                            >
-                              <div
-                                className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${srtBlurBg ? "translate-x-6" : "translate-x-1"}`}
-                              />
-                            </button>
-                          </div>
-
-                          {srtBlurBg && (
-                            <>
-                              {/* Blur Size */}
-                              <div>
-                                <div className="flex justify-between mb-1">
-                                  <span className="text-xs font-bold" style={{ color: subtextColor }}>
-                                    {lang === "mm" ? "ပါးအား" : "Blur Amount"}
-                                  </span>
-                                  <span className="text-xs font-bold" style={{ color: subtextColor }}>
-                                    {srtBlurSize}
-                                  </span>
-                                </div>
-                                <input
-                                  type="range"
-                                  min="0"
-                                  max="20"
-                                  value={srtBlurSize}
-                                  onChange={e => setSrtBlurSize(Number(e.target.value))}
-                                  className="w-full accent"
-                                  style={{ accentColor: accent }}
-                                />
-                              </div>
-
-                              {/* Blur Color */}
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm font-bold" style={{ color: textColor }}>
-                                  {lang === "mm" ? "ပါးအရောင်" : "Blur Color"}
-                                </span>
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() => setSrtBlurColor("black")}
-                                    className={`px-3 py-1 rounded text-xs font-bold ${srtBlurColor === "black" ? "ring-2" : ""}`}
-                                    style={{
-                                      background: "#1f1f1f",
-                                      color: "#fff",
-                                      ringColor: accent,
-                                    }}
-                                  >
-                                    မည်း
-                                  </button>
-                                  <button
-                                    onClick={() => setSrtBlurColor("white")}
-                                    className={`px-3 py-1 rounded text-xs font-bold ${srtBlurColor === "white" ? "ring-2" : ""}`}
-                                    style={{
-                                      background: "#fff",
-                                      color: "#000",
-                                      ringColor: accent,
-                                    }}
-                                  >
-                                   စွက်
-                                  </button>
-                                </div>
-                              </div>
-                            </>
-                          )}
-
-                          {/* Full Width */}
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-bold" style={{ color: textColor }}>
-                              {lang === "mm" ? "ပြည့်ပါးပါး" : "Full Width"}
-                            </span>
-                            <button
-                              onClick={() => setSrtFullWidth(!srtFullWidth)}
-                              className={`w-12 h-7 rounded-full transition-all ${srtFullWidth ? "bg-green-500" : "bg-gray-400"}`}
-                            >
-                              <div
-                                className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${srtFullWidth ? "translate-x-6" : "translate-x-1"}`}
-                              />
-                            </button>
                           </div>
                         </div>
                       </div>

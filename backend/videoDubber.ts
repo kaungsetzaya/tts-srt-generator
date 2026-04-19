@@ -22,6 +22,9 @@ export type { DubOptions, DubResult } from "@shared/types";
 function pad(n: number, len = 2) {
   return String(n).padStart(len, "0");
 }
+function pad2(n: number) {
+  return n.toString(16).padStart(2, "0").toUpperCase();
+}
 
 function msToSrtTime(ms: number): string {
   const h = Math.floor(ms / 3600000);
@@ -78,8 +81,20 @@ function getMyanmarFontPath(): string {
 // ASS format gives us more control than SRT for font rendering
 function buildAssContent(
   segments: Array<{ startMs: number; endMs: number; text: string }>,
-  fontPath: string
+  fontPath: string,
+  opts?: { fontSize?: number; fontColor?: string; marginV?: number; blurBg?: boolean; blurSize?: number }
 ): string {
+  const fontSize = opts?.fontSize ?? 52;
+  const fontColor = opts?.fontColor ?? "#ffffff";
+  const marginV = opts?.marginV ?? 40;
+
+  // Convert hex color to ASS format (&HAABBGGRR)
+  const hex = fontColor.replace("#", "");
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  const assColor = `&H00${pad2(b)}${pad2(g)}${pad2(r)}`;
+
   const fontName = fontPath
     ? path.basename(fontPath, path.extname(fontPath))
     : "Noto Sans Myanmar";
@@ -92,7 +107,7 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,${fontName},52,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,2,1,2,20,20,40,1
+Style: Default,${fontName},${fontSize},${assColor},&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,2,1,2,20,20,${marginV},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -491,7 +506,14 @@ export async function dubVideoFromBuffer(
         endMs: s.endMs,
         text: s.text,
       })),
-      fontPath
+      fontPath,
+      {
+        fontSize: options.srtFontSize,
+        fontColor: options.srtColor,
+        marginV: options.srtMarginV,
+        blurBg: options.srtBlurBg,
+        blurSize: options.srtBlurSize,
+      }
     );
     await fs.writeFile(tempAssPath, assContent, "utf-8");
 
@@ -632,6 +654,11 @@ registerProcessor("dub_link", async (job) => {
       speed: speed ?? 1.2,
       pitch: pitch ?? 0,
       srtEnabled: srtEnabled ?? true,
+      srtFontSize: job.input.srtFontSize,
+      srtColor: job.input.srtColor,
+      srtMarginV: job.input.srtMarginV,
+      srtBlurBg: job.input.srtBlurBg,
+      srtBlurSize: job.input.srtBlurSize,
     });
 
     updateJob(job.id, {
@@ -681,6 +708,11 @@ registerProcessor("dub_file", async (job) => {
       speed: speed ?? 1.2,
       pitch: pitch ?? 0,
       srtEnabled: srtEnabled ?? true,
+      srtFontSize: job.input.srtFontSize,
+      srtColor: job.input.srtColor,
+      srtMarginV: job.input.srtMarginV,
+      srtBlurBg: job.input.srtBlurBg,
+      srtBlurSize: job.input.srtBlurSize,
     });
 
     updateJob(job.id, {

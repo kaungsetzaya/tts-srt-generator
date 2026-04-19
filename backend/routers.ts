@@ -347,11 +347,16 @@ export const appRouter = t.router({
           videoBase64: z.string(),
           filename: z.string(),
           voice: z.enum(["thiha", "nilar"]),
+          srtEnabled: z.boolean().optional().default(true),
+          srtFontSize: z.number().optional().default(24),
+          srtColor: z.string().optional().default("#ffffff"),
+          srtMarginV: z.number().optional().default(30),
+          srtBlurBg: z.boolean().optional().default(true),
+          srtBlurSize: z.number().optional().default(8),
         })
       )
       .mutation(async ({ input, ctx }) => {
         const userId = ctx.user!.userId;
-        // Deduct 10 credits for dub with thiha/nilar
         await deductCredits(
           userId,
           10,
@@ -359,14 +364,18 @@ export const appRouter = t.router({
           `Video Dub: ${input.voice}`
         );
         try {
-          // Use job queue for file upload (like dubLink)
           const jobId = createJob("dub_file", {
             videoBase64: input.videoBase64,
             filename: input.filename,
             voice: input.voice,
             speed: 1.2,
             pitch: 0,
-            srtEnabled: true,
+            srtEnabled: input.srtEnabled,
+            srtFontSize: input.srtFontSize,
+            srtColor: input.srtColor,
+            srtMarginV: input.srtMarginV,
+            srtBlurBg: input.srtBlurBg,
+            srtBlurSize: input.srtBlurSize,
             userId,
           }, userId);
 
@@ -552,12 +561,17 @@ export const appRouter = t.router({
         z.object({
           url: z.string(),
           voice: z.enum(["thiha", "nilar"]),
+          srtEnabled: z.boolean().optional().default(true),
+          srtFontSize: z.number().optional().default(24),
+          srtColor: z.string().optional().default("#ffffff"),
+          srtMarginV: z.number().optional().default(30),
+          srtBlurBg: z.boolean().optional().default(true),
+          srtBlurSize: z.number().optional().default(8),
         })
       )
       .mutation(async ({ input, ctx }) => {
         const userId = ctx.user!.userId;
 
-        // Validate URL first
         if (!isAllowedVideoUrl(input.url)) {
           throw new TRPCError({
             code: "BAD_REQUEST",
@@ -565,7 +579,6 @@ export const appRouter = t.router({
           });
         }
 
-        // Deduct 10 credits upfront
         await deductCredits(
           userId,
           10,
@@ -573,13 +586,17 @@ export const appRouter = t.router({
           `Video Dub Link: ${input.voice}`
         );
 
-        // createJob will auto-trigger the registered dub_link processor
         const jobId = createJob("dub_link", {
           url: input.url,
           voice: input.voice,
           speed: 1.2,
           pitch: 0,
-          srtEnabled: true,
+          srtEnabled: input.srtEnabled,
+          srtFontSize: input.srtFontSize,
+          srtColor: input.srtColor,
+          srtMarginV: input.srtMarginV,
+          srtBlurBg: input.srtBlurBg,
+          srtBlurSize: input.srtBlurSize,
           userId,
         }, userId);
 

@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "NODE_ENV=development tsx watch backend/_core/index.ts",
-    "build": "vite build && esbuild backend/_core/index.ts --platform=node --bundle --format=cjs --outfile=dist/index.cjs --external:dotenv --external:fs --external:path --external:os --external:crypto --external:fs/promises --alias:@shared/const=./dist/shared/const.ts --alias:@shared/types=./dist/shared/types.ts --alias:@shared/_core/errors=./dist/shared/_core/errors.ts && cp -r shared dist/",
+    "build": "vite build && cp -r frontend/dist/* dist/public/ && esbuild backend/_core/index.ts --platform=node --bundle --format=cjs --outfile=dist/index.cjs --external:dotenv --external:fs --external:path --external:os --external:crypto --external:fs/promises --alias:@shared/const=./dist/shared/const.ts --alias:@shared/types=./dist/shared/types.ts --alias:@shared/_core/errors=./dist/shared/_core/errors.ts && cp -r shared dist/",
     "start": "NODE_ENV=production node dist/index.cjs",
     "check": "tsc --noEmit",
     "format": "prettier --write .",
