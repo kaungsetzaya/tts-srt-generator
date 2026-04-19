@@ -10,6 +10,7 @@ import { promisify } from "util";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { downloadVideo, getVideoInfo } from "./_core/multiDownloader";
 import { generateSpeech, type VoiceKey } from "./tts";
+import { geminiTranslateBatch } from "./geminiTranslator";
 import { isAllowedVideoUrl } from "./_core/security";
 import { generateSignedDownloadUrl } from "./_core/signedUrl";
 import type { DubOptions, DubResult } from "@shared/types";
@@ -225,68 +226,27 @@ async function translateSegments(
 ): Promise<Segment[]> {
   if (segments.length === 0) return segments;
 
-  const genAI = new GoogleGenerativeAI(
-    apiKey || process.env.GEMINI_API_KEY || ""
-  );
-  const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite-preview" });
+  try {
+    const inputSegments = segments.map((seg, i) => ({
+      index: i,
+      start: seg.start,
+      end: seg.end,
+      text: seg.text,
+    }));
 
-  // Build indexed prompt — ALL segments in ONE call
-  const indexedText = segments
-    .map((seg, i) => `[${i}] ${seg.text}`)
-    .join("\n");
+    const { translated } = await geminiTranslateBatch(inputSegments, apiKey);
 
-  const prompt = `Translate ALL the following video segments to Myanmar (Burmese) language.
-
-RULES:
-1. Return ONLY a JSON array — no extra text, no markdown, no explanation
-2. Keep the same index numbers [0], [1], [2]...
-3. Each item: {"i": number, "text": "myanmar translation"}
-4. NO quotes around Myanmar text
-5. NO "..." dots or suspension marks
-6. Keep the translation natural and conversational
-7. If a segment is already Myanmar, keep it as is
-
-Segments to translate:
-${indexedText}
-
-Return JSON array only:`;
-
-  let retries = 2;
-  while (retries >= 0) {
-    try {
-      const result = await model.generateContent(prompt);
-      const responseText = result.response.text();
-
-      // Extract JSON array from response
-      const jsonMatch = responseText.match(/\[[\s\S]*\]/);
-      if (!jsonMatch) throw new Error("No JSON array in response");
-
-      const parsed: Array<{ i: number; text: string }> = JSON.parse(jsonMatch[0]);
-
-      // Map back to segments using index
-      const translated = segments.map((seg, i) => {
-        const found = parsed.find(p => p.i === i);
-        return {
-          ...seg,
-          text: found?.text?.trim() || seg.text, // fallback to original
-        };
-      });
-
-      console.log(`[Gemini] Translated ${translated.length} segments in 1 API call`);
-      return translated;
-
-    } catch (err) {
-      console.error(`[Gemini] Translation attempt failed (retries left: ${retries}):`, err);
-      retries--;
-      if (retries < 0) {
-        console.warn("[Gemini] All retries failed — using original text");
-        return segments; // fallback: use original
-      }
-      await new Promise(r => setTimeout(r, 2000)); // wait 2s before retry
-    }
+    // Map back to expected Segment type seamlessly
+    return translated.map(t => ({
+      start: t.start,
+      end: t.end,
+      text: t.text,
+    }));
+  } catch (err) {
+    console.error(`[Gemini Dubber] Translation attempt failed:`, err);
+    console.warn("[Gemini Dubber] Falling back to original text due to error.");
+    return segments;
   }
-
-  return segments;
 }
 
 // ─── Step 4: Generate silence audio file ────────────────────────
@@ -573,6 +533,7 @@ export async function dubVideoFromBuffer(
           "-map", "0:v",
           "-map", "1:a",
           "-shortest",
+          "-movflags", "+faststart"
         ]);
 
       if (fontPath && existsSync(fontPath)) {
