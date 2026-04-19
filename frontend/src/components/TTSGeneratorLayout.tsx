@@ -58,11 +58,6 @@ export function TTSGeneratorLayout({
 }: TTSGeneratorLayoutProps) {
   return (
     <>
-      {headerBar && (
-        <header className="fixed top-0 left-0 right-0 z-[100] will-change-transform" style={{ marginLeft: 'var(--sidebar-width-icon, 4rem)' }}>
-          {headerBar}
-        </header>
-      )}
       <SidebarProvider defaultOpen>
         <div className="flex min-h-screen w-full">
           <TTSGeneratorSidebar
@@ -77,7 +72,12 @@ export function TTSGeneratorLayout({
             setLang={setLang}
           />
           <SidebarRail />
-          <SidebarInset className="flex-1 flex flex-col min-h-screen pt-16">
+          <SidebarInset className="flex-1 flex flex-col min-h-screen">
+            {headerBar && (
+              <header className="sticky top-0 z-[100] will-change-transform">
+                {headerBar}
+              </header>
+            )}
             <main className="flex-1 overflow-auto pb-20 md:pb-0">
               <div>{children}</div>
             </main>

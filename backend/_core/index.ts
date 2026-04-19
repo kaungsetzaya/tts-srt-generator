@@ -142,7 +142,7 @@ async function startServer() {
       return;
     }
 
-    // Serve the file
+    // Serve the file with Range request support (required for <video> elements)
     const filePath = path.join(downloadsDir, filename);
     const resolved = path.resolve(filePath);
     if (!resolved.startsWith(path.resolve(downloadsDir))) {
@@ -150,14 +150,48 @@ async function startServer() {
       return;
     }
 
-    res.sendFile(resolved, (err) => {
-      if (err) {
-        console.error("[Download] File send error:", err);
-        if (!res.headersSent) {
-          res.status(404).json({ error: "File not found" });
-        }
+    // Check file exists
+    const { createReadStream, statSync } = require('fs');
+    let stat: any;
+    try {
+      stat = statSync(resolved);
+    } catch {
+      res.status(404).json({ error: "File not found" });
+      return;
+    }
+
+    const fileSize = stat.size;
+    const range = req.headers.range;
+
+    if (range) {
+      // Handle Range request (required for video seeking / Chrome playback)
+      const parts = range.replace(/bytes=/, '').split('-');
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+
+      if (start >= fileSize || end >= fileSize || start > end) {
+        res.status(416).set('Content-Range', `bytes */${fileSize}`).end();
+        return;
       }
-    });
+
+      res.status(206).set({
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': end - start + 1,
+        'Content-Type': 'video/mp4',
+        'Content-Disposition': `inline; filename="${filename}"`,
+      });
+      createReadStream(resolved, { start, end }).pipe(res);
+    } else {
+      // Full file download
+      res.set({
+        'Content-Length': fileSize,
+        'Content-Type': 'video/mp4',
+        'Accept-Ranges': 'bytes',
+        'Content-Disposition': `inline; filename="${filename}"`,
+      });
+      createReadStream(resolved).pipe(res);
+    }
   });
 
   // Legacy /downloads/* for backward compat during transition (1h cache)

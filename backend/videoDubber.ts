@@ -685,10 +685,10 @@ import { eq, sql } from "drizzle-orm";
 registerProcessor("dub_link", async (job) => {
   const { url, voice, speed, pitch, srtEnabled, userId } = job.input;
 
-  updateJob(job.id, { progress: 5, message: "ဗီဒီယို Download လုပ်နေသည်..." });
+  updateJob(job.id, { progress: 5, message: "ပြင်ဆင်နေသည်..." });
 
   try {
-    updateJob(job.id, { progress: 15, message: "ဗီဒီယို Download ပြီးပါပြီ၊ Audio ထုတ်နေသည်..." });
+    updateJob(job.id, { progress: 15, message: "ဖန်တီးနေသည်..." });
 
     const result = await dubVideoFromLink(url, {
       voice,
@@ -741,10 +741,10 @@ registerProcessor("dub_link", async (job) => {
 registerProcessor("dub_file", async (job) => {
   const { videoBase64, filename, voice, speed, pitch, srtEnabled, userId } = job.input;
 
-  updateJob(job.id, { progress: 5, message: "Processing video..." });
+  updateJob(job.id, { progress: 5, message: "ပြင်ဆင်နေသည်..." });
 
   try {
-    updateJob(job.id, { progress: 20, message: "Extracting audio..." });
+    updateJob(job.id, { progress: 20, message: "ဖန်တီးနေသည်..." });
     const buffer = Buffer.from(videoBase64, "base64");
 
     const result = await dubVideoFromBuffer(buffer, filename, {

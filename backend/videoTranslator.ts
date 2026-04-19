@@ -52,10 +52,29 @@ async function extractAudio(videoBuffer: Buffer): Promise<string> {
     });
 }
 
-// ─── Pre-flight: check python3 + faster-whisper are available ─────────────────
+// ─── Auto-detect Python binary (python3 or python) ─────────────────
+let _pythonBin: string | null = null;
+
+async function getPythonBin(): Promise<string> {
+    if (_pythonBin) return _pythonBin;
+    
+    // Try python3 first, then python
+    for (const bin of ["python3", "python"]) {
+        try {
+            await execFileAsync(bin, ["--version"], { timeout: 5000, killSignal: "SIGKILL" });
+            _pythonBin = bin;
+            console.log(`[Translate] Using Python binary: ${bin}`);
+            return bin;
+        } catch {}
+    }
+    throw new Error("Server: Python မတွေ့ပါ (python3/python)။ Admin ကို ဆက်သွယ်ပါ။");
+}
+
+// ─── Pre-flight: check python + faster-whisper are available ─────────────────
 export async function checkPythonAndWhisper(): Promise<void> {
+    const bin = await getPythonBin();
     try {
-        await execFileAsync("python3", ["-c", "import faster_whisper; print('ok')"], {
+        await execFileAsync(bin, ["-c", "import faster_whisper; print('ok')"], {
             timeout: 10000,
             killSignal: "SIGKILL",
         });
@@ -64,24 +83,22 @@ export async function checkPythonAndWhisper(): Promise<void> {
         if (msg.includes("No module named") || msg.includes("ModuleNotFound")) {
             throw new Error("Server: faster-whisper မထည့်သွင်းရသေးပါ။ Admin ကို ဆက်သွယ်ပါ။");
         }
-        if (msg.includes("ENOENT") || msg.includes("not found")) {
-            throw new Error("Server: Python3 မတွေ့ပါ။ Admin ကို ဆက်သွယ်ပါ။");
-        }
         throw new Error(`Server: Python check failed — ${msg.slice(0, 200)}`);
     }
 }
 
 // ------------------ Whisper — Python script with faster-whisper ------------------
 async function transcribeLocalWhisper(audioPath: string): Promise<{ text: string; segments: { start: number; end: number; text: string }[] }> {
+    const bin = await getPythonBin();
     console.log(`[Translate] Starting transcription for: ${audioPath}`);
     const outputDir = path.dirname(audioPath);
     const baseName = path.parse(audioPath).name;
     const scriptPath = path.join(process.cwd(), "python", "transcriber.py");
     const outputJson = path.join(outputDir, `${baseName}_transcription.json`);
 
-    console.log(`[Translate] Running: python3 ${scriptPath} ${audioPath} ${outputJson}`);
+    console.log(`[Translate] Running: ${bin} ${scriptPath} ${audioPath} ${outputJson}`);
     // 🔐 Command Guard: execFile with argument array + SIGKILL to guarantee termination
-    await execFileAsync("python3", [scriptPath, audioPath, outputJson], {
+    await execFileAsync(bin, [scriptPath, audioPath, outputJson], {
         timeout: 300000,
         killSignal: "SIGKILL",
         maxBuffer: 10 * 1024 * 1024,
@@ -157,12 +174,12 @@ export async function translateVideo(
             throw new Error("Video too long. Max 2min 30sec.");
         }
 
-        onProgress?.(15, "Audio ထုတ်နေသည်...");
+        onProgress?.(15, "ပြင်ဆင်နေသည်...");
         console.log(`[Translate] Step 1: Extracting audio from ${filename} (${Math.round(videoSizeMB)}MB`);
         audioPath = await extractAudio(videoBuffer);
         console.log(`[Translate] Step 2: Audio extracted to ${audioPath}`);
 
-        onProgress?.(30, "Whisper AI ဖြင့် အသံမှစာသားပြောင်းနေသည်...");
+        onProgress?.(30, "အသံ ခွဲခြမ်းနေသည်...");
         console.log(`[Translate] Step 3: Starting Whisper transcription...`);
         const { text: englishText, segments } = await transcribeLocalWhisper(audioPath);
         console.log(`[Translate] Step 4: Transcription done, ${segments.length} segments`);
@@ -176,7 +193,7 @@ export async function translateVideo(
             throw new Error("No English text to translate.");
         }
         
-        onProgress?.(70, "Gemini AI ဖြင့် မြန်မာဘာသာပြန်နေသည်...");
+        onProgress?.(70, "ဘာသာပြန်နေသည်...");
         console.log(`[Translate] English text: "${englishText.substring(0, 100)}..."`);
         
         const { myanmar } = await geminiTranslate(englishText, userApiKey);
@@ -235,7 +252,7 @@ export async function translateVideoLink(url: string, userApiKey?: string, onPro
         }
 
         // ── Download with unified multi-platform downloader ──
-        onProgress?.(15, "ဗီဒီယို ဒေါင်းလော့ဆွဲနေသည်...");
+        onProgress?.(15, "ဗီဒီယို ပြင်ဆင်နေသည်...");
         console.log(`[Video Translator] Downloading: ${url}`);
 
         const dlResult = await downloadVideo(url, tempVideoPath, {
@@ -249,7 +266,7 @@ export async function translateVideoLink(url: string, userApiKey?: string, onPro
         const fileStat = await fs.stat(tempVideoPath).catch(() => null);
         if (fileStat) console.log(`[Video Translator] Video downloaded: ${Math.round(fileStat.size / 1024 / 1024 * 10) / 10}MB`);
 
-        onProgress?.(35, "Audio ထုတ်နေသည်...");
+        onProgress?.(35, "ပြင်ဆင်နေသည်...");
         console.log(`[Video Translator] Extracting Audio...`);
         await new Promise((resolve, reject) => {
             ffmpeg(tempVideoPath)
@@ -260,7 +277,7 @@ export async function translateVideoLink(url: string, userApiKey?: string, onPro
                 .save(tempAudioPath);
         });
 
-        onProgress?.(50, "Whisper AI ဖြင့် အသံမှစာသားပြောင်းနေသည်...");
+        onProgress?.(50, "အသံ ခွဲခြမ်းနေသည်...");
         console.log(`[Video Translator] Sending to local Whisper...`);
         const { text: englishText, segments } = await transcribeLocalWhisper(tempAudioPath);
 
@@ -270,7 +287,7 @@ export async function translateVideoLink(url: string, userApiKey?: string, onPro
         
         console.log(`[Video Translator] English: "${englishText.substring(0, 100)}..."`);
 
-        onProgress?.(80, "Gemini AI ဖြင့် မြန်မာဘာသာပြန်နေသည်...");
+        onProgress?.(80, "ဘာသာပြန်နေသည်...");
         console.log(`[Video Translator] Translating with Gemini...`);
         
         // Translate ALL at once using geminiTranslate (simple call)
