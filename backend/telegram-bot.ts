@@ -1,7 +1,7 @@
-import { randomBytes } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
 import { getDb } from "./db";
 import { eq } from "drizzle-orm";
-import { users, settings } from "../drizzle/schema";
+import { users, settings, subscriptions, creditTransactions } from "../drizzle/schema";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
@@ -67,22 +67,32 @@ export async function handleTelegramUpdate(update: any) {
         }).where(eq(users.id, user.id));
       } else {
         // Check trial settings - give trial credits to new users if enabled
+        let isTrialActive = false;
         let trialCredits = 0;
+        let trialDays = 7;
+        
         try {
           const settingsRows = await db.select().from(settings);
           const settingsObj: Record<string, string> = {};
           for (const r of settingsRows) settingsObj[r.keyName] = r.value;
           
           const autoTrialEnabled = settingsObj.autoTrialEnabled === 'true';
-          if (autoTrialEnabled) {
+          const isDateValid = !settingsObj.trialStartDate || !settingsObj.trialEndDate || 
+                              (new Date() >= new Date(settingsObj.trialStartDate) && new Date() <= new Date(settingsObj.trialEndDate));
+                              
+          if (autoTrialEnabled && isDateValid) {
+            isTrialActive = true;
             trialCredits = parseInt(settingsObj.trialCredits) || 15;
+            trialDays = parseInt(settingsObj.autoTrialDays) || 7;
           }
         } catch {
-          trialCredits = 0; // default to 0 if settings failed
+          // default to no trial
         }
 
+        const newUserId = randomBytes(16).toString("hex");
+
         await db.insert(users).values({
-          id: randomBytes(16).toString("hex"),
+          id: newUserId,
           telegramId,
           telegramUsername: from.username || null,
           telegramFirstName: firstName,
@@ -90,6 +100,28 @@ export async function handleTelegramUpdate(update: any) {
           telegramCodeExpiresAt: newExpiresAt,
           credits: trialCredits,
         });
+
+        if (isTrialActive && trialCredits > 0) {
+          // 1) Add Subscription
+          await db.insert(subscriptions).values({
+            id: randomUUID(),
+            userId: newUserId,
+            plan: "trial",
+            startsAt: new Date(),
+            expiresAt: new Date(Date.now() + trialDays * 86400000),
+            note: "Auto Telegram Trial",
+            paymentMethod: "free",
+          });
+
+          // 2) Log Credit Transaction
+          await db.insert(creditTransactions).values({
+            id: randomUUID(),
+            userId: newUserId,
+            amount: trialCredits,
+            type: "subscription",
+            description: "Started free trial from Telegram bot",
+          });
+        }
       }
 
       const formattedMessage = `👋 မင်္ဂလာပါ, ${firstName}!\n\n🔑 *သင့် login code:*\n\n\`${loginCode}\`\n\n⏰ Code သက်တမ်း: *၁၀ မိနစ်*\nဒီ code ကို ${APP_URL} မှာ login ဝင်ဖို့ သုံးပါ။\n\n⚠️ Code သက်တမ်းကုန်ရင် /code ကို ထပ်နှိပ်ပါ!`;

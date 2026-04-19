@@ -1068,7 +1068,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
           ) : (
             <>
               <span className="relative z-10 text-sm font-medium" style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
-                {me ? (lang === "mm" ? "အမျိုးသမီး" : "Free") : ""}
+                {me ? (lang === "mm" ? "အခမဲ့" : "Free") : ""}
               </span>
               <div className="relative z-10 flex-1 h-2 max-w-[100px] rounded-full overflow-hidden" style={{ background: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)" }}>
                 <div 
