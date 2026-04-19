@@ -3739,8 +3739,6 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                   })}
                 </div>
               )}
-
-              )}
             </div>
           )}
 
