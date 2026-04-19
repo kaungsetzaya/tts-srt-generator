@@ -359,13 +359,18 @@ export const appRouter = t.router({
           `Video Dub: ${input.voice}`
         );
         try {
-          const buffer = Buffer.from(input.videoBase64, "base64");
-          return await dubVideoFromBuffer(buffer, input.filename, {
+          // Use job queue for file upload (like dubLink)
+          const jobId = createJob("dub_file", {
+            videoBase64: input.videoBase64,
+            filename: input.filename,
             voice: input.voice,
             speed: 1.2,
             pitch: 0,
             srtEnabled: true,
-          });
+            userId,
+          }, userId);
+
+          return { jobId };
         } catch (error: any) {
           // Refund credits on failure
           await addCredits(
