@@ -276,16 +276,6 @@ async function startServer() {
 
 startServer().catch(console.error);
 
-// ─── Signed URL helper (exported for use by routers) ────────
-export function generateSignedDownloadUrl(filename: string): string {
-  const secret = process.env.JWT_SECRET || "fallback-download-secret";
-  const baseUrl = process.env.BASE_URL || "https://choco.de5.net";
-  // Links expire after 1 hour
-  const expiry = String(Date.now() + 60 * 60 * 1000);
-  const signature = createHmac('sha256', secret)
-    .update(`${filename}:${expiry}`)
-    .digest('hex')
-    .slice(0, 32);
-  const token = `${signature}-${expiry}`;
-  return `${baseUrl}/downloads/${token}/${filename}`;
-}
+// ─── Signed URL helper (re-exported from shared utility) ────────
+export { generateSignedDownloadUrl } from "./signedUrl";
+

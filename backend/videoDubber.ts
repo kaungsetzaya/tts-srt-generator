@@ -11,6 +11,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { downloadVideo, getVideoInfo } from "./_core/multiDownloader";
 import { generateSpeech, type VoiceKey } from "./tts";
 import { isAllowedVideoUrl } from "./_core/security";
+import { generateSignedDownloadUrl } from "./_core/signedUrl";
 import type { DubOptions, DubResult } from "@shared/types";
 
 const execFileAsync = promisify(execFile);
@@ -612,7 +613,7 @@ export async function dubVideoFromBuffer(
     await fs.mkdir(path.dirname(finalPath), { recursive: true }).catch(() => {});
     await fs.copyFile(tempOutputPath, finalPath);
 
-    const videoUrl = `${process.env.BASE_URL || "https://choco.de5.net"}/downloads/${downloadFilename}`;
+    const videoUrl = generateSignedDownloadUrl(downloadFilename);
 
     // Build plain myanmar text
     const myanmarText = processed.map(s => s.text).join(" ");
