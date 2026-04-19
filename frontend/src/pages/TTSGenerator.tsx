@@ -33,7 +33,9 @@ import {
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { TTSGeneratorLayout } from "@/components/TTSGeneratorLayout";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useTheme } from "@/contexts/ThemeContext";
+import { JobProgressOverlay } from "@/components/JobProgressOverlay";
 
 type MainTab = "tts" | "video" | "dubbing";
 type SecondaryTab = "history" | "plan" | "guide" | "settings" | null;
@@ -983,7 +985,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
 
   const headerBar = (
     <div
-      className="backdrop-blur-2xl border-b flex items-center justify-between py-2 sm:py-2.5 w-full"
+      className="backdrop-blur-2xl border-b flex items-center justify-between py-2 sm:py-2.5 px-3 sm:px-4 w-full"
       style={{
         borderColor: isDark
           ? "rgba(192,111,48,0.15)"
@@ -996,6 +998,21 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
           : "0 1px 12px rgba(244,179,79,0.06)",
       }}
     >
+      <div className="flex items-center gap-2">
+        <SidebarTrigger 
+          className="flex items-center justify-center rounded-xl flex-shrink-0"
+          style={{
+            width: 36,
+            height: 36,
+            background: isDark
+              ? "rgba(192,111,48,0.15)"
+              : "rgba(192,111,48,0.12)",
+            border: `1px solid ${isDark ? "rgba(192,111,48,0.3)" : "rgba(192,111,48,0.25)"}`,
+            color: "#C06F30",
+          }}
+        />
+        <div className="md:hidden font-black text-lg ml-2" style={{ color: "#C06F30" }}>LUMIX</div>
+      </div>
       <div className="flex items-center gap-1.5 sm:gap-2 ml-auto">
         {subLoading ? (
           <div className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl">
@@ -1158,6 +1175,16 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
           className="h-full relative transition-colors duration-500 font-sans"
           style={{ color: textColor }}
         >
+        <JobProgressOverlay 
+          isVisible={Boolean(translateJobId) || Boolean(dubJobId) || generateMutation.isPending}
+          progress={translateJobId ? translateJobProgress : dubJobId ? dubJobProgress : generateMutation.isPending ? 85 : 0}
+          message={translateJobId ? translateJobMessage : dubJobId ? dubJobMessage : generateMutation.isPending ? (lang === "mm" ? "အသံ ဖန်တီးနေသည်..." : "Generating audio...") : ""}
+          title={translateJobId ? (lang === "mm" ? "ဗီဒီယို ဘာသာပြန်" : "Video Translation") : dubJobId ? "Auto Creator" : "Text to Speech"}
+          isDark={isDark}
+          accent={accent}
+          lang={lang}
+        />
+
         {/* Error Toast */}
         {errorToast && (
           <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-top-4 duration-300 max-w-[90vw]">
@@ -3696,7 +3723,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                             )}
                           </div>
                         </div>
-                        <div className="text-right flex-shrink-0">
+                        <div className="text-right flex-shrink-0 flex flex-col items-end gap-1">
                           <div
                             className="text-xs font-semibold"
                             style={{ color: subtextColor }}
@@ -3714,6 +3741,18 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                                 )
                               : "-"}
                           </div>
+                          {item.status === "success" && (
+                            <div 
+                              className="text-[10px] font-black px-2 py-0.5 rounded-full"
+                              style={{ 
+                                background: isDark ? "rgba(192,111,48,0.15)" : "rgba(192,111,48,0.1)", 
+                                color: accent 
+                              }}
+                            >
+                              -{item.feature?.includes("dub") || item.feature?.includes("translate") ? 5 : item.character ? 3 : 1} 
+                              {lang === "mm" ? " Credits" : " Credits"}
+                            </div>
+                          )}
                         </div>
                       </div>
                     );

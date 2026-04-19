@@ -265,29 +265,6 @@ function TTSGeneratorSidebar({
             </motion.div>
           )}
 
-          <motion.div
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95, rotate: isCollapsed ? 180 : -180 }}
-            transition={{ duration: 0.3, ease: [0.34, 1.56, 0.64, 1] }}
-          >
-            <SidebarTrigger
-              className="flex items-center justify-center rounded-xl flex-shrink-0"
-              style={{
-                width: 36,
-                height: 36,
-                background: isDark
-                  ? "rgba(192,111,48,0.15)"
-                  : "rgba(192,111,48,0.12)",
-                border: `1px solid ${isDark ? "rgba(192,111,48,0.3)" : "rgba(192,111,48,0.25)"}`,
-                color: "#C06F30",
-                boxShadow: isCollapsed
-                  ? `0 0 16px ${accent}30, inset 0 1px 0 rgba(255,255,255,0.1)`
-                  : "none",
-              }}
-            >
-              <PanelLeft className="h-4 w-4" />
-            </SidebarTrigger>
-          </motion.div>
         </div>
       </SidebarHeader>
 
