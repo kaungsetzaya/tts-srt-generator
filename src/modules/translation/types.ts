@@ -12,7 +12,7 @@ export interface TranslationInput {
 export interface TranslationOutput {
   englishText: string;
   myanmarText: string;
-  // Optional segments fordubbing to reuse
+  // Optional segments for dubbing to reuse
   segments?: Segment[];
 }
 

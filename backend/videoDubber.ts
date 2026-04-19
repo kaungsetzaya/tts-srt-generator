@@ -665,4 +665,46 @@ registerProcessor("dub_link", async (job) => {
       message: "Failed",
     });
   }
-});
+});
+
+registerProcessor("dub_file", async (job) => {
+  const { videoBase64, filename, voice, speed, pitch, srtEnabled, userId } = job.input;
+
+  updateJob(job.id, { progress: 5, message: "Processing video..." });
+
+  try {
+    updateJob(job.id, { progress: 20, message: "Extracting audio..." });
+    const buffer = Buffer.from(videoBase64, "base64");
+
+    const result = await dubVideoFromBuffer(buffer, filename, {
+      voice,
+      speed: speed ?? 1.2,
+      pitch: pitch ?? 0,
+      srtEnabled: srtEnabled ?? true,
+    });
+
+    updateJob(job.id, {
+      status: "completed",
+      progress: 100,
+      result,
+      message: "Done",
+    });
+  } catch (error: any) {
+    console.error(`[DubFileJob ${job.id}] Error:`, error.message);
+
+    if (userId) {
+      try {
+        const db = await getDb();
+        await db.update(users).set({ credits: sql`credits + 10` }).where(eq(users.id, userId));
+      } catch (refundErr) {
+        console.error("[DubFileJob] Refund failed:", refundErr);
+      }
+    }
+
+    updateJob(job.id, {
+      status: "failed",
+      error: error.message || "Dub file failed",
+      message: "Failed",
+    });
+  }
+});

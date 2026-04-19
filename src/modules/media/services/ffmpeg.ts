@@ -145,10 +145,11 @@ export class MediaService {
         const tempPath = path.join(tmpdir(), `concat_${id}_${i}.${outputFormat}`);
         await fs.writeFile(tempPath, audioBuffers[i]);
         tempFiles.push(tempPath);
-        await fs.writeFile(listPath, tempFiles.map(f => `file '${f}'`).join("\n"), {
-          flag: "a",
-        });
       }
+
+      // Write concat list ONCE after all files are written
+      const listContent = tempFiles.map(f => `file '${f}'`).join("\n");
+      await fs.writeFile(listPath, listContent);
 
       // Concatenate
       await execAsync("ffmpeg", [

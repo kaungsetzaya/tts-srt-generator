@@ -92,7 +92,7 @@ export const appRouter = t.router({
           if (adminUser) {
             const sessionToken = randomUUID();
             await db.update(users).set({ sessionToken, lastLoginAt: new Date() }).where(eq(users.id, adminUser.id));
-            const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "dev-secret");
+            const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "dev-secret-fallback");
             // Bug 14 fix: Check if JWT_SECRET is properly set in production
             if (!process.env.JWT_SECRET && process.env.NODE_ENV === "production") {
               console.warn("[SECURITY] JWT_SECRET not set in production! Using fallback.");
@@ -130,7 +130,7 @@ export const appRouter = t.router({
         // Generate session token
         const sessionToken = randomUUID();
         const JWT_SECRET = new TextEncoder().encode(
-          process.env.JWT_SECRET || "dev-only-secret-do-not-use-in-production"
+          process.env.JWT_SECRET || "dev-secret-fallback"
         );
 
         // Update user: clear code, set session token

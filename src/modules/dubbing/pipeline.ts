@@ -56,10 +56,14 @@ export class DubbingPipeline {
       return sum + (seg.end - seg.start) * 1000; // Convert seconds to ms
     }, 0);
 
+    // Build combined Myanmar text from all translated segments
+    const myanmarText = translatedSegments.map(seg => seg.translatedText).join(" ");
+
     return {
       videoBuffer: finalVideo,
       srtContent: assContent,
       durationMs: totalDuration || 0,
+      myanmarText,
     };
   }
 }
