@@ -3173,8 +3173,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                             )}
                           </div>
 
-                        </div>
-                      </div>
+
 
                       {/* Generate Dubbing Button */}
                       <motion.button
@@ -3229,9 +3228,6 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                           </>
                         )}
                       </motion.button>
-                    </div>
-                  </div>
-                )}
 
                       {(startDubMutation.isPending || activeJobId !== null) && (
                         <div
@@ -3311,7 +3307,8 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                         ← {lang === "mm" ? "ဗီဒီယိုပြောင်းမည်" : "Change Video"}
                       </button>
                     </div>
-                  )}
+                  </div>
+                )}
 
                   {/* Dubbing Result — Final Video + Download */}
                   {dubResult && (
