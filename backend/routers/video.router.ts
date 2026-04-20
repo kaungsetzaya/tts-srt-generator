@@ -64,7 +64,7 @@ export const videoRouter = t.router({
       }
 
       // ── Gate 3: Deduct credits BEFORE creating job ──
-      // await deductCredits(userId, 10, "video_dub", `Video Dub: ${input.voice}`);
+      await deductCredits(userId, 10, "video_dub", `Video Dub: ${input.voice}`);
 
       // ── Gate 4: Create job (auto-dispatches to processor) ──
       try {
@@ -141,7 +141,7 @@ export const videoRouter = t.router({
       }
 
       // ── Gate 3: Deduct credits BEFORE creating job ──
-      // await deductCredits(userId, 10, "video_dub", `Video Dub Link: ${input.voice}`);
+      await deductCredits(userId, 10, "video_dub", `Video Dub Link: ${input.voice}`);
 
       // ── Gate 4: Create job ──
       try {
@@ -229,7 +229,7 @@ export const videoRouter = t.router({
       }
 
       // ── Gate 3: Deduct credits BEFORE creating job ──
-      // await deductCredits(userId, 5, "video_translate", "Video Translate");
+      await deductCredits(userId, 5, "video_translate", "Video Translate");
       
       // ── Gate 4: Create job ──
       const jobId = createJob("translate_file", { 
@@ -279,7 +279,7 @@ export const videoRouter = t.router({
       }
 
       // ── Gate 3: Deduct credits BEFORE creating job ──
-      // await deductCredits(userId, 5, "video_translate", "Video Translate Link");
+      await deductCredits(userId, 5, "video_translate", "Video Translate Link");
       
       // ── Gate 4: Create job ──
       const jobId = createJob("translate_link", { 
