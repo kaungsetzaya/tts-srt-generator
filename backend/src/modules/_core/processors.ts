@@ -2,6 +2,7 @@ import { registerProcessor, updateJob } from "../../../jobs";
 import { dubVideoPipeline } from "../dubbing/pipelines/dubVideo.pipeline";
 import { translateVideoPipeline } from "../translation/pipelines/translateVideo.pipeline";
 import { addCredits } from "../../../routers/credits";
+import { generateSignedDownloadUrl } from "./signedUrl";
 
 /**
  * Centrally registers all background job processors.
@@ -15,6 +16,13 @@ export function registerAllProcessors() {
         try {
             const buffer = Buffer.from(videoBase64, 'base64');
             const result = await dubVideoPipeline.execute(buffer, filename, options);
+            
+            // Sign the download URL before completing
+            if (result.filename) {
+                result.videoUrl = generateSignedDownloadUrl(result.filename);
+            }
+
+            console.log(`[Job ${job.id}] Dub file successful: ${result.videoUrl}`);
             updateJob(job.id, { status: "completed", progress: 100, result });
         } catch (err: any) {
             console.error(`[Job ${job.id}] Failed:`, err);
@@ -28,8 +36,16 @@ export function registerAllProcessors() {
         const { url, userId, ...options } = job.input;
         try {
             const result = await dubVideoPipeline.executeFromLink(url, options);
+
+            // Sign the download URL before completing
+            if (result.filename) {
+                result.videoUrl = generateSignedDownloadUrl(result.filename);
+            }
+
+            console.log(`[Job ${job.id}] Dub link successful: ${result.videoUrl}`);
             updateJob(job.id, { status: "completed", progress: 100, result });
         } catch (err: any) {
+            console.error(`[Job ${job.id}] Failed:`, err);
             if (userId) await addCredits(userId, 10, "video_dub_refund", "Refund: Dub link job failed");
             throw err;
         }

@@ -232,6 +232,7 @@ export class DubVideoPipeline {
 
       return { 
           videoUrl: `/downloads/${finalFilename}`,
+          filename: finalFilename,
           id,
           myanmarText: allTranslatedText,
           srtContent: allSrtContent,
