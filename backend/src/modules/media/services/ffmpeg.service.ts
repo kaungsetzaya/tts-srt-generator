@@ -117,6 +117,7 @@ export async function mergeVideoAudioSubtitles(
     options: {
         fontPath?: string,
         videoDurationSec: number,
+        videoSpeedRatio?: number, // > 1 slows down video, < 1 speeds it up
         onProgress?: (progress: number) => void
     }
 ): Promise<void> {
@@ -141,10 +142,15 @@ export async function mergeVideoAudioSubtitles(
             subFilter = `subtitles='${escapedP}'`;
         }
 
+        const speedRatio = options.videoSpeedRatio || 1.0;
+        const videoFilter = speedRatio !== 1.0 
+            ? `${subFilter},setpts=${speedRatio.toFixed(6)}*PTS` 
+            : subFilter;
+
         ffmpeg(videoPath)
             .input(audioPath)
             .outputOptions([
-                "-vf", subFilter,
+                "-vf", videoFilter,
                 "-c:v", "libx264",
                 "-preset", "ultrafast",
                 "-crf", "28",
@@ -183,14 +189,25 @@ export async function mergeVideoAudio(
     outputPath: string,
     options: {
         videoDurationSec: number,
+        videoSpeedRatio?: number,
         onProgress?: (progress: number) => void
     }
 ): Promise<void> {
     return new Promise((resolve, reject) => {
-        ffmpeg(videoPath)
-            .input(audioPath)
-            .outputOptions([
-                "-c:v", "copy",
+        const speedRatio = options.videoSpeedRatio || 1.0;
+        const videoFilter = speedRatio !== 1.0 
+            ? `setpts=${speedRatio.toFixed(6)}*PTS` 
+            : null;
+
+        const ff = ffmpeg(videoPath)
+            .input(audioPath);
+
+        if (videoFilter) {
+            ff.videoFilters(videoFilter);
+        }
+
+        ff.outputOptions([
+                videoFilter ? "-c:v libx264" : "-c:v copy",
                 "-c:a", "aac",
                 "-b:a", "128k",
                 "-map", "0:v",

@@ -156,21 +156,26 @@ export class DubVideoPipeline {
       const audioParts: string[] = [];
       const processedForSrt: any[] = [];
       let timelinePosMs = 0;
+      const NATURAL_PAUSE_MS = 300; // Natural gap between lines
 
       for (let i = 0; i < activeSegments.length; i++) {
-        const seg = activeSegments[i];
         const result = ttsResults[i];
         
-        // Target start time based on original segment (offset in ms)
-        const targetStartMs = Math.round((seg.start || 0) * 1000);
-        
-        // If there's a gap between current position and the next speaker, fill with silence
-        if (targetStartMs > timelinePosMs) {
-          const silenceDuration = targetStartMs - timelinePosMs;
-          const silencePath = path.join(tempDir, `silence_${i}.mp3`);
-          await ffmpegService.generateSilence(silenceDuration, silencePath);
+        // Add natural pause before segment (except the first one if it starts at 0)
+        if (i > 0) {
+          const silencePath = path.join(tempDir, `pause_${i}.mp3`);
+          await ffmpegService.generateSilence(NATURAL_PAUSE_MS, silencePath);
           audioParts.push(silencePath);
-          timelinePosMs = targetStartMs;
+          timelinePosMs += NATURAL_PAUSE_MS;
+        } else {
+           // First segment starts at its original intended time OR 0
+           const startOffset = Math.round((activeSegments[0].start || 0) * 1000);
+           if (startOffset > 0) {
+             const silencePath = path.join(tempDir, `initial_pause.mp3`);
+             await ffmpegService.generateSilence(startOffset, silencePath);
+             audioParts.push(silencePath);
+             timelinePosMs += startOffset;
+           }
         }
         
         // Add the translated speech
@@ -184,13 +189,15 @@ export class DubVideoPipeline {
         timelinePosMs += result.duration;
       }
 
-      // Pad the end with silence if shorter than video
-      const videoDurationMs = videoDurationSec * 1000;
-      if (timelinePosMs < videoDurationMs) {
-        const silencePath = path.join(tempDir, `final_silence.mp3`);
-        await ffmpegService.generateSilence(videoDurationMs - timelinePosMs, silencePath);
-        audioParts.push(silencePath);
-      }
+      // Final audio duration
+      const totalAudioDurationSec = timelinePosMs / 1000;
+      
+      // Calculate speed ratio to make video match narration
+      // If audio is 65s and video is 60s, ratio is 1.083 (slows video down)
+      const videoSpeedRatio = totalAudioDurationSec / videoDurationSec;
+
+      console.log(`[Dubbing Pipeline] Narration duration: ${totalAudioDurationSec.toFixed(2)}s, Original video: ${videoDurationSec.toFixed(2)}s`);
+      console.log(`[Dubbing Pipeline] Applying video speed ratio: ${videoSpeedRatio.toFixed(4)}`);
 
       // Step 6: Concat audio parts and merge with video
       const listPath = path.join(tempDir, "concat_list.txt");
@@ -229,13 +236,15 @@ export class DubVideoPipeline {
         const assContent = assBuilderService.buildAssContent(processedForSrt, fontPath, videoDimensions.width, videoDimensions.height, options as any);
         await fs.writeFile(tempAssPath, assContent);
         await ffmpegService.mergeVideoAudioSubtitles(tempVideoPath, finalAudioPath, tempAssPath, tempOutputPath, {
-          videoDurationSec,
+          videoDurationSec: totalAudioDurationSec, // New duration
+          videoSpeedRatio,
           fontPath,
         });
       } else {
         console.log(`[Dubbing Pipeline] Merging video with audio...`);
         await ffmpegService.mergeVideoAudio(tempVideoPath, finalAudioPath, tempOutputPath, {
-          videoDurationSec,
+          videoDurationSec: totalAudioDurationSec, // New duration
+          videoSpeedRatio,
         });
       }
 
