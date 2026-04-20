@@ -106,11 +106,11 @@ export async function generateSpeech(
     const durationMs = parseLastEndTime(rawSrt);
     const srtContent = buildSRTFromRaw(rawSrt, text, aspectRatio);
 
-    return { audioBuffer, rawSrt, srtContent, durationMs };
-  } finally {
     await fs.unlink(tmpText).catch(() => {});
     await fs.unlink(audioPath).catch(() => {});
     await fs.unlink(srtPath).catch(() => {});
+
+    return { audioBuffer, rawSrt, srtContent, durationMs };
   }
 }
 
