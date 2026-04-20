@@ -75,7 +75,13 @@ export async function generateSpeech(
 
   await fs.writeFile(tmpText, text, "utf8");
 
+  if (!text.trim()) {
+    console.error(`[TTS Service] Attempted to generate speech for empty text (Voice: ${voice})`);
+    throw new Error("Cannot generate speech for empty text");
+  }
+
   const pythonCmd = process.platform === "win32" ? "python" : "python3";
+  console.log(`[TTS Service] Generating: "${text.slice(0, 50)}..." [Voice: ${voiceConfig.shortName}, Rate: ${rateStr}]`);
 
   try {
     await execFileAsync(pythonCmd, [
