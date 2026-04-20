@@ -142,7 +142,21 @@ export async function generateSpeechWithCharacter(
     body: form as any,
   });
 
-  const result = (await response.json()) as any;
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`[Murf API Error] HTTP ${response.status}: ${errorText.slice(0, 500)}`);
+    throw new Error(`Murf API returned an error (HTTP ${response.status}). The service might be temporarily unavailable.`);
+  }
+
+  let result: any;
+  try {
+    result = await response.json();
+  } catch (err) {
+    const body = await response.text().catch(() => "Unknown body");
+    console.error(`[TTS Service] Failed to parse Murf response as JSON. Body start: ${body.slice(0, 200)}`);
+    throw new Error("Failed to parse TTS conversion response. The API might be down or returning an error page.");
+  }
+
   if (result.error_code) {
     throw new Error(`[Murf API Error] ${result.error_message} (${result.error_code})`);
   }

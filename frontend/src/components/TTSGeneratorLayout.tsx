@@ -72,16 +72,16 @@ export function TTSGeneratorLayout({
             setLang={setLang}
           />
           <SidebarRail className="hidden md:block" />
-          <SidebarInset className="flex-1 flex flex-col min-h-screen">
+          <SidebarInset className="flex-1 flex flex-col min-h-screen relative z-10">
             {headerBar && (
-              <header className="sticky top-0 z-[45] w-full border-b border-white/5 bg-background/80 backdrop-blur-md">
+              <header className="sticky top-0 z-40 w-full border-b border-white/5 bg-background/80 backdrop-blur-xl">
                 <div className="flex items-center h-14 px-2">
                   <SidebarTrigger className="hidden md:flex shrink-0 scale-110 active:scale-95 transition-transform" />
                   <div className="flex-1 overflow-hidden">{headerBar}</div>
                 </div>
               </header>
             )}
-            <main className="flex-1 overflow-auto pb-20 md:pb-0">
+            <main className="flex-1 overflow-auto pb-24 md:pb-0">
               <div>{children}</div>
             </main>
             <MobileBottomNavigation
@@ -185,7 +185,7 @@ function TTSGeneratorSidebar({
   return (
     <Sidebar
       collapsible="icon"
-      className={`hidden md:block glass-sidebar ${isDark ? "dark" : "light"}`}
+      className={`hidden md:block glass-sidebar relative z-50 ${isDark ? "dark" : "light"}`}
       style={
         {
           backgroundColor: isDark
@@ -398,13 +398,13 @@ function MobileBottomNavigation({
 
   return (
     <div
-      className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t backdrop-blur-xl"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-[60] border-t backdrop-blur-2xl"
       style={{
-        background: isDark ? "rgba(15,15,15,0.97)" : "rgba(248,250,252,0.97)",
-        borderColor: isDark ? "rgba(192,111,48,0.25)" : "rgba(192,111,48,0.15)",
+        background: isDark ? "rgba(15,15,15,0.85)" : "rgba(255,255,255,0.85)",
+        borderColor: isDark ? "rgba(192,111,48,0.2)" : "rgba(192,111,48,0.1)",
         boxShadow: isDark
-          ? "0 -4px 30px rgba(192,111,48,0.15)"
-          : "0 -4px 30px rgba(0,0,0,0.1)",
+          ? "0 -10px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)"
+          : "0 -10px 40px rgba(192,111,48,0.1), inset 0 1px 0 rgba(255,255,255,0.5)",
       }}
     >
       <div className="flex items-center justify-around py-3 px-4 gap-2">
@@ -431,7 +431,10 @@ function MobileBottomNavigation({
                 <motion.div
                   layoutId="mobileMainTab"
                   className="absolute inset-0 rounded-xl"
-                  style={{ background: "rgba(192,111,48,0.15)" }}
+                  style={{ 
+                    background: "linear-gradient(135deg, rgba(192,111,48,0.15), rgba(244,179,79,0.1))",
+                    boxShadow: `0 0 15px ${accent}20`
+                  }}
                   transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
                 />
               )}
