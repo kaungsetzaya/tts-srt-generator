@@ -5,7 +5,20 @@ import path from 'path';
 /**
  * FFmpeg Service - Strictly isolates all FFmpeg/fluent-ffmpeg logic.
  * Per ARCHITECTURE.md, no other module may directly use FFmpeg.
+ *
+ * Audio normalization standard (all clips must match for clean concat):
+ *   - Sample rate : 44100 Hz
+ *   - Channels    : 1 (mono)
+ *   - Bitrate     : 128k
  */
+
+// ─── Standard audio spec (must match across ALL generated clips) ──────────────
+const AUDIO_SAMPLE_RATE = 44100;
+const AUDIO_CHANNELS    = 1;
+const AUDIO_BITRATE     = '128k';
+
+// ─── Floating-point safe speed ratio check ───────────────────────────────────
+const needsSpeedChange = (ratio: number) => Math.abs(ratio - 1.0) > 0.005;
 
 export async function getVideoDuration(filePath: string): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -30,9 +43,9 @@ export async function getVideoSize(filePath: string): Promise<{ width: number; h
     ffmpeg.ffprobe(filePath, (err: any, metadata: any) => {
       if (err) reject(err);
       else {
-        const videoStream = metadata.streams?.find((s: any) => s.codec_type === "video");
+        const videoStream = metadata.streams?.find((s: any) => s.codec_type === 'video');
         resolve({
-          width: videoStream?.width || 1920,
+          width:  videoStream?.width  || 1920,
           height: videoStream?.height || 1080,
         });
       }
@@ -47,34 +60,86 @@ export async function extractAudio(videoPath: string, outputPath: string): Promi
   return new Promise((resolve, reject) => {
     ffmpeg(videoPath)
       .noVideo()
-      .audioCodec("libmp3lame")
+      .audioCodec('libmp3lame')
+      .audioFrequency(AUDIO_SAMPLE_RATE)
+      .audioChannels(AUDIO_CHANNELS)
       .audioQuality(2)
-      .on("end", () => resolve())
-      .on("error", reject)
+      .on('end', () => resolve())
+      .on('error', reject)
       .save(outputPath);
   });
 }
 
 /**
- * Geneate a silent mp3 file of specific duration.
+ * Generate a silent mp3 clip of specific duration.
+ * FIXED: was 24000Hz — now matches TTS standard (44100Hz mono 128k).
+ * Mismatch caused crackling and timing gaps during concat.
  */
 export async function generateSilence(durationMs: number, outputPath: string): Promise<void> {
   if (durationMs <= 0) return;
+  const durationSec = (durationMs / 1000).toFixed(6);
   return new Promise((resolve, reject) => {
     ffmpeg()
-      .input("anullsrc=r=24000:cl=mono")
-      .inputFormat("lavfi")
-      .duration(durationMs / 1000)
-      .audioCodec("libmp3lame")
-      .audioBitrate("32k") // Match edge-tts low bitrate
-      .on("end", () => resolve())
-      .on("error", reject)
+      .input(`anullsrc=r=${AUDIO_SAMPLE_RATE}:cl=mono`)
+      .inputFormat('lavfi')
+      .duration(parseFloat(durationSec))
+      .audioCodec('libmp3lame')
+      .audioBitrate(AUDIO_BITRATE)
+      .audioFrequency(AUDIO_SAMPLE_RATE)
+      .audioChannels(AUDIO_CHANNELS)
+      .on('end', () => resolve())
+      .on('error', reject)
       .save(outputPath);
   });
 }
 
 /**
- * Adjust audio speed using atempo filters.
+ * Apply an ffmpeg audio filter to a clip (used for atempo speed adjustment).
+ * Normalizes output to standard audio spec for clean concat.
+ */
+export async function runFilter(inputPath: string, filter: string, outputPath: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .audioFilters(filter)
+      .audioCodec('libmp3lame')
+      .audioBitrate(AUDIO_BITRATE)
+      .audioFrequency(AUDIO_SAMPLE_RATE)
+      .audioChannels(AUDIO_CHANNELS)
+      .on('end', () => resolve())
+      .on('error', reject)
+      .save(outputPath);
+  });
+}
+
+/**
+ * Trim an audio file to [startMs, endMs].
+ * Last resort when atempo ratio exceeds 2.5x (Burmese unintelligible beyond that).
+ */
+export async function trimAudio(
+  inputPath: string,
+  startMs: number,
+  endMs: number,
+  outputPath: string
+): Promise<void> {
+  const startSec    = (startMs / 1000).toFixed(3);
+  const durationSec = ((endMs - startMs) / 1000).toFixed(3);
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .seekInput(parseFloat(startSec))
+      .duration(parseFloat(durationSec))
+      .audioCodec('libmp3lame')
+      .audioBitrate(AUDIO_BITRATE)
+      .audioFrequency(AUDIO_SAMPLE_RATE)
+      .audioChannels(AUDIO_CHANNELS)
+      .on('end', () => resolve())
+      .on('error', reject)
+      .save(outputPath);
+  });
+}
+
+/**
+ * Adjust audio speed using chained atempo filters.
+ * atempo only accepts 0.5–2.0 per stage — chain stages for wider range.
  */
 export async function speedUpAudio(
   inputPath: string,
@@ -83,229 +148,201 @@ export async function speedUpAudio(
 ): Promise<void> {
   const filters: string[] = [];
   let r = ratio;
-
-  while (r > 2.0) {
-    filters.push("atempo=2.0");
-    r /= 2.0;
-  }
-  while (r < 0.5) {
-    filters.push("atempo=0.5");
-    r /= 0.5;
-  }
-  filters.push(`atempo=${r.toFixed(4)}`);
-
-  const filterStr = filters.join(",");
+  while (r > 2.0) { filters.push('atempo=2.0'); r /= 2.0; }
+  while (r < 0.5) { filters.push('atempo=0.5'); r *= 2.0; }
+  filters.push(`atempo=${r.toFixed(6)}`);
 
   return new Promise((resolve, reject) => {
     ffmpeg(inputPath)
-      .audioFilters(filterStr)
-      .audioCodec("libmp3lame")
-      .on("end", () => resolve())
-      .on("error", reject)
-      .save(outputPath);
-  });
-}
-
-/**
- * Merge audio into video, burning in ASS subtitles.
- */
-export async function mergeVideoAudioSubtitles(
-    videoPath: string,
-    audioPath: string,
-    subtitlesPath: string,
-    outputPath: string,
-    options: {
-        fontPath?: string,
-        videoDurationSec: number,
-        videoSpeedRatio?: number, // > 1 slows down video, < 1 speeds it up
-        onProgress?: (progress: number) => void
-    }
-): Promise<void> {
-    return new Promise((resolve, reject) => {
-        let subFilter: string;
-        if (options.fontPath) {
-            const p = subtitlesPath.replace(/\\/g, "/");
-            const fd = path.dirname(options.fontPath).replace(/\\/g, "/");
-            const escapedP = p.replace(/:/g, "\\:");
-            
-            // On Linux, if the font is in a standard system path, we avoid fontsdir 
-            // as it can cause metadata loading errors with some Noto fonts.
-            if (process.platform !== "win32" && fd.startsWith("/usr/share/fonts")) {
-                subFilter = `ass='${escapedP}'`;
-            } else {
-                const escapedFd = fd.replace(/:/g, "\\:");
-                subFilter = `ass='${escapedP}':fontsdir='${escapedFd}'`;
-            }
-        } else {
-            const p = subtitlesPath.replace(/\\/g, "/");
-            const escapedP = p.replace(/:/g, "\\:");
-            subFilter = `subtitles='${escapedP}'`;
-        }
-
-        const speedRatio = options.videoSpeedRatio || 1.0;
-        const videoFilter = speedRatio !== 1.0 
-            ? `${subFilter},setpts=${speedRatio.toFixed(6)}*PTS` 
-            : subFilter;
-
-        ffmpeg(videoPath)
-            .input(audioPath)
-            .outputOptions([
-                "-vf", videoFilter,
-                "-c:v", "libx264",
-                "-preset", "ultrafast",
-                "-crf", "28",
-                "-c:a", "aac",
-                "-b:a", "128k",
-                "-map", "0:v",
-                "-map", "1:a",
-                "-t", options.videoDurationSec.toFixed(3),
-                "-map_metadata", "-1",
-                "-movflags", "+faststart"
-            ])
-            .on("progress", (p: any) => options.onProgress?.(p.percent ?? 0))
-            .on("stderr", (line: string) => {
-              if (line.includes("Error") || line.includes("fail")) {
-                console.error(`[FFmpeg Subtitles] ${line}`);
-              }
-            })
-            .on("error", (err: any) => {
-              console.error(`[FFmpeg MergeSubtitles Error] ${err.message}`);
-              reject(err);
-            })
-            .on("end", () => {
-              console.log("[FFmpeg Subtitles] Merge completed successfully.");
-              resolve();
-            })
-            .save(outputPath);
-    });
-}
-
-/**
- * Merge audio into video without subtitles.
- */
-export async function mergeVideoAudio(
-    videoPath: string,
-    audioPath: string,
-    outputPath: string,
-    options: {
-        videoDurationSec: number,
-        videoSpeedRatio?: number,
-        onProgress?: (progress: number) => void
-    }
-): Promise<void> {
-    return new Promise((resolve, reject) => {
-        const speedRatio = options.videoSpeedRatio || 1.0;
-        const videoFilter = speedRatio !== 1.0 
-            ? `setpts=${speedRatio.toFixed(6)}*PTS` 
-            : null;
-
-        const ff = ffmpeg(videoPath)
-            .input(audioPath);
-
-        if (videoFilter) {
-            ff.videoFilters(videoFilter);
-        }
-
-        ff.outputOptions([
-                videoFilter ? "-c:v libx264" : "-c:v copy",
-                "-c:a", "aac",
-                "-b:a", "128k",
-                "-map", "0:v",
-                "-map", "1:a",
-                "-t", options.videoDurationSec.toFixed(3),
-                "-map_metadata", "-1",
-                "-movflags", "+faststart"
-            ])
-            .on("progress", (p: any) => options.onProgress?.(p.percent ?? 0))
-            .on("stderr", (line: string) => {
-              if (line.includes("Error") || line.includes("fail")) {
-                console.error(`[FFmpeg Merge] ${line}`);
-              }
-            })
-            .on("error", (err: any) => {
-              console.error(`[FFmpeg Merge Error] ${err.message}`);
-              reject(err);
-            })
-            .on("end", () => resolve())
-            .save(outputPath);
-    });
-}
-
-/**
- * Apply an ffmpeg audio filter string to an audio file.
- * Used for atempo (speed adjustment) to fit TTS into a time window.
- */
-export async function runFilter(inputPath: string, filter: string, outputPath: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    ffmpeg(inputPath)
-      .audioFilters(filter)
-      .audioCodec("libmp3lame")
-      .audioChannels(1)
-      .audioFrequency(44100)
-      .on("end", () => resolve())
-      .on("error", reject)
-      .save(outputPath);
-  });
-}
-
-/**
- * Trim an audio file to [startMs, endMs].
- * Used as a last resort when atempo ratio would exceed 2.5x.
- */
-export async function trimAudio(inputPath: string, startMs: number, endMs: number, outputPath: string): Promise<void> {
-  const startSec = (startMs / 1000).toFixed(3);
-  const durationSec = ((endMs - startMs) / 1000).toFixed(3);
-  return new Promise((resolve, reject) => {
-    ffmpeg(inputPath)
-      .seekInput(parseFloat(startSec))
-      .duration(parseFloat(durationSec))
-      .audioCodec("libmp3lame")
-      .audioChannels(1)
-      .audioFrequency(44100)
-      .on("end", () => resolve())
-      .on("error", reject)
+      .audioFilters(filters.join(','))
+      .audioCodec('libmp3lame')
+      .audioBitrate(AUDIO_BITRATE)
+      .audioFrequency(AUDIO_SAMPLE_RATE)
+      .audioChannels(AUDIO_CHANNELS)
+      .on('end', () => resolve())
+      .on('error', reject)
       .save(outputPath);
   });
 }
 
 /**
  * Concatenate multiple audio files into one using ffmpeg concat demuxer.
+ * FIXED: was 192k — now 128k to match all generated clips (silence, TTS, trimmed).
+ * Bitrate mismatch was causing ffmpeg to resample and introduce timing drift.
  */
 export async function concatAudioFiles(listPath: string, outputPath: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-        ffmpeg()
-            .input(listPath)
-            .inputFormat('concat')
-            .inputOptions(['-safe', '0'])
-            .audioCodec('libmp3lame')
-            .audioBitrate('192k')
-            .on("stderr", (line: string) => {
-              if (line.includes("Error") || line.includes("fail")) {
-                console.error(`[FFmpeg Concat] ${line}`);
-              }
-            })
-            .on('end', () => {
-              console.log("[FFmpeg Concat] Audio concatenation completed.");
-              resolve();
-            })
-            .on('error', (err: any) => {
-              console.error(`[FFmpeg Concat Error] ${err.message}`);
-              reject(err);
-            })
-            .save(outputPath);
-    });
+  return new Promise((resolve, reject) => {
+    ffmpeg()
+      .input(listPath)
+      .inputFormat('concat')
+      .inputOptions(['-safe', '0'])
+      .audioCodec('libmp3lame')
+      .audioBitrate(AUDIO_BITRATE)
+      .audioFrequency(AUDIO_SAMPLE_RATE)
+      .audioChannels(AUDIO_CHANNELS)
+      .on('stderr', (line: string) => {
+        if (line.includes('Error') || line.includes('fail')) {
+          console.error(`[FFmpeg Concat] ${line}`);
+        }
+      })
+      .on('end', () => {
+        console.log('[FFmpeg Concat] Audio concatenation completed.');
+        resolve();
+      })
+      .on('error', (err: any) => {
+        console.error(`[FFmpeg Concat Error] ${err.message}`);
+        reject(err);
+      })
+      .save(outputPath);
+  });
+}
+
+/**
+ * Merge audio into video, burning in ASS subtitles.
+ * FIXED: floating-point safe ratio check (was !== 1.0, now abs diff > 0.005).
+ * Pipeline passes videoSpeedRatio=1.0 — no video stretch applied.
+ */
+export async function mergeVideoAudioSubtitles(
+  videoPath: string,
+  audioPath: string,
+  subtitlesPath: string,
+  outputPath: string,
+  options: {
+    fontPath?: string;
+    videoDurationSec: number;
+    videoSpeedRatio?: number;
+    onProgress?: (progress: number) => void;
+  }
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    // Build subtitle filter string
+    let subFilter: string;
+    if (options.fontPath) {
+      const p   = subtitlesPath.replace(/\\/g, '/');
+      const fd  = path.dirname(options.fontPath).replace(/\\/g, '/');
+      const escapedP  = p.replace(/:/g, '\\:');
+      // On Linux with system font path — skip fontsdir to avoid Noto metadata errors
+      if (process.platform !== 'win32' && fd.startsWith('/usr/share/fonts')) {
+        subFilter = `ass='${escapedP}'`;
+      } else {
+        const escapedFd = fd.replace(/:/g, '\\:');
+        subFilter = `ass='${escapedP}':fontsdir='${escapedFd}'`;
+      }
+    } else {
+      const escapedP = subtitlesPath.replace(/\\/g, '/').replace(/:/g, '\\:');
+      subFilter = `subtitles='${escapedP}'`;
+    }
+
+    // FIXED: use abs diff check — floating point 1.0000001 !== 1.0 caused
+    // unnecessary re-encode even when pipeline passed videoSpeedRatio=1.0
+    const speedRatio  = options.videoSpeedRatio ?? 1.0;
+    const applyStretch = needsSpeedChange(speedRatio);
+
+    // setpts: >1 slows video down, <1 speeds up
+    // e.g. ratio=1.2 (audio 20% longer) → setpts=1.200000*PTS (slow video to match)
+    const videoFilter = applyStretch
+      ? `${subFilter},setpts=${speedRatio.toFixed(6)}*PTS`
+      : subFilter;
+
+    ffmpeg(videoPath)
+      .input(audioPath)
+      .outputOptions([
+        '-vf',         videoFilter,
+        '-c:v',        'libx264',
+        '-preset',     'ultrafast',
+        '-crf',        '28',
+        '-c:a',        'aac',
+        '-b:a',        '128k',
+        '-map',        '0:v',
+        '-map',        '1:a',
+        '-t',          options.videoDurationSec.toFixed(3),
+        '-map_metadata', '-1',
+        '-movflags',   '+faststart',
+      ])
+      .on('progress', (p: any) => options.onProgress?.(p.percent ?? 0))
+      .on('stderr', (line: string) => {
+        if (line.includes('Error') || line.includes('fail')) {
+          console.error(`[FFmpeg Subtitles] ${line}`);
+        }
+      })
+      .on('error', (err: any) => {
+        console.error(`[FFmpeg MergeSubtitles Error] ${err.message}`);
+        reject(err);
+      })
+      .on('end', () => {
+        console.log('[FFmpeg Subtitles] Merge completed successfully.');
+        resolve();
+      })
+      .save(outputPath);
+  });
+}
+
+/**
+ * Merge audio into video without subtitles.
+ * FIXED: "-c:v copy" was passed as single string in outputOptions array —
+ * fluent-ffmpeg treats it as one flag, ffmpeg rejects it. Now split correctly.
+ * FIXED: floating-point safe ratio check.
+ */
+export async function mergeVideoAudio(
+  videoPath: string,
+  audioPath: string,
+  outputPath: string,
+  options: {
+    videoDurationSec: number;
+    videoSpeedRatio?: number;
+    onProgress?: (progress: number) => void;
+  }
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const speedRatio   = options.videoSpeedRatio ?? 1.0;
+    const applyStretch = needsSpeedChange(speedRatio);
+    const videoFilter  = applyStretch ? `setpts=${speedRatio.toFixed(6)}*PTS` : null;
+
+    const ff = ffmpeg(videoPath).input(audioPath);
+
+    if (videoFilter) {
+      ff.videoFilters(videoFilter);
+    }
+
+    // FIXED: was `videoFilter ? "-c:v libx264" : "-c:v copy"` as one string —
+    // that made ffmpeg receive "-c:v libx264" as a single unrecognized flag.
+    // Now split into separate '-c:v' and codec value entries.
+    ff.outputOptions([
+        '-c:v',  applyStretch ? 'libx264' : 'copy',
+        ...(applyStretch ? ['-preset', 'ultrafast', '-crf', '28'] : []),
+        '-c:a',  'aac',
+        '-b:a',  '128k',
+        '-map',  '0:v',
+        '-map',  '1:a',
+        '-t',    options.videoDurationSec.toFixed(3),
+        '-map_metadata', '-1',
+        '-movflags', '+faststart',
+      ])
+      .on('progress', (p: any) => options.onProgress?.(p.percent ?? 0))
+      .on('stderr', (line: string) => {
+        if (line.includes('Error') || line.includes('fail')) {
+          console.error(`[FFmpeg Merge] ${line}`);
+        }
+      })
+      .on('error', (err: any) => {
+        console.error(`[FFmpeg Merge Error] ${err.message}`);
+        reject(err);
+      })
+      .on('end', () => resolve())
+      .save(outputPath);
+  });
 }
 
 export const ffmpegService = {
-    getVideoDuration,
-    getAudioDurationMs,
-    getVideoSize,
-    extractAudio,
-    generateSilence,
-    speedUpAudio,
-    runFilter,
-    trimAudio,
-    mergeVideoAudioSubtitles,
-    mergeVideoAudio,
-    concatAudioFiles,
+  getVideoDuration,
+  getAudioDurationMs,
+  getVideoSize,
+  extractAudio,
+  generateSilence,
+  speedUpAudio,
+  runFilter,
+  trimAudio,
+  mergeVideoAudioSubtitles,
+  mergeVideoAudio,
+  concatAudioFiles,
 };
