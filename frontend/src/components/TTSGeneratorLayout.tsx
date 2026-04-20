@@ -71,12 +71,12 @@ export function TTSGeneratorLayout({
             lang={lang}
             setLang={setLang}
           />
-          <SidebarRail />
+          <SidebarRail className="hidden md:block" />
           <SidebarInset className="flex-1 flex flex-col min-h-screen">
             {headerBar && (
               <header className="sticky top-0 z-[45] w-full border-b border-white/5 bg-background/80 backdrop-blur-md">
                 <div className="flex items-center h-14 px-2">
-                  <SidebarTrigger className="shrink-0 scale-110 active:scale-95 transition-transform" />
+                  <SidebarTrigger className="hidden md:flex shrink-0 scale-110 active:scale-95 transition-transform" />
                   <div className="flex-1 overflow-hidden">{headerBar}</div>
                 </div>
               </header>
@@ -185,7 +185,7 @@ function TTSGeneratorSidebar({
   return (
     <Sidebar
       collapsible="icon"
-      className={`glass-sidebar ${isDark ? "dark" : "light"}`}
+      className={`hidden md:block glass-sidebar ${isDark ? "dark" : "light"}`}
       style={
         {
           backgroundColor: isDark

@@ -221,7 +221,7 @@ export default function Landing() {
       {/* HERO - 3D floating */}
       <div
         ref={heroRef}
-        className="relative z-10 flex items-center justify-center px-4 pt-20 pb-4"
+        className="relative z-10 flex items-center justify-center px-4 pt-28 md:pt-32 pb-4"
         style={{ scrollSnapAlign: "start" }}
       >
         <motion.div style={{ opacity: heroOp }} className="text-center">

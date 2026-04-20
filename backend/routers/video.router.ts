@@ -18,7 +18,7 @@ export const videoRouter = t.router({
       z.object({
         videoBase64: z.string(),
         filename: z.string(),
-        voice: z.enum(["thiha", "nilar"]),
+        voice: z.string(),
         speed: z.number().optional().default(1.2),
         pitch: z.number().optional().default(0),
         srtEnabled: z.boolean().optional().default(true),
@@ -92,7 +92,7 @@ export const videoRouter = t.router({
     .input(
       z.object({
         url: z.string(),
-        voice: z.enum(["thiha", "nilar"]),
+        voice: z.string(),
         speed: z.number().optional().default(1.2),
         pitch: z.number().optional().default(0),
         srtEnabled: z.boolean().optional().default(true),

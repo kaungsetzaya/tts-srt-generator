@@ -1,12 +1,19 @@
 import { randomBytes } from "crypto";
 import { execFile } from "child_process";
 import { promisify } from "util";
+import * as path from "path";
+import { fileURLToPath } from "url";
 
 const execFileAsync = promisify(execFile);
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const COOKIE_PATH = path.resolve(__dirname, "../cookies.txt");
 
 export async function getVideoInfo(url: string): Promise<{ duration: number; filesize: number } | null> {
   try {
     const { stdout } = await execFileAsync("yt-dlp", [
+      "--cookies", COOKIE_PATH,
       "--dump-json",
       "--no-download",
       url
@@ -26,6 +33,7 @@ export async function downloadVideo(url: string, outputPath: string, options: { 
   try {
     // Using yt-dlp for robust video downloading
     await execFileAsync("yt-dlp", [
+      "--cookies", COOKIE_PATH,
       "-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
       "-o", outputPath,
       url

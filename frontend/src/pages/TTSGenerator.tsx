@@ -65,8 +65,8 @@ function getYouTubeEmbedUrl(url: string): string | null {
 function friendlyError(raw: string): string {
   if (!raw) return "တစ်ခုခုမှားယွင်းနေပါသည်။ ထပ်ကြိုးစားပါ။";
   // Common backend errors → user-friendly Myanmar messages
-  if (raw.includes("Subscription expired"))
-    return "သင့် Subscription သက်တမ်းကုန်ဆုံးသွားပါပြီ။ Admin ကို ဆက်သွယ်ပါ။";
+  if (raw.includes("Insufficient credits"))
+    return "Credit မလုံလောက်ပါ။ Plan ဝယ်ယူပါ။";
   if (raw.includes("Please login")) return "ကျေးဇူးပြု၍ Login ဝင်ပါ။";
   if (raw.includes("banned"))
     return "သင့် Account ကို ပိတ်ထားပါသည်။ Admin ကို ဆက်သွယ်ပါ။";
@@ -773,10 +773,8 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
     amara: { base: "nilar" },
   };
   const handleDubGenerate = async () => {
-    const dubVoiceToUse: "thiha" | "nilar" =
-      dubVoiceMode === "standard"
-        ? dubVoice
-        : ((CHARACTER_VOICES_MAP[dubCharacter]?.base || dubVoice) as "thiha" | "nilar");
+    const dubVoiceToUse =
+      dubVoiceMode === "standard" ? dubVoice : dubCharacter;
 
     // Use job-based API for dubbing (handles long processing time)
     if (dubVideoUrl.trim()) {
@@ -983,20 +981,20 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
 
   const headerBar = (
     <div
-      className="flex items-center justify-between py-1.5 px-1 sm:px-4 w-full h-full"
+      className="flex flex-nowrap items-center justify-between py-1 px-2 sm:px-4 w-full h-full gap-1 sm:gap-2 overflow-hidden"
     >
-      <div className="flex items-center gap-1.5 sm:gap-2">
-        <div className="font-black text-base sm:text-lg tracking-tighter" style={{ color: "#C06F30" }}>LUMIX</div>
+      <div className="flex flex-nowrap items-center gap-1 sm:gap-2 ml-auto">
+        <div className="font-black text-base sm:text-lg tracking-tighter shrink-0" style={{ color: "#C06F30" }}>LUMIX</div>
       </div>
-      <div className="flex items-center gap-1.5 sm:gap-2 ml-auto">
+      <div className="flex items-center gap-1 sm:gap-2 sm:ml-auto">
         {subLoading ? (
-          <div className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl">
-            <div className="w-16 h-4 rounded animate-pulse" style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }} />
-            <div className="w-8 h-4 rounded animate-pulse" style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }} />
+          <div className="flex items-center gap-2 px-2 py-1.5 rounded-xl">
+            <div className="w-10 h-3 rounded animate-pulse" style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }} />
+            <div className="w-5 h-3 rounded animate-pulse" style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }} />
           </div>
         ) : (
         <div
-          className="hidden md:flex items-center gap-4 px-4 py-2 rounded-xl text-xs font-semibold relative overflow-hidden"
+          className="flex items-center gap-1.5 sm:gap-3 px-2 sm:px-4 py-1 sm:py-2 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-semibold relative overflow-hidden"
           style={{
             background: hasActiveSub 
               ? "linear-gradient(135deg, rgba(192,111,48,0.25) 0%, rgba(244,179,79,0.15) 50%, rgba(192,111,48,0.25) 100%)"
@@ -1011,9 +1009,9 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
           )}
           {hasActiveSub ? (
             <>
-              <div className="relative z-10 flex items-center gap-2">
+              <div className="relative z-10 flex items-center gap-1 sm:gap-2">
                 <span 
-                  className="px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider"
+                  className="px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-md text-[9px] sm:text-xs font-bold uppercase tracking-wider"
                   style={{
                     background: "linear-gradient(135deg, #C06F30 0%, #F4B34F 100%)",
                     color: "#fff",
@@ -1023,7 +1021,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                   {subStatus?.plan === "trial" ? (lang === "mm" ? "အစမ်း" : "Trial") : subStatus?.plan}
                 </span>
               </div>
-              <div className="relative z-10 flex-1 h-2 max-w-[100px] rounded-full overflow-hidden" style={{ background: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.1)" }}>
+              <div className="relative z-10 hidden sm:block flex-1 h-2 max-w-[100px] rounded-full overflow-hidden" style={{ background: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.1)" }}>
                 <motion.div 
                   className="h-full rounded-full"
                   initial={{ width: 0 }}
@@ -1035,17 +1033,17 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                   }}
                 />
               </div>
-              <div className="relative z-10 flex items-center gap-2 font-bold" style={{ color: isDark ? "#F4B34F" : "#B45309" }}>
-                <span>{subStatus?.credits ?? 0}</span>
-                <span className="text-xs opacity-70 uppercase">credits</span>
+              <div className="relative z-10 flex items-center gap-1 sm:gap-2 font-bold" style={{ color: isDark ? "#F4B34F" : "#B45309" }}>
+                <span className="text-[11px] sm:text-sm">{subStatus?.credits ?? 0}</span>
+                <span className="hidden sm:inline text-xs opacity-70 uppercase">credits</span>
               </div>
             </>
           ) : (
             <>
-              <span className="relative z-10 text-sm font-medium" style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
+              <span className="relative z-10 text-[10px] sm:text-sm font-medium" style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
                 {me ? (lang === "mm" ? "အခမဲ့" : "Free") : ""}
               </span>
-              <div className="relative z-10 flex-1 h-2 max-w-[100px] rounded-full overflow-hidden" style={{ background: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)" }}>
+              <div className="relative z-10 hidden sm:block flex-1 h-2 max-w-[100px] rounded-full overflow-hidden" style={{ background: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)" }}>
                 <div 
                   className="h-full rounded-full"
                   style={{
@@ -1054,7 +1052,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                   }}
                 />
               </div>
-              <span className="relative z-10" style={{ color: isDark ? "#6B7280" : "#9CA3AF" }}>
+              <span className="relative z-10 text-[11px] sm:text-sm" style={{ color: isDark ? "#6B7280" : "#9CA3AF" }}>
                 {subStatus?.credits ?? 0}
               </span>
             </>
@@ -1062,7 +1060,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
         </div>
         )}
         <span
-          className="hidden md:inline text-xs font-bold px-2.5 py-1 rounded-full"
+          className="hidden sm:inline text-xs font-bold px-1.5 sm:px-2.5 py-1 rounded-full"
           style={{
             background: isDark
               ? "rgba(192,111,48,0.1)"
@@ -2389,7 +2387,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                               style={{
                                 width:
                                   dubDetectedRatio === "9:16"
-                                    ? "180px"
+                                    ? "min(240px, 55vw)"
                                     : "100%",
                                 margin:
                                   dubDetectedRatio === "9:16" ? "0 auto" : "0",
@@ -2476,7 +2474,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                               style={{
                                 position: "relative",
                                 width:
-                                  aspectRatio === "9:16" ? "180px" : "100%",
+                                  aspectRatio === "9:16" ? "min(240px, 55vw)" : "100%",
                                 aspectRatio:
                                   aspectRatio === "9:16" ? "9/16" : "16/9",
                                 margin: aspectRatio === "9:16" ? "0 auto" : "0",
@@ -2579,7 +2577,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                               style={{
                                 width:
                                   dubDetectedRatio === "9:16"
-                                    ? "240px"
+                                    ? "min(240px, 55vw)"
                                     : "100%",
                                 maxWidth:
                                   dubDetectedRatio === "9:16"
@@ -2858,14 +2856,14 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
 
                       {/* ═══ Premium 3D Subtitle Settings Panel ═══ */}
                       <div
-                        className="panel-floating p-5"
+                        className="panel-floating p-3 sm:p-5"
                         style={{
                           ...panelStyle,
                           borderRadius: 20,
                         }}
                       >
                         {/* Panel Header with Toggle */}
-                        <div className="flex items-center justify-between mb-5">
+                        <div className="flex items-center justify-between mb-3 sm:mb-5">
                           <div className="flex items-center gap-2.5">
                             <div
                               className="w-8 h-8 rounded-xl flex items-center justify-center"
@@ -2887,7 +2885,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                           </div>
                           <button
                             onClick={() => setSrtEnabled(!srtEnabled)}
-                            className={`relative w-14 h-7 rounded-full transition-all duration-300 ${srtEnabled ? "" : ""}`}
+                            className={`relative w-10 h-5 sm:w-14 sm:h-7 rounded-full transition-all duration-300`}
                             style={{
                               background: srtEnabled
                                 ? "linear-gradient(135deg, #C06F30, #F4B34F)"
@@ -2896,7 +2894,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                             }}
                           >
                             <div
-                              className={`absolute top-0.5 w-6 h-6 bg-white rounded-full transition-transform duration-300 ${srtEnabled ? "translate-x-7" : "translate-x-0.5"}`}
+                              className={`absolute top-0.5 w-5 h-5 sm:w-6 sm:h-6 bg-white rounded-full transition-transform duration-300 ${srtEnabled ? "translate-x-[22px] sm:translate-x-7" : "translate-x-0.5"}`}
                               style={{
                                 boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
                               }}
@@ -3294,7 +3292,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                         <div className="flex justify-center mt-2">
                           <div
                             style={{
-                              width: aspectRatio === "9:16" ? "180px" : "100%",
+                              width: aspectRatio === "9:16" ? "min(240px, 55vw)" : "100%",
                               margin: aspectRatio === "9:16" ? "0 auto" : "0",
                               aspectRatio:
                                 aspectRatio === "9:16" ? "9/16" : "16/9",
@@ -3741,7 +3739,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                   boxShadow: boxShadow,
                 }}
               >
-                <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center justify-between mb-3 sm:mb-5">
                   <div className="flex items-center gap-3">
                     <Star
                       className="w-6 h-6"

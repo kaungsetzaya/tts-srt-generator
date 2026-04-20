@@ -303,8 +303,8 @@ function graphemeLen(s: string): number {
 
 // ─── Burmese SRT constants ───────────────────────────────────────────────────
 const BURMESE_SRT_CONFIG = {
-  "16:9": { charsPerLine: 20 },
-  "9:16": { charsPerLine: 14 },
+  "16:9": { charsPerLine: 18 },
+  "9:16": { charsPerLine: 12 },
 } as const;
 
 const MIN_CUE_MS = 800;   // minimum cue display duration (ms)
@@ -426,57 +426,16 @@ function buildSRTFromRaw(
     }
   }
 
-  // ── Step 3: pair display lines into 2-line cues ──
-  interface Cue {
-    lines: string[];
-    startMs: number;
-    endMs: number;
-  }
-  const cues: Cue[] = [];
-  let i = 0;
-  while (i < displayLines.length) {
-    const first = displayLines[i];
-    if (!first.sentenceEnd && i + 1 < displayLines.length) {
-      const second = displayLines[i + 1];
-      cues.push({
-        lines: [first.text, second.text],
-        startMs: first.startMs,
-        endMs: second.endMs,
-      });
-      i += 2;
-    } else {
-      cues.push({
-        lines: [first.text],
-        startMs: first.startMs,
-        endMs: first.endMs,
-      });
-      i++;
-    }
-  }
-
-  // ── Step 4: enforce minimum duration and inter-cue frame gap ──
-  for (let j = 0; j < cues.length; j++) {
-    const nextStart = j + 1 < cues.length ? cues[j + 1].startMs : Infinity;
-    const maxEnd = nextStart - FRAME_GAP_MS;
-
-    // ပြင်ဆင်ချက်: မူလကြာချိန် (သို့) အနည်းဆုံးကြာချိန် ထဲမှ ပိုများသောတန်ဖိုးကို ယူပါမည်
-    const desiredEnd = Math.max(cues[j].endMs, cues[j].startMs + MIN_CUE_MS);
-    cues[j].endMs = Math.min(desiredEnd, maxEnd);
-
-    // Safety floor: ensure endMs is always after startMs
-    if (cues[j].endMs <= cues[j].startMs) {
-      cues[j].endMs = cues[j].startMs + 100;
-    }
-  }
-
-  // ── Step 5: serialise to SRT ──
+  // ── Step 3: create SRT blocks — one line per block, no forced pairing ──
   const result: string[] = [];
-  for (let idx = 0; idx < cues.length; idx++) {
+  for (let idx = 0; idx < displayLines.length; idx++) {
     result.push(`${idx + 1}`);
     result.push(
-      `${msToSrtTime(cues[idx].startMs)} --> ${msToSrtTime(cues[idx].endMs)}`
+      `${msToSrtTime(displayLines[idx].startMs)} --> ${msToSrtTime(displayLines[idx].endMs)}`
     );
-    result.push(cues[idx].lines.join("\n"));
+    // Remove line breaks (\N or \n) and keep as single line
+    const cleanText = displayLines[idx].text.replace(/\\N/g, ' ').replace(/\n/g, ' ').trim();
+    result.push(cleanText);
     result.push("");
   }
 

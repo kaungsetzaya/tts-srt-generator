@@ -500,8 +500,8 @@
 
   /* ═══ Color Swatch Bubble ═══ */
   .color-swatch {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     border: 2px solid transparent;
     transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
@@ -509,7 +509,7 @@
   }
   .color-swatch:hover {
     transform: scale(1.12);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
   }
   .color-swatch.active {
     border-color: #C06F30;

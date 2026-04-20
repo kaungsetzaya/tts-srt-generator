@@ -9,7 +9,7 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { downloadVideo, getVideoInfo } from "./_core/multiDownloader";
-import { generateSpeech, type VoiceKey } from "./tts";
+import { generateSpeech, generateSpeechWithCharacter, CHARACTER_VOICES, type VoiceKey, type CharacterKey } from "./tts";
 import { geminiTranslateBatch } from "./geminiTranslator";
 import { isAllowedVideoUrl } from "./_core/security";
 import { generateSignedDownloadUrl } from "./_core/signedUrl";
@@ -512,6 +512,52 @@ export async function dubVideoFromBuffer(
     });
     console.log(`[Dubber] Audio trimmed to ${targetDurationSec.toFixed(1)}s to match video.`);
 
+    // ── Step 6b: Character voice conversion with Murf.ai ──
+    let finalAudioPath = tempFinalAudio;
+    const isCharacterVoice = options.voice && options.voice in CHARACTER_VOICES;
+    if (isCharacterVoice) {
+      console.log(`[Dubber] Converting to character voice: ${options.voice} with Murf.ai...`);
+      try {
+        const charVoice = CHARACTER_VOICES[options.voice as CharacterKey];
+        const murfApiKey = process.env.MURF_API_KEY;
+        if (!murfApiKey) {
+          throw new Error("MURF_API_KEY not configured");
+        }
+
+        const { FormData, Blob } = await import("formdata-node");
+        const form = new FormData();
+        form.set("voice_id", charVoice.murfId);
+        form.set("format", "MP3");
+        const audioBuffer = await fs.readFile(tempFinalAudio);
+        form.set("file", new Blob([audioBuffer], { type: "audio/mpeg" }), "audio.mp3");
+
+        const response = await fetch("https://api.murf.ai/v1/voice-changer/convert", {
+          method: "POST",
+          headers: { "api-key": murfApiKey },
+          body: form as any,
+        });
+
+        const result = (await response.json()) as any;
+        if (result.error_code) {
+          throw new Error(result.error_message);
+        }
+
+        // Download converted audio
+        const audioResponse = await fetch(result.audio_file);
+        const convertedBuffer = Buffer.from(await audioResponse.arrayBuffer());
+
+        // Save converted audio to tempFinalAudio (overwrite)
+        const tempConvertedPath = path.join(tempDir, `final_audio_converted_${id}.mp3`);
+        await fs.writeFile(tempConvertedPath, convertedBuffer);
+        finalAudioPath = tempConvertedPath;
+        console.log(`[Dubber] Character voice conversion complete.`);
+      } catch (murfErr: any) {
+        console.error(`[Dubber] Murf.ai conversion failed:`, murfErr.message);
+        // Continue with base voice if conversion fails
+        console.log(`[Dubber] Falling back to base voice.`);
+      }
+    }
+
     // ── Step 7: Build SRT — cap all timestamps at video duration ──
     const videoDurationMsCapped = videoDurationMs;
     let srtContent = "";
@@ -568,7 +614,7 @@ export async function dubVideoFromBuffer(
       }
 
       ffmpeg(tempVideoPath)
-        .input(tempFinalAudio)
+        .input(finalAudioPath)
         .outputOptions([
           "-vf", subFilter,
           "-c:v", "libx264",
