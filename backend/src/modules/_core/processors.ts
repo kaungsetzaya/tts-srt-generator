@@ -2,7 +2,7 @@ import { registerProcessor, updateJob } from "../../../jobs";
 import { dubVideoPipeline } from "../dubbing/pipelines/dubVideo.pipeline";
 import { translateVideoPipeline } from "../translation/pipelines/translateVideo.pipeline";
 import { addCredits } from "../../../routers/credits";
-import { generateSignedDownloadUrl } from "./signedUrl";
+import { generateSignedDownloadUrl } from "../../../_core/signedUrl";
 
 /**
  * Centrally registers all background job processors.
