@@ -125,10 +125,14 @@ export async function mergeVideoAudioSubtitles(
         if (options.fontPath) {
             const p = subtitlesPath.replace(/\\/g, "/");
             const fd = path.dirname(options.fontPath).replace(/\\/g, "/");
-            subFilter = `ass=${p}:fontsdir=${fd}`;
+            // FFmpeg ass filter requires escaping colons and singe quotes
+            const escapedP = p.replace(/:/g, "\\:");
+            const escapedFd = fd.replace(/:/g, "\\:");
+            subFilter = `ass='${escapedP}':fontsdir='${escapedFd}'`;
         } else {
             const p = subtitlesPath.replace(/\\/g, "/");
-            subFilter = `subtitles=${p}`;
+            const escapedP = p.replace(/:/g, "\\:");
+            subFilter = `subtitles='${escapedP}'`;
         }
 
         ffmpeg(videoPath)
@@ -148,7 +152,15 @@ export async function mergeVideoAudioSubtitles(
                 "-movflags", "+faststart"
             ])
             .on("progress", (p: any) => options.onProgress?.(p.percent ?? 0))
-            .on("error", reject)
+            .on("stderr", (line: string) => {
+              if (line.includes("Error") || line.includes("fail")) {
+                console.error(`[FFmpeg Subtitles] ${line}`);
+              }
+            })
+            .on("error", (err: any) => {
+              console.error(`[FFmpeg MergeSubtitles Error] ${err.message}`);
+              reject(err);
+            })
             .on("end", () => resolve())
             .save(outputPath);
     });
@@ -181,7 +193,15 @@ export async function mergeVideoAudio(
                 "-movflags", "+faststart"
             ])
             .on("progress", (p: any) => options.onProgress?.(p.percent ?? 0))
-            .on("error", reject)
+            .on("stderr", (line: string) => {
+              if (line.includes("Error") || line.includes("fail")) {
+                console.error(`[FFmpeg Merge] ${line}`);
+              }
+            })
+            .on("error", (err: any) => {
+              console.error(`[FFmpeg Merge Error] ${err.message}`);
+              reject(err);
+            })
             .on("end", () => resolve())
             .save(outputPath);
     });
@@ -198,8 +218,16 @@ export async function concatAudioFiles(listPath: string, outputPath: string): Pr
             .inputOptions(['-safe', '0'])
             .audioCodec('libmp3lame')
             .audioBitrate('192k')
+            .on("stderr", (line: string) => {
+              if (line.includes("Error") || line.includes("fail")) {
+                console.error(`[FFmpeg Concat] ${line}`);
+              }
+            })
             .on('end', () => resolve())
-            .on('error', reject)
+            .on('error', (err: any) => {
+              console.error(`[FFmpeg Concat Error] ${err.message}`);
+              reject(err);
+            })
             .save(outputPath);
     });
 }

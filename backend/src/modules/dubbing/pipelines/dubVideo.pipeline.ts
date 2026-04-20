@@ -183,7 +183,19 @@ export class DubVideoPipeline {
           ? "C:/Windows/Fonts/mmrtext.ttf" 
           : "/usr/share/fonts/truetype/noto/NotoSansMyanmar-Regular.ttf");
       
+      console.log(`[Dubbing Pipeline] Using font: ${fontPath}`);
+      
+      if (!existsSync(finalAudioPath)) {
+        throw new Error("Final concatenated audio file not found.");
+      }
+
+      const audioStats = await fs.stat(finalAudioPath);
+      if (audioStats.size === 0) {
+        throw new Error("Final concatenated audio file is empty.");
+      }
+
       if (options.srtEnabled !== false && processedForSrt.length > 0) {
+        console.log(`[Dubbing Pipeline] Merging video with audio and subtitles...`);
         const videoDimensions = await ffmpegService.getVideoSize(tempVideoPath);
         const assContent = assBuilderService.buildAssContent(processedForSrt, fontPath, videoDimensions.width, videoDimensions.height, options as any);
         await fs.writeFile(tempAssPath, assContent);
@@ -192,6 +204,7 @@ export class DubVideoPipeline {
           fontPath,
         });
       } else {
+        console.log(`[Dubbing Pipeline] Merging video with audio...`);
         await ffmpegService.mergeVideoAudio(tempVideoPath, finalAudioPath, tempOutputPath, {
           videoDurationSec,
         });

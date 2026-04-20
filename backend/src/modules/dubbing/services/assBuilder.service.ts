@@ -49,7 +49,12 @@ export class AssBuilderService {
         const b = parseInt(hex.substring(4, 6), 16) || 255;
         const assColor = `&H00${this.pad2(b)}${this.pad2(g)}${this.pad2(r)}`;
 
-        const fontName = fontPath ? path.basename(fontPath, path.extname(fontPath)) : "Noto Sans Myanmar";
+        const fontBase = fontPath ? path.basename(fontPath).toLowerCase() : "";
+        let fontName = "Noto Sans Myanmar";
+        if (fontBase === "mmrtext.ttf") fontName = "Myanmar Text";
+        else if (fontBase === "myanmar3.ttf") fontName = "Myanmar3";
+        else if (fontBase.includes("notosansmyanmar")) fontName = "Noto Sans Myanmar";
+        else if (fontPath) fontName = path.basename(fontPath, path.extname(fontPath));
 
         let backColor = "&HFF000000"; 
         let borderStyle = 1; 
