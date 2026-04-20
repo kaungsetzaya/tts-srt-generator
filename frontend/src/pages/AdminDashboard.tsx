@@ -552,7 +552,7 @@ export default function AdminDashboard() {
     setTrialStartDate(d.trialStartDate || "");
     setTrialEndDate(d.trialEndDate || "");
     setTrialEnabled(d.trialEnabled === 'true' || d.trialEnabled === true);
-    setMaintenanceModeEnabled(d.maintenanceModeEnabled === 'true' || d.maintenanceModeEnabled === true);
+    setMaintenanceModeEnabled(d.maintenance_mode === 'true' || d.maintenance_mode === true);
   }, [settingsData]);
 
   const logoutMutation = trpc.auth.logout.useMutation({
@@ -1686,13 +1686,13 @@ export default function AdminDashboard() {
                         confirmText: "Yes, Lock It Down",
                         onConfirm: () => {
                           setMaintenanceModeEnabled(true);
-                          updateSettings.mutate({ maintenanceModeEnabled: true });
+                          updateSettings.mutate({ key: "maintenance_mode", value: "true" });
                           setConfirmModal({ ...confirmModal, show: false });
                         }
                       });
                     } else {
                       setMaintenanceModeEnabled(false);
-                      updateSettings.mutate({ maintenanceModeEnabled: false });
+                      updateSettings.mutate({ key: "maintenance_mode", value: "false" });
                     }
                   }}
                   className={`relative w-11 h-6 rounded-full transition-all ${maintenanceModeEnabled ? "bg-red-500" : "bg-gray-600"}`}

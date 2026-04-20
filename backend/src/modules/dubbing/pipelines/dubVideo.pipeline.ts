@@ -12,6 +12,7 @@ import { geminiService } from '../../translation/services/gemini.service';
 import { ttsService, CHARACTER_VOICES, CharacterKey, VoiceKey } from '../../tts/services/tts.service';
 import { assBuilderService } from '../services/assBuilder.service';
 import { isAllowedVideoUrl } from '../../../../_core/security';
+import { updateJob } from '../../../jobs';
 
 function formatTimestamp(ms: number): string {
     const totalSec = Math.floor(ms / 1000);
@@ -44,7 +45,7 @@ export class DubVideoPipeline {
   /**
    * Orchestrates dubbing from a remote URL.
    */
-  async executeFromLink(url: string, options: DubOptions) {
+  async executeFromLink(url: string, options: DubOptions, jobId?: string) {
     if (!isAllowedVideoUrl(url)) throw new Error("Disallowed URL");
     
     const info = await getVideoInfo(url);
@@ -66,7 +67,7 @@ export class DubVideoPipeline {
    * Orchestrates the multi-step dubbing process.
    * Step-by-step numbering as per ARCHITECTURE.md compliance.
    */
-  async execute(videoBuffer: Buffer, filename: string, options: DubOptions) {
+  async execute(videoBuffer: Buffer, filename: string, options: DubOptions, jobId?: string) {
     const id = randomUUID();
     const tempDir = path.join(tmpdir(), `dub_pipe_${id}`);
     await fs.mkdir(tempDir, { recursive: true });
@@ -79,18 +80,22 @@ export class DubVideoPipeline {
 
     try {
       // Step 1: Write video and validate metadata
+      if (jobId) updateJob(jobId, { progress: 10, message: "Initializing video data..." });
       await fs.writeFile(tempVideoPath, videoBuffer);
       const videoDurationSec = await ffmpegService.getVideoDuration(tempVideoPath);
       if (videoDurationSec > 150) throw new Error("Video too long. Max 2min 30sec.");
 
       // Step 2: Extract audio for transcription
+      if (jobId) updateJob(jobId, { progress: 20, message: "Extracting audio for analysis..." });
       await ffmpegService.extractAudio(tempVideoPath, tempAudioExtract);
 
       // Step 3: Transcribe with Whisper
+      if (jobId) updateJob(jobId, { progress: 35, message: "Transcribing speech..." });
       const segments = await whisperService.transcribe(tempAudioExtract);
       if (segments.length === 0) throw new Error("No speech detected in video");
 
       // Step 4: Translate segments with Gemini
+      if (jobId) updateJob(jobId, { progress: 50, message: "Translating to Myanmar..." });
       const translatedSegments = await geminiService.translateSegments(
         segments.map((s, i) => ({ index: i, start: s.start, end: s.end, text: s.text })),
         options.userApiKey
@@ -139,7 +144,13 @@ export class DubVideoPipeline {
               const idx = nextIndex++;
               running++;
               fn(items[idx])
-                .then(result => { results[idx] = result; })
+                .then(result => { 
+                  results[idx] = result; 
+                  if (jobId) {
+                    const ttsProgress = 50 + Math.floor((results.filter(r => r).length / items.length) * 25);
+                    updateJob(jobId, { progress: ttsProgress, message: `Generating Myanmar voice (${results.filter(r => r).length}/${items.length})...` });
+                  }
+                })
                 .catch(reject)
                 .finally(() => { running--; launchNext(); });
             }
@@ -207,6 +218,7 @@ export class DubVideoPipeline {
       const tempConcatAudio = path.join(tempDir, `concat_raw.mp3`);
       
       // Step 6a: Actually concatenate audio parts using ffmpeg
+      if (jobId) updateJob(jobId, { progress: 80, message: "Assembling final narration..." });
       await ffmpegService.concatAudioFiles(listPath, tempConcatAudio);
 
       // Step 6b: Character voice conversion (Module-to-Module call via Service)
@@ -239,12 +251,24 @@ export class DubVideoPipeline {
           videoDurationSec: totalAudioDurationSec, // New duration
           videoSpeedRatio,
           fontPath,
+          onProgress: (p: number) => {
+            if (jobId) {
+              const mergeProgress = 85 + Math.floor((p / 100) * 10);
+              updateJob(jobId, { progress: mergeProgress, message: "Merging visuals with audio..." });
+            }
+          }
         });
       } else {
         console.log(`[Dubbing Pipeline] Merging video with audio...`);
         await ffmpegService.mergeVideoAudio(tempVideoPath, finalAudioPath, tempOutputPath, {
           videoDurationSec: totalAudioDurationSec, // New duration
           videoSpeedRatio,
+          onProgress: (p: number) => {
+            if (jobId) {
+              const mergeProgress = 85 + Math.floor((p / 100) * 10);
+              updateJob(jobId, { progress: mergeProgress, message: "Merging visuals with audio..." });
+            }
+          }
         });
       }
 

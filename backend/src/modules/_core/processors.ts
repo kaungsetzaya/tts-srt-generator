@@ -15,7 +15,7 @@ export function registerAllProcessors() {
         const { videoBase64, filename, userId, ...options } = job.input;
         try {
             const buffer = Buffer.from(videoBase64, 'base64');
-            const result = await dubVideoPipeline.execute(buffer, filename, options);
+            const result = await dubVideoPipeline.execute(buffer, filename, options, job.id);
             
             // Sign the download URL before completing
             if (result.filename) {
@@ -35,7 +35,7 @@ export function registerAllProcessors() {
     registerProcessor("dub_link", async (job) => {
         const { url, userId, ...options } = job.input;
         try {
-            const result = await dubVideoPipeline.executeFromLink(url, options);
+            const result = await dubVideoPipeline.executeFromLink(url, options, job.id);
 
             // Sign the download URL before completing
             if (result.filename) {
@@ -56,7 +56,7 @@ export function registerAllProcessors() {
         const { videoBase64, filename, userId, userApiKey } = job.input;
         try {
             const buffer = Buffer.from(videoBase64, 'base64');
-            const result = await translateVideoPipeline.execute(buffer, filename, userApiKey);
+            const result = await translateVideoPipeline.execute(buffer, filename, userApiKey, job.id);
             updateJob(job.id, { status: "completed", progress: 100, result });
         } catch (err: any) {
             if (userId) await addCredits(userId, 5, "video_translate_refund", "Refund: Translate job failed");
@@ -68,7 +68,7 @@ export function registerAllProcessors() {
     registerProcessor("translate_link", async (job) => {
         const { url, userId, userApiKey } = job.input;
         try {
-            const result = await translateVideoPipeline.executeFromLink(url, userApiKey);
+            const result = await translateVideoPipeline.executeFromLink(url, userApiKey, job.id);
             updateJob(job.id, { status: "completed", progress: 100, result });
         } catch (err: any) {
             console.error(`[Job ${job.id}] Failed:`, err);

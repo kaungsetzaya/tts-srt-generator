@@ -69,7 +69,7 @@ function App() {
   const [location] = useLocation();
   const { data: settings, isLoading } = trpc.settings.get.useQuery();
 
-  const isMaintenance = settings?.maintenanceModeEnabled === "true";
+  const isMaintenance = settings?.maintenance_mode === "true";
   const isSafeRoute = location.startsWith("/admin") || location.startsWith("/login");
 
   // Prevent flash while checking maintenance status (unless it's a safe route)

@@ -200,50 +200,61 @@ const BURMESE_BOUNDARY_RE = /[။၊]/;
 
 function buildSRTFromRaw(rawSrt: string, originalText: string, aspectRatio: "9:16" | "16:9"): string {
   const { charsPerLine } = BURMESE_SRT_CONFIG[aspectRatio] ?? BURMESE_SRT_CONFIG["16:9"];
-  const words = parseRawSrt(rawSrt);
-  if (words.length === 0) return ""; // Simplified fallback
+  const rawSegments = parseRawSrt(rawSrt);
+  if (rawSegments.length === 0) return "";
 
-  const tokens = originalText.trim().split(/\s+/).filter(t => t.length > 0);
-  const tokenEntries = tokens.map((token, i) => {
-    if (i < words.length) return { token, startMs: words[i].startMs, endMs: words[i].endMs };
-    const last = words[words.length - 1];
-    return { token, startMs: last?.endMs || 0, endMs: (last?.endMs || 0) + 200 };
-  });
+  // The goal is to produce a clean SRT that isn't too fragmented.
+  // We will group segments until they reach a minimum duration OR a max character count.
+  const finalSegments: { startMs: number; endMs: number; text: string }[] = [];
+  
+  let currentGroup: typeof rawSegments = [];
+  let currentChars = 0;
+  let currentDuration = 0;
 
-  const sentences: (typeof tokenEntries)[] = [];
-  let currentSentence: typeof tokenEntries = [];
-  for (const entry of tokenEntries) {
-    currentSentence.push(entry);
-    if (BURMESE_BOUNDARY_RE.test(entry.token)) {
-      sentences.push(currentSentence);
-      currentSentence = [];
+  const MIN_DURATION_MS = 1200; // Minimum 1.2s for a block
+  const MAX_CHARS = charsPerLine * 2; // Up to 2 lines
+
+  for (const seg of rawSegments) {
+    const glen = graphemeLen(seg.text);
+    
+    const shouldFlush = 
+      (currentDuration >= MIN_DURATION_MS && currentChars + glen > charsPerLine) ||
+      (currentChars + glen > MAX_CHARS);
+
+    if (shouldFlush && currentGroup.length > 0) {
+      finalSegments.push({
+        startMs: currentGroup[0].startMs,
+        endMs: currentGroup[currentGroup.length - 1].endMs,
+        text: currentGroup.map(s => s.text).join(" ").trim()
+      });
+      currentGroup = [];
+      currentChars = 0;
+      currentDuration = 0;
     }
-  }
-  if (currentSentence.length > 0) sentences.push(currentSentence);
 
-  const displayLines: any[] = [];
-  for (const sentence of sentences) {
-    let lineTokens: string[] = [];
-    let lineChars = 0;
-    let lineStart = sentence[0].startMs;
-    let lineEnd = sentence[0].endMs;
-
-    for (const entry of sentence) {
-      const glen = graphemeLen(entry.token);
-      if (lineChars > 0 && lineChars + 1 + glen > charsPerLine) {
-        displayLines.push({ text: lineTokens.join(" "), startMs: lineStart, endMs: lineEnd });
-        lineTokens = []; lineChars = 0; lineStart = entry.startMs;
-      }
-      lineTokens.push(entry.token);
-      lineChars += (lineChars > 0 ? 1 : 0) + glen;
-      lineEnd = entry.endMs;
-    }
-    if (lineTokens.length > 0) displayLines.push({ text: lineTokens.join(" "), startMs: lineStart, endMs: lineEnd });
+    currentGroup.push(seg);
+    currentChars += glen;
+    currentDuration = currentGroup[currentGroup.length - 1].endMs - currentGroup[0].startMs;
   }
 
-  return displayLines.map((line, idx) => {
-    return `${idx + 1}\n${msToSrtTime(line.startMs)} --> ${msToSrtTime(line.endMs)}\n${line.text.trim()}\n`;
-  }).join("\n");
+  if (currentGroup.length > 0) {
+    finalSegments.push({
+      startMs: currentGroup[0].startMs,
+      endMs: currentGroup[currentGroup.length - 1].endMs,
+      text: currentGroup.map(s => s.text).join(" ").trim()
+    });
+  }
+
+  // Filter out tiny or overlapping segments and format as SRT
+  return finalSegments
+    .filter(s => s.endMs > s.startMs)
+    .map((s, idx) => {
+      // Add a tiny gap (20ms) to prevent some editors from fusing blocks
+      const start = msToSrtTime(s.startMs);
+      const end = msToSrtTime(s.endMs - 20); 
+      return `${idx + 1}\n${start} --> ${end}\n${s.text}\n`;
+    })
+    .join("\n");
 }
 
 function parseRawSrt(rawSrt: string): any[] {
