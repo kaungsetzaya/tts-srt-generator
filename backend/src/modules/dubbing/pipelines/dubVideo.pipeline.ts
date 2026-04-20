@@ -155,12 +155,41 @@ export class DubVideoPipeline {
 
       const audioParts: string[] = [];
       const processedForSrt: any[] = [];
-      let cursorMs = 0;
+      let timelinePosMs = 0;
 
-      for (const result of ttsResults) {
-        processedForSrt.push({ startMs: cursorMs, endMs: cursorMs + result.duration, text: result.text });
+      for (let i = 0; i < activeSegments.length; i++) {
+        const seg = activeSegments[i];
+        const result = ttsResults[i];
+        
+        // Target start time based on original segment (offset in ms)
+        const targetStartMs = Math.round((seg.start || 0) * 1000);
+        
+        // If there's a gap between current position and the next speaker, fill with silence
+        if (targetStartMs > timelinePosMs) {
+          const silenceDuration = targetStartMs - timelinePosMs;
+          const silencePath = path.join(tempDir, `silence_${i}.mp3`);
+          await ffmpegService.generateSilence(silenceDuration, silencePath);
+          audioParts.push(silencePath);
+          timelinePosMs = targetStartMs;
+        }
+        
+        // Add the translated speech
         audioParts.push(result.partPath);
-        cursorMs += result.duration + TINY_PAUSE_MS;
+        processedForSrt.push({ 
+          startMs: timelinePosMs, 
+          endMs: timelinePosMs + result.duration, 
+          text: result.text 
+        });
+        
+        timelinePosMs += result.duration;
+      }
+
+      // Pad the end with silence if shorter than video
+      const videoDurationMs = videoDurationSec * 1000;
+      if (timelinePosMs < videoDurationMs) {
+        const silencePath = path.join(tempDir, `final_silence.mp3`);
+        await ffmpegService.generateSilence(videoDurationMs - timelinePosMs, silencePath);
+        audioParts.push(silencePath);
       }
 
       // Step 6: Concat audio parts and merge with video

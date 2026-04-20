@@ -66,7 +66,7 @@ export async function generateSilence(durationMs: number, outputPath: string): P
       .inputFormat("lavfi")
       .duration(durationMs / 1000)
       .audioCodec("libmp3lame")
-      .audioBitrate("128k")
+      .audioBitrate("32k") // Match edge-tts low bitrate
       .on("end", () => resolve())
       .on("error", reject)
       .save(outputPath);
@@ -153,7 +153,6 @@ export async function mergeVideoAudioSubtitles(
                 "-map", "0:v",
                 "-map", "1:a",
                 "-t", options.videoDurationSec.toFixed(3),
-                "-shortest",
                 "-map_metadata", "-1",
                 "-movflags", "+faststart"
             ])
@@ -197,7 +196,6 @@ export async function mergeVideoAudio(
                 "-map", "0:v",
                 "-map", "1:a",
                 "-t", options.videoDurationSec.toFixed(3),
-                "-shortest",
                 "-map_metadata", "-1",
                 "-movflags", "+faststart"
             ])
