@@ -2367,14 +2367,8 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                   {/* ── STEP: Video Preview + Settings ── */}
                   {dubPreviewUrl && !dubResult && (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-                      {/* Left Side: Settings (lg:col-span-2) */}
-                      <div className="lg:col-span-2 space-y-4 lg:order-1">
-                        
-                        {/* ── ACCORDION: Voice Selection ── */}
-                        </div>
-                      </div>
-
-                      {/* Right Side: Preview (Sticky) */}
+                      
+                      {/* Right Side: Preview (Sticky) - Positioned in the side column on desktop */}
                       <div className="lg:col-span-1 lg:sticky lg:top-[74px] z-20 lg:order-2">
                         <div
                           className={box}
@@ -2754,12 +2748,12 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                               </span>
                             </div>
                           )}
-                        </div>
                       </div>
-                    </div>
-                  )}
 
-                      {/* ── ACCORDION: Voice Selection ── */}
+                      {/* Left Side: Settings (lg:col-span-2) - Main scrollable area */}
+                      <div className="lg:col-span-2 space-y-4 lg:order-1">
+                        
+                        {/* ── ACCORDION: Voice Selection ── */}
                       <div
                         className={box}
                         style={{
@@ -3235,6 +3229,9 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                           </>
                         )}
                       </motion.button>
+                    </div>
+                  </div>
+                )}
 
                       {(startDubMutation.isPending || activeJobId !== null) && (
                         <div
