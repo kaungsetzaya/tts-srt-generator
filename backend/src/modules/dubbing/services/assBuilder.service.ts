@@ -28,16 +28,16 @@ export class AssBuilderService {
     ): string {
         const playResX = videoWidth;
         const playResY = videoHeight;
-        const fontScaleFactor = videoHeight / 490;
-        const fontSize = Math.round((opts?.srtFontSize ?? 24) * fontScaleFactor * 2.0);
+        const fontScaleFactor = videoHeight / 720; // Normalizing to 720p base
+        const fontSize = Math.round((opts?.srtFontSize ?? 24) * fontScaleFactor * 1.5);
         const fontColor = opts?.srtColor ?? "#ffffff";
 
-        const userMarginV = opts?.srtMarginV ?? 30;
-        const baseMarginV = 80 + userMarginV * 3;
-        const marginV = Math.round(baseMarginV * (videoHeight / 1080));
+        // Vertical Position - interpreted as 0-100% from bottom
+        const posPercent = opts?.srtMarginV ?? 10; 
+        const marginV = Math.round((posPercent / 100) * (videoHeight * 0.9)); // Cap at 90% height to avoid overflow
 
         const blurBg = opts?.srtBlurBg ?? true;
-        const blurSize = opts?.srtBlurSize ?? 8;
+        const opacity = opts?.srtBlurSize ?? 80; // 0-100 scale
         const blurColor = opts?.srtBlurColor ?? "black";
         const boxPadding = opts?.srtBoxPadding ?? 4;
         const fullWidth = opts?.srtFullWidth ?? false;
@@ -62,8 +62,7 @@ export class AssBuilderService {
         let shadow = dropShadow ? 1 : 0;
 
         if (blurBg) {
-            const opacityFraction = Math.min(0.72, (blurSize / 20) * 0.72); 
-            const alphaInt = Math.round((1 - opacityFraction) * 255);
+            const alphaInt = Math.round((1 - (opacity / 100)) * 255);
             const alphaHex = alphaInt.toString(16).padStart(2, "0").toUpperCase();
             const bgHex = blurColor === "black" ? "000000" : "FFFFFF";
             backColor = `&H${alphaHex}${bgHex}`;
