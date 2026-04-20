@@ -232,6 +232,43 @@ export async function mergeVideoAudio(
 }
 
 /**
+ * Apply an ffmpeg audio filter string to an audio file.
+ * Used for atempo (speed adjustment) to fit TTS into a time window.
+ */
+export async function runFilter(inputPath: string, filter: string, outputPath: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .audioFilters(filter)
+      .audioCodec("libmp3lame")
+      .audioChannels(1)
+      .audioFrequency(44100)
+      .on("end", () => resolve())
+      .on("error", reject)
+      .save(outputPath);
+  });
+}
+
+/**
+ * Trim an audio file to [startMs, endMs].
+ * Used as a last resort when atempo ratio would exceed 2.5x.
+ */
+export async function trimAudio(inputPath: string, startMs: number, endMs: number, outputPath: string): Promise<void> {
+  const startSec = (startMs / 1000).toFixed(3);
+  const durationSec = ((endMs - startMs) / 1000).toFixed(3);
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .seekInput(parseFloat(startSec))
+      .duration(parseFloat(durationSec))
+      .audioCodec("libmp3lame")
+      .audioChannels(1)
+      .audioFrequency(44100)
+      .on("end", () => resolve())
+      .on("error", reject)
+      .save(outputPath);
+  });
+}
+
+/**
  * Concatenate multiple audio files into one using ffmpeg concat demuxer.
  */
 export async function concatAudioFiles(listPath: string, outputPath: string): Promise<void> {
@@ -266,6 +303,8 @@ export const ffmpegService = {
     extractAudio,
     generateSilence,
     speedUpAudio,
+    runFilter,
+    trimAudio,
     mergeVideoAudioSubtitles,
     mergeVideoAudio,
     concatAudioFiles,
