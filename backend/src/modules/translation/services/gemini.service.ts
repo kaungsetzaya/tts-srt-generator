@@ -9,9 +9,34 @@ import * as path from 'path';
 const QUOTA_FILE = path.join(process.cwd(), 'backend/.gemini_quota.json');
 
 const MODELS = [
-    { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash", rpd: 500, rpm: 15, primary: true },
-    { id: "gemini-2.5-flash-lite-preview-06-17", name: "Gemini 2.5 Flash Lite", rpd: 20, rpm: 10, primary: false },
-    { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", rpd: 20, rpm: 5, primary: false },
+  {
+    id: "models/gemini-3.1-flash-lite-preview",
+    name: "Gemini 3.1 Flash Lite",
+    rpd: 500,
+    rpm: 15,
+    primary: true,
+  },
+  {
+    id: "models/gemini-3-flash-preview",
+    name: "Gemini 3 Flash",
+    rpd: 20,
+    rpm: 5,
+    primary: false,
+  },
+  {
+    id: "models/gemini-2.5-flash-lite",
+    name: "Gemini 2.5 Flash Lite",
+    rpd: 20,
+    rpm: 10,
+    primary: false,
+  },
+  {
+    id: "models/gemini-2.5-flash",
+    name: "Gemini 2.5 Flash",
+    rpd: 20,
+    rpm: 5,
+    primary: false,
+  },
 ];
 
 let quotaMap: Map<string, { date: string; count: number }>;
@@ -170,10 +195,23 @@ export class GeminiService {
     }
 
     private async callApi(text: string, modelId: string, apiKey: string): Promise<string | null> {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/${modelId}:generateContent?key=${apiKey}`;
+        const systemPrompt = `You are a TTS narrator. Translate video script EXACTLY word-for-word to Myanmar.
+Keep exact meaning. Output must be speakable. No intro or outro.
+Return exact same number of lines as input.
+
+STRICT RULES:
+1. ONLY TRANSLATE: Output ONLY the translation. Do NOT add any explanation, note, or intro text like "ဤသည်မှာ..." or "This is..." 
+2. ONLY MYANMAR: Output in Myanmar ONLY.
+3. TRANSLITERATION: Use phonetic Myanmar (Car=ကား, Bus=ဘတ်စ်ကား, Zombie=ဇွန်ဘီး).
+4. DYNAMIC ENDINGS: Mix "ခဲ့တာပါ", "ပါတော့တယ်", "နေကြတာပါ", "သွားခဲ့ရတယ်", "လိုက်မိပါတယ်", "ကြတာပါ", "နေခဲ့တယ်".
+5. NO "ပါတယ်" repetition.
+6. SPOKEN STYLE: Natural conversational Myanmar.
+7. CLEAN OUTPUT: JSON array ONLY. No intro/notes.`;
+
         const body = {
-            contents: [{ parts: [{ text: `Translate to Myanmar (standard script):\n\n${text}` }] }],
-            systemInstruction: { parts: [{ text: "Output ONLY the raw Myanmar translation. NO markdown. NO filler." }] }
+            contents: [{ parts: [{ text: `Translate to Myanmar:\n\n${text}` }] }],
+            systemInstruction: { parts: [{ text: systemPrompt }] }
         };
 
         const res = await fetch(url, {
@@ -188,10 +226,23 @@ export class GeminiService {
     }
 
     private async callBatchApi(lines: string[], modelId: string, apiKey: string): Promise<string[] | null> {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/${modelId}:generateContent?key=${apiKey}`;
+        const systemPrompt = `You are a TTS narrator. Translate video script EXACTLY word-for-word to Myanmar.
+Keep exact meaning. Output must be speakable. No intro or outro.
+Return exact same number of lines as input.
+
+STRICT RULES:
+1. ONLY TRANSLATE: Output ONLY the translation. Do NOT add any explanation, note, or intro text like "ဤသည်မှာ..." or "This is..." 
+2. ONLY MYANMAR: Output in Myanmar ONLY.
+3. TRANSLITERATION: Use phonetic Myanmar (Car=ကား, Bus=ဘတ်စ်ကား, Zombie=ဇွန်ဘီး).
+4. DYNAMIC ENDINGS: Mix "ခဲ့တာပါ", "ပါတော့တယ်", "နေကြတာပါ", "သွားခဲ့ရတယ်", "လိုက်မိပါတယ်", "ကြတာပါ", "နေခဲ့တယ်".
+5. NO "ပါတယ်" repetition.
+6. SPOKEN STYLE: Natural conversational Myanmar.
+7. CLEAN OUTPUT: JSON array ONLY. No intro/notes.`;
+
         const body = {
             contents: [{ parts: [{ text: `TEXT TO TRANSLATE (JSON Array):\n${JSON.stringify(lines)}` }] }],
-            systemInstruction: { parts: [{ text: "Professional script translator. Return JSON array ONLY. Exact same line count." }] },
+            systemInstruction: { parts: [{ text: systemPrompt }] },
             generationConfig: {
                 responseMimeType: "application/json",
                 responseSchema: { type: "ARRAY", items: { type: "STRING" } }

@@ -180,7 +180,7 @@ export class DubVideoPipeline {
       // Step 6c: Subtitles - cross-platform font resolution
       const fontPath = process.env.MYANMAR_FONT_PATH || 
         (process.platform === "win32" 
-          ? "C:/Windows/Fonts/Myanmar3.ttf" 
+          ? "C:/Windows/Fonts/mmrtext.ttf" 
           : "/usr/share/fonts/truetype/noto/NotoSansMyanmar-Regular.ttf");
       
       if (options.srtEnabled !== false && processedForSrt.length > 0) {
