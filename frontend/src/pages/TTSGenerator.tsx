@@ -220,6 +220,38 @@ const T = {
   },
 };
 
+// --- PREMIUM UI COLORS (Hoisted to module level to prevent ReferenceErrors in production) ---
+const accent = "#C06F30";
+const accentSecondary = "#F4B34F";
+const deepRed = "#861C1C";
+const peach = "#ECCEB6";
+const cream = "#EBE6D8";
+const darkBrown = "#2B1D1C";
+
+// Premium color scheme for light mode — Warm Sand & Copper
+const lightBg = "#FBF8F4";
+const lightCardBg = "#FFFFFF";
+const lightCardBorder = "rgba(192,111,48,0.12)";
+const lightText = "#2B1D1C";
+const lightSubtext = "#8B7355";
+
+// Helper: hex color + opacity → 8-digit hex
+const withOpacity = (color: string, opacity: number) => {
+  if (color.startsWith("#") && color.length === 7) {
+    const hex = color.slice(1);
+    const alpha = Math.round(opacity * 255)
+      .toString(16)
+      .padStart(2, "0");
+    return `#${hex}${alpha}`;
+  }
+  return color;
+};
+
+const accent15 = withOpacity(accent, 0.15);
+const accent30 = withOpacity(accent, 0.3);
+const accent40 = withOpacity(accent, 0.4);
+const accent80 = withOpacity(accent, 0.8);
+
 export default function TTSGenerator() {
   const [mainTab, setMainTab] = useState<MainTab>("tts");
   const [secondaryTab, setSecondaryTab] = useState<SecondaryTab>(null);
@@ -462,40 +494,8 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
       )
     : null;
 
-  // --- PREMIUM UI COLORS (Spiced Palette) ---
   const isDark = theme === "dark";
-
-  const accent = "#C06F30";
-  const accentSecondary = "#F4B34F";
-  const deepRed = "#861C1C";
-  const peach = "#ECCEB6";
-  const cream = "#EBE6D8";
-  const darkBrown = "#2B1D1C";
   const subColor = accent;
-
-  // Premium color scheme for light mode — Warm Sand & Copper
-  const lightBg = "#FBF8F4";
-  const lightCardBg = "#FFFFFF";
-  const lightCardBorder = "rgba(192,111,48,0.12)";
-  const lightText = "#2B1D1C";
-  const lightSubtext = "#8B7355";
-
-  // Helper: hex color + opacity → 8-digit hex
-  const withOpacity = (color: string, opacity: number) => {
-    if (color.startsWith("#") && color.length === 7) {
-      const hex = color.slice(1);
-      const alpha = Math.round(opacity * 255)
-        .toString(16)
-        .padStart(2, "0");
-      return `#${hex}${alpha}`;
-    }
-    return color;
-  };
-
-  const accent15 = withOpacity(accent, 0.15);
-  const accent30 = withOpacity(accent, 0.3);
-  const accent40 = withOpacity(accent, 0.4);
-  const accent80 = withOpacity(accent, 0.8);
 
   // ─── Premium theme-aware derived values ───
   const bgColor = isDark ? "#0f0f0f" : lightBg;
