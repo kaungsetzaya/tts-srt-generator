@@ -11,7 +11,7 @@ const OUTPUT_DIR =
 fs.mkdir(OUTPUT_DIR, { recursive: true }).catch(() => {});
 
 let currentMurfKeyIndex = 0;
-function getMurfKey(): string | undefined {
+export function getMurfKey(): string | undefined {
   const keysStr = process.env.MURF_API_KEY || "";
   const keys = keysStr
     .split(",")
@@ -133,7 +133,9 @@ export async function generateSpeechWithCharacter(
   });
 
   const result = (await response.json()) as any;
-  if (result.error_code) throw new Error(result.error_message);
+  if (result.error_code) {
+    throw new Error(`[Murf API Error] ${result.error_message} (${result.error_code})`);
+  }
 
   // Download converted audio
   const audioResponse = await fetch(result.audio_file);

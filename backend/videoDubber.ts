@@ -9,7 +9,7 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { downloadVideo, getVideoInfo } from "./_core/multiDownloader";
-import { generateSpeech, generateSpeechWithCharacter, CHARACTER_VOICES, type VoiceKey, type CharacterKey } from "./tts";
+import { generateSpeech, generateSpeechWithCharacter, CHARACTER_VOICES, type VoiceKey, type CharacterKey, getMurfKey } from "./tts";
 import { geminiTranslateBatch } from "./geminiTranslator";
 import { isAllowedVideoUrl } from "./_core/security";
 import { generateSignedDownloadUrl } from "./_core/signedUrl";
@@ -416,12 +416,17 @@ export async function dubVideoFromBuffer(
 
       if (!seg.text.trim()) continue;
 
+      const isCharacterVoice = options.voice && options.voice in CHARACTER_VOICES;
+      const baseVoice = isCharacterVoice
+        ? CHARACTER_VOICES[options.voice as CharacterKey].base
+        : (options.voice as VoiceKey);
+
       // Generate TTS at fixed speed — NEVER change speed per segment
       let ttsResult;
       try {
         ttsResult = await generateSpeech(
           seg.text,
-          options.voice as VoiceKey,
+          baseVoice,
           FIXED_SPEED,
           options.pitch ?? 0
         );
@@ -519,7 +524,7 @@ export async function dubVideoFromBuffer(
       console.log(`[Dubber] Converting to character voice: ${options.voice} with Murf.ai...`);
       try {
         const charVoice = CHARACTER_VOICES[options.voice as CharacterKey];
-        const murfApiKey = process.env.MURF_API_KEY;
+        const murfApiKey = getMurfKey();
         if (!murfApiKey) {
           throw new Error("MURF_API_KEY not configured");
         }
@@ -539,7 +544,7 @@ export async function dubVideoFromBuffer(
 
         const result = (await response.json()) as any;
         if (result.error_code) {
-          throw new Error(result.error_message);
+          throw new Error(`[Murf API Error] ${result.error_message} (${result.error_code})`);
         }
 
         // Download converted audio
