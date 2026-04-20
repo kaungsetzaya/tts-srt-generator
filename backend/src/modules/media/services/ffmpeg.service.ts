@@ -125,10 +125,16 @@ export async function mergeVideoAudioSubtitles(
         if (options.fontPath) {
             const p = subtitlesPath.replace(/\\/g, "/");
             const fd = path.dirname(options.fontPath).replace(/\\/g, "/");
-            // FFmpeg ass filter requires escaping colons and singe quotes
             const escapedP = p.replace(/:/g, "\\:");
-            const escapedFd = fd.replace(/:/g, "\\:");
-            subFilter = `ass='${escapedP}':fontsdir='${escapedFd}'`;
+            
+            // On Linux, if the font is in a standard system path, we avoid fontsdir 
+            // as it can cause metadata loading errors with some Noto fonts.
+            if (process.platform !== "win32" && fd.startsWith("/usr/share/fonts")) {
+                subFilter = `ass='${escapedP}'`;
+            } else {
+                const escapedFd = fd.replace(/:/g, "\\:");
+                subFilter = `ass='${escapedP}':fontsdir='${escapedFd}'`;
+            }
         } else {
             const p = subtitlesPath.replace(/\\/g, "/");
             const escapedP = p.replace(/:/g, "\\:");
@@ -161,7 +167,10 @@ export async function mergeVideoAudioSubtitles(
               console.error(`[FFmpeg MergeSubtitles Error] ${err.message}`);
               reject(err);
             })
-            .on("end", () => resolve())
+            .on("end", () => {
+              console.log("[FFmpeg Subtitles] Merge completed successfully.");
+              resolve();
+            })
             .save(outputPath);
     });
 }
@@ -223,7 +232,10 @@ export async function concatAudioFiles(listPath: string, outputPath: string): Pr
                 console.error(`[FFmpeg Concat] ${line}`);
               }
             })
-            .on('end', () => resolve())
+            .on('end', () => {
+              console.log("[FFmpeg Concat] Audio concatenation completed.");
+              resolve();
+            })
             .on('error', (err: any) => {
               console.error(`[FFmpeg Concat Error] ${err.message}`);
               reject(err);
