@@ -74,8 +74,12 @@ export function TTSGeneratorLayout({
           <SidebarRail />
           <SidebarInset className="flex-1 flex flex-col min-h-screen">
             {headerBar && (
-              <header className="sticky top-0 z-[100] will-change-transform">
-                {headerBar}
+              <header className="sticky top-0 z-40">
+                <div className="flex items-center">
+                  {/* Sidebar toggle — keeps the logo unblocked */}
+                  <SidebarTrigger className="ml-2 mr-1 shrink-0" />
+                  <div className="flex-1">{headerBar}</div>
+                </div>
               </header>
             )}
             <main className="flex-1 overflow-auto pb-20 md:pb-0">
@@ -366,21 +370,6 @@ function TTSGeneratorSidebar({
         </SidebarGroup>
       </SidebarContent>
 
-      {setLang && (
-        <div className="p-3 border-t" style={{ borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)" }}>
-          <button
-            onClick={() => setLang(lang === "mm" ? "en" : "mm")}
-            className="w-full py-2 px-3 rounded-lg font-bold text-xs uppercase tracking-widest transition-all"
-            style={{
-              border: `1px solid ${isDark ? "rgba(192,111,48,0.35)" : "rgba(192,111,48,0.15)"}`,
-              background: isDark ? "rgba(192,111,48,0.1)" : "rgba(255,255,255,0.7)",
-              color: isDark ? "#ECCEB6" : "#2B1D1C",
-            }}
-          >
-            {lang === "mm" ? "EN" : "MM"}
-          </button>
-        </div>
-      )}
     </Sidebar>
   );
 }

@@ -473,7 +473,7 @@ export async function dubVideoFromBuffer(
     const needsVideoAdjust = Math.abs(clampedVideoSpeed - 1.0) > 0.02;
     console.log(`[Dubber] Video speed factor: ${clampedVideoSpeed.toFixed(3)}x (original ratio: ${videoAudioRatio.toFixed(3)})`);
 
-    // ── Step 6: Concat all audio parts into final dubbed audio ──
+    // ── Step 6: Concat all audio parts, then trim to video duration ──
     console.log(`[Dubber] Concatenating ${audioParts.length} audio parts...`);
 
     if (audioParts.length === 0) {
@@ -486,6 +486,8 @@ export async function dubVideoFromBuffer(
       .join("\n");
     await fs.writeFile(listPath, listContent);
 
+    // Concatenate all audio segments
+    const tempConcatAudio = path.join(tempDir, `concat_raw_${id}.mp3`);
     await new Promise<void>((resolve, reject) => {
       ffmpeg()
         .input(listPath)
@@ -494,25 +496,44 @@ export async function dubVideoFromBuffer(
         .audioBitrate("128k")
         .on("end", () => resolve())
         .on("error", reject)
-        .save(tempFinalAudio);
+        .save(tempConcatAudio);
     });
 
-    // ── Step 7: Build SRT content (for return value) ──
+    // Trim audio to exactly video duration — ensures audio never outlasts video
+    const targetDurationSec = videoDurationSec;
+    await new Promise<void>((resolve, reject) => {
+      ffmpeg(tempConcatAudio)
+        .outputOptions(["-t", targetDurationSec.toFixed(3)])
+        .audioCodec("libmp3lame")
+        .audioBitrate("128k")
+        .on("end", () => resolve())
+        .on("error", reject)
+        .save(tempFinalAudio);
+    });
+    console.log(`[Dubber] Audio trimmed to ${targetDurationSec.toFixed(1)}s to match video.`);
+
+    // ── Step 7: Build SRT — cap all timestamps at video duration ──
+    const videoDurationMsCapped = videoDurationMs;
     let srtContent = "";
     processed.forEach((seg, idx) => {
+      const capStart = Math.min(seg.startMs, videoDurationMsCapped);
+      const capEnd = Math.min(seg.endMs, videoDurationMsCapped);
+      if (capStart >= capEnd) return; // skip segments entirely beyond video
       srtContent += `${idx + 1}\n`;
-      srtContent += `${msToSrtTime(seg.startMs)} --> ${msToSrtTime(seg.endMs)}\n`;
+      srtContent += `${msToSrtTime(capStart)} --> ${msToSrtTime(capEnd)}\n`;
       srtContent += `${seg.text}\n\n`;
     });
 
-    // ── Step 8: Build ASS subtitle file with Myanmar font ──
+    // ── Step 8: Build ASS — cap subtitle timestamps at video duration ──
     const fontPath = getMyanmarFontPath();
     const assContent = buildAssContent(
-      processed.map(s => ({
-        startMs: s.startMs,
-        endMs: s.endMs,
-        text: s.text,
-      })),
+      processed
+        .map(s => ({
+          startMs: Math.min(s.startMs, videoDurationMs),
+          endMs: Math.min(s.endMs, videoDurationMs),
+          text: s.text,
+        }))
+        .filter(s => s.startMs < s.endMs), // discard segments past video end
       fontPath,
       videoSize.width,
       videoSize.height,
@@ -529,43 +550,27 @@ export async function dubVideoFromBuffer(
     );
     await fs.writeFile(tempAssPath, assContent, "utf-8");
 
-    // ── Step 9: FFmpeg final merge — video + audio + burn ASS subtitles ──
+    // ── Step 9: FFmpeg final merge — video + trimmed audio + burned subtitles ──
     console.log("[Dubber] Merging video + audio + subtitles...");
 
     await new Promise<void>((resolve, reject) => {
-      // Build video filter chain
-      const vfFilters: string[] = [];
-
-      // If video speed adjustment needed, apply setpts filter
-      // setpts=PTS/speed_factor: speed>1 speeds up playback (fewer PTS per frame)
-      if (needsVideoAdjust) {
-        // To make video duration = dubbed audio duration:
-        //   videoSpeedFactor = videoDurationMs / totalDubbedMs
-        const videoSpeedFactor = videoDurationMs / totalDubbedMs;
-        const clampedFactor = Math.max(MAX_VIDEO_SPEED, Math.min(1 / MIN_VIDEO_SPEED, videoSpeedFactor));
-        vfFilters.push(`setpts=${(1 / clampedFactor).toFixed(4)}*PTS`);
-        console.log(`[Dubber] Adjusting video PTS by ${(1 / clampedFactor).toFixed(4)}x`);
-      }
-
-      // Subtitle filter (always last in chain)
+      // subtitle filter path (escape for FFmpeg vf syntax on Linux)
+      let subFilter: string;
       if (fontPath && existsSync(fontPath)) {
-        // Escape colons/backslashes in path for ffmpeg vf syntax
-        const escapedAssPath = tempAssPath.replace(/\\/g, "/").replace(/:/g, "\\:");
-        const escapedFontsDir = path.dirname(fontPath).replace(/\\/g, "/").replace(/:/g, "\\:");
-        vfFilters.push(`ass='${escapedAssPath}':fontsdir='${escapedFontsDir}'`);
+        const p = tempAssPath.replace(/\\/g, "/");
+        const fd = path.dirname(fontPath).replace(/\\/g, "/");
+        subFilter = `ass=${p}:fontsdir=${fd}`;
         console.log(`[Dubber] Burning ASS subtitles with font: ${path.basename(fontPath)}`);
       } else {
-        const escapedAssPath = tempAssPath.replace(/\\/g, "/").replace(/:/g, "\\:");
-        vfFilters.push(`subtitles='${escapedAssPath}'`);
-        console.warn("[Dubber] No Myanmar font found — subtitles may not render correctly!");
+        const p = tempAssPath.replace(/\\/g, "/");
+        subFilter = `subtitles=${p}`;
+        console.warn("[Dubber] No Myanmar font found — subtitles may render without Myanmar script.");
       }
 
-      const vfString = vfFilters.join(",");
-
-      const cmd = ffmpeg(tempVideoPath)
+      ffmpeg(tempVideoPath)
         .input(tempFinalAudio)
         .outputOptions([
-          "-vf", vfString,
+          "-vf", subFilter,
           "-c:v", "libx264",
           "-preset", "ultrafast",
           "-crf", "28",
@@ -573,7 +578,10 @@ export async function dubVideoFromBuffer(
           "-b:a", "128k",
           "-map", "0:v",
           "-map", "1:a",
-          "-shortest",
+          // Force output to end exactly at video duration
+          "-t", videoDurationSec.toFixed(3),
+          "-shortest", // Emergency fallback: stop when shortest stream ends
+          "-map_metadata", "-1", // Strip metadata that could cause duration drift
           "-movflags", "+faststart"
         ])
         .on("progress", (p: any) =>
