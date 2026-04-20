@@ -98,14 +98,24 @@ export class DubVideoPipeline {
         if (!seg.translatedText.trim()) continue;
 
         const isCharacter = options.voice in CHARACTER_VOICES;
-        const baseVoice = isCharacter 
-            ? CHARACTER_VOICES[options.voice as CharacterKey].base 
-            : (options.voice as VoiceKey);
+        let audioBuffer: Buffer;
 
-        const tts = await ttsService.generateSpeech(seg.translatedText, baseVoice, FIXED_SPEED, options.pitch ?? 0);
+        if (isCharacter) {
+            const ttsResult = await ttsService.generateSpeechWithCharacter(
+                seg.translatedText,
+                options.voice as CharacterKey,
+                FIXED_SPEED,
+                undefined,
+                options.pitch ?? 0
+            );
+            audioBuffer = ttsResult.audioBuffer;
+        } else {
+            const ttsResult = await ttsService.generateSpeech(seg.translatedText, options.voice as VoiceKey, FIXED_SPEED, options.pitch ?? 0);
+            audioBuffer = ttsResult.audioBuffer;
+        }
         
         const partPath = path.join(tempDir, `tts_${seg.index}.mp3`);
-        await fs.writeFile(partPath, tts.audioBuffer);
+        await fs.writeFile(partPath, audioBuffer);
         
         const duration = await ffmpegService.getAudioDurationMs(partPath);
         

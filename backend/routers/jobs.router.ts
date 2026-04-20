@@ -13,7 +13,7 @@ export const jobsRouter = t.router({
     .input(
       z.object({
         url: z.string(),
-        voice: z.enum(["thiha", "nilar"]),
+        voice: z.enum(["thiha", "nilar", "ryan", "ronnie", "lucas", "daniel", "evander", "michelle", "iris", "charlotte", "amara"]),
         srtEnabled: z.boolean().optional().default(true),
         srtFontSize: z.number().optional().default(24),
         srtColor: z.string().optional().default("#ffffff"),
@@ -23,6 +23,8 @@ export const jobsRouter = t.router({
         srtBlurColor: z.enum(["black", "white"]).optional().default("black"),
         srtBoxPadding: z.number().optional().default(4),
         srtFullWidth: z.boolean().optional().default(false),
+        srtDropShadow: z.boolean().optional().default(true),
+        srtBorderRadius: z.enum(["rounded", "square"]).optional().default("rounded"),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -56,6 +58,8 @@ export const jobsRouter = t.router({
         srtBlurColor: input.srtBlurColor,
         srtBoxPadding: input.srtBoxPadding,
         srtFullWidth: input.srtFullWidth,
+        srtDropShadow: input.srtDropShadow,
+        srtBorderRadius: input.srtBorderRadius,
         userId,
       }, userId);
 
