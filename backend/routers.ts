@@ -51,8 +51,6 @@ export const appRouter = t.router({
 
 export type AppRouter = typeof appRouter;
 
-// ─── Side-effect imports: register job processors ────────────
-// These files call registerProcessor() at module level,
-// so importing them wires up the job system.
-import "./videoDubber";
-import "./videoTranslator";
+// ─── Side-effect: register job processors ────────────
+import { registerAllProcessors } from "./src/modules/_core/processors";
+registerAllProcessors();

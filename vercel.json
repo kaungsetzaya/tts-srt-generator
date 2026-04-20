@@ -15,7 +15,7 @@
       "headers": [
         {
           "key": "Access-Control-Allow-Origin",
-          "value": "*"
+          "value": "https://choco.de5.net"
         },
         {
           "key": "Access-Control-Allow-Credentials",

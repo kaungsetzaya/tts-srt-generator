@@ -35,21 +35,27 @@ export async function createContext(
           algorithms: ["HS256"],
         });
 
-        // 🔐 One-Device Session Check
-        // JWT ထဲက sid နှင့် DB ထဲက session_token ကို ယှဉ်စစ်သည်
-        // မတူရင် — နောက်တစ်ခြား device ကနေ login ဝင်သွားပြီ ⟹ ဒီ session ပယ်ဖျက်
+        // Support both Telegram auth (userId, telegramId, role, sid) and OAuth (openId, appId) JWT formats
+        const userId = (payload.userId as string) || (payload.openId as string);
+        if (!userId) {
+          return { req: opts.req, res: opts.res, user: null };
+        }
+
+        const telegramId = (payload.telegramId as string) || "";
+        const name = (payload.name as string) || "User";
+        const role = (payload.role as string) ?? "user";
         const sid = payload.sid as string | undefined;
+
+        // One-Device Session Check (only for Telegram auth with sid)
         if (sid) {
           const db = await getDb();
           if (db) {
             const row = await db.select({ sessionToken: users.sessionToken, bannedAt: users.bannedAt })
-              .from(users).where(eq(users.id, payload.userId as string)).limit(1);
+              .from(users).where(eq(users.id, userId)).limit(1);
             if (row.length > 0) {
-              // Session token မတူ → invalidate
               if (row[0].sessionToken && row[0].sessionToken !== sid) {
                 return { req: opts.req, res: opts.res, user: null };
               }
-              // Banned check
               if (row[0].bannedAt) {
                 return { req: opts.req, res: opts.res, user: null };
               }
@@ -58,10 +64,10 @@ export async function createContext(
         }
 
         user = {
-          userId: payload.userId as string,
-          telegramId: payload.telegramId as string,
-          name: payload.name as string,
-          role: (payload.role as string) ?? "user",
+          userId,
+          telegramId,
+          name,
+          role,
         };
       }
     }

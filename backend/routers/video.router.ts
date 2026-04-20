@@ -10,7 +10,7 @@ import { TRPCError } from "@trpc/server";
 import { isAllowedVideoUrl, validateBase64VideoPrefix } from "../_core/security";
 import { createJob, getJobAsync, updateJob } from "../jobs";
 import { deductCredits, addCredits } from "./credits";
-import { checkPythonAndWhisper } from "../videoTranslator";
+import { whisperService } from "../src/modules/translation/services/whisper.service";
 
 export const videoRouter = t.router({
   dubFile: protectedProcedure
@@ -18,7 +18,7 @@ export const videoRouter = t.router({
       z.object({
         videoBase64: z.string(),
         filename: z.string(),
-        voice: z.string(),
+        voice: z.enum(["thiha", "nilar", "ryan", "ronnie", "lucas", "daniel", "evander", "michelle", "iris", "charlotte", "amara"]),
         speed: z.number().optional().default(1.2),
         pitch: z.number().optional().default(0),
         srtEnabled: z.boolean().optional().default(true),
@@ -52,7 +52,7 @@ export const videoRouter = t.router({
 
       // ── Gate 2: Pre-flight environment check ──
       try {
-        await checkPythonAndWhisper();
+        await whisperService.checkEnvironment();
       } catch (envErr: any) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
@@ -98,7 +98,7 @@ export const videoRouter = t.router({
     .input(
       z.object({
         url: z.string(),
-        voice: z.string(),
+        voice: z.enum(["thiha", "nilar", "ryan", "ronnie", "lucas", "daniel", "evander", "michelle", "iris", "charlotte", "amara"]),
         speed: z.number().optional().default(1.2),
         pitch: z.number().optional().default(0),
         srtEnabled: z.boolean().optional().default(true),
@@ -125,7 +125,7 @@ export const videoRouter = t.router({
 
       // ── Gate 2: Pre-flight environment check ──
       try {
-        await checkPythonAndWhisper();
+        await whisperService.checkEnvironment();
       } catch (envErr: any) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
@@ -193,7 +193,7 @@ export const videoRouter = t.router({
 
       // ── Gate 2: Pre-flight check ──
       try {
-        await checkPythonAndWhisper();
+        await whisperService.checkEnvironment();
       } catch (envErr: any) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
@@ -243,7 +243,7 @@ export const videoRouter = t.router({
 
       // ── Gate 2: Pre-flight check ──
       try {
-        await checkPythonAndWhisper();
+        await whisperService.checkEnvironment();
       } catch (envErr: any) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",

@@ -109,7 +109,10 @@ async function startServer() {
   // Previously public: any user could guess another's video URL.
   // Now: /downloads/:token/:filename validates an HMAC signature.
   // ──────────────────────────────────────────
-  const DOWNLOAD_SECRET = process.env.JWT_SECRET || "fallback-download-secret";
+  const DOWNLOAD_SECRET = process.env.JWT_SECRET;
+  if (!DOWNLOAD_SECRET) {
+    throw new Error("JWT_SECRET is required for download URL signing");
+  }
   const downloadsDir = path.join(process.cwd(), 'static', 'downloads');
 
   // Generate a signed download URL (called from routers when a dub job completes)
@@ -193,11 +196,7 @@ async function startServer() {
     }
   });
 
-  // Legacy /downloads/* for backward compat during transition (1h cache)
-  app.use('/downloads', express.static(downloadsDir, {
-    maxAge: '1h',
-    etag: true,
-  }));
+  // NOTE: Legacy /downloads/* route removed — all downloads now require signed URLs
 
   // ──────────────────────────────────────────
   // tRPC API
@@ -299,7 +298,7 @@ async function startServer() {
   server.listen(port, "0.0.0.0", () => {
     console.log(`[LUMIX] Server running on http://0.0.0.0:${port}/`);
     console.log(`[LUMIX] Environment: ${process.env.NODE_ENV || "development"}`);
-    const webhookUrl = `https://choco.de5.net/webhook/telegram`;
+    const webhookUrl = `${process.env.APP_URL || "https://choco.de5.net"}/webhook/telegram`;
     setWebhook(webhookUrl).catch(console.error);
     // Initial cleanup runs
     cleanTempFiles();

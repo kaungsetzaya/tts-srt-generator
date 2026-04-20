@@ -26,6 +26,7 @@
  * ```
  */
 import { ENV } from "./env";
+import { sanitizeForAI } from "./security";
 
 export type TranscribeOptions = {
   audioUrl: string; // URL to the audio file (e.g., S3 URL)
@@ -90,10 +91,20 @@ export async function transcribeAudio(
       };
     }
 
-    // Step 2: Download audio from URL
+    // Step 2: Download audio from URL (validate to prevent SSRF)
     let audioBuffer: Buffer;
     let mimeType: string;
     try {
+      const parsedUrl = new URL(options.audioUrl);
+      const allowedHosts = ["storage.googleapis.com", "s3.amazonaws.com", "choco.de5.net", "localhost", "127.0.0.1"];
+      if (!allowedHosts.includes(parsedUrl.hostname) && !parsedUrl.hostname.endsWith(".vercel.app")) {
+        return {
+          error: "Audio URL host is not allowed",
+          code: "INVALID_URL",
+          details: `Host ${parsedUrl.hostname} is not in allowed list`
+        };
+      }
+
       const response = await fetch(options.audioUrl);
       if (!response.ok) {
         return {
@@ -135,11 +146,13 @@ export async function transcribeAudio(
     formData.append("response_format", "verbose_json");
     
     // Add prompt - use custom prompt if provided, otherwise generate based on language
-    const prompt = options.prompt || (
+    // Sanitize to prevent prompt injection
+    const rawPrompt = options.prompt || (
       options.language 
         ? `Transcribe the user's voice to text, the user's working language is ${getLanguageName(options.language)}`
         : "Transcribe the user's voice to text"
     );
+    const prompt = sanitizeForAI(rawPrompt);
     formData.append("prompt", prompt);
 
     // Step 4: Call the transcription service

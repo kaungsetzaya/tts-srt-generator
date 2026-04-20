@@ -8,7 +8,9 @@ const execFileAsync = promisify(execFile);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const COOKIE_PATH = path.resolve(__dirname, "../cookies.txt");
+// Refined path for modular structure: backend/src/modules/media/services -> src is at level 1, modules level 2, media level 3, services level 4.
+// Original cookies.txt is at backend/cookies.txt
+const COOKIE_PATH = path.resolve(__dirname, "../../../../../cookies.txt");
 
 export async function getVideoInfo(url: string): Promise<{ duration: number; filesize: number } | null> {
   try {
@@ -24,14 +26,13 @@ export async function getVideoInfo(url: string): Promise<{ duration: number; fil
       filesize: info.filesize || info.filesize_approx || 0
     };
   } catch (error) {
-    console.error("[getVideoInfo Error]", error);
+    console.error("[Downloader Service Error]", error);
     return null;
   }
 }
 
 export async function downloadVideo(url: string, outputPath: string, options: { timeout?: number } = {}) {
   try {
-    // Using yt-dlp for robust video downloading
     await execFileAsync("yt-dlp", [
       "--cookies", COOKIE_PATH,
       "-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
@@ -40,7 +41,7 @@ export async function downloadVideo(url: string, outputPath: string, options: { 
     ], { timeout: options.timeout || 300000 });
     return { success: true };
   } catch (error: any) {
-    console.error("[Download Error]", error);
+    console.error("[Downloader Service Error]", error);
     return { success: false, error: error.message };
   }
 }
@@ -48,3 +49,9 @@ export async function downloadVideo(url: string, outputPath: string, options: { 
 export function generateDownloadId(): string {
   return randomBytes(18).toString("hex");
 }
+
+export const downloaderService = {
+  getVideoInfo,
+  downloadVideo,
+  generateDownloadId,
+};

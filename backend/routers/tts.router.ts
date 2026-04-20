@@ -7,7 +7,8 @@ import { t, protectedProcedure } from "./trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
 import { ttsConversions } from "../../drizzle/schema";
-import { generateSpeech, generateSpeechWithCharacter } from "../tts";
+import { ttsService } from "../src/modules/tts/services/tts.service";
+const { generateSpeech, generateSpeechWithCharacter } = ttsService;
 import { deductCredits, addCredits } from "./credits";
 import { acquireSlot, releaseSlot } from "../jobs";
 

@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS `tts_jobs` (
   `error` varchar(1000),
   `user_id` varchar(36),
   `created_at` timestamp DEFAULT (now()),
-  `updated_at` timestamp DEFAULT (now()) ON UPDATE (now()),
+  `updated_at` timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT `tts_jobs_id` PRIMARY KEY(`id`)
 );
 -- Index for fast user job lookups

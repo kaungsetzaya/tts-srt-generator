@@ -4,8 +4,8 @@
 
 ```
 tts-srt-generator/
-├── client/              # Frontend React application
-├── server/              # Backend Express server
+├── frontend/            # Frontend React application
+├── backend/             # Backend Express server
 ├── shared/              # Shared utilities and types
 ├── drizzle/             # Database migrations and schema
 ├── docs/                # Documentation files

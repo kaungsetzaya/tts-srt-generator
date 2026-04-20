@@ -4,7 +4,7 @@
 import { z } from "zod";
 import { t, protectedProcedure } from "./trpc";
 import { TRPCError } from "@trpc/server";
-import { dubVideoFromLink } from "../videoDubber";
+import { dubVideoPipeline } from "../src/modules/dubbing/pipelines/dubVideo.pipeline";
 import { isAllowedVideoUrl } from "../_core/security";
 import { deductCredits } from "./credits";
 
@@ -33,7 +33,7 @@ export const dubRouter = t.router({
       await deductCredits(userId, 10, "video_dub", `Legacy Video Dub Link: ${input.voice}`);
 
       try {
-        return await dubVideoFromLink(input.url, {
+        return await dubVideoPipeline.executeFromLink(input.url, {
           voice: input.voice,
           speed: input.speed ?? 1.0,
           pitch: input.pitch ?? 0,

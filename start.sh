@@ -1,6 +1,17 @@
 #!/bin/bash
 cd /root/tts-srt-generator
 export NODE_ENV=production
-export DATABASE_URL="mysql://tts_user:tts_password_123@localhost:3306/tts_generator"
-export TELEGRAM_BOT_TOKEN="8712572330:AAFvQ3LApdmI5WQO3sdoYugIHDSw7F1IQng"
+
+# Credentials must be set via environment variables or .env file
+# DO NOT hardcode secrets in this file
+if [ -z "$DATABASE_URL" ]; then
+  echo "ERROR: DATABASE_URL environment variable is required"
+  exit 1
+fi
+
+if [ -z "$TELEGRAM_BOT_TOKEN" ]; then
+  echo "ERROR: TELEGRAM_BOT_TOKEN environment variable is required"
+  exit 1
+fi
+
 exec node_modules/tsx/dist/cli.mjs backend/_core/index.ts

@@ -7,7 +7,10 @@ import { t, adminProcedure } from "./trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
 import { users, subscriptions, ttsConversions, creditTransactions } from "../../drizzle/schema";
-import { eq, count, sql, desc } from "drizzle-orm";
+import { eq, count, sql, desc, and, gt } from "drizzle-orm";
+import { execFile } from "child_process";
+import { promisify } from "util";
+const execFileAsync = promisify(execFile);
 
 export const adminRouter = t.router({
   getUsers: adminProcedure.query(async () => {
@@ -100,7 +103,10 @@ export const adminRouter = t.router({
       const existingSubs = await db
         .select()
         .from(subscriptions)
-        .where(sql`user_id = ${input.userId} AND expires_at > NOW()`)
+        .where(and(
+          eq(subscriptions.userId, input.userId),
+          gt(subscriptions.expiresAt, new Date())
+        ))
         .limit(1);
 
       if (existingSubs.length > 0) {
@@ -236,13 +242,14 @@ export const adminRouter = t.router({
 
   getServerHealth: adminProcedure.query(async () => {
     const mem = process.memoryUsage();
-    const { execSync } = await import("child_process");
     let disk = "—";
     try {
-      const df = execSync("df -h / | tail -1 | awk '{print $3}'")
-        .toString()
-        .trim();
-      disk = df || "—";
+      const { stdout } = await execFileAsync("df", ["-h", "/"]);
+      const lines = stdout.trim().split("\n");
+      if (lines.length > 1) {
+        const parts = lines[1].split(/\s+/);
+        disk = parts[2] || "—";
+      }
     } catch {}
     return {
       uptime: process.uptime(),

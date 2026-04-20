@@ -15,7 +15,7 @@
  *     }]
  *   });
  */
-import { storagePut } from "../storage";
+import { storagePut } from "../src/modules/media/services/storage.service";
 import { ENV } from "./env";
 
 export type GenerateImageOptions = {

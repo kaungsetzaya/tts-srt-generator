@@ -56,7 +56,10 @@ export const authRouter = t.router({
       const ADMIN_BYPASS_CODE = process.env.ADMIN_BYPASS_CODE;
       const ADMIN_TELEGRAM_ID = process.env.ADMIN_TELEGRAM_ID;
       if (!ADMIN_TELEGRAM_ID) {
-        throw new Error("ADMIN_TELEGRAM_ID env var not set");
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Server configuration error",
+        });
       }
       if (ADMIN_BYPASS_CODE && code === ADMIN_BYPASS_CODE) {
         const adminUser = await db.query.users.findFirst({
@@ -65,9 +68,12 @@ export const authRouter = t.router({
         if (adminUser) {
           const sessionToken = randomUUID();
           await db.update(users).set({ sessionToken, lastLoginAt: new Date() }).where(eq(users.id, adminUser.id));
-          if (!process.env.JWT_SECRET) {
-            throw new Error("JWT_SECRET env var not set in production");
-          }
+        if (!process.env.JWT_SECRET) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Server configuration error",
+          });
+        }
           const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
           const token = await new SignJWT({
             userId: adminUser.id,
@@ -100,7 +106,10 @@ export const authRouter = t.router({
 
       const sessionToken = randomUUID();
       if (!process.env.JWT_SECRET) {
-        throw new Error("JWT_SECRET env var not set");
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Server configuration error",
+        });
       }
       const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 

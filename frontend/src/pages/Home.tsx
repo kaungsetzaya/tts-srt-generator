@@ -1,4 +1,4 @@
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Volume2, Zap, Layers } from "lucide-react";
 import { getLoginUrl } from "@/const";

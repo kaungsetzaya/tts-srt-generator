@@ -5,8 +5,24 @@
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { t } from "./trpc";
+import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
 import { errorLogs } from "../../drizzle/schema";
+
+// Simple in-memory rate limiter for public error logging (prevent log flooding)
+const errorLogLimits = new Map<string, { count: number; resetAt: number }>();
+const ERROR_LOG_MAX_PER_MIN = 10;
+
+function checkErrorLogRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const record = errorLogLimits.get(ip);
+  if (!record || now > record.resetAt) {
+    errorLogLimits.set(ip, { count: 1, resetAt: now + 60000 });
+    return true;
+  }
+  record.count++;
+  return record.count <= ERROR_LOG_MAX_PER_MIN;
+}
 
 export const errorLoggingRouter = t.procedure
   .input(
@@ -18,6 +34,17 @@ export const errorLoggingRouter = t.procedure
     })
   )
   .mutation(async ({ input, ctx }) => {
+    const ip = (ctx.req?.headers?.["x-forwarded-for"] as string)?.split(",")[0]?.trim()
+      || (ctx.req?.headers?.["x-real-ip"] as string)
+      || ctx.req?.ip || "unknown";
+
+    if (!checkErrorLogRateLimit(ip)) {
+      throw new TRPCError({
+        code: "TOO_MANY_REQUESTS",
+        message: "Too many error logs. Please try again later.",
+      });
+    }
+
     const db = await getDb();
     if (!db) return { success: false };
     try {

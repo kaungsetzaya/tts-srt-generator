@@ -74,9 +74,11 @@ function parseAdminIps(): Set<string> {
           .replace(/\/.*$/, '')
           .split(':')[0]; // Remove port
         ips.add(normalized);
-        // Also add with ::1 suffix for IPv6
+        // Also add IPv6-mapped IPv4 representation
         if (normalized.includes('.')) {
-          ips.add(normalized.replace('.', ':'));
+          const parts = normalized.split('.');
+          const ipv6Mapped = `::ffff:${parts[0]}.${parts[1]}.${parts[2]}.${parts[3]}`;
+          ips.add(ipv6Mapped);
         }
       }
     });
@@ -139,9 +141,9 @@ const DANGEROUS_PATTERNS = [
 
 function containsDangerousPattern(value: unknown): boolean {
   if (typeof value === "string") {
-    // Skip base64 video data (too large and not dangerous)
-    if (value.length > 10000) return false;
-    return DANGEROUS_PATTERNS.some(p => p.test(value));
+    // Check first 10KB for dangerous patterns (XSS/SQLi signatures are typically at the start)
+    const sample = value.length > 10000 ? value.slice(0, 10000) : value;
+    return DANGEROUS_PATTERNS.some(p => p.test(sample));
   }
   if (Array.isArray(value)) return value.some(containsDangerousPattern);
   if (value && typeof value === "object") {
@@ -257,10 +259,12 @@ export function requestIdMiddleware(req: Request, res: Response, next: NextFunct
 // ────────────────────────────────────────────────────
 // ✅ 9. Global Memory Threshold — Pause new tasks if RAM > 90%
 // ────────────────────────────────────────────────────
+import { totalmem } from "os";
+
 export function memoryGuardMiddleware(req: Request, res: Response, next: NextFunction) {
   try {
     const mem = process.memoryUsage();
-    const totalSystem = require("os").totalmem();
+    const totalSystem = totalmem();
     const usedPercent = (mem.rss / totalSystem) * 100;
     if (usedPercent > 90) {
       console.warn(`[MEMORY] Server RAM usage at ${usedPercent.toFixed(1)}% — rejecting request`);

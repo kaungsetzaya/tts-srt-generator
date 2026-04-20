@@ -3,6 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { queryClient } from "@/lib/queryClient";
 import { Loader2, Upload, Copy, Check, FileVideo, Languages } from "lucide-react";
 import { useLocation } from "wouter";
+import { TTSGeneratorLayout } from "@/components/TTSGeneratorLayout";
 
 export default function VideoTranslator() {
   const [, navigate] = useLocation();
