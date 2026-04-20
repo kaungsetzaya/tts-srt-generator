@@ -12,7 +12,7 @@ import { geminiService } from '../../translation/services/gemini.service';
 import { ttsService, CHARACTER_VOICES, CharacterKey, VoiceKey } from '../../tts/services/tts.service';
 import { assBuilderService } from '../services/assBuilder.service';
 import { isAllowedVideoUrl } from '../../../../_core/security';
-import { updateJob } from '../../../jobs';
+import { updateJob } from '../../../../jobs';
 
 function formatTimestamp(ms: number): string {
     const totalSec = Math.floor(ms / 1000);

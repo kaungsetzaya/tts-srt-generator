@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { tmpdir } from 'os';
-import { updateJob } from '../../../jobs';
+import { updateJob } from '../../../../jobs';
 
 // Services
 import { ffmpegService } from '../../media/services/ffmpeg.service';
