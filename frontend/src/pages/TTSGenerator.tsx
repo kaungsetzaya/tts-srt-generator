@@ -232,26 +232,27 @@ const withOpacity = (color: string, opacity: number) => {
   return color;
 };
 
+// --- PREMIUM UI COLORS (Hoisted to module level to resolve production ReferenceError) ---
+const accent = "#C06F30";
+const accentSecondary = "#F4B34F";
+const deepRed = "#861C1C";
+const peach = "#ECCEB6";
+const cream = "#EBE6D8";
+const darkBrown = "#2B1D1C";
+
+// Premium color scheme for light mode — Warm Sand & Copper
+const lightBg = "#FBF8F4";
+const lightCardBg = "#FFFFFF";
+const lightCardBorder = "rgba(192,111,48,0.12)";
+const lightText = "#2B1D1C";
+const lightSubtext = "#8B7355";
+
+const accent15 = withOpacity(accent, 0.15);
+const accent30 = withOpacity(accent, 0.3);
+const accent40 = withOpacity(accent, 0.4);
+const accent80 = withOpacity(accent, 0.8);
+
 export default function TTSGenerator() {
-  // --- PREMIUM UI COLORS (inside component to prevent production ReferenceError) ---
-  const accent = "#C06F30";
-  const accentSecondary = "#F4B34F";
-  const deepRed = "#861C1C";
-  const peach = "#ECCEB6";
-  const cream = "#EBE6D8";
-  const darkBrown = "#2B1D1C";
-
-  // Premium color scheme for light mode — Warm Sand & Copper
-  const lightBg = "#FBF8F4";
-  const lightCardBg = "#FFFFFF";
-  const lightCardBorder = "rgba(192,111,48,0.12)";
-  const lightText = "#2B1D1C";
-  const lightSubtext = "#8B7355";
-
-  const accent15 = withOpacity(accent, 0.15);
-  const accent30 = withOpacity(accent, 0.3);
-  const accent40 = withOpacity(accent, 0.4);
-  const accent80 = withOpacity(accent, 0.8);
   const [mainTab, setMainTab] = useState<MainTab>("tts");
   const [secondaryTab, setSecondaryTab] = useState<SecondaryTab>(null);
   const [menuOpen, setMenuOpen] = useState(true);
