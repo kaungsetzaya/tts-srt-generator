@@ -11,6 +11,7 @@ import { isAllowedVideoUrl, validateBase64VideoPrefix } from "../_core/security"
 import { createJob, getJobAsync, updateJob } from "../jobs";
 import { deductCredits, addCredits } from "./credits";
 import { whisperService } from "../src/modules/translation/services/whisper.service";
+import { downloaderService } from "../src/modules/media/services/downloader.service";
 
 export const videoRouter = t.router({
   dubFile: protectedProcedure
@@ -176,7 +177,25 @@ export const videoRouter = t.router({
   previewLink: t.procedure
     .input(z.object({ url: z.string() }))
     .mutation(async ({ input }) => {
-      return { title: "Video", duration: 0, thumbnail: "" };
+      try {
+        const info = await downloaderService.getVideoInfo(input.url);
+        if (!info) {
+          return { title: "Video", duration: 0, thumbnail: "" };
+        }
+        const parsed = new URL(input.url);
+        let title = "Video";
+        let thumbnail = "";
+        if (parsed.hostname?.includes("youtube.com") || parsed.hostname?.includes("youtu.be")) {
+          const videoIdMatch = input.url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+          if (videoIdMatch) {
+            const videoId = videoIdMatch[1];
+            thumbnail = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+          }
+        }
+        return { title, duration: info.duration, thumbnail };
+      } catch {
+        return { title: "Video", duration: 0, thumbnail: "" };
+      }
     }),
 
   translate: protectedProcedure

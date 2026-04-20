@@ -22,10 +22,9 @@ if (ALLOWED_ORIGINS.length === 0) ALLOWED_ORIGINS.push(DEFAULT_ORIGIN);
 
 // ✅ Vercel preview domains - RESTRICTED to known patterns
 const EXTRA_ALLOWED_PATTERNS: RegExp[] = [
-  // Only specific known Vercel project patterns (not all subdomains)
-  /^https:\/\/[a-z0-9]{1,20}-[a-z0-9]{1,20}\.vercel\.app$/, // project-repo.vercel.app
-  /^https:\/\/[a-z0-9]{1,20}\.vercel\.app$/, // only single-name short projects
-  /^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/, // cloudflare tunnel URLs
+  /^https:\/\/lumix(-[a-z0-9]+)?\.vercel\.app$/,
+  /^https:\/\/[a-z0-9]{1,20}\.vercel\.app$/,
+  /^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/,
 ];
 
 function isOriginAllowed(origin: string): boolean {

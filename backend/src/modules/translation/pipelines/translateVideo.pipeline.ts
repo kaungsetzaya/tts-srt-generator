@@ -5,10 +5,33 @@ import { tmpdir } from 'os';
 
 // Services
 import { ffmpegService } from '../../media/services/ffmpeg.service';
+import { getVideoInfo, downloadVideo } from '../../media/services/downloader.service';
 import { whisperService } from '../services/whisper.service';
 import { geminiService } from '../services/gemini.service';
+import { isAllowedVideoUrl } from '../../../../_core/security';
 
 export class TranslateVideoPipeline {
+    /**
+     * Orchestrates translation from a remote URL.
+     */
+    async executeFromLink(url: string, userApiKey?: string) {
+        if (!isAllowedVideoUrl(url)) throw new Error("Disallowed URL");
+
+        const info = await getVideoInfo(url);
+        if (!info) throw new Error("Could not get video info");
+        if (info.duration > 150) throw new Error("Video too long (max 150s)");
+
+        const id = randomUUID();
+        const tempVideoPath = path.join(tmpdir(), `tl_${id}.mp4`);
+        try {
+            await downloadVideo(url, tempVideoPath);
+            const buffer = await fs.readFile(tempVideoPath);
+            return await this.execute(buffer, "video.mp4", userApiKey);
+        } finally {
+            await fs.unlink(tempVideoPath).catch(() => {});
+        }
+    }
+
     /**
      * Step-by-step video translation pipeline.
      */

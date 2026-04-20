@@ -10,7 +10,7 @@ import { eq, desc } from "drizzle-orm";
 export const historyRouter = t.router({
   getMyHistory: t.procedure
     .input(z.object({ limit: z.number().optional() }))
-    .query(async ({ ctx }) => {
+    .query(async ({ ctx, input }) => {
       if (!ctx.user) return [];
       const db = await getDb();
       if (!db) return [];
@@ -20,7 +20,7 @@ export const historyRouter = t.router({
           .from(ttsConversions)
           .where(eq(ttsConversions.userId, ctx.user.userId))
           .orderBy(desc(ttsConversions.createdAt))
-          .limit(100);
+          .limit(input.limit ?? 100);
         return rows;
       } catch {
         return [];

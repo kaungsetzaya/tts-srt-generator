@@ -13,6 +13,15 @@ import { ttsService, CHARACTER_VOICES, CharacterKey, VoiceKey } from '../../tts/
 import { assBuilderService } from '../services/assBuilder.service';
 import { isAllowedVideoUrl } from '../../../../_core/security';
 
+function formatTimestamp(ms: number): string {
+    const totalSec = Math.floor(ms / 1000);
+    const millis = ms % 1000;
+    const hours = Math.floor(totalSec / 3600);
+    const minutes = Math.floor((totalSec % 3600) / 60);
+    const seconds = totalSec % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')},${String(millis).padStart(3, '0')}`;
+}
+
 export interface DubOptions {
   voice: string;
   speed?: number;
@@ -87,16 +96,14 @@ export class DubVideoPipeline {
         options.userApiKey
       );
 
-      // Step 5: Generate TTS per segment
+      // Step 5: Generate TTS per segment (concurrent with limiter)
       const FIXED_SPEED = 1.2;
       const TINY_PAUSE_MS = 150;
-      const audioParts: string[] = [];
-      const processedForSrt: any[] = [];
-      let cursorMs = 0;
+      const CONCURRENCY = 3;
 
-      for (const seg of translatedSegments) {
-        if (!seg.translatedText.trim()) continue;
+      const activeSegments = translatedSegments.filter(seg => seg.translatedText.trim());
 
+      async function generateTtsForSegment(seg: typeof translatedSegments[0]): Promise<{ partPath: string; duration: number; text: string; index: number }> {
         const isCharacter = options.voice in CHARACTER_VOICES;
         let audioBuffer: Buffer;
 
@@ -113,15 +120,47 @@ export class DubVideoPipeline {
             const ttsResult = await ttsService.generateSpeech(seg.translatedText, options.voice as VoiceKey, FIXED_SPEED, options.pitch ?? 0);
             audioBuffer = ttsResult.audioBuffer;
         }
-        
+
         const partPath = path.join(tempDir, `tts_${seg.index}.mp3`);
         await fs.writeFile(partPath, audioBuffer);
-        
         const duration = await ffmpegService.getAudioDurationMs(partPath);
-        
-        processedForSrt.push({ startMs: cursorMs, endMs: cursorMs + duration, text: seg.translatedText });
-        audioParts.push(partPath);
-        cursorMs += duration + TINY_PAUSE_MS; 
+
+        return { partPath, duration, text: seg.translatedText, index: seg.index };
+      }
+
+      async function runWithConcurrency<T>(items: typeof activeSegments, fn: (item: typeof activeSegments[0]) => Promise<T>, limit: number): Promise<T[]> {
+        const results: T[] = new Array(items.length);
+        let running = 0;
+        let nextIndex = 0;
+
+        return new Promise<T[]>((resolve, reject) => {
+          function launchNext() {
+            while (running < limit && nextIndex < items.length) {
+              const idx = nextIndex++;
+              running++;
+              fn(items[idx])
+                .then(result => { results[idx] = result; })
+                .catch(reject)
+                .finally(() => { running--; launchNext(); });
+            }
+            if (running === 0 && nextIndex === items.length) {
+              resolve(results);
+            }
+          }
+          launchNext();
+        });
+      }
+
+      const ttsResults = await runWithConcurrency(activeSegments, generateTtsForSegment, CONCURRENCY);
+
+      const audioParts: string[] = [];
+      const processedForSrt: any[] = [];
+      let cursorMs = 0;
+
+      for (const result of ttsResults) {
+        processedForSrt.push({ startMs: cursorMs, endMs: cursorMs + result.duration, text: result.text });
+        audioParts.push(result.partPath);
+        cursorMs += result.duration + TINY_PAUSE_MS;
       }
 
       // Step 6: Concat audio parts and merge with video
@@ -141,7 +180,7 @@ export class DubVideoPipeline {
       // Step 6c: Subtitles - cross-platform font resolution
       const fontPath = process.env.MYANMAR_FONT_PATH || 
         (process.platform === "win32" 
-          ? "C:/Windows/Fonts/ Myanmar3.ttf" 
+          ? "C:/Windows/Fonts/Myanmar3.ttf" 
           : "/usr/share/fonts/truetype/noto/NotoSansMyanmar-Regular.ttf");
       
       if (options.srtEnabled !== false && processedForSrt.length > 0) {
@@ -165,9 +204,25 @@ export class DubVideoPipeline {
       const finalPath = path.join(finalDir, finalFilename);
       await fs.copyFile(tempOutputPath, finalPath);
 
+      const totalDurationMs = processedForSrt.length > 0
+          ? processedForSrt[processedForSrt.length - 1].endMs
+          : 0;
+
+      const allTranslatedText = translatedSegments.map(s => s.translatedText).join("\n");
+      const allSrtContent = processedForSrt
+          .map((s, i) => {
+              const start = formatTimestamp(s.startMs);
+              const end = formatTimestamp(s.endMs);
+              return `${i + 1}\n${start} --> ${end}\n${s.text}\n`;
+          })
+          .join("\n");
+
       return { 
           videoUrl: `/downloads/${finalFilename}`,
-          id
+          id,
+          myanmarText: allTranslatedText,
+          srtContent: allSrtContent,
+          durationMs: totalDurationMs,
       };
 
     } catch (err) {

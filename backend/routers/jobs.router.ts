@@ -6,7 +6,7 @@ import { t, protectedProcedure } from "./trpc";
 import { TRPCError } from "@trpc/server";
 import { isAllowedVideoUrl } from "../_core/security";
 import { createJob, getJobAsync } from "../jobs";
-import { deductCredits } from "./credits";
+import { deductCredits, addCredits } from "./credits";
 
 export const jobsRouter = t.router({
   startDub: protectedProcedure
@@ -44,26 +44,34 @@ export const jobsRouter = t.router({
         `Video Dub Link: ${input.voice}`
       );
 
-      const jobId = createJob("dub_link", {
-        url: input.url,
-        voice: input.voice,
-        speed: 1.2,
-        pitch: 0,
-        srtEnabled: input.srtEnabled,
-        srtFontSize: input.srtFontSize,
-        srtColor: input.srtColor,
-        srtMarginV: input.srtMarginV,
-        srtBlurBg: input.srtBlurBg,
-        srtBlurSize: input.srtBlurSize,
-        srtBlurColor: input.srtBlurColor,
-        srtBoxPadding: input.srtBoxPadding,
-        srtFullWidth: input.srtFullWidth,
-        srtDropShadow: input.srtDropShadow,
-        srtBorderRadius: input.srtBorderRadius,
-        userId,
-      }, userId);
+      try {
+        const jobId = createJob("dub_link", {
+          url: input.url,
+          voice: input.voice,
+          speed: 1.2,
+          pitch: 0,
+          srtEnabled: input.srtEnabled,
+          srtFontSize: input.srtFontSize,
+          srtColor: input.srtColor,
+          srtMarginV: input.srtMarginV,
+          srtBlurBg: input.srtBlurBg,
+          srtBlurSize: input.srtBlurSize,
+          srtBlurColor: input.srtBlurColor,
+          srtBoxPadding: input.srtBoxPadding,
+          srtFullWidth: input.srtFullWidth,
+          srtDropShadow: input.srtDropShadow,
+          srtBorderRadius: input.srtBorderRadius,
+          userId,
+        }, userId);
 
-      return { jobId };
+        return { jobId };
+      } catch (error: any) {
+        await addCredits(userId, 10, "video_dub_refund", "Refund: Dub link job creation failed");
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message || "Failed to start dub job.",
+        });
+      }
     }),
 
   getStatus: protectedProcedure

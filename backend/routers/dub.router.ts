@@ -6,7 +6,7 @@ import { t, protectedProcedure } from "./trpc";
 import { TRPCError } from "@trpc/server";
 import { dubVideoPipeline } from "../src/modules/dubbing/pipelines/dubVideo.pipeline";
 import { isAllowedVideoUrl } from "../_core/security";
-import { deductCredits } from "./credits";
+import { deductCredits, addCredits } from "./credits";
 
 export const dubRouter = t.router({
   fromLink: protectedProcedure
@@ -42,6 +42,7 @@ export const dubRouter = t.router({
         });
       } catch (error: any) {
         console.error("[Dub Error]", error);
+        await addCredits(userId, 10, "video_dub_refund", "Refund: Dub link pipeline failed");
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: error.message || "Failed to dub video.",

@@ -50,7 +50,14 @@ export function registerAllProcessors() {
 
     // 4. Translate Link Processor
     registerProcessor("translate_link", async (job) => {
-        // ... implementation using translateVideoPipeline.executeFromLink (to be added)
-        updateJob(job.id, { status: "failed", error: "Translate from link not yet modularized" });
+        const { url, userId, userApiKey } = job.input;
+        try {
+            const result = await translateVideoPipeline.executeFromLink(url, userApiKey);
+            updateJob(job.id, { status: "completed", progress: 100, result });
+        } catch (err: any) {
+            console.error(`[Job ${job.id}] Failed:`, err);
+            if (userId) await addCredits(userId, 5, "video_translate_refund", "Refund: Translate link job failed");
+            throw err;
+        }
     });
 }

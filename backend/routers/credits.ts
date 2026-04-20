@@ -82,7 +82,7 @@ export async function addCredits(
         .from(users)
         .where(eq(users.id, userId))
         .limit(1);
-      if (!user) return false;
+      if (!user) throw new Error("User not found");
 
       const currentCredits = user.credits ?? 0;
       await tx

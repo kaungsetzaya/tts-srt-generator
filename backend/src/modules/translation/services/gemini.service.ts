@@ -3,14 +3,41 @@
  * Aligned with ARCHITECTURE.md requirements.
  */
 
+import { promises as fs } from 'fs';
+import * as path from 'path';
+
+const QUOTA_FILE = path.join(process.cwd(), 'backend/.gemini_quota.json');
+
 const MODELS = [
-    { id: "gemini-3.1-flash-lite-preview", name: "Gemini 3.1 Flash Lite", rpd: 500, rpm: 15, primary: true },
-    { id: "gemini-3-flash-preview", name: "Gemini 3 Flash", rpd: 20, rpm: 5, primary: false },
-    { id: "gemini-2.5-flash-lite", name: "Gemini 2.5 Flash Lite", rpd: 20, rpm: 10, primary: false },
+    { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash", rpd: 500, rpm: 15, primary: true },
+    { id: "gemini-2.5-flash-lite-preview-06-17", name: "Gemini 2.5 Flash Lite", rpd: 20, rpm: 10, primary: false },
     { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", rpd: 20, rpm: 5, primary: false },
 ];
 
-const quotaMap = new Map<string, { date: string; count: number }>();
+let quotaMap: Map<string, { date: string; count: number }>;
+
+async function loadQuotaFile(): Promise<Record<string, { date: string; count: number }>> {
+    try {
+        const raw = await fs.readFile(QUOTA_FILE, 'utf-8');
+        return JSON.parse(raw);
+    } catch {
+        return {};
+    }
+}
+
+async function saveQuotaFile(data: Record<string, { date: string; count: number }>): Promise<void> {
+    try {
+        await fs.writeFile(QUOTA_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    } catch {}
+}
+
+async function initQuotaMap(): Promise<void> {
+    const raw = await loadQuotaFile();
+    quotaMap = new Map(Object.entries(raw));
+    saveQuotaFile(raw).catch(() => {});
+}
+
+initQuotaMap().catch(() => {});
 
 function getDailyCount(modelId: string): number {
     const today = new Date().toISOString().split("T")[0];
@@ -27,6 +54,7 @@ function incrementQuota(modelId: string): void {
     } else {
         current.count++;
     }
+    saveQuotaFile(Object.fromEntries(quotaMap)).catch(() => {});
 }
 
 function getAllSystemKeys(): string[] {

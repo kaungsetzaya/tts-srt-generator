@@ -2,15 +2,11 @@ import { randomBytes } from "crypto";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import * as path from "path";
-import { fileURLToPath } from "url";
 
 const execFileAsync = promisify(execFile);
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-// Refined path for modular structure: backend/src/modules/media/services -> src is at level 1, modules level 2, media level 3, services level 4.
-// Original cookies.txt is at backend/cookies.txt
-const COOKIE_PATH = path.resolve(__dirname, "../../../../../cookies.txt");
+// cookies.txt is at backend/cookies.txt (from backend/src/modules/media/services/)
+const COOKIE_PATH = path.resolve(process.cwd(), "backend/cookies.txt");
 
 export async function getVideoInfo(url: string): Promise<{ duration: number; filesize: number } | null> {
   try {

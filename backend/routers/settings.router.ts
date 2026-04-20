@@ -27,6 +27,24 @@ export const settingsRouter = t.router({
     try {
       const rows = await db.select().from(settings);
       const obj: Record<string, string> = {};
+      const PUBLIC_KEYS = ["trial_credits", "maintenance_mode", "max_video_size_mb", "max_video_duration_sec"];
+      for (const r of rows) {
+        if (PUBLIC_KEYS.includes(r.keyName)) {
+          obj[r.keyName] = r.value;
+        }
+      }
+      return obj;
+    } catch {
+      return {};
+    }
+  }),
+
+  getAll: adminProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) return {};
+    try {
+      const rows = await db.select().from(settings);
+      const obj: Record<string, string> = {};
       for (const r of rows) obj[r.keyName] = r.value;
       return obj;
     } catch {

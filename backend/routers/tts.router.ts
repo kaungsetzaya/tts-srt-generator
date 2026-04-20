@@ -34,19 +34,20 @@ export const ttsRouter = t.router({
       const userId = ctx.user!.userId;
       const voiceName = input.character || voice;
 
-      await deductCredits(
-        userId,
-        creditsNeeded,
-        "tts",
-        input.character
-          ? `TTS Character: ${input.character}`
-          : `TTS Voice: ${voice}`
-      );
-
       // Acquire a slot from the centralized queue (shared with dub/translate jobs)
+      // BEFORE deducting credits so users don't lose credits while waiting in queue
       await acquireSlot();
       let result;
       try {
+        await deductCredits(
+          userId,
+          creditsNeeded,
+          "tts",
+          input.character
+            ? `TTS Character: ${input.character}`
+            : `TTS Voice: ${voice}`
+        );
+
         if (input.character) {
           result = await generateSpeechWithCharacter(
             input.text,
@@ -66,6 +67,10 @@ export const ttsRouter = t.router({
         }
       } catch (error: any) {
         console.error("[TTS Error]", error?.message || error);
+        if (error.code === "BAD_REQUEST" || error.code === "NOT_FOUND") {
+          releaseSlot();
+          throw error;
+        }
         await addCredits(userId, creditsNeeded, "tts_refund", `Refund: ${voiceName} TTS failed`);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
