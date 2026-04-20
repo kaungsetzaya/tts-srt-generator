@@ -121,6 +121,7 @@ export class GeminiService {
     }
 
     private sanitize(text: string): string {
+        if (!text || typeof text !== 'string') return "";
         let cleaned = text.replace(/ဤသည်မှာ သင်ပေးပို့.*?(ဖြေ|ပါသည်|ပြန်ဆိုထားပါသည်။)/g, ""); 
         cleaned = cleaned.replace(/မြန်မာဘာသာဖြင့် အောက်ပါအတိုင်း.*?ပါသည်/g, "");
         cleaned = cleaned.replace(/Here is the.*/gi, "");
@@ -185,10 +186,15 @@ export class GeminiService {
                 // Fallback to original text if batch fails
                 results.push(...chunk.map(s => ({ ...s, translatedText: s.text })));
             } else {
-                results.push(...chunk.map((s, idx) => ({
-                    ...s,
-                    translatedText: this.applyPhonetics(this.sanitize(chunkTranslated![idx]))
-                })));
+                results.push(...chunk.map((s, idx) => {
+                    const translatedVal = chunkTranslated![idx];
+                    return {
+                        ...s,
+                        translatedText: translatedVal 
+                            ? this.applyPhonetics(this.sanitize(translatedVal)) 
+                            : s.text // Fallback to original if this specific segment is null/undefined
+                    };
+                }));
             }
         }
         return results;
