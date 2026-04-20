@@ -36,6 +36,7 @@ import { TTSGeneratorLayout } from "@/components/TTSGeneratorLayout";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useTheme } from "@/contexts/ThemeContext";
 import { JobProgressOverlay } from "@/components/JobProgressOverlay";
+import { ACCENT, ACCENT_SECONDARY } from "@shared/const";
 
 type MainTab = "tts" | "video" | "dubbing";
 type SecondaryTab = "history" | "plan" | "guide" | "settings" | null;
@@ -232,9 +233,10 @@ const withOpacity = (color: string, opacity: number) => {
   return color;
 };
 
-// --- PREMIUM UI COLORS (Hoisted to module level to resolve production ReferenceError) ---
-const accent = "#C06F30";
-const accentSecondary = "#F4B34F";
+
+// Premium UI Colors (Derived from shared constants)
+const accent = ACCENT;
+const accentSecondary = ACCENT_SECONDARY;
 const deepRed = "#861C1C";
 const peach = "#ECCEB6";
 const cream = "#EBE6D8";
@@ -247,10 +249,10 @@ const lightCardBorder = "rgba(192,111,48,0.12)";
 const lightText = "#2B1D1C";
 const lightSubtext = "#8B7355";
 
-const accent15 = withOpacity(accent, 0.15);
-const accent30 = withOpacity(accent, 0.3);
-const accent40 = withOpacity(accent, 0.4);
-const accent80 = withOpacity(accent, 0.8);
+const accent15 = withOpacity(ACCENT, 0.15);
+const accent30 = withOpacity(ACCENT, 0.3);
+const accent40 = withOpacity(ACCENT, 0.4);
+const accent80 = withOpacity(ACCENT, 0.8);
 
 export default function TTSGenerator() {
   const [mainTab, setMainTab] = useState<MainTab>("tts");
@@ -2907,19 +2909,11 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                             </div>
                           </div>
                           <button
-                            onClick={() => setSrtAccordionOpen(!srtAccordionOpen)}
-                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all text-[10px] font-bold mr-2"
-                            style={{
-                              borderColor: srtAccordionOpen ? accent : cardBorder,
-                              background: srtAccordionOpen ? `${accent}10` : "transparent",
-                              color: srtAccordionOpen ? accent : subtextColor
+                            onClick={() => {
+                              const next = !srtEnabled;
+                              setSrtEnabled(next);
+                              setSrtAccordionOpen(next);
                             }}
-                          >
-                            <Settings className={`w-3 h-3 transition-transform ${srtAccordionOpen ? "rotate-90" : ""}`} />
-                            {srtAccordionOpen ? (lang === "mm" ? "ပိတ်ရန်" : "Close") : (lang === "mm" ? "ပြင်ဆင်ရန်" : "Settings")}
-                          </button>
-                          <button
-                            onClick={() => setSrtEnabled(!srtEnabled)}
                             className={`relative w-10 h-5 sm:w-14 sm:h-7 rounded-full transition-all duration-300`}
                             style={{
                               background: srtEnabled
