@@ -15,7 +15,7 @@ export const ttsRouter = t.router({
   generateAudio: protectedProcedure
     .input(
       z.object({
-        text: z.string().min(1, "Invalid text"),
+        text: z.string().min(1, "Invalid text").max(30000, "Text too long"),
         voice: z.enum(["thiha", "nilar"]).optional(),
         tone: z.number().optional(),
         speed: z.number().optional(),

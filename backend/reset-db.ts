@@ -4,6 +4,11 @@ import mysql from "mysql2/promise";
 import { sql, ne } from "drizzle-orm";
 import { users, ttsConversions, subscriptions, creditTransactions, ttsJobs, errorLogs } from "../drizzle/schema";
 
+if (process.env.RESET_CONFIRM !== "YES_I_KNOW") {
+  console.error("FATAL: RESET_CONFIRM env var must be 'YES_I_KNOW' to run reset-db.");
+  process.exit(1);
+}
+
 async function runReset() {
   console.log("⚠️ STARTING DATABASE RESET FOR PRODUCTION LAUNCH ⚠️");
   

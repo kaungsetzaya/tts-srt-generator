@@ -47,7 +47,7 @@ ssh -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_IP} "npm install -g pnpm" &
 wait
 
 echo "[9/15] Creating MySQL Database..."
-ssh -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_IP} "mysql -u root -e 'CREATE DATABASE IF NOT EXISTS tts_generator; CREATE USER IF NOT EXISTS \"tts_user\"@\"localhost\" IDENTIFIED BY \"tts_password_123\"; GRANT ALL PRIVILEGES ON tts_generator.* TO \"tts_user\"@\"localhost\"; FLUSH PRIVILEGES;'" &
+ssh -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_IP} "mysql -u root -e 'CREATE DATABASE IF NOT EXISTS tts_generator; CREATE USER IF NOT EXISTS \"tts_user\"@\"localhost\" IDENTIFIED BY \"CHANGE_ME_PASSWORD\"; GRANT ALL PRIVILEGES ON tts_generator.* TO \"tts_user\"@\"localhost\"; FLUSH PRIVILEGES;'" &
 wait
 
 echo "[10/15] Cloning Project..."
@@ -56,10 +56,10 @@ wait
 
 echo "[11/15] Creating Environment File..."
 ssh -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_IP} "cat > /home/tts-generator/.env.production << 'ENVFILE'
-DATABASE_URL=mysql://tts_user:tts_password_123@localhost:3306/tts_generator
+DATABASE_URL=mysql://tts_user:CHANGE_ME_PASSWORD@localhost:3306/tts_generator
 NODE_ENV=production
 PORT=3000
-JWT_SECRET=your_random_jwt_secret_key_here_change_this_12345
+JWT_SECRET=CHANGE_ME_JWT_SECRET
 VPS_TTS_API_URL=http://217.76.48.32:5000/generate
 VPS_TTS_AUDIO_BASE_URL=http://217.76.48.32:5000/audio/
 VPS_TTS_HEALTH_CHECK_URL=http://217.76.48.32:5000/health

@@ -8,7 +8,7 @@ import { getDb } from "../db";
 import { settings } from "../../drizzle/schema";
 
 export const settingsRouter = t.router({
-  get: t.procedure.query(async () => {
+  get: protectedProcedure.query(async () => {
     const db = await getDb();
     if (!db) return {};
     try {

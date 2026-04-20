@@ -19,7 +19,7 @@ pnpm install
 
 # Step 3: Run DB migration (add payment_method + payment_slip columns)
 echo "[3/5] Running database migration..."
-mysql -u tts_user -ptts_password_123 tts_generator -e "
+mysql -u tts_user -pCHANGE_ME_PASSWORD tts_generator -e "
   ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS payment_method varchar(30) DEFAULT NULL;
   ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS payment_slip text DEFAULT NULL;
 " 2>/dev/null || echo "  → Columns may already exist, skipping..."

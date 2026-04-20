@@ -5,6 +5,8 @@ import { z } from "zod";
 import { t, protectedProcedure } from "./trpc";
 import { TRPCError } from "@trpc/server";
 import { dubVideoFromLink } from "../videoDubber";
+import { isAllowedVideoUrl } from "../_core/security";
+import { deductCredits } from "./credits";
 
 export const dubRouter = t.router({
   fromLink: protectedProcedure
@@ -18,7 +20,18 @@ export const dubRouter = t.router({
         userApiKey: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.user!.userId;
+
+      if (!isAllowedVideoUrl(input.url)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invalid or disallowed URL. YouTube, TikTok, Facebook only.",
+        });
+      }
+
+      await deductCredits(userId, 10, "video_dub", `Legacy Video Dub Link: ${input.voice}`);
+
       try {
         return await dubVideoFromLink(input.url, {
           voice: input.voice,

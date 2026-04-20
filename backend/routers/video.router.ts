@@ -7,7 +7,7 @@
 import { z } from "zod";
 import { t, protectedProcedure } from "./trpc";
 import { TRPCError } from "@trpc/server";
-import { isAllowedVideoUrl } from "../_core/security";
+import { isAllowedVideoUrl, validateBase64VideoPrefix } from "../_core/security";
 import { createJob, getJobAsync, updateJob } from "../jobs";
 import { deductCredits, addCredits } from "./credits";
 import { checkPythonAndWhisper } from "../videoTranslator";
@@ -35,7 +35,13 @@ export const videoRouter = t.router({
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.user!.userId;
 
-      // ── Gate 1: Size check (no credits spent yet) ──
+      // ── Gate 1: Security and Size check ──
+      if (!validateBase64VideoPrefix(input.videoBase64)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invalid video file format.",
+        });
+      }
       const videoSize = input.videoBase64.length * 0.75;
       if (videoSize > 25 * 1024 * 1024) {
         throw new TRPCError({
@@ -170,7 +176,13 @@ export const videoRouter = t.router({
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.user!.userId;
 
-      // ── Gate 1: Size check ──
+      // ── Gate 1: Security and Size check ──
+      if (!validateBase64VideoPrefix(input.videoBase64)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invalid video file format.",
+        });
+      }
       const videoSize = input.videoBase64.length * 0.75;
       if (videoSize > 25 * 1024 * 1024) {
         throw new TRPCError({

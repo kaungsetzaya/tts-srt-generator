@@ -722,8 +722,7 @@ export async function dubVideoFromLink(
 // ─── Job Processor Registration ──────────────────────────────────
 // Must be at the bottom so dubVideoFromLink is defined first
 import { registerProcessor, updateJob } from "./jobs";
-import { getDb } from "./db";
-import { users } from "../drizzle/schema";
+import { addCredits } from "./routers/credits";
 import { eq, sql } from "drizzle-orm";
 
 registerProcessor("dub_link", async (job) => {
@@ -761,14 +760,7 @@ registerProcessor("dub_link", async (job) => {
     // Refund credits on failure
     if (userId) {
       try {
-        const db = await getDb();
-        if (db) {
-          await db
-            .update(users)
-            .set({ credits: sql`credits + ${10}` })
-            .where(eq(users.id, userId));
-          console.log(`[DubJob] Refunded 10 credits to user ${userId}`);
-        }
+        await addCredits(userId, 10, "video_dub_refund", `Refund: Dub job failed for ${url}`);
       } catch (refundErr) {
         console.error("[DubJob] Refund failed:", refundErr);
       }
@@ -817,8 +809,7 @@ registerProcessor("dub_file", async (job) => {
 
     if (userId) {
       try {
-        const db = await getDb();
-        await db.update(users).set({ credits: sql`credits + 10` }).where(eq(users.id, userId));
+        await addCredits(userId, 10, "video_dub_refund", `Refund: Dub file job failed for ${filename}`);
       } catch (refundErr) {
         console.error("[DubFileJob] Refund failed:", refundErr);
       }

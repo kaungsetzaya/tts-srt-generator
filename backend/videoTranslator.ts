@@ -342,13 +342,7 @@ registerProcessor("translate_file", async (job) => {
         // Refund credits on failure
         if (userId) {
             try {
-                const db = await getDb();
-                if (db) {
-                    await db.update(users)
-                        .set({ credits: sql`credits + ${5}` })
-                        .where(eq(users.id, userId));
-                    console.log(`[Translate] Refunded 5 credits to user ${userId}`);
-                }
+                await addCredits(userId, 5, "translate_refund", `Refund: Translation failed for ${filename}`);
             } catch (refundErr) {
                 console.error("[Translate] Refund failed:", refundErr);
             }
@@ -386,13 +380,7 @@ registerProcessor("translate_link", async (job) => {
         // Refund credits on failure
         if (userId) {
             try {
-                const db = await getDb();
-                if (db) {
-                    await db.update(users)
-                        .set({ credits: sql`credits + ${5}` })
-                        .where(eq(users.id, userId));
-                    console.log(`[Translate Link] Refunded 5 credits to user ${userId}`);
-                }
+                await addCredits(userId, 5, "translate_refund", `Refund: Link translation failed for ${url}`);
             } catch (refundErr) {
                 console.error("[Translate Link] Refund failed:", refundErr);
             }
