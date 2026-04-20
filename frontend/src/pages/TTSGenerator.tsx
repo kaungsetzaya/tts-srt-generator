@@ -341,7 +341,6 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
 
   // Dubbing SRT overlay settings
   const [srtEnabled, setSrtEnabled] = useState(true);
-  const [srtAccordionOpen, setSrtAccordionOpen] = useState(false);
   const [srtFontSize, setSrtFontSize] = useState(24); // Better for Burmese text
   const [srtColor, setSrtColor] = useState("#ffffff");
   const [srtDropShadow, setSrtDropShadow] = useState(true);
