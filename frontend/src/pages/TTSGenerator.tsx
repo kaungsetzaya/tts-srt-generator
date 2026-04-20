@@ -425,7 +425,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
   // Accordion state for mobile-friendly collapsible sections
   const [voiceAccordionOpen, setVoiceAccordionOpen] = useState(true);
   const [speedAccordionOpen, setSpeedAccordionOpen] = useState(false);
-  const [srtAccordionOpen, setSrtAccordionOpen] = useState(false);
+  const [srtAccordionOpen, setSrtAccordionOpen] = useState(true);
 
   const [geminiKey, setGeminiKey] = useState("");
   const [savedKey, setSavedKey] = useState(
@@ -1060,14 +1060,14 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                     boxShadow: "0 2px 8px rgba(192,111,48,0.4)",
                   }}
                 >
-                  {subStatus?.plan === "trial" ? (lang === "mm" ? "အစမ်း" : "Trial") : subStatus?.plan}
+                  {isAdmin ? "Admin" : (subStatus?.plan === "trial" ? (lang === "mm" ? "အစမ်း" : "Trial") : subStatus?.plan)}
                 </span>
               </div>
               <div className="relative z-10 hidden sm:block flex-1 h-2 max-w-[100px] rounded-full overflow-hidden" style={{ background: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.1)" }}>
                 <motion.div 
                   className="h-full rounded-full"
                   initial={{ width: 0 }}
-                  animate={{ width: `${Math.min(100, ((subStatus?.credits ?? 0) / (planLimits?.maxCredits ?? 800)) * 100)}%` }}
+                  animate={{ width: isAdmin ? "100%" : `${Math.min(100, ((subStatus?.credits ?? 0) / (planLimits?.maxCredits ?? 800)) * 100)}%` }}
                   transition={{ duration: 0.8, ease: "easeOut" }}
                   style={{
                     background: "linear-gradient(90deg, #C06F30, #F4B34F, #FCD34D)",
@@ -1076,8 +1076,8 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                 />
               </div>
               <div className="relative z-10 flex items-center gap-1 sm:gap-2 font-bold" style={{ color: isDark ? "#F4B34F" : "#B45309" }}>
-                <span className="text-[11px] sm:text-sm">{subStatus?.credits ?? 0}</span>
-                <span className="hidden sm:inline text-xs opacity-70 uppercase">credits</span>
+                <span className="text-[11px] sm:text-sm">{isAdmin ? "Admin" : subStatus?.credits}</span>
+                {!isAdmin && <span className="hidden sm:inline text-xs opacity-70 uppercase">credits</span>}
               </div>
             </>
           ) : (
@@ -3325,10 +3325,10 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                         <div className="flex justify-center mt-2">
                           <div
                             style={{
-                              width: aspectRatio === "9:16" ? "min(240px, 55vw)" : "100%",
-                              margin: aspectRatio === "9:16" ? "0 auto" : "0",
+                              width: dubDetectedRatio === "9:16" ? "min(240px, 55vw)" : "100%",
+                              margin: dubDetectedRatio === "9:16" ? "0 auto" : "0",
                               aspectRatio:
-                                aspectRatio === "9:16" ? "9/16" : "16/9",
+                                dubDetectedRatio === "9:16" ? "9/16" : "16/9",
                               borderRadius: "12px",
                               overflow: "hidden",
                             }}
