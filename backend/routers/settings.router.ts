@@ -21,7 +21,7 @@ const ALLOWED_SETTINGS_KEYS = [
 const allowedKeySchema = z.enum(ALLOWED_SETTINGS_KEYS);
 
 export const settingsRouter = t.router({
-  get: protectedProcedure.query(async () => {
+  get: t.procedure.query(async () => {
     const db = await getDb();
     if (!db) return {};
     try {
