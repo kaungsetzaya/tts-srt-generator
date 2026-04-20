@@ -155,6 +155,39 @@ export async function mergeVideoAudioSubtitles(
 }
 
 /**
+ * Merge audio into video without subtitles.
+ */
+export async function mergeVideoAudio(
+    videoPath: string,
+    audioPath: string,
+    outputPath: string,
+    options: {
+        videoDurationSec: number,
+        onProgress?: (progress: number) => void
+    }
+): Promise<void> {
+    return new Promise((resolve, reject) => {
+        ffmpeg(videoPath)
+            .input(audioPath)
+            .outputOptions([
+                "-c:v", "copy",
+                "-c:a", "aac",
+                "-b:a", "128k",
+                "-map", "0:v",
+                "-map", "1:a",
+                "-t", options.videoDurationSec.toFixed(3),
+                "-shortest",
+                "-map_metadata", "-1",
+                "-movflags", "+faststart"
+            ])
+            .on("progress", (p: any) => options.onProgress?.(p.percent ?? 0))
+            .on("error", reject)
+            .on("end", () => resolve())
+            .save(outputPath);
+    });
+}
+
+/**
  * Concatenate multiple audio files into one using ffmpeg concat demuxer.
  */
 export async function concatAudioFiles(listPath: string, outputPath: string): Promise<void> {
@@ -179,5 +212,6 @@ export const ffmpegService = {
     generateSilence,
     speedUpAudio,
     mergeVideoAudioSubtitles,
+    mergeVideoAudio,
     concatAudioFiles,
 };

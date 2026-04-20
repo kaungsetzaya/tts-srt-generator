@@ -329,6 +329,8 @@ export default function TTSGenerator() {
   const [dubDetectedRatio, setDubDetectedRatio] = useState<"9:16" | "16:9">(
     "16:9"
   );
+  const [dubVideoWidth, setDubVideoWidth] = useState(1920);
+  const [dubVideoHeight, setDubVideoHeight] = useState(1080);
   const [videoPreviewError, setVideoPreviewError] = useState<string>("");
   const [videoLoading, setVideoLoading] = useState(false);
   const [dubVoice, setDubVoice] = useState<"thiha" | "nilar">("thiha");
@@ -351,6 +353,40 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
     "rounded"
   );
   const [srtBoxPadding, setSrtBoxPadding] = useState(4); // Blur box height/padding in px
+
+  const computeSrtPreviewStyle = useMemo(() => {
+    const vw = dubVideoWidth;
+    const vh = dubVideoHeight;
+    const fontScaleFactor = vh / 490;
+    const assFontSize = Math.round((srtFontSize ?? 24) * fontScaleFactor * 2.0);
+    const containerWidth = dubDetectedRatio === "9:16" ? Math.min(240, window.innerWidth * 0.55) : window.innerWidth;
+    const scale = containerWidth / vw;
+    const scaledFontSize = assFontSize * scale;
+    const assMarginV = Math.round((80 + (srtMarginV ?? 30) * 3) * (vh / 1080));
+    const topPercent = ((vh - assMarginV) / vh) * 100;
+    const opacityFraction = Math.min(0.72, ((srtBlurSize ?? 8) / 20) * 0.72);
+    const alphaInt = Math.round((1 - opacityFraction) * 255);
+    const bgAlpha = (alphaInt / 255);
+    const assOutline = Math.max(4, (srtBoxPadding ?? 4) * 3);
+    const scaledPadding = assOutline * scale;
+    const shadowSize = 2 * scale;
+
+    return {
+      wrapperTop: `${Math.max(2, Math.round(topPercent))}%`,
+      fontSize: `${Math.max(6, Math.round(scaledFontSize))}px`,
+      padding: srtFullWidth
+        ? `${scaledPadding}px 0`
+        : `${scaledPadding}px ${scaledPadding + 10 * scale}px`,
+      background: srtBlurBg
+        ? srtBlurColor === "black"
+          ? `rgba(0,0,0,${bgAlpha.toFixed(2)})`
+          : `rgba(255,255,255,${bgAlpha.toFixed(2)})`
+        : "transparent",
+      textShadow: srtDropShadow
+        ? `${shadowSize}px ${shadowSize}px ${4 * scale}px rgba(0,0,0,0.8)`
+        : "none",
+    };
+  }, [dubVideoWidth, dubVideoHeight, dubDetectedRatio, srtFontSize, srtMarginV, srtBlurSize, srtBlurColor, srtBlurBg, srtBoxPadding, srtFullWidth, srtDropShadow]);
 
   // Accordion state for mobile-friendly collapsible sections
   const [voiceAccordionOpen, setVoiceAccordionOpen] = useState(true);
@@ -779,7 +815,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
     // Use job-based API for dubbing (handles long processing time)
     if (dubVideoUrl.trim()) {
       try {
-        const res = await startDubMutation.mutateAsync({
+         const res = await startDubMutation.mutateAsync({
           url: dubVideoUrl.trim(),
           voice: dubVoiceToUse,
           srtEnabled,
@@ -791,6 +827,8 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
           srtBlurColor,
           srtBoxPadding,
           srtFullWidth,
+          srtDropShadow,
+          srtBorderRadius,
         });
         setActiveJobId(res.jobId);
         // Poll for job status
@@ -807,7 +845,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
     reader.onload = async () => {
       const base64 = (reader.result as string).split(",")[1];
       try {
-        const res = await dubFileMutation.mutateAsync({
+         const res = await dubFileMutation.mutateAsync({
           videoBase64: base64,
           filename: dubVideoFile.name,
           voice: dubVoiceToUse,
@@ -820,6 +858,8 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
           srtBlurColor,
           srtBoxPadding,
           srtFullWidth,
+          srtDropShadow,
+          srtBorderRadius,
         });
         setActiveJobId(res.jobId);
         utils.subscription.myStatus.invalidate();
@@ -2411,6 +2451,8 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                                 }}
                                 onLoadedMetadata={e => {
                                   const v = e.currentTarget;
+                                  setDubVideoWidth(v.videoWidth);
+                                  setDubVideoHeight(v.videoHeight);
                                   if (v.videoHeight > v.videoWidth)
                                     setDubDetectedRatio("9:16");
                                   else setDubDetectedRatio("16:9");
@@ -2425,30 +2467,22 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                                   className="absolute left-0 right-0 flex justify-center pointer-events-none"
                                   style={{
                                     zIndex: 10,
-                                    top: `${Math.max(2, Math.round(78 - (srtMarginV / 200) * 76))}%`,
+                                    top: computeSrtPreviewStyle.wrapperTop,
                                     transition: "top 0.2s ease-out",
                                   }}
                                 >
                                   <div
                                     style={{
-                                      padding: srtFullWidth
-                                        ? `${srtBoxPadding}px 0`
-                                        : `${srtBoxPadding}px ${srtBoxPadding + 10}px`,
+                                      padding: computeSrtPreviewStyle.padding,
                                       borderRadius: srtFullWidth
                                         ? "0"
                                         : srtBorderRadius === "rounded"
                                           ? "12px"
                                           : "4px",
-                                      fontSize: `${Math.max(6, srtFontSize)}px`,
+                                      fontSize: computeSrtPreviewStyle.fontSize,
                                       color: srtColor,
-                                      textShadow: srtDropShadow
-                                        ? "2px 2px 4px rgba(0,0,0,0.8)"
-                                        : "none",
-                                      background: srtBlurBg
-                                        ? srtBlurColor === "black"
-                                          ? `rgba(0,0,0,${Math.min(0.85, srtBlurSize * 0.06)})`
-                                          : `rgba(255,255,255,${Math.min(0.85, srtBlurSize * 0.06)})`
-                                        : "transparent",
+                                      textShadow: computeSrtPreviewStyle.textShadow,
+                                      background: computeSrtPreviewStyle.background,
                                       backdropFilter: srtBlurBg
                                         ? `blur(${srtBlurSize}px)`
                                         : "none",
@@ -2532,29 +2566,22 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                                   className="absolute left-0 right-0 flex justify-center pointer-events-none"
                                   style={{
                                     zIndex: 10,
-                                    top: `${Math.max(2, Math.round(78 - (srtMarginV / 200) * 76))}%`,
+                                    top: computeSrtPreviewStyle.wrapperTop,
                                     transition: "top 0.2s ease-out",
                                   }}
                                 >
                                   <div
                                     style={{
-                                      padding: srtFullWidth
-                                        ? `${srtBoxPadding}px 0`
-                                        : `${srtBoxPadding}px ${srtBoxPadding + 10}px`,
+                                      padding: computeSrtPreviewStyle.padding,
                                       borderRadius: srtFullWidth
                                         ? "0"
                                         : srtBorderRadius === "rounded"
                                           ? "12px"
                                           : "4px",
-                                      fontSize: `${Math.max(6, srtFontSize)}px`,
+                                      fontSize: computeSrtPreviewStyle.fontSize,
                                       color: srtColor,
-                                      textShadow:
-                                        "2px 2px 6px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,1)",
-                                      background: srtBlurBg
-                                        ? srtBlurColor === "black"
-                                          ? `rgba(0,0,0,${Math.min(0.85, srtBlurSize * 0.06)})`
-                                          : `rgba(255,255,255,${Math.min(0.85, srtBlurSize * 0.06)})`
-                                        : "transparent",
+                                      textShadow: computeSrtPreviewStyle.textShadow,
+                                      background: computeSrtPreviewStyle.background,
                                       backdropFilter: srtBlurBg
                                         ? `blur(${srtBlurSize}px)`
                                         : "none",
@@ -2626,8 +2653,8 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                                   }}
                                   onLoadedMetadata={e => {
                                     const v = e.currentTarget;
-                                    const w = v.videoWidth;
-                                    const h = v.videoHeight;
+                                    setDubVideoWidth(v.videoWidth);
+                                    setDubVideoHeight(v.videoHeight);
                                     if (h > w) setDubDetectedRatio("9:16");
                                     else setDubDetectedRatio("16:9");
                                     setVideoLoading(false);
@@ -2667,30 +2694,22 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                                   className="absolute left-0 right-0 flex justify-center pointer-events-none"
                                   style={{
                                     zIndex: 10,
-                                    top: `${Math.max(2, Math.round(78 - (srtMarginV / 200) * 76))}%`,
+                                    top: computeSrtPreviewStyle.wrapperTop,
                                     transition: "top 0.2s ease-out",
                                   }}
                                 >
                                   <div
                                     style={{
-                                      padding: srtFullWidth
-                                        ? `${srtBoxPadding}px 0`
-                                        : `${srtBoxPadding}px ${srtBoxPadding + 10}px`,
+                                      padding: computeSrtPreviewStyle.padding,
                                       borderRadius: srtFullWidth
                                         ? "0"
                                         : srtBorderRadius === "rounded"
                                           ? "12px"
                                           : "4px",
-                                      fontSize: `${Math.max(6, srtFontSize)}px`,
+                                      fontSize: computeSrtPreviewStyle.fontSize,
                                       color: srtColor,
-                                      textShadow: srtDropShadow
-                                        ? "2px 2px 4px rgba(0,0,0,0.8)"
-                                        : "none",
-                                      background: srtBlurBg
-                                        ? srtBlurColor === "black"
-                                          ? `rgba(0,0,0,${Math.min(0.85, srtBlurSize * 0.06)})`
-                                          : `rgba(255,255,255,${Math.min(0.85, srtBlurSize * 0.06)})`
-                                        : "transparent",
+                                      textShadow: computeSrtPreviewStyle.textShadow,
+                                      background: computeSrtPreviewStyle.background,
                                       backdropFilter: srtBlurBg
                                         ? `blur(${srtBlurSize}px)`
                                         : "none",

@@ -15,31 +15,33 @@ export class AssBuilderService {
         videoWidth: number,
         videoHeight: number,
         opts?: {
-            fontSize?: number;
-            fontColor?: string;
-            marginV?: number;
-            blurBg?: boolean;
-            blurSize?: number;
-            blurColor?: "black" | "white";
-            boxPadding?: number;
-            fullWidth?: boolean;
+            srtFontSize?: number;
+            srtColor?: string;
+            srtMarginV?: number;
+            srtBlurBg?: boolean;
+            srtBlurSize?: number;
+            srtBlurColor?: "black" | "white";
+            srtBoxPadding?: number;
+            srtFullWidth?: boolean;
+            srtDropShadow?: boolean;
         }
     ): string {
         const playResX = videoWidth;
         const playResY = videoHeight;
         const fontScaleFactor = videoHeight / 490;
-        const fontSize = Math.round((opts?.fontSize ?? 12) * fontScaleFactor * 2.0);
-        const fontColor = opts?.fontColor ?? "#ffffff";
+        const fontSize = Math.round((opts?.srtFontSize ?? 24) * fontScaleFactor * 2.0);
+        const fontColor = opts?.srtColor ?? "#ffffff";
 
-        const userMarginV = opts?.marginV ?? 30;
+        const userMarginV = opts?.srtMarginV ?? 30;
         const baseMarginV = 80 + userMarginV * 3;
         const marginV = Math.round(baseMarginV * (videoHeight / 1080));
 
-        const blurBg = opts?.blurBg ?? true;
-        const blurSize = opts?.blurSize ?? 8;
-        const blurColor = opts?.blurColor ?? "black";
-        const boxPadding = opts?.boxPadding ?? 4;
-        const fullWidth = opts?.fullWidth ?? false;
+        const blurBg = opts?.srtBlurBg ?? true;
+        const blurSize = opts?.srtBlurSize ?? 8;
+        const blurColor = opts?.srtBlurColor ?? "black";
+        const boxPadding = opts?.srtBoxPadding ?? 4;
+        const fullWidth = opts?.srtFullWidth ?? false;
+        const dropShadow = opts?.srtDropShadow ?? true;
 
         const hex = (fontColor.replace("#", "") + "000000").substring(0, 6);
         const r = parseInt(hex.substring(0, 2), 16) || 255;
@@ -47,12 +49,12 @@ export class AssBuilderService {
         const b = parseInt(hex.substring(4, 6), 16) || 255;
         const assColor = `&H00${this.pad2(b)}${this.pad2(g)}${this.pad2(r)}`;
 
-        const fontName = fontPath ? require('path').basename(fontPath, require('path').extname(fontPath)) : "Noto Sans Myanmar";
+        const fontName = fontPath ? path.basename(fontPath, path.extname(fontPath)) : "Noto Sans Myanmar";
 
         let backColor = "&HFF000000"; 
         let borderStyle = 1; 
         let outline = 1;
-        let shadow = 1;
+        let shadow = dropShadow ? 1 : 0;
 
         if (blurBg) {
             const opacityFraction = Math.min(0.72, (blurSize / 20) * 0.72); 
@@ -62,6 +64,8 @@ export class AssBuilderService {
             backColor = `&H${alphaHex}${bgHex}`;
             borderStyle = 3; 
             outline = Math.max(4, boxPadding * 3);
+            shadow = 0;
+        } else if (!dropShadow) {
             shadow = 0;
         }
 

@@ -26,6 +26,8 @@ export interface DubOptions {
   srtBlurColor?: "black" | "white";
   srtBoxPadding?: number;
   srtFullWidth?: boolean;
+  srtDropShadow?: boolean;
+  srtBorderRadius?: "rounded" | "square";
   userApiKey?: string;
 }
 
@@ -131,15 +133,20 @@ export class DubVideoPipeline {
         (process.platform === "win32" 
           ? "C:/Windows/Fonts/ Myanmar3.ttf" 
           : "/usr/share/fonts/truetype/noto/NotoSansMyanmar-Regular.ttf");
-      const videoDimensions = await ffmpegService.getVideoSize(tempVideoPath);
-      const assContent = assBuilderService.buildAssContent(processedForSrt, fontPath, videoDimensions.width, videoDimensions.height, options as any);
-      await fs.writeFile(tempAssPath, assContent);
-
-      // Step 7: Final Merge
-      await ffmpegService.mergeVideoAudioSubtitles(tempVideoPath, finalAudioPath, tempAssPath, tempOutputPath, {
+      
+      if (options.srtEnabled !== false && processedForSrt.length > 0) {
+        const videoDimensions = await ffmpegService.getVideoSize(tempVideoPath);
+        const assContent = assBuilderService.buildAssContent(processedForSrt, fontPath, videoDimensions.width, videoDimensions.height, options as any);
+        await fs.writeFile(tempAssPath, assContent);
+        await ffmpegService.mergeVideoAudioSubtitles(tempVideoPath, finalAudioPath, tempAssPath, tempOutputPath, {
           videoDurationSec,
           fontPath,
-      });
+        });
+      } else {
+        await ffmpegService.mergeVideoAudio(tempVideoPath, finalAudioPath, tempOutputPath, {
+          videoDurationSec,
+        });
+      }
 
       // Step 8: Move to final storage
       const finalFilename = `dub_${id}.mp4`;
