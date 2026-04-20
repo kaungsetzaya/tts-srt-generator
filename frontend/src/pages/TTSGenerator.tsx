@@ -341,6 +341,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
 
   // Dubbing SRT overlay settings
   const [srtEnabled, setSrtEnabled] = useState(true);
+  const [srtAccordionOpen, setSrtAccordionOpen] = useState(false);
   const [srtFontSize, setSrtFontSize] = useState(24); // Better for Burmese text
   const [srtColor, setSrtColor] = useState("#ffffff");
   const [srtDropShadow, setSrtDropShadow] = useState(true);
@@ -2907,6 +2908,18 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                             </div>
                           </div>
                           <button
+                            onClick={() => setSrtAccordionOpen(!srtAccordionOpen)}
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all text-[10px] font-bold mr-2"
+                            style={{
+                              borderColor: srtAccordionOpen ? accent : cardBorder,
+                              background: srtAccordionOpen ? `${accent}10` : "transparent",
+                              color: srtAccordionOpen ? accent : subtextColor
+                            }}
+                          >
+                            <Settings className={`w-3 h-3 transition-transform ${srtAccordionOpen ? "rotate-90" : ""}`} />
+                            {srtAccordionOpen ? (lang === "mm" ? "ပိတ်ရန်" : "Close") : (lang === "mm" ? "ပြင်ဆင်ရန်" : "Settings")}
+                          </button>
+                          <button
                             onClick={() => setSrtEnabled(!srtEnabled)}
                             className={`relative w-10 h-5 sm:w-14 sm:h-7 rounded-full transition-all duration-300`}
                             style={{
@@ -2918,14 +2931,13 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                           >
                             <div
                               className={`absolute top-0.5 w-5 h-5 sm:w-6 sm:h-6 bg-white rounded-full transition-transform duration-300 ${srtEnabled ? "translate-x-[22px] sm:translate-x-7" : "translate-x-0.5"}`}
-                              style={{
-                                boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
-                              }}
+                              style={{ boxShadow: "0 2px 6px rgba(0,0,0,0.15)" }}
                             />
                           </button>
                         </div>
 
-                        {/* Settings Groups */}
+                        {/* Settings Groups — collapsible */}
+                        {srtAccordionOpen && (
                         <div className="space-y-5">
                           
                           {/* ── Group: Text ── */}
@@ -3156,8 +3168,8 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                               </div>
                             )}
                           </div>
-
-                        </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Generate Dubbing Button */}
