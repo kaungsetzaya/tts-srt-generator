@@ -154,56 +154,64 @@ export default function Landing() {
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
-        className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-2xl flex items-center gap-4"
+        className="fixed top-3 md:top-6 left-1/2 -translate-x-1/2 z-50 px-4 md:px-8 py-2 md:py-3.5 rounded-full flex items-center gap-2 md:gap-4 max-w-[95vw] md:max-w-none shadow-2xl"
         style={{
           background: C.glass,
           backdropFilter: "blur(24px)",
           border: `1px solid ${C.glassB}`,
-          boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)",
         }}
       >
-        <motion.div className="flex items-center gap-8">
+        <motion.div className="flex items-center gap-4 md:gap-10">
           <motion.span
-            whileHover={{ scale: 1.1, rotate: -3 }}
+            whileHover={{ scale: 1.05, rotate: -2 }}
             whileTap={{ scale: 0.95 }}
-            initial={{ opacity: 0, x: -20 }}
+            initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-2xl font-black tracking-tight cursor-pointer"
+            className="text-lg md:text-2xl font-black tracking-tighter cursor-pointer"
             style={{ color: C.gold }}
           >
             LUMIX
           </motion.span>
+          <div className="flex items-center gap-3 md:gap-8">
+            <motion.button
+              whileHover={{ y: -2, color: C.gold }}
+              whileTap={{ scale: 0.95 }}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              onClick={() =>
+                featRef.current?.scrollIntoView({ behavior: "smooth" })
+              }
+              className="text-[10px] md:text-xs uppercase tracking-[0.15em] md:tracking-[0.25em] font-bold transition-colors duration-200"
+              style={{ color: C.nude }}
+            >
+              Features
+            </motion.button>
+            <motion.button
+              whileHover={{ y: -2, color: C.gold }}
+              whileTap={{ scale: 0.95 }}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              onClick={() => nav("/plans")}
+              className="text-[10px] md:text-xs uppercase tracking-[0.15em] md:tracking-[0.25em] font-bold transition-colors duration-200"
+              style={{ color: C.nude }}
+            >
+              Plans
+            </motion.button>
+          </div>
           <motion.button
-            whileHover={{ scale: 1.15, y: -3, color: C.gold }}
+            whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            onClick={() =>
-              featRef.current?.scrollIntoView({ behavior: "smooth" })
-            }
-            className="text-xs uppercase tracking-[0.2em] transition-colors duration-200"
-            style={{ color: C.nude }}
-          >
-            Features
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.15, y: -3, color: C.gold }}
-            whileTap={{ scale: 0.95 }}
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            onClick={() => nav("/plans")}
-            className="text-xs uppercase tracking-[0.2em] transition-colors duration-200"
-            style={{ color: C.nude }}
-          >
-            Plans
-          </motion.button>
-          <motion.button
             onClick={go}
-            className="px-6 py-2 rounded-full text-xs font-bold uppercase tracking-[0.15em]"
-            style={{ background: C.gold, color: isDark ? C.dark : "#fff" }}
+            className="px-4 md:px-7 py-1.5 md:py-2.5 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest whitespace-nowrap"
+            style={{ 
+              background: `linear-gradient(135deg, ${C.gold}, #FCD34D)`,
+              color: isDark ? C.dark : "#fff",
+              boxShadow: `0 4px 15px ${C.gold}30`
+            }}
           >
             Login
           </motion.button>

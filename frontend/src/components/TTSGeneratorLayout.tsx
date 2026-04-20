@@ -74,11 +74,10 @@ export function TTSGeneratorLayout({
           <SidebarRail />
           <SidebarInset className="flex-1 flex flex-col min-h-screen">
             {headerBar && (
-              <header className="sticky top-0 z-40">
-                <div className="flex items-center">
-                  {/* Sidebar toggle — keeps the logo unblocked */}
-                  <SidebarTrigger className="ml-2 mr-1 shrink-0" />
-                  <div className="flex-1">{headerBar}</div>
+              <header className="sticky top-0 z-[45] w-full border-b border-white/5 bg-background/80 backdrop-blur-md">
+                <div className="flex items-center h-14 px-2">
+                  <SidebarTrigger className="shrink-0 scale-110 active:scale-95 transition-transform" />
+                  <div className="flex-1 overflow-hidden">{headerBar}</div>
                 </div>
               </header>
             )}
@@ -408,7 +407,7 @@ function MobileBottomNavigation({
           : "0 -4px 30px rgba(0,0,0,0.1)",
       }}
     >
-      <div className="flex items-center justify-around py-2 px-2 gap-1">
+      <div className="flex items-center justify-around py-3 px-4 gap-2">
         {mainNavItems.map(({ id, icon: Icon, label }) => {
           const isActive = mainTab === id && !currentSecondaryTab;
           return (

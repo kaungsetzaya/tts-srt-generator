@@ -92,27 +92,26 @@ export default function VideoTranslator() {
   const isLoading = translateMutation.isPending;
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-background/80">
-        <div className="flex items-center gap-2">
-          <Languages className="w-5 h-5" style={{ color: C }} />
-          <span className="font-black uppercase tracking-widest text-sm" style={{ color: C }}>Video Translator</span>
+    <TTSGeneratorLayout
+      currentSecondaryTab={null}
+      onTabChange={() => {}}
+      mainTab="video"
+      setMainTab={(t) => { if (t === 'tts') navigate('/lumix'); }}
+      headerBar={
+        <div className="flex items-center justify-between py-1.5 px-1 sm:px-4 w-full h-full">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="font-black text-base sm:text-lg tracking-tighter" style={{ color: C }}>LUMIX</div>
+            <span className="text-[10px] sm:text-xs opacity-50 uppercase tracking-widest font-bold ml-1">Translator</span>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <a href="/lumix" className="text-xs px-3 py-1 border border-border opacity-60 hover:opacity-100 transition-all uppercase tracking-wider">TTS Page</a>
-          {me?.role === "admin" && (
-            <a href="/admin" className="text-xs px-3 py-1 border border-border opacity-60 hover:opacity-100 transition-all uppercase tracking-wider">Admin</a>
-          )}
-        </div>
-      </div>
-
-      <div className="max-w-4xl mx-auto p-6 space-y-6">
+      }
+    >
+      <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6 pb-24">
         {/* Title */}
-        <div className="text-center py-6">
-          <h1 className="text-3xl font-black uppercase tracking-widest mb-2" style={{ color: C }}>Video → Myanmar</h1>
-          <p className="text-sm opacity-50">Upload video and get Myanmar translation</p>
-          <div className="flex items-center justify-center gap-4 mt-3 text-xs opacity-40">
+        <div className="text-center py-4 sm:py-6">
+          <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-widest mb-2" style={{ color: C }}>Video → Myanmar</h1>
+          <p className="text-xs sm:text-sm opacity-50">Upload video and get Myanmar translation</p>
+          <div className="flex items-center justify-center gap-3 sm:gap-4 mt-3 text-[10px] sm:text-xs opacity-40 uppercase font-bold tracking-tighter">
             <span>Max 25MB</span>
             <span>•</span>
             <span>Max 3 minutes</span>
@@ -127,7 +126,7 @@ export default function VideoTranslator() {
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
           onClick={() => fileRef.current?.click()}
-          className={`border-2 border-dashed p-12 text-center cursor-pointer transition-all ${
+          className={`border-2 border-dashed p-8 sm:p-12 text-center cursor-pointer transition-all rounded-2xl ${
             dragOver ? "border-primary bg-[rgba(192,111,48,0.1)]" :
             file ? "border-green-500/50 bg-green-500/5" :
             "border-border hover:border-primary/50"
@@ -135,16 +134,16 @@ export default function VideoTranslator() {
           <input ref={fileRef} type="file" accept="video/*" className="hidden" onChange={e => { if (e.target.files?.[0]) handleFile(e.target.files[0]); }} />
           {file ? (
             <div>
-              <FileVideo className="w-12 h-12 mx-auto mb-3 text-green-400" />
-              <p className="font-bold text-green-400">{file.name}</p>
-              <p className="text-xs opacity-50 mt-1">{(file.size / 1024 / 1024).toFixed(1)} MB</p>
-              <p className="text-xs opacity-40 mt-2">Click to change file</p>
+              <FileVideo className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 text-green-400" />
+              <p className="font-bold text-green-400 text-sm sm:text-base">{file.name}</p>
+              <p className="text-[10px] sm:text-xs opacity-50 mt-1">{(file.size / 1024 / 1024).toFixed(1)} MB</p>
+              <p className="text-[10px] sm:text-xs opacity-40 mt-2 italic">Click to change file</p>
             </div>
           ) : (
             <div>
-              <Upload className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p className="font-bold opacity-60">Drop video here or click to upload</p>
-              <p className="text-xs opacity-40 mt-2">MP4, WebM, MOV, AVI — max 25MB, 3 minutes</p>
+              <Upload className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 opacity-30" />
+              <p className="font-bold opacity-60 text-sm sm:text-base">Drop video here or click to upload</p>
+              <p className="text-[10px] sm:text-xs opacity-40 mt-2 uppercase tracking-wide">MP4, WebM, MOV, AVI — max 25MB</p>
             </div>
           )}
         </div>
@@ -152,7 +151,7 @@ export default function VideoTranslator() {
         {/* Translate Button */}
         {file && !jobId && !result && (
           <button onClick={handleTranslate} disabled={isLoading}
-            className="w-full py-4 font-black uppercase tracking-widest flex items-center justify-center gap-3 disabled:opacity-50 transition-all rounded-xl"
+            className="w-full py-3.5 sm:py-4 font-black uppercase tracking-widest flex items-center justify-center gap-3 disabled:opacity-50 transition-all rounded-xl text-white text-xs sm:text-sm"
             style={{ background: isLoading ? "rgba(192,111,48,0.4)" : C }}>
             {isLoading ? (
               <><Loader2 className="w-5 h-5 animate-spin" /> Translating...</>
@@ -164,37 +163,23 @@ export default function VideoTranslator() {
 
         {/* Processing animation */}
         {(isLoading || jobId) && (
-          <div className="border border-border bg-card p-8 rounded-xl text-center">
-            {jobId && (
-              <>
-                <div className="flex items-center justify-center gap-3 mb-4">
-                  <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: C }} />
-                  <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: C, animationDelay: "0.3s" }} />
-                  <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: C, animationDelay: "0.6s" }} />
-                </div>
-                <p className="text-sm font-bold opacity-60">Translating your video...</p>
-                <p className="text-xs opacity-40 mt-2">Progress: {jobProgress}%</p>
-              </>
-            )}
-            {isLoading && !jobId && (
-              <>
-                <div className="flex items-center justify-center gap-3 mb-4">
-                  <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: C }} />
-                  <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: C, animationDelay: "0.3s" }} />
-                  <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: C, animationDelay: "0.6s" }} />
-                </div>
-                <p className="text-sm font-bold opacity-60">Translating your video...</p>
-              </>
-            )}
+          <div className="border border-border bg-card p-6 sm:p-8 rounded-2xl text-center space-y-4">
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full animate-bounce" style={{ background: C }} />
+              <div className="w-2.5 h-2.5 rounded-full animate-bounce" style={{ background: C, animationDelay: "0.2s" }} />
+              <div className="w-2.5 h-2.5 rounded-full animate-bounce" style={{ background: C, animationDelay: "0.4s" }} />
+            </div>
+            <p className="text-xs sm:text-sm font-bold opacity-60">Translating your video...</p>
+            {jobId && <p className="text-[10px] sm:text-xs font-mono opacity-40">Progress: {jobProgress}%</p>}
           </div>
         )}
 
         {/* Error display */}
         {jobError && (
-          <div className="border border-red-500/50 bg-red-500/10 p-6 rounded-xl text-center">
-            <p className="text-sm font-bold text-red-400">Error: {jobError}</p>
+          <div className="border border-red-500/30 bg-red-500/5 p-5 sm:p-6 rounded-2xl text-center">
+            <p className="text-xs sm:text-sm font-bold text-red-400">Error: {jobError}</p>
             <button onClick={() => { setJobError(null); setFile(null); }}
-              className="mt-4 text-xs px-4 py-2 border border-border hover:bg-accent transition-all rounded-xl">
+              className="mt-4 text-[10px] uppercase font-black tracking-widest px-6 py-2 border border-red-500/20 hover:bg-red-500/10 transition-all rounded-xl text-red-400">
               Try Again
             </button>
           </div>
@@ -202,33 +187,33 @@ export default function VideoTranslator() {
 
         {/* Results — editable with copy button */}
         {result && (
-          <div className="space-y-4">
+          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex items-center justify-between">
-              <h2 className="font-black uppercase tracking-wider" style={{ color: C }}>Translation Result</h2>
+              <h2 className="font-black uppercase tracking-wider text-sm sm:text-base" style={{ color: C }}>Translation Result</h2>
               <button onClick={handleCopy}
-                className="flex items-center gap-2 text-xs px-4 py-2.5 rounded-xl font-bold transition-all hover:scale-105"
-                style={{ background: copied ? "#4ade80" : C }}>
+                className="flex items-center gap-2 text-[10px] px-4 py-2 rounded-full font-black uppercase tracking-widest text-white transition-all active:scale-95"
+                style={{ background: copied ? "#22c55e" : C }}>
                 {copied ? <><Check className="w-3 h-3" /> Copied!</> : <><Copy className="w-3 h-3" /> Copy Text</>}
               </button>
             </div>
 
-            <div className="border border-border bg-card rounded-xl overflow-hidden">
+            <div className="border border-border bg-card rounded-2xl overflow-hidden shadow-2xl">
               <textarea
                 value={editedText}
                 onChange={e => setEditedText(e.target.value)}
-                className="w-full min-h-[300px] p-6 text-sm bg-transparent focus:outline-none resize-y font-sans"
-                style={{ lineHeight: "2.2", color: "inherit" }}
+                className="w-full min-h-[300px] sm:min-h-[400px] p-5 sm:p-8 text-xs sm:text-sm bg-transparent focus:outline-none resize-y font-sans leading-relaxed"
+                style={{ lineHeight: "2", color: "inherit" }}
               />
             </div>
 
             {/* New Translation */}
             <button onClick={() => { setFile(null); setResult(null); setEditedText(""); }}
-              className="w-full py-3 border border-border font-bold uppercase text-sm hover:opacity-70 transition-all rounded-xl">
+              className="w-full py-3 border border-border font-black uppercase text-[10px] sm:text-xs tracking-widest hover:bg-accent transition-all rounded-xl opacity-60">
               Translate Another Video
             </button>
           </div>
         )}
       </div>
-    </div>
+    </TTSGeneratorLayout>
   );
 }

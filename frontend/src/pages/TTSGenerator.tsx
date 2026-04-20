@@ -983,33 +983,10 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
 
   const headerBar = (
     <div
-      className="backdrop-blur-2xl border-b flex items-center justify-between py-2 sm:py-2.5 px-3 sm:px-4 w-full"
-      style={{
-        borderColor: isDark
-          ? "rgba(192,111,48,0.15)"
-          : "rgba(244,179,79,0.08)",
-        background: isDark
-          ? "rgba(15,15,15,0.97)"
-          : "rgba(245,240,230,0.95)",
-        boxShadow: isDark
-          ? "0 4px 30px rgba(192,111,48,0.12)"
-          : "0 1px 12px rgba(244,179,79,0.06)",
-      }}
+      className="flex items-center justify-between py-1.5 px-1 sm:px-4 w-full h-full"
     >
-      <div className="flex items-center gap-2">
-        <SidebarTrigger 
-          className="flex items-center justify-center rounded-xl flex-shrink-0"
-          style={{
-            width: 36,
-            height: 36,
-            background: isDark
-              ? "rgba(192,111,48,0.15)"
-              : "rgba(192,111,48,0.12)",
-            border: `1px solid ${isDark ? "rgba(192,111,48,0.3)" : "rgba(192,111,48,0.25)"}`,
-            color: "#C06F30",
-          }}
-        />
-        <div className="md:hidden font-black text-lg ml-2" style={{ color: "#C06F30" }}>LUMIX</div>
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="font-black text-base sm:text-lg tracking-tighter" style={{ color: "#C06F30" }}>LUMIX</div>
       </div>
       <div className="flex items-center gap-1.5 sm:gap-2 ml-auto">
         {subLoading ? (
@@ -1476,7 +1453,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                                       : `${voiceName}: ${limitText}`}
                                   </span>
                                 </div>
-                                <div className="grid grid-cols-3 sm:grid-cols-3 gap-2 sm:gap-3">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
                                   {voices.map(v => {
                                     const isSelected = v.isStd
                                       ? voiceMode === "standard" &&
