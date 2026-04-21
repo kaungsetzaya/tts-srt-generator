@@ -54,16 +54,6 @@ export default function MaintenanceOverlay() {
             Our systems are currently undergoing scheduled maintenance to bring you new features and immense performance upgrades. We'll be back online shortly.
           </p>
         </motion.div>
-
-        {/* Status Bar */}
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.8, duration: 1 }}
-          className="mt-12 flex items-center gap-4 px-6 py-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md"
-        >
-          
-        </motion.div>
       </motion.div>
     </div>
   );
