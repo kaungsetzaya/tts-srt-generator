@@ -433,7 +433,7 @@ function MobileBottomNavigation({
                   className="absolute inset-0 rounded-xl"
                   style={{ 
                     background: "linear-gradient(135deg, rgba(192,111,48,0.15), rgba(244,179,79,0.1))",
-                    boxShadow: `0 0 15px ${accent}20`
+                    boxShadow: "0 0 15px #C06F3020"
                   }}
                   transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
                 />
