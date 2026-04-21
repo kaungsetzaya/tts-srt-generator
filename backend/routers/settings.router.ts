@@ -16,6 +16,11 @@ const ALLOWED_SETTINGS_KEYS = [
   "tts_api_url",
   "tts_audio_base_url",
   "tts_health_check_url",
+  "auto_trial_enabled",
+  "auto_trial_days",
+  "trial_enabled",
+  "trial_start_date",
+  "trial_end_date",
 ] as const;
 
 const allowedKeySchema = z.enum(ALLOWED_SETTINGS_KEYS);
@@ -28,7 +33,7 @@ export const settingsRouter = t.router({
     try {
       const rows = await db.select().from(settings);
       const obj: Record<string, string> = {};
-      const PUBLIC_KEYS = ["trial_credits", "maintenance_mode", "max_video_size_mb", "max_video_duration_sec"];
+      const PUBLIC_KEYS = ["trial_credits", "maintenance_mode", "max_video_size_mb", "max_video_duration_sec", "auto_trial_enabled", "auto_trial_days", "trial_enabled", "trial_start_date", "trial_end_date"];
       for (const r of rows) {
         if (PUBLIC_KEYS.includes(r.keyName)) {
           obj[r.keyName] = r.value;

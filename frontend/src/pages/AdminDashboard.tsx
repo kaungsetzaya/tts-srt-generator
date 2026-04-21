@@ -548,12 +548,12 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (!settingsData) return;
     const d = settingsData;
-    setAutoTrialEnabled(d.autoTrialEnabled === 'true' || d.autoTrialEnabled === true);
-    setAutoTrialDays(Number(d.autoTrialDays) || 7);
-    setTrialCredits(Number(d.trialCredits) || 15);
-    setTrialStartDate(d.trialStartDate || "");
-    setTrialEndDate(d.trialEndDate || "");
-    setTrialEnabled(d.trialEnabled === 'true' || d.trialEnabled === true);
+    setAutoTrialEnabled(d.auto_trial_enabled === 'true' || d.auto_trial_enabled === true);
+    setAutoTrialDays(Number(d.auto_trial_days) || 7);
+    setTrialCredits(Number(d.trial_credits) || 15);
+    setTrialStartDate(d.trial_start_date || "");
+    setTrialEndDate(d.trial_end_date || "");
+    setTrialEnabled(d.trial_enabled === 'true' || d.trial_enabled === true);
     setMaintenanceModeEnabled(d.maintenance_mode === 'true' || d.maintenance_mode === true);
   }, [settingsData]);
 
@@ -574,6 +574,9 @@ export default function AdminDashboard() {
       setPaymentSlipBase64("");
       setPaymentSlipPreview("");
     },
+    onError: (error) => {
+      alert("Error giving subscription: " + error.message);
+    },
   });
   const cancelSub = trpc.admin.cancelSubscription.useMutation({
     onSuccess: () => refetch(),
@@ -587,6 +590,11 @@ export default function AdminDashboard() {
   const queryClient = trpc.useUtils();
   const utils = trpc.useUtils();
   const updateSettings = trpc.settings.update.useMutation({
+    onSuccess: () => {
+      utils.settings.get.invalidate();
+    },
+  });
+  const updateSettingsBulk = trpc.settings.updateBulk.useMutation({
     onSuccess: () => {
       utils.settings.get.invalidate();
     },
@@ -1718,7 +1726,7 @@ export default function AdminDashboard() {
                   onClick={() => {
                     const newVal = !autoTrialEnabled;
                     setAutoTrialEnabled(newVal);
-                    updateSettings.mutate({ autoTrialEnabled: newVal, trialCredits, trialEnabled, trialStartDate, trialEndDate });
+                    updateSettingsBulk.mutate({ auto_trial_enabled: newVal ? "true" : "false", auto_trial_days: String(autoTrialDays), trial_credits: String(trialCredits), trial_enabled: trialEnabled ? "true" : "false", trial_start_date: trialStartDate, trial_end_date: trialEndDate });
                   }}
                   className={`relative w-11 h-6 rounded-full transition-all ${autoTrialEnabled ? "" : "bg-gray-600"}`}
                   style={{ background: autoTrialEnabled ? C : undefined }}
@@ -1807,19 +1815,20 @@ export default function AdminDashboard() {
               </div>
               <button
                 onClick={() =>
-                  updateSettings.mutate({
-                    autoTrialEnabled,
-                    trialCredits,
-                    trialEnabled,
-                    trialStartDate,
-                    trialEndDate,
+                  updateSettingsBulk.mutate({
+                    auto_trial_enabled: autoTrialEnabled ? "true" : "false",
+                    auto_trial_days: String(autoTrialDays),
+                    trial_credits: String(trialCredits),
+                    trial_enabled: trialEnabled ? "true" : "false",
+                    trial_start_date: trialStartDate,
+                    trial_end_date: trialEndDate,
                   })
                 }
-                disabled={updateSettings.isPending}
+                disabled={updateSettingsBulk.isPending}
                 className="px-6 py-2.5 font-bold uppercase text-sm rounded-xl disabled:opacity-50 flex items-center gap-2"
                 style={{ background: C, color: "var(--foreground)" }}
               >
-                {updateSettings.isPending && (
+                {updateSettingsBulk.isPending && (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 )}{" "}
                 Save Settings
