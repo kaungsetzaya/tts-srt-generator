@@ -84,8 +84,6 @@ export const historyRouter = t.router({
             amount: t.credits || 0,
             status: t.status,
             description: t.text?.slice(0, 100) || t.errorMsg || "",
-            voice: t.voice || "",
-            character: t.character || "",
             createdAt: t.createdAt!,
           })),
           ...credits.map((c: typeof credits[0]) => ({

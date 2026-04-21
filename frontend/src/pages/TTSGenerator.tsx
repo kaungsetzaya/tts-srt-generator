@@ -3619,7 +3619,7 @@ const res = await startDubMutation.mutateAsync({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {unifiedHistory?.filter((item: any) => item.origin !== "credit").map((item: any) => {
+                  {unifiedHistory?.map((item: any) => {
                     const isCredit = item.origin === "credit";
                     const isTask = item.origin === "task";
                     const isError = item.status === "fail";
@@ -3706,6 +3706,9 @@ const res = await startDubMutation.mutateAsync({
                             )}
                           </div>
                           <div className="flex items-center justify-between gap-4">
+                            <p className="text-xs truncate opacity-60" style={{ color: subtextColor }}>
+                              {item.description}
+                            </p>
                             <span className="text-[10px] opacity-30 whitespace-nowrap">
                               {fmtTime(item.createdAt)}
                             </span>
