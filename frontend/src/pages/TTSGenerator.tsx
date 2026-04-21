@@ -2596,7 +2596,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                                       textShadow: computeSrtPreviewStyle.textShadow,
                                       background: computeSrtPreviewStyle.background,
                                       backdropFilter: srtBlurBg
-                                        ? `blur(${srtBlurSize}px)`
+                                        ? `blur(${Math.max(1, Math.round(srtBlurSize / 10))}px)`
                                         : "none",
                                       textAlign: "center",
                                       width: srtFullWidth ? "100%" : "auto",
@@ -2725,7 +2725,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                                       textShadow: computeSrtPreviewStyle.textShadow,
                                       background: computeSrtPreviewStyle.background,
                                       backdropFilter: srtBlurBg
-                                        ? `blur(${srtBlurSize}px)`
+                                        ? `blur(${Math.max(1, Math.round(srtBlurSize / 10))}px)`
                                         : "none",
                                       textAlign: "center",
                                       width: srtFullWidth ? "100%" : "auto",
