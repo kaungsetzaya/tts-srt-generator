@@ -1682,13 +1682,29 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                           {generateMutation.isPending ? (
                             <>
-                              <div className="relative flex items-center gap-2">
-                                <Loader2 className="w-6 h-6 animate-spin" />
-                                <div className="flex gap-1">
-                                  <div className="w-2 h-2 rounded-full bg-white animate-pulse" style={{ animationDelay: "0s" }} />
-                                  <div className="w-2 h-2 rounded-full bg-white animate-pulse" style={{ animationDelay: "0.2s" }} />
-                                  <div className="w-2 h-2 rounded-full bg-white animate-pulse" style={{ animationDelay: "0.4s" }} />
-                                </div>
+                              <div className="relative flex items-center gap-3">
+                                <motion.div
+                                  animate={{ rotate: 360 }}
+                                  transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                                  className="relative"
+                                >
+                                  <Loader2 className="w-6 h-6" />
+                                </motion.div>
+                                <motion.div
+                                  animate={{ scale: [0.8, 1.2, 0.8] }}
+                                  transition={{ repeat: Infinity, duration: 1, delay: 0 }}
+                                  className="w-3 h-3 rounded-full bg-white"
+                                />
+                                <motion.div
+                                  animate={{ scale: [0.8, 1.2, 0.8] }}
+                                  transition={{ repeat: Infinity, duration: 1, delay: 0.2 }}
+                                  className="w-3 h-3 rounded-full bg-white"
+                                />
+                                <motion.div
+                                  animate={{ scale: [0.8, 1.2, 0.8] }}
+                                  transition={{ repeat: Infinity, duration: 1, delay: 0.4 }}
+                                  className="w-3 h-3 rounded-full bg-white"
+                                />
                               </div>
                               <span className="relative z-10">{t.generating}</span>
                             </>
@@ -3173,9 +3189,13 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                         {startDubMutation.isPending || dubFileMutation.isPending || activeJobId !== null ? (
                           <>
-                            <div className="relative">
-                              <Loader2 className="w-6 h-6 animate-spin" />
-                            </div>
+                            <motion.div
+                              animate={{ rotate: 360 }}
+                              transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                              className="relative"
+                            >
+                              <Loader2 className="w-6 h-6" />
+                            </motion.div>
                             <span className="relative z-10 text-xs sm:text-sm">
                               {lang === "mm"
                                 ? "ဖန်တီးနေသည်... (၃-၅ မိနစ်)"
