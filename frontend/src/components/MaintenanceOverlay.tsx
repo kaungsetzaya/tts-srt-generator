@@ -62,13 +62,7 @@ export default function MaintenanceOverlay() {
           transition={{ delay: 0.8, duration: 1 }}
           className="mt-12 flex items-center gap-4 px-6 py-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md"
         >
-          <span className="relative flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
-          </span>
-          <span className="text-sm font-medium tracking-wide text-gray-300">
-            Engineers are working on the servers
-          </span>
+          
         </motion.div>
       </motion.div>
     </div>
