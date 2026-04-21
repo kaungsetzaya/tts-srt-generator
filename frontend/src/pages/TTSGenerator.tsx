@@ -1,6 +1,7 @@
 import { useState, useRef, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { trpc } from "@/lib/trpc";
+import { useSystemTime } from "@/lib/useSystemTime";
 import { Slider } from "@/components/ui/slider";
 import {
   ChevronUp,
@@ -1006,18 +1007,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
     setDubDetectedRatio("16:9");
   };
 
-  // Thailand time formatter → now real user timezone
-  const thaiTime = () => {
-    const userTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    return new Date().toLocaleString("en-US", {
-      timeZone: userTZ,
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-      day: "2-digit",
-      month: "short",
-    });
-  };
+  const { fmtTime } = useSystemTime();
 
   // Header is now in layout, always sticky
 
@@ -1185,6 +1175,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
       lang={lang}
       setLang={setLang}
       headerBar={headerBar}
+      showLogo={false}
     >
       <div
           className="h-full relative transition-colors duration-500 font-sans"
@@ -3736,9 +3727,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                               {item.description}
                             </p>
                             <span className="text-[10px] opacity-30 whitespace-nowrap">
-                              {new Date(item.createdAt).toLocaleString(lang === "mm" ? "my-MM" : "en-GB", { 
-                                day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
-                              })}
+                              {fmtTime(item.createdAt)}
                             </span>
                           </div>
                         </div>

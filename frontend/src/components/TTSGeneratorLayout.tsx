@@ -37,6 +37,7 @@ interface TTSGeneratorLayoutProps {
   logoUrl?: string;
   isDark?: boolean;
   miniLogoUrl?: string;
+  showLogo?: boolean;
   lang?: "mm" | "en";
   setLang?: (lang: "mm" | "en") => void;
   headerBar?: ReactNode;
@@ -55,6 +56,7 @@ export function TTSGeneratorLayout({
   lang,
   setLang,
   headerBar,
+  showLogo = true,
 }: TTSGeneratorLayoutProps) {
   return (
     <>
@@ -70,6 +72,7 @@ export function TTSGeneratorLayout({
             isDark={isDark}
             lang={lang}
             setLang={setLang}
+            showLogo={showLogo}
           />
           <SidebarRail className="hidden md:block" />
           <SidebarInset className="flex-1 flex flex-col min-h-screen relative z-10">
@@ -108,6 +111,7 @@ interface TTSGeneratorSidebarProps {
   isDark?: boolean;
   lang?: "mm" | "en";
   setLang?: (lang: "mm" | "en") => void;
+  showLogo?: boolean;
 }
 
 function TTSGeneratorSidebar({
@@ -120,6 +124,7 @@ function TTSGeneratorSidebar({
   isDark = true,
   lang = "mm",
   setLang,
+  showLogo = true,
 }: TTSGeneratorSidebarProps) {
   const sidebar = useSidebar();
   const isCollapsed = !sidebar.open;
@@ -205,8 +210,7 @@ function TTSGeneratorSidebar({
         }}
       >
         <div className="flex items-center justify-between gap-2 w-full px-1">
-          {/* Logo */}
-          {isCollapsed ? (
+          {showLogo && isCollapsed ? (
             <motion.div
               key="mini-logo"
               initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
@@ -236,7 +240,7 @@ function TTSGeneratorSidebar({
                 </span>
               )}
             </motion.div>
-          ) : (
+          ) : showLogo ? (
             <motion.div
               key="full-logo"
               initial={{ opacity: 0, x: -12 }}
@@ -266,7 +270,7 @@ function TTSGeneratorSidebar({
                 </span>
               )}
             </motion.div>
-          )}
+          ) : null}
 
         </div>
       </SidebarHeader>
