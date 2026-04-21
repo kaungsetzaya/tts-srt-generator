@@ -2617,9 +2617,8 @@ export default function TTSGenerator() {
                             </div>
                           ) : (
                             <div
+                              className={dubDetectedRatio === "9:16" ? "w-[240px] sm:w-[280px]" : "w-full max-w-[640px]"}
                               style={{
-                                className: dubDetectedRatio === "9:16" ? "w-[240px] sm:w-[280px]" : "w-full max-w-[640px]",
-                                style={{
                                 aspectRatio: dubDetectedRatio === "9:16" ? "9/16" : "16/9",
                                 position: "relative",
                                 overflow: "hidden",
