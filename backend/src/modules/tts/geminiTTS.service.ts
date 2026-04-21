@@ -19,7 +19,7 @@ interface GeminiTTSRequest {
   };
 }
 
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent";
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-tts-preview:generateContent";
 
 /**
  * Generate speech using Google Gemini 3.1 Flash TTS
