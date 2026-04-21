@@ -443,7 +443,11 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
       window.location.href = "/login";
     },
   });
-  const generateMutation = trpc.tts.generateAudio.useMutation();
+  const generateMutation = trpc.tts.generateAudio.useMutation({
+    onSuccess: () => {
+      utils.history.getUnifiedHistory.invalidate();
+    },
+  });
   const translateMutation = trpc.video.translate.useMutation();
   const translateLinkMutation = trpc.video.translateLink.useMutation();
   // Separate mutations for dubbing tab
@@ -3615,7 +3619,7 @@ const res = await startDubMutation.mutateAsync({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {unifiedHistory?.map((item: any) => {
+                  {unifiedHistory?.filter((item: any) => item.origin !== "credit").map((item: any) => {
                     const isCredit = item.origin === "credit";
                     const isTask = item.origin === "task";
                     const isError = item.status === "fail";
@@ -3702,9 +3706,6 @@ const res = await startDubMutation.mutateAsync({
                             )}
                           </div>
                           <div className="flex items-center justify-between gap-4">
-                            <p className="text-xs truncate opacity-60" style={{ color: subtextColor }}>
-                              {item.description}
-                            </p>
                             <span className="text-[10px] opacity-30 whitespace-nowrap">
                               {fmtTime(item.createdAt)}
                             </span>
