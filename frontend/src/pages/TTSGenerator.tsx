@@ -384,7 +384,7 @@ export default function TTSGenerator() {
   const [srtDropShadow, setSrtDropShadow] = useState(true);
   const [srtBlurBg, setSrtBlurBg] = useState(true);
   const [srtMarginV, setSrtMarginV] = useState(30);
-  const [srtBlurOpacity, setSrtBlurOpacity] = useState(80);
+  const [srtBlurOpacity, setSrtBlurOpacity] = useState(50);
   const [srtBlurColor, setSrtBlurColor] = useState<"black" | "white" | "transparent">("black");
   const [srtFullWidth, setSrtFullWidth] = useState(false);
   const [srtBorderRadius, setSrtBorderRadius] = useState<"rounded" | "square">(
@@ -2381,8 +2381,8 @@ export default function TTSGenerator() {
                   {/* ── STEP: Video Preview + Settings ── */}
                   {dubPreviewUrl && !dubResult && (
                     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_400px] lg:items-start gap-4 space-y-4 lg:space-y-0">
-                      {/* Left Column: Video Preview & Progress (Sticky on Desktop) */}
-                      <div className="lg:sticky lg:top-[80px] space-y-4 z-40">
+                      {/* Left Column: Video Preview & Progress (Sticky) */}
+                      <div className="sticky top-[70px] lg:top-[80px] space-y-4 z-40 bg-background/95 backdrop-blur-sm pb-2 lg:bg-transparent lg:backdrop-blur-none transition-all">
                         <div
                           className={box}
                           style={{
@@ -2436,7 +2436,7 @@ export default function TTSGenerator() {
                             </div>
                           ) : dubPreviewUrl.startsWith("blob:") ? (
                             <div
-                              className={dubDetectedRatio === "9:16" ? "w-[240px] sm:w-[280px]" : "w-full max-w-[640px]"}
+                              className={dubDetectedRatio === "9:16" ? "w-[160px] sm:w-[220px] lg:w-[260px] mx-auto" : "w-full max-w-[640px] mx-auto"}
                               style={{
                                 aspectRatio: dubDetectedRatio === "9:16" ? "9/16" : "16/9",
                                 borderRadius: "12px",
@@ -2512,11 +2512,11 @@ export default function TTSGenerator() {
                           ) : dubPreviewUrl.startsWith("fallback:") ||
                             isExternalVideoUrl(dubPreviewUrl) ? (
                             <div
-                              className="rounded-xl overflow-hidden"
+                              className="rounded-xl overflow-hidden mx-auto"
                               style={{
                                 position: "relative",
                                 width:
-                                  aspectRatio === "9:16" ? "min(240px, 55vw)" : "100%",
+                                  aspectRatio === "9:16" ? "min(160px, 45vw)" : "100%",
                                 aspectRatio:
                                   aspectRatio === "9:16" ? "9/16" : "16/9",
                                 margin: aspectRatio === "9:16" ? "0 auto" : "0",
