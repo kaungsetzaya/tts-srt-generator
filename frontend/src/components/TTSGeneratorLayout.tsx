@@ -275,7 +275,7 @@ function TTSGeneratorSidebar({
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="bg-transparent px-2 py-3 overflow-y-auto">
+      <SidebarContent className="bg-transparent px-2 py-3 overflow-hidden">
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1.5">
