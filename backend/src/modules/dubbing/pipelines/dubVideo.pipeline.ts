@@ -245,7 +245,13 @@ export class DubVideoPipeline {
       if (options.srtEnabled !== false && processedForSrt.length > 0) {
         console.log(`[Dubbing Pipeline] Merging video with audio and subtitles...`);
         const videoDimensions = await ffmpegService.getVideoSize(tempVideoPath);
-        const assContent = assBuilderService.buildAssContent(processedForSrt, fontPath, videoDimensions.width, videoDimensions.height, options as any);
+        
+        const limitedSegments = processedForSrt.map(s => ({
+            ...s,
+            text: limitTo2Lines(s.text)
+        }));
+        
+        const assContent = assBuilderService.buildAssContent(limitedSegments, fontPath, videoDimensions.width, videoDimensions.height, options as any);
         await fs.writeFile(tempAssPath, assContent);
         await ffmpegService.mergeVideoAudioSubtitles(tempVideoPath, finalAudioPath, tempAssPath, tempOutputPath, {
           videoDurationSec: totalAudioDurationSec, // New duration
@@ -284,11 +290,21 @@ export class DubVideoPipeline {
           : 0;
 
       const allTranslatedText = translatedSegments.map(s => s.translatedText).join("\n");
+      
+      const limitTo2Lines = (text: string): string => {
+          const lines = text.split(/[\n\r]+/).filter(l => l.trim());
+          if (lines.length > 2) {
+              return lines.slice(0, 2).join("\n");
+          }
+          return lines.join("\n");
+      };
+      
       const allSrtContent = processedForSrt
           .map((s, i) => {
               const start = formatTimestamp(s.startMs);
               const end = formatTimestamp(s.endMs);
-              return `${i + 1}\n${start} --> ${end}\n${s.text}\n`;
+              const limitedText = limitTo2Lines(s.text);
+              return `${i + 1}\n${start} --> ${end}\n${limitedText}\n`;
           })
           .join("\n");
 
