@@ -76,7 +76,20 @@ export const settingsRouter = t.router({
     }),
 
   updateBulk: adminProcedure
-    .input(z.record(allowedKeySchema, z.string().max(10000)).partial())
+    .input(z.object({
+      trial_credits: z.string().max(10000).optional(),
+      maintenance_mode: z.string().max(10000).optional(),
+      max_video_size_mb: z.string().max(10000).optional(),
+      max_video_duration_sec: z.string().max(10000).optional(),
+      tts_api_url: z.string().max(10000).optional(),
+      tts_audio_base_url: z.string().max(10000).optional(),
+      tts_health_check_url: z.string().max(10000).optional(),
+      auto_trial_enabled: z.string().max(10000).optional(),
+      auto_trial_days: z.string().max(10000).optional(),
+      trial_enabled: z.string().max(10000).optional(),
+      trial_start_date: z.string().max(10000).optional(),
+      trial_end_date: z.string().max(10000).optional(),
+    }))
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
