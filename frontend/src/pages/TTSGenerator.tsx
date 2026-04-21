@@ -32,6 +32,15 @@ import {
   Subtitles,
   Star,
 } from "lucide-react";
+import {
+  ALL_VOICES,
+  TIER1_VOICES,
+  TIER2_VOICES,
+  TIER3_VOICES,
+  getVoiceCredits,
+  type VoiceTier,
+  type Voice,
+} from "@/lib/voices";
 import { useLocation } from "wouter";
 import { TTSGeneratorLayout } from "@/components/TTSGeneratorLayout";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -256,7 +265,7 @@ const accent40 = withOpacity(ACCENT, 0.4);
 const accent80 = withOpacity(ACCENT, 0.8);
 
 export default function TTSGenerator() {
-  const [mainTab, setMainTab] = useState<MainTab>("tts");
+  const [mainTab, setMainTab] = useState<MainTab>("dubbing");
   const [secondaryTab, setSecondaryTab] = useState<SecondaryTab>(null);
   const [menuOpen, setMenuOpen] = useState(true);
   const { theme, toggleTheme } = useTheme();
@@ -278,11 +287,8 @@ export default function TTSGenerator() {
   };
 
   const [text, setText] = useState("");
-  const [voice, setVoice] = useState<"thiha" | "nilar">("thiha");
-  const [character, setCharacter] = useState<string>("");
-  const [voiceMode, setVoiceMode] = useState<"standard" | "character">(
-    "standard"
-  );
+  const [selectedVoice, setSelectedVoice] = useState<string>("thiha");
+  const [selectedTier, setSelectedTier] = useState<VoiceTier>("tier1");
   const [tone, setTone] = useState(0);
   const [speed, setSpeed] = useState(1.0);
   const [aspectRatio, setAspectRatio] = useState<"9:16" | "16:9">("16:9");
@@ -481,12 +487,12 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
   const getCharLimit = () => {
     if (isAdmin) return 99999;
     if (!currentPlan) return 0; // No plan yet
-    if (currentPlan === "trial") {
-      // Trial: Thiha/Nilar 5000, others 1600
-      return voiceMode === "character" ? 1600 : 5000;
+    // Tier 1 voices have higher limits
+    if (selectedTier === "tier1") {
+      return currentPlan === "trial" ? 5000 : 30000;
     }
-    // Regular: Thiha/Nilar 30000, others 2000
-    return voiceMode === "character" ? 2000 : 30000;
+    // Tier 2 & 3 have lower limits
+    return currentPlan === "trial" ? 1600 : 2000;
   };
   const currentCharLimit = getCharLimit();
 
@@ -588,11 +594,10 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
     try {
       const result = await generateMutation.mutateAsync({
         text,
-        voice,
+        voice: selectedVoice as any,
         tone,
         speed,
         aspectRatio,
-        character: voiceMode === "character" ? character : undefined,
       });
       if (result.success && result.audioBase64) {
         try {
@@ -1016,7 +1021,38 @@ const res = await startDubMutation.mutateAsync({
     <div
       className="flex flex-nowrap items-center justify-between py-1 px-2 sm:px-4 w-full h-full gap-1 sm:gap-2 overflow-hidden"
     >
-      
+      {/* Mobile Logo - shown on small screens only */}
+      <div className="flex items-center gap-2 md:hidden">
+        <div
+          className="w-8 h-8 rounded-lg flex items-center justify-center shadow-md"
+          style={{
+            background: `linear-gradient(135deg, ${accent}30, ${accentSecondary}20)`,
+            border: `1px solid ${isDark ? "rgba(192,111,48,0.5)" : "rgba(192,111,48,0.4)"}`,
+          }}
+        >
+          <span
+            className="text-sm font-black"
+            style={{
+              color: "#C06F30",
+              textShadow: `0 0 8px ${accent}60`,
+            }}
+          >
+            L
+          </span>
+        </div>
+        <span
+          className="text-sm font-black tracking-widest"
+          style={{
+            background: "linear-gradient(135deg, #C06F30, #F4B34F)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+          }}
+        >
+          LUMIX
+        </span>
+      </div>
+
       <div className="flex items-center gap-1 sm:gap-2 sm:ml-auto">
         {subLoading ? (
           <div className="flex items-center gap-2 px-2 py-1.5 rounded-xl">
@@ -1380,22 +1416,13 @@ const res = await startDubMutation.mutateAsync({
                               planLimits && (
                                 <span
                                   style={{
-                                    color:
-                                      voiceMode === "character"
-                                        ? planUsage.characterUse >=
-                                          planLimits.dailyCharacterUse
-                                          ? "#dc2626"
-                                          : subtextColor
-                                        : planUsage.tts >=
-                                            planLimits.dailyTtsSrt
-                                          ? "#dc2626"
-                                          : subtextColor,
+                                    color: planUsage.tts >= planLimits.dailyTtsSrt
+                                      ? "#dc2626"
+                                      : subtextColor,
                                   }}
                                 >
                                   {lang === "mm" ? "ယနေ့" : "Today"}:{" "}
-                                  {voiceMode === "character"
-                                    ? `${planUsage.characterUse}/${planLimits.dailyCharacterUse}`
-                                    : `${planUsage.tts}/${planLimits.dailyTtsSrt}`}{" "}
+                                  {`${planUsage.tts}/${planLimits.dailyTtsSrt}`}{" "}
                                   {lang === "mm" ? "ကြိမ်" : "uses"}
                                 </span>
                               )}
@@ -1424,111 +1451,96 @@ const res = await startDubMutation.mutateAsync({
                         >
                           {t.voiceSelection}
                         </div>
-                        <div className="space-y-4 sm:space-y-5">
-                          {[
-                            {
-                              label: t.male,
-                              voices: [
-                                { id: "thiha", name: "သီဟ", isStd: true },
-                                { id: "ryan", name: "ရဲရင့်", isStd: false },
-                                { id: "ronnie", name: "ရောင်နီ", isStd: false },
-                                { id: "lucas", name: "လင်းခန့်", isStd: false },
-                                { id: "daniel", name: "ဒေဝ", isStd: false },
-                                { id: "evander", name: "အဂ္ဂ", isStd: false },
-                              ],
-                            },
-                            {
-                              label: t.female,
-                              voices: [
-                                { id: "nilar", name: "နီလာ", isStd: true },
-                                {
-                                  id: "michelle",
-                                  name: "မေချို",
-                                  isStd: false,
-                                },
-                                { id: "iris", name: "အိန္ဒြာ", isStd: false },
-                                { id: "charlotte", name: "သီရိ", isStd: false },
-                                { id: "amara", name: "အမရာ", isStd: false },
-                              ],
-                            },
-                          ].map(({ label: grpLabel, voices }) => {
-                            const limitText =
-                              voiceMode === "character"
-                                ? "0/2000"
-                                : grpLabel === t.male
-                                  ? "0/30000"
-                                  : "0/30000";
-                            const voiceName =
-                              grpLabel === t.male ? "Thiha" : "Nilar";
-                            return (
-                              <div key={grpLabel}>
-                                <div className="flex items-center justify-between mb-2 sm:mb-3">
-                                  <p
-                                    className="text-xs font-bold uppercase tracking-wider"
-                                    style={{ color: subtextColor }}
-                                  >
-                                    {grpLabel}
-                                  </p>
-                                  <span
-                                    className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                                    style={{
-                                      background: isDark
-                                        ? "rgba(192,111,48,0.1)"
-                                        : "rgba(192,111,48,0.08)",
-                                      color: accent,
-                                    }}
-                                  >
-                                    {voiceMode === "character"
-                                      ? `Character: ${limitText}`
-                                      : `${voiceName}: ${limitText}`}
-                                  </span>
-                                </div>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-                                  {voices.map(v => {
-                                    const isSelected = v.isStd
-                                      ? voiceMode === "standard" &&
-                                        voice ===
-                                          (v.id === "thiha" ? "thiha" : "nilar")
-                                      : voiceMode === "character" &&
-                                        character === v.id;
-                                    return (
-                                      <button
-                                        key={v.id}
-                                        disabled={!hasPlan}
-                                        onClick={() => {
-                                          if (v.isStd) {
-                                            setVoiceMode("standard");
-                                            setVoice(v.id as any);
-                                            setCharacter("");
-                                          } else {
-                                            setVoiceMode("character");
-                                            setCharacter(v.id);
-                                          }
-                                        }}
-                                        className="py-2 sm:py-2.5 px-2 sm:px-3 border rounded-xl text-xs sm:text-sm font-bold transition-all disabled:opacity-40"
-                                        style={{
-                                          borderColor: isSelected
-                                            ? accent
-                                            : cardBorder,
-                                          background: isSelected
-                                            ? isDark
-                                              ? "rgba(192,111,48,0.2)"
-                                              : "rgba(244,179,79,0.08)"
-                                            : "transparent",
-                                          color: isSelected
-                                            ? accent
-                                            : textColor,
-                                          boxShadow: "none",
-                                        }}
-                                      >
-                                        {v.name}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            );
-                          })}
+
+                        {/* Tier Tabs */}
+                        <div className="flex gap-1 p-2">
+                          {([
+                            { id: "tier1" as VoiceTier, label: "Tier 1", subLabel: "Myanmar", voices: TIER1_VOICES },
+                            { id: "tier2" as VoiceTier, label: "Tier 2", subLabel: "Murf AI", voices: TIER2_VOICES },
+                            { id: "tier3" as VoiceTier, label: "Tier 3", subLabel: "Gemini", voices: TIER3_VOICES },
+                          ] as const).map(tier => (
+                            <button
+                              key={tier.id}
+                              onClick={() => setSelectedTier(tier.id)}
+                              className="flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all"
+                              style={{
+                                background: selectedTier === tier.id
+                                  ? `linear-gradient(135deg, ${accent}30, ${accentSecondary}20)`
+                                  : "transparent",
+                                border: `1px solid ${selectedTier === tier.id ? accent : cardBorder}`,
+                                color: selectedTier === tier.id ? accent : subtextColor,
+                              }}
+                            >
+                              <div>{tier.label}</div>
+                              <div className="text-[9px] font-normal opacity-60">{tier.subLabel}</div>
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Voice Grid */}
+                        <div className="px-2 pb-2 space-y-3">
+                          {/* Males */}
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-wider mb-2 px-1" style={{ color: subtextColor }}>
+                              {t.male}
+                            </p>
+                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
+                              {ALL_VOICES.filter(v => v.tier === selectedTier && v.gender === "male").map(v => (
+                                <button
+                                  key={v.id}
+                                  disabled={!hasPlan}
+                                  onClick={() => setSelectedVoice(v.id)}
+                                  className="py-2 px-2 border rounded-lg text-xs font-bold transition-all disabled:opacity-40"
+                                  style={{
+                                    borderColor: selectedVoice === v.id ? accent : cardBorder,
+                                    background: selectedVoice === v.id
+                                      ? isDark ? "rgba(192,111,48,0.2)" : "rgba(244,179,79,0.08)"
+                                      : "transparent",
+                                    color: selectedVoice === v.id ? accent : textColor,
+                                  }}
+                                >
+                                  <div className=" truncate">{lang === "mm" ? v.nameMm : v.name}</div>
+                                  <div className="text-[9px] font-normal opacity-50">{v.description.split(" ")[0]}</div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          {/* Females */}
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-wider mb-2 px-1" style={{ color: subtextColor }}>
+                              {t.female}
+                            </p>
+                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
+                              {ALL_VOICES.filter(v => v.tier === selectedTier && v.gender === "female").map(v => (
+                                <button
+                                  key={v.id}
+                                  disabled={!hasPlan}
+                                  onClick={() => setSelectedVoice(v.id)}
+                                  className="py-2 px-2 border rounded-lg text-xs font-bold transition-all disabled:opacity-40"
+                                  style={{
+                                    borderColor: selectedVoice === v.id ? accent : cardBorder,
+                                    background: selectedVoice === v.id
+                                      ? isDark ? "rgba(192,111,48,0.2)" : "rgba(244,179,79,0.08)"
+                                      : "transparent",
+                                    color: selectedVoice === v.id ? accent : textColor,
+                                  }}
+                                >
+                                  <div className="truncate">{lang === "mm" ? v.nameMm : v.name}</div>
+                                  <div className="text-[9px] font-normal opacity-50">{v.description.split(" ")[0]}</div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Credits info */}
+                        <div className="px-3 pb-3 text-center">
+                          <span className="text-[10px] font-semibold px-3 py-1 rounded-full" style={{
+                            background: `rgba(192,111,48,0.1)`,
+                            color: accent,
+                          }}>
+                            {getVoiceCredits(selectedVoice)} {lang === "mm" ? "ကရဒစ်" : "credits"}
+                          </span>
                         </div>
                       </div>
 
@@ -1716,15 +1728,15 @@ const res = await startDubMutation.mutateAsync({
                                 <div className="absolute -top-1 -right-1 w-2 h-2 bg-white rounded-full animate-ping" />
                               </div>
                               <span className="relative z-10">{t.generate}</span>
-                              <span 
+                              <span
                                 className="relative z-10 px-3 py-1.5 rounded-full text-[13px] font-black"
-                                style={{ 
-                                  background: "#fff", 
+                                style={{
+                                  background: "#fff",
                                   color: accent,
                                   boxShadow: "0 2px 8px rgba(0,0,0,0.3)"
                                 }}
                               >
-                                {voiceMode === "character" ? "3" : "1"} credits
+                                {getVoiceCredits(selectedVoice)} credits
                               </span>
                               <Sparkles className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                             </>
@@ -3692,11 +3704,11 @@ const res = await startDubMutation.mutateAsync({
                         color: "#22c55e", 
                         label: lang === "mm" ? "ပြန်အမ်း" : "Refunded" 
                       };
-                    } else if (isTask) {
+                    } else if (isTask && item.amount > 0) {
                       statusConfig = { 
                         bg: "rgba(192,111,48,0.1)", 
-                        color: accent, 
-                        label: lang === "mm" ? "ပြီးစီး" : "Done" 
+                        color: "#f59e0b", 
+                        label: "-" + item.amount 
                       };
                     } else if (isPositive) {
                       statusConfig = { 
@@ -3772,18 +3784,29 @@ const res = await startDubMutation.mutateAsync({
                           
                           {/* Credits & Status */}
                           <div className="flex flex-col items-end gap-1">
-                            {!isCredit && (
-                              <span className="text-sm font-black" style={{ 
-                                color: isRefund ? "#22c55e" : isError ? "#ef4444" : "#f59e0b" 
-                              }}>
-                                {isRefund ? "+" : isError ? "" : "-"}{Math.abs(item.amount || 0)}
+                            {isCredit && isPositive && (
+                              <span className="text-sm font-black" style={{ color: "#22c55e" }}>
+                                +{item.amount}
                               </span>
                             )}
-                            {isCredit && (
-                              <span className="text-sm font-black" style={{ 
-                                color: isPositive ? "#22c55e" : "#f59e0b" 
-                              }}>
-                                {isPositive ? "+" : ""}{item.amount}
+                            {isCredit && !isPositive && (
+                              <span className="text-sm font-black" style={{ color: "#f59e0b" }}>
+                                {item.amount}
+                              </span>
+                            )}
+                            {!isCredit && isError && (
+                              <span className="text-sm font-black" style={{ color: "#ef4444" }}>
+                                0
+                              </span>
+                            )}
+                            {!isCredit && !isError && isRefund && item.amount > 0 && (
+                              <span className="text-sm font-black" style={{ color: "#22c55e" }}>
+                                +{item.amount}
+                              </span>
+                            )}
+                            {!isCredit && !isError && !isRefund && item.amount > 0 && (
+                              <span className="text-sm font-black" style={{ color: "#f59e0b" }}>
+                                -{item.amount}
                               </span>
                             )}
                             <span 

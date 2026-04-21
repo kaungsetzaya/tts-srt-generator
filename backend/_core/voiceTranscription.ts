@@ -100,7 +100,7 @@ export async function transcribeAudio(
       if (!allowedHosts.includes(parsedUrl.hostname) && !parsedUrl.hostname.endsWith(".vercel.app")) {
         return {
           error: "Audio URL host is not allowed",
-          code: "INVALID_URL",
+          code: "SERVICE_ERROR",
           details: `Host ${parsedUrl.hostname} is not in allowed list`
         };
       }

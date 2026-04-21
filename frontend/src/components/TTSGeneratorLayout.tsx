@@ -136,10 +136,10 @@ function TTSGeneratorSidebar({
 
   const allMenuItems = [
     {
-      id: "tts",
-      label: "စာမှအသံ",
-      labelEn: "Text to Speech",
-      icon: Mic,
+      id: "dubbing",
+      label: "Auto Creator",
+      labelEn: "Auto Creator",
+      icon: Wand2,
       type: "main" as const,
     },
     {
@@ -150,10 +150,10 @@ function TTSGeneratorSidebar({
       type: "main" as const,
     },
     {
-      id: "dubbing",
-      label: "Auto Creator",
-      labelEn: "Auto Creator",
-      icon: Wand2,
+      id: "tts",
+      label: "စာမှအသံ",
+      labelEn: "Text to Speech",
+      icon: Mic,
       type: "main" as const,
     },
     {
@@ -393,9 +393,9 @@ function MobileBottomNavigation({
   isDark?: boolean;
 }) {
   const mainNavItems = [
-    { id: "tts" as const, icon: Mic, label: "TTS" },
-    { id: "video" as const, icon: FileVideo, label: "Video" },
     { id: "dubbing" as const, icon: Wand2, label: "Auto Creator" },
+    { id: "video" as const, icon: FileVideo, label: "Video" },
+    { id: "tts" as const, icon: Mic, label: "TTS" },
   ];
   const secondaryItems = [
     { id: "history", icon: History, label: "History" },

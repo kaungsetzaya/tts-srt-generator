@@ -7,13 +7,27 @@ import { TRPCError } from "@trpc/server";
 import { isAllowedVideoUrl } from "../_core/security";
 import { createJob, getJobAsync } from "../jobs";
 import { deductCredits, addCredits } from "./credits";
+import { getVoiceCredits, type VoiceId } from "../src/modules/tts";
+
+// All valid voice IDs for validation
+const ALL_VOICE_IDS = [
+  // Tier 1
+  "thiha", "nilar",
+  // Tier 2
+  "ryan", "ronnie", "lucas", "daniel", "evander", "michelle", "iris", "charlotte", "amara",
+  // Tier 3
+  "gemini_alex", "gemini_aria", "gemini_asha", "gemini_b中年", "gemini_dustin", "gemini_emma",
+  "gemini_eric", "gemini_female_01", "gemini_female_02", "gemini_kokoro", "gemini_male_01",
+  "gemini_male_02", "gemini_male_03", "gemini_puck", "gemini_soren", "gemini_studio_female",
+  "gemini_studio_male",
+] as const;
 
 export const jobsRouter = t.router({
   startDub: protectedProcedure
     .input(
       z.object({
         url: z.string(),
-        voice: z.enum(["thiha", "nilar", "ryan", "ronnie", "lucas", "daniel", "evander", "michelle", "iris", "charlotte", "amara"]),
+        voice: z.enum(ALL_VOICE_IDS),
         srtEnabled: z.boolean().optional().default(true),
         srtFontSize: z.number().optional().default(24),
         srtColor: z.string().optional().default("#ffffff"),
@@ -37,11 +51,13 @@ export const jobsRouter = t.router({
         });
       }
 
+      const creditsNeeded = getVoiceCredits(input.voice as VoiceId);
+
       await deductCredits(
         userId,
-        10,
+        creditsNeeded,
         "video_dub",
-        `Video Dub Link: ${input.voice}`
+        `Video Dub: ${input.voice}`
       );
 
       try {
@@ -66,7 +82,7 @@ export const jobsRouter = t.router({
 
         return { jobId };
       } catch (error: any) {
-        await addCredits(userId, 10, "video_dub_refund", "Refund: Dub link job creation failed");
+        await addCredits(userId, creditsNeeded, "video_dub_refund", "Refund: Dub link job creation failed");
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: error.message || "Failed to start dub job.",

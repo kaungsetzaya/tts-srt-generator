@@ -81,7 +81,7 @@ export const historyRouter = t.router({
             id: t.id,
             origin: "task" as const,
             type: t.feature || "tts",
-            amount: 0,
+            amount: t.credits || 0,
             status: t.status,
             voice: t.voice || "",
             character: t.character || "",
