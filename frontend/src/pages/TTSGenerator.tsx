@@ -3694,10 +3694,15 @@ const res = await startDubMutation.mutateAsync({
                                 {isPositive ? "+" : ""}{item.amount}
                               </span>
                             )}
-                            {isTask && !isError && (
-<span className="text-[10px] px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 font-bold">
-                                  {item.amount ? `${item.amount} ${lang === "mm" ? "အမှတ်" : "pts"}` : (lang === "mm" ? "ပြီးစီး" : "Done")}
-                                </span>
+                            {isTask && !isError && item.amount !== 0 && (
+                              <span className="text-sm font-black whitespace-nowrap text-amber-500">
+                                -{Math.abs(item.amount)} {lang === "mm" ? "pts" : "pts"}
+                              </span>
+                            )}
+                            {isTask && !isError && item.amount === 0 && (
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 font-bold">
+                                {lang === "mm" ? "ပြီးစီး" : "Done"}
+                              </span>
                             )}
                             {isError && (
                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 font-bold uppercase tracking-wider">
@@ -3706,9 +3711,6 @@ const res = await startDubMutation.mutateAsync({
                             )}
                           </div>
                           <div className="flex items-center justify-between gap-4">
-                            <p className="text-xs truncate opacity-60" style={{ color: subtextColor }}>
-                              {item.description}
-                            </p>
                             <span className="text-[10px] opacity-30 whitespace-nowrap">
                               {fmtTime(item.createdAt)}
                             </span>
