@@ -382,6 +382,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
   const [srtBlurBg, setSrtBlurBg] = useState(true);
   const [srtMarginV, setSrtMarginV] = useState(30);
   const [srtBlurSize, setSrtBlurSize] = useState(8);
+  const [srtBlurOpacity, setSrtBlurOpacity] = useState(80);
   const [srtBlurColor, setSrtBlurColor] = useState<"black" | "white" | "transparent">("black");
   const [srtFullWidth, setSrtFullWidth] = useState(false);
   const [srtBorderRadius, setSrtBorderRadius] = useState<"rounded" | "square">(
@@ -2491,9 +2492,9 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                                       textShadow: srtDropShadow ? "2px 2px 4px rgba(0,0,0,0.8)" : "none",
                                       background: srtBlurBg 
                                         ? srtBlurColor === "black" 
-                                          ? `rgba(0,0,0,${Math.min(1, srtBlurSize / 100)})` 
+                                          ? `rgba(0,0,0,${Math.min(1, srtBlurOpacity / 100)})` 
                                           : srtBlurColor === "white"
-                                            ? `rgba(255,255,255,${Math.min(1, srtBlurSize / 100)})`
+                                            ? `rgba(255,255,255,${Math.min(1, srtBlurOpacity / 100)})`
                                             : srtBlurColor === "transparent"
                                               ? `rgba(0,0,0,0)`
                                               : "transparent"
@@ -3117,13 +3118,33 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                                       {lang === "mm" ? "အလင်းပိတ်မှု" : "Background Opacity"}
                                     </span>
                                     <span className="text-xs font-bold" style={{ color: accent }}>
-                                      {srtBlurSize}%
+                                      {srtBlurOpacity}%
                                     </span>
                                   </div>
                                   <input
                                     type="range"
                                     min="0"
                                     max="100"
+                                    value={srtBlurOpacity}
+                                    onChange={e => setSrtBlurOpacity(Number(e.target.value))}
+                                    className="premium-slider w-full"
+                                  />
+                                </div>
+
+                                {/* Blur Radius */}
+                                <div>
+                                  <div className="flex justify-between items-center mb-2">
+                                    <span className="text-xs font-semibold" style={{ color: subtextColor }}>
+                                      {lang === "mm" ? "ပြတ်ပါးမှု" : "Blur Radius"}
+                                    </span>
+                                    <span className="text-xs font-bold" style={{ color: accent }}>
+                                      {srtBlurSize}px
+                                    </span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min="0"
+                                    max="20"
                                     value={srtBlurSize}
                                     onChange={e => setSrtBlurSize(Number(e.target.value))}
                                     className="premium-slider w-full"
