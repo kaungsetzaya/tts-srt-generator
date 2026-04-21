@@ -34,7 +34,7 @@ export interface DubOptions {
   srtBlurBg?: boolean;
   srtBlurOpacity?: number;
   srtBlurSize?: number;
-  srtBlurColor?: "black" | "white" | "transparent" | "blue" | "yellow";
+  srtBlurColor?: "black" | "white" | "transparent";
   srtBoxPadding?: number;
   srtFullWidth?: boolean;
   srtDropShadow?: boolean;

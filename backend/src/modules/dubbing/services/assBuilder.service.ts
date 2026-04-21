@@ -21,7 +21,7 @@ export class AssBuilderService {
             srtBlurBg?: boolean;
             srtBlurOpacity?: number;
             srtBlurSize?: number;
-            srtBlurColor?: "black" | "white" | "transparent" | "blue" | "yellow";
+            srtBlurColor?: "black" | "white" | "transparent";
             srtBoxPadding?: number;
             srtFullWidth?: boolean;
             srtDropShadow?: boolean;
@@ -51,9 +51,7 @@ export class AssBuilderService {
         const blurColorMap: Record<string, string> = {
             black: "000000",
             white: "FFFFFF",
-            transparent: "000000",
-            blue: "0000FF",
-            yellow: "FFFF00"
+            transparent: "000000"
         };
         const bgHex = blurColorMap[blurColor] || "000000";
 
