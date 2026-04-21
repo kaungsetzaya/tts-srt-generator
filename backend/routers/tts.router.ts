@@ -101,6 +101,7 @@ export const ttsRouter = t.router({
             text: input.text.slice(0, 500),
             charCount: input.text.length,
             durationMs: result.durationMs,
+            credits: creditsNeeded,
             feature: "tts",
           });
         }
