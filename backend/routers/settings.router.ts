@@ -76,7 +76,7 @@ export const settingsRouter = t.router({
     }),
 
   updateBulk: adminProcedure
-    .input(z.record(allowedKeySchema, z.string().max(10000)))
+    .input(z.record(allowedKeySchema, z.string().max(10000)).partial())
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
