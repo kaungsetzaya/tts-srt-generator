@@ -62,18 +62,20 @@ export function TTSGeneratorLayout({
     <>
       <SidebarProvider defaultOpen>
         <div className="flex min-h-screen w-full">
-          <TTSGeneratorSidebar
-            currentTab={currentSecondaryTab}
-            onTabChange={onTabChange}
-            mainTab={mainTab}
-            setMainTab={setMainTab}
-            logoUrl={logoUrl}
-            miniLogoUrl={miniLogoUrl}
-            isDark={isDark}
-            lang={lang}
-            setLang={setLang}
-            showLogo={showLogo}
-          />
+          <div className="sticky top-0 h-screen shrink-0">
+            <TTSGeneratorSidebar
+              currentTab={currentSecondaryTab}
+              onTabChange={onTabChange}
+              mainTab={mainTab}
+              setMainTab={setMainTab}
+              logoUrl={logoUrl}
+              miniLogoUrl={miniLogoUrl}
+              isDark={isDark}
+              lang={lang}
+              setLang={setLang}
+              showLogo={showLogo}
+            />
+          </div>
           <SidebarRail className="hidden md:block" />
           <SidebarInset className="flex-1 flex flex-col min-h-screen relative z-10">
             {headerBar && (
