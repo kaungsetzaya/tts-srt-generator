@@ -381,7 +381,6 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
   const [srtDropShadow, setSrtDropShadow] = useState(true);
   const [srtBlurBg, setSrtBlurBg] = useState(true);
   const [srtMarginV, setSrtMarginV] = useState(30);
-  const [srtBlurSize, setSrtBlurSize] = useState(8);
   const [srtBlurOpacity, setSrtBlurOpacity] = useState(80);
   const [srtBlurColor, setSrtBlurColor] = useState<"black" | "white">("black");
   const [srtFullWidth, setSrtFullWidth] = useState(false);
@@ -400,9 +399,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
     const scaledFontSize = assFontSize * scale;
     const assMarginV = Math.round((80 + (srtMarginV ?? 30) * 3) * (vh / 1080));
     const topPercent = ((vh - assMarginV) / vh) * 100;
-    const opacityFraction = Math.min(0.72, ((srtBlurSize ?? 8) / 20) * 0.72);
-    const alphaInt = Math.round((1 - opacityFraction) * 255);
-    const bgAlpha = (alphaInt / 255);
+    const bgAlpha = srtBlurOpacity / 100;
     const assOutline = Math.max(4, (srtBoxPadding ?? 4) * 3);
     const scaledPadding = assOutline * scale;
     const shadowSize = 2 * scale;
@@ -422,7 +419,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
         ? `${shadowSize}px ${shadowSize}px ${4 * scale}px rgba(0,0,0,0.8)`
         : "none",
     };
-  }, [dubVideoWidth, dubVideoHeight, dubDetectedRatio, srtFontSize, srtMarginV, srtBlurSize, srtBlurColor, srtBlurBg, srtBoxPadding, srtFullWidth, srtDropShadow]);
+  }, [dubVideoWidth, dubVideoHeight, dubDetectedRatio, srtFontSize, srtMarginV, srtBlurOpacity, srtBlurColor, srtBlurBg, srtBoxPadding, srtFullWidth, srtDropShadow]);
 
   // Accordion state for mobile-friendly collapsible sections
   const [voiceAccordionOpen, setVoiceAccordionOpen] = useState(true);
@@ -818,21 +815,21 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
     // Use job-based API for dubbing (handles long processing time)
     if (dubVideoUrl.trim()) {
       try {
-         const res = await startDubMutation.mutateAsync({
-          url: dubVideoUrl.trim(),
-          voice: dubVoiceToUse,
-          srtEnabled,
-          srtFontSize,
-          srtColor,
-          srtMarginV,
-          srtBlurBg,
-          srtBlurSize,
-          srtBlurColor,
-          srtBoxPadding,
-          srtFullWidth,
-          srtDropShadow,
-          srtBorderRadius,
-        });
+const res = await startDubMutation.mutateAsync({
+           url: dubVideoUrl.trim(),
+           voice: dubVoiceToUse,
+           srtEnabled,
+           srtFontSize,
+           srtColor,
+           srtMarginV,
+           srtBlurBg,
+           srtBlurOpacity,
+           srtBlurColor,
+           srtBoxPadding,
+           srtFullWidth,
+           srtDropShadow,
+           srtBorderRadius,
+         });
         setActiveJobId(res.jobId);
         // Poll for job status
         pollJobStatus(res.jobId);
@@ -857,7 +854,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
           srtColor,
           srtMarginV,
           srtBlurBg,
-          srtBlurSize,
+          srtBlurOpacity,
           srtBlurColor,
           srtBoxPadding,
           srtFullWidth,
@@ -2594,9 +2591,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                                       color: srtColor,
                                       textShadow: computeSrtPreviewStyle.textShadow,
                                       background: computeSrtPreviewStyle.background,
-                                      backdropFilter: srtBlurBg
-                                        ? `blur(${Math.max(1, Math.round(srtBlurSize / 10))}px)`
-                                        : "none",
+                                      backdropFilter: "none",
                                       textAlign: "center",
                                       width: srtFullWidth ? "100%" : "auto",
                                       maxWidth: srtFullWidth ? "100%" : "90%",
@@ -2723,9 +2718,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                                       color: srtColor,
                                       textShadow: computeSrtPreviewStyle.textShadow,
                                       background: computeSrtPreviewStyle.background,
-                                      backdropFilter: srtBlurBg
-                                        ? `blur(${Math.max(1, Math.round(srtBlurSize / 10))}px)`
-                                        : "none",
+                                      backdropFilter: "none",
                                       textAlign: "center",
                                       width: srtFullWidth ? "100%" : "auto",
                                       maxWidth: srtFullWidth ? "100%" : "90%",
@@ -3113,7 +3106,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                                 <div>
                                   <div className="flex justify-between items-center mb-2">
                                     <span className="text-xs font-semibold" style={{ color: subtextColor }}>
-                                      {lang === "mm" ? "အလင်းပိတ်မှု" : "Background Opacity"}
+                                      {lang === "mm" ? "အလင်းပိတ်မှု" : "Opacity"}
                                     </span>
                                     <span className="text-xs font-bold" style={{ color: accent }}>
                                       {srtBlurOpacity}%
@@ -3125,26 +3118,6 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                                     max="100"
                                     value={srtBlurOpacity}
                                     onChange={e => setSrtBlurOpacity(Number(e.target.value))}
-                                    className="premium-slider w-full"
-                                  />
-                                </div>
-
-                                {/* Blur Radius */}
-                                <div>
-                                  <div className="flex justify-between items-center mb-2">
-                                    <span className="text-xs font-semibold" style={{ color: subtextColor }}>
-                                      {lang === "mm" ? "ပြတ်ပါးမှု" : "Blur Radius"}
-                                    </span>
-                                    <span className="text-xs font-bold" style={{ color: accent }}>
-                                      {srtBlurSize}px
-                                    </span>
-                                  </div>
-                                  <input
-                                    type="range"
-                                    min="0"
-                                    max="20"
-                                    value={srtBlurSize}
-                                    onChange={e => setSrtBlurSize(Number(e.target.value))}
                                     className="premium-slider w-full"
                                   />
                                 </div>

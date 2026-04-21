@@ -20,7 +20,6 @@ export class AssBuilderService {
             srtMarginV?: number;
             srtBlurBg?: boolean;
             srtBlurOpacity?: number;
-            srtBlurSize?: number;
             srtBlurColor?: "black" | "white" | "transparent";
             srtBoxPadding?: number;
             srtFullWidth?: boolean;
