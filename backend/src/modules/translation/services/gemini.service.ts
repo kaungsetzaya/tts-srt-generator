@@ -123,6 +123,8 @@ export class GeminiService {
         cleaned = cleaned.replace(/\*\*ဇာတ်ညွှန်း[^\*]*\*\*/g, ""); 
         cleaned = cleaned.replace(/\*\*.+?\*\*/g, ""); 
         cleaned = cleaned.replace(/[#_*\[\]]/g, ""); 
+        cleaned = cleaned.replace(/"/g, "");
+        cleaned = cleaned.replace(/'/g, "");
         return cleaned.trim();
     }
 
