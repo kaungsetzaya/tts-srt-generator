@@ -21,10 +21,12 @@ const T = {
     fail: "မအောင်မြင်",
     noHistory: "အသုံးပြုမှု မှတ်တမ်း မရှိသေးပါ",
     tts: "စာမှအသံ",
-    translate_file: "ဗီဒီယိုဘာသာပြန်",
-    translate_link: "Link ဘာသာပြန်",
+    video_upload: "ဗီဒီယိုဘာသာပြန်",
+    video_link: "Link ဘာသာပြန်",
     dub_file: "Auto Creator (ဖိုင်)",
     dub_link: "Auto Creator (Link)",
+    trial: "မင်္ဂလာဆောင်းပါး",
+    purchase: "ဝယ်ယူခြင်း",
   },
   en: {
     title: "Usage History",
@@ -39,10 +41,12 @@ const T = {
     fail: "Failed",
     noHistory: "No usage history yet",
     tts: "Text to Speech",
-    translate_file: "Video Translate",
-    translate_link: "Link Translate",
+    video_upload: "Video Translate",
+    video_link: "Link Translate",
     dub_file: "Auto Creator (File)",
     dub_link: "Auto Creator (Link)",
+    trial: "Trial",
+    purchase: "Purchase",
   }
 };
 
@@ -57,7 +61,7 @@ export default function History() {
   const [lang, setLang] = useState<Lang>(() => (localStorage.getItem("lumix_lang") as Lang) || "mm");
   const t = T[lang];
   const [, navigate] = useLocation();
-  const { data: history, isLoading } = trpc.history.getMyHistory.useQuery({ limit: 100 });
+  const { data: history, isLoading } = trpc.history.getUnifiedHistory.useQuery({ limit: 100 });
   const { theme } = useTheme();
 
   const isDark = theme === "dark";
@@ -76,6 +80,12 @@ export default function History() {
   const featureLabel = (feat: string) => {
     return (t as any)[feat] || feat;
   };
+
+  const dedupedHistory = history?.reduce((acc: typeof history, item) => {
+    const existing = acc.find((x) => x.id === item.id);
+    if (!existing) acc.push(item);
+    return acc;
+  }, [] as typeof history) ?? [];
 
   return (
     <div className="min-h-screen font-sans transition-colors duration-500" style={{
@@ -107,21 +117,21 @@ export default function History() {
           <div className="flex items-center justify-center py-20">
             <div className="w-8 h-8 border-2 rounded-full animate-spin" style={{ borderColor: accent, borderTopColor: "transparent" }} />
           </div>
-        ) : !history || history.length === 0 ? (
+        ) : !dedupedHistory || dedupedHistory.length === 0 ? (
           <div className="text-center py-20">
             <Clock className="w-12 h-12 mx-auto mb-4 opacity-30" />
             <p className="text-sm font-bold" style={{ color: subtextColor }}>{t.noHistory}</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {history.map((item) => (
+            {dedupedHistory.map((item: any) => (
               <div key={item.id} className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-2xl border backdrop-blur-xl transition-all" style={{ background: cardBg, borderColor: cardBorder }}>
                 <div className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: item.status === "fail" ? "rgba(220,38,38,0.2)" : "rgba(192,111,48,0.15)", color: item.status === "fail" ? "#ef4444" : accent }}>
-                  {featureIcon(item.feature || "tts")}
+                  {item.origin === "credit" ? <CheckCircle className="w-4 h-4" /> : featureIcon(item.type || "tts")}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-bold truncate">{featureLabel(item.feature || "tts")}</span>
+                    <span className="text-sm font-bold truncate">{item.origin === "credit" ? (item.type === "trial" ? (lang === "mm" ? "မင်္ဂလာဆောင်းပါး" : "Trial") : (lang === "mm" ? "ဝယ်ယူခြင်း" : "Purchase")) : featureLabel(item.type || "tts")}</span>
                     {item.status === "success" ? (
                       <CheckCircle className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />
                     ) : (
@@ -129,9 +139,14 @@ export default function History() {
                     )}
                   </div>
                   <div className="flex items-center gap-3 text-xs" style={{ color: subtextColor }}>
-                    {item.voice && <span>{item.character || item.voice}</span>}
-                    {(item.charCount ?? 0) > 0 && <span>{item.charCount?.toLocaleString()} {lang === "mm" ? "စာလုံး" : "chars"}</span>}
-                    {(item.durationMs ?? 0) > 0 && <span>{Math.floor((item.durationMs ?? 0) / 1000)}s</span>}
+                    {item.origin === "credit" && item.amount ? (
+                      <span>{item.amount > 0 ? "+" : ""}{item.amount} {lang === "mm" ? "ကရက်ဒစ်" : "credits"}</span>
+                    ) : (
+                      <>
+                        {item.voice && <span>{item.character || item.voice}</span>}
+                        {item.description && <span className="truncate max-w-[150px]">{item.description}</span>}
+                      </>
+                    )}
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0">

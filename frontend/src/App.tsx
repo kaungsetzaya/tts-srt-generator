@@ -30,8 +30,13 @@ function Router() {
         transition={{ duration: 0.25, ease: "easeInOut" }}
       >
       <Switch>
-        <Route path={"/"} component={Landing} />
+        <Route path={"/"}>
+          <AuthGuard>
+            <TTSGenerator />
+          </AuthGuard>
+        </Route>
         <Route path={"/login"} component={Login} />
+        <Route path={"/home"} component={Landing} />
       <Route path={"/lumix"}>
         <AuthGuard>
           <TTSGenerator />
