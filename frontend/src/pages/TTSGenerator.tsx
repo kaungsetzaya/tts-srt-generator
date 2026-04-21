@@ -2800,7 +2800,6 @@ export default function TTSGenerator() {
                             </span>
                           </div>
                         )}
-                        )}
                       </div>
 
                       {/* Generating Progress inside Sticky Left Column */}
