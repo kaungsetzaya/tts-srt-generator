@@ -915,16 +915,16 @@ export default function AdminDashboard() {
                   <p className="text-xs uppercase tracking-wider opacity-50 mb-3">
                     Voices Ranked
                   </p>
-                  {voiceStats?.voices?.length === 0 && (
+                  {voiceStats?.allVoicesRanked?.length === 0 && (
                     <p className="text-xs opacity-30">No data</p>
                   )}
-                  {voiceStats?.voices?.map((v: any) => (
+                  {voiceStats?.allVoicesRanked?.map((v: any) => (
                     <MiniBar
                       key={v.name}
-                      label={v.name}
+                      label={v.displayName || v.name}
                       count={v.count}
                       max={maxVoice}
-                      color={v.name?.startsWith("[Character]") ? "#F4B34F" : C}
+                      color={v.isCharacter ? "#F4B34F" : C}
                     />
                   ))}
                 </div>

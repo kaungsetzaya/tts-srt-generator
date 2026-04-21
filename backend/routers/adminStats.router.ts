@@ -100,6 +100,7 @@ export const adminStatsRouter = t.router({
           .from(ttsConversions)
           .where(dateFilter);
 
+        // Get base voice usage (thiha/nilar) - excluding character voices
         const baseVoiceDetails = await db
           .select({
             voice: ttsConversions.voice,
@@ -109,19 +110,11 @@ export const adminStatsRouter = t.router({
           })
           .from(ttsConversions)
           .where(days
-            ? sql`voice IN ('thiha', 'nilar') AND created_at > DATE_SUB(NOW(), INTERVAL ${days} DAY)`
-            : sql`voice IN ('thiha', 'nilar')`)
+            ? sql`voice IN ('thiha', 'nilar') AND (\`character\` IS NULL OR \`character\` = '') AND created_at > DATE_SUB(NOW(), INTERVAL ${days} DAY)`
+            : sql`voice IN ('thiha', 'nilar') AND (\`character\` IS NULL OR \`character\` = '')`)
           .groupBy(ttsConversions.voice);
 
-        const baseVoices = baseVoiceDetails.map((r: any) => ({
-          name: r.voice,
-          displayName:
-            r.voice === "thiha" ? "Thiha (Male)" : "Nilar (Female)",
-          count: r.count,
-          chars: Number(r.chars),
-          durationMs: Number(r.duration),
-        }));
-
+        // Get character voice usage
         const charDetails = await db
           .select({
             character: ttsConversions.character,
@@ -135,6 +128,36 @@ export const adminStatsRouter = t.router({
             ? sql`\`character\` IS NOT NULL AND \`character\` != '' AND created_at > DATE_SUB(NOW(), INTERVAL ${days} DAY)`
             : sql`\`character\` IS NOT NULL AND \`character\` != ''`)
           .groupBy(ttsConversions.character, ttsConversions.voice);
+
+        // Build all voices ranked list (base + characters)
+        const allVoicesRanked = [
+          ...baseVoiceDetails.map((r: any) => ({
+            name: r.voice,
+            displayName: r.voice === "thiha" ? "Thiha (Male)" : "Nilar (Female)",
+            isCharacter: false,
+            count: r.count,
+            chars: Number(r.chars),
+            durationMs: Number(r.duration),
+          })),
+          ...charDetails.map((r: any) => ({
+            name: r.character,
+            displayName: r.character,
+            isCharacter: true,
+            baseVoice: r.voice || "thiha",
+            count: r.count,
+            chars: Number(r.chars),
+            durationMs: Number(r.duration),
+          })),
+        ].sort((a, b) => b.count - a.count);
+
+        const baseVoices = baseVoiceDetails.map((r: any) => ({
+          name: r.voice,
+          displayName:
+            r.voice === "thiha" ? "Thiha (Male)" : "Nilar (Female)",
+          count: r.count,
+          chars: Number(r.chars),
+          durationMs: Number(r.duration),
+        }));
 
         const characters = charDetails.map((r: any) => ({
           key: r.character,
@@ -151,6 +174,7 @@ export const adminStatsRouter = t.router({
           features,
           baseVoices,
           characters,
+          allVoicesRanked,
           total: totalRow?.count || 0,
           totalChars: Number(totalRow?.chars) || 0,
           totalDurationMs: Number(totalRow?.duration) || 0,
