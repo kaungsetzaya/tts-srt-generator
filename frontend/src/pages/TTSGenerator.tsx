@@ -1458,9 +1458,9 @@ export default function TTSGenerator() {
                         {/* Tier Tabs */}
                         <div className="flex gap-1 p-2">
                           {([
-                            { id: "tier1" as VoiceTier, label: "Tier 1", subLabel: "Myanmar", voices: TIER1_VOICES },
-                            { id: "tier2" as VoiceTier, label: "Tier 2", subLabel: "Murf AI", voices: TIER2_VOICES },
-                            { id: "tier3" as VoiceTier, label: "Tier 3", subLabel: "Gemini", voices: TIER3_VOICES },
+                            { id: "tier1" as VoiceTier, label: "Tier 1", subLabel: lang === "mm" ? "၁ ကရက်ဒစ်" : "1 Credit", voices: TIER1_VOICES },
+                            { id: "tier2" as VoiceTier, label: "Tier 2", subLabel: lang === "mm" ? "၃ ကရက်ဒစ်" : "3 Credits", voices: TIER2_VOICES },
+                            { id: "tier3" as VoiceTier, label: "Tier 3", subLabel: lang === "mm" ? "၅ ကရက်ဒစ်" : "5 Credits", voices: TIER3_VOICES },
                           ] as const).map(tier => (
                             <button
                               key={tier.id}
@@ -1536,15 +1536,6 @@ export default function TTSGenerator() {
                           </div>
                         </div>
 
-                        {/* Credits info */}
-                        <div className="px-3 pb-3 text-center">
-                          <span className="text-[10px] font-semibold px-3 py-1 rounded-full" style={{
-                            background: `rgba(192,111,48,0.1)`,
-                            color: accent,
-                          }}>
-                            {getVoiceCredits(selectedVoice)} {lang === "mm" ? "ကရဒစ်" : "credits"}
-                          </span>
-                        </div>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -2901,9 +2892,9 @@ export default function TTSGenerator() {
                             {/* Tier Tabs */}
                             <div className="flex gap-1 p-1 bg-black/10 rounded-lg">
                               {([
-                                { id: "tier1" as VoiceTier, label: "Tier 1", subLabel: "Myanmar" },
-                                { id: "tier2" as VoiceTier, label: "Tier 2", subLabel: "Murf AI" },
-                                { id: "tier3" as VoiceTier, label: "Tier 3", subLabel: "Gemini" },
+                                { id: "tier1" as VoiceTier, label: "Tier 1", subLabel: lang === "mm" ? "၁ ကရက်ဒစ်" : "1 Credit" },
+                                { id: "tier2" as VoiceTier, label: "Tier 2", subLabel: lang === "mm" ? "၃ ကရက်ဒစ်" : "3 Credits" },
+                                { id: "tier3" as VoiceTier, label: "Tier 3", subLabel: lang === "mm" ? "၅ ကရက်ဒစ်" : "5 Credits" },
                               ] as const).map(tier => (
                                 <button
                                   key={tier.id}
@@ -2973,15 +2964,6 @@ export default function TTSGenerator() {
                               </div>
                             </div>
 
-                            {/* Credits info */}
-                            <div className="text-center">
-                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{
-                                background: `rgba(192,111,48,0.1)`,
-                                color: accent,
-                              }}>
-                                {getVoiceCredits(dubSelectedVoice)} credits
-                              </span>
-                            </div>
                           </div>
                         )}
                         </div>
