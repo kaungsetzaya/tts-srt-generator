@@ -3632,8 +3632,8 @@ const res = await startDubMutation.mutateAsync({
                               tts: "စာမှအသံ",
                               translate_file: "ဗီဒီယိုဘာသာပြန်",
                               translate_link: "Link ဘာသာပြန်",
-                              dub_file: "Auto Creator (ဖိုင်)",
-                              dub_link: "Auto Creator (Link)",
+                              dub_file: "Auto Creator",
+                              dub_link: "Auto Creator",
                               TRIAL: "Trial Rewards",
                               GEN_AUDIO: "TTS အသံဖန်တီးမှု",
                               VIDEO_DUB: "Video Dubbing",
@@ -3644,8 +3644,8 @@ const res = await startDubMutation.mutateAsync({
                               tts: "Text to Speech",
                               translate_file: "Video Translate",
                               translate_link: "Link Translate",
-                              dub_file: "Auto Creator (File)",
-                              dub_link: "Auto Creator (Link)",
+                              dub_file: "Auto Creator",
+                              dub_link: "Auto Creator",
                               TRIAL: "Trial Credits",
                               GEN_AUDIO: "TTS Generation",
                               VIDEO_DUB: "Video Dubbing",
@@ -3654,6 +3654,26 @@ const res = await startDubMutation.mutateAsync({
                             };
                       return labels[type] || type.replace("_", " ");
                     };
+
+                    const voiceNameMap: Record<string, string> = {
+                      thiha: lang === "mm" ? "သီဟ" : "Thiha",
+                      nilar: lang === "mm" ? "နီလာ" : "Nilar",
+                      ryan: lang === "mm" ? "ရဲရင့်" : "Ryan",
+                      ronnie: lang === "mm" ? "ရောင်နီ" : "Ronnie",
+                      lucas: lang === "mm" ? "လင်းခန့်" : "Lucas",
+                      daniel: lang === "mm" ? "ဒေဝ" : "Daniel",
+                      evander: lang === "mm" ? "အဂ္ဂ" : "Evander",
+                      michelle: lang === "mm" ? "မေချို" : "Michelle",
+                      iris: lang === "mm" ? "အိန္ဒြာ" : "Iris",
+                      charlotte: lang === "mm" ? "သီရိ" : "Charlotte",
+                      amara: lang === "mm" ? "အမရာ" : "Amara",
+                    };
+                    
+                    const voiceDisplay = item.character 
+                      ? voiceNameMap[item.character] || item.character
+                      : item.voice 
+                        ? voiceNameMap[item.voice] || item.voice 
+                        : "";
 
                     const featureEmoji = (type: string) => {
                       if (type === "tts" || type === "GEN_AUDIO") return "🎙️";
@@ -3694,14 +3714,9 @@ const res = await startDubMutation.mutateAsync({
                                 {isPositive ? "+" : ""}{item.amount}
                               </span>
                             )}
-                            {isTask && !isError && item.amount !== 0 && (
+                            {isTask && !isError && (
                               <span className="text-sm font-black whitespace-nowrap text-amber-500">
-                                -{Math.abs(item.amount)} {lang === "mm" ? "pts" : "pts"}
-                              </span>
-                            )}
-                            {isTask && !isError && item.amount === 0 && (
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 font-bold">
-                                {lang === "mm" ? "ပြီးစီး" : "Done"}
+                                -{Math.abs(item.amount || 0)} {lang === "mm" ? "pts" : "pts"}
                               </span>
                             )}
                             {isError && (
@@ -3711,9 +3726,16 @@ const res = await startDubMutation.mutateAsync({
                             )}
                           </div>
                           <div className="flex items-center justify-between gap-4">
-                            <span className="text-[10px] opacity-30 whitespace-nowrap">
-                              {fmtTime(item.createdAt)}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              {voiceDisplay && (
+                                <span className="text-xs font-medium" style={{ color: accent }}>
+                                  {voiceDisplay}
+                                </span>
+                              )}
+                              <span className="text-[10px] opacity-30 whitespace-nowrap">
+                                {fmtTime(item.createdAt)}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>

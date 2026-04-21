@@ -83,6 +83,8 @@ export const historyRouter = t.router({
             type: t.feature || "tts",
             amount: t.credits || 0,
             status: t.status,
+            voice: t.voice || "",
+            character: t.character || "",
             description: t.text?.slice(0, 100) || t.errorMsg || "",
             createdAt: t.createdAt!,
           })),
@@ -92,6 +94,8 @@ export const historyRouter = t.router({
             type: c.type,
             amount: c.amount,
             status: "success",
+            voice: "",
+            character: "",
             description: c.description || "",
             createdAt: c.createdAt!,
           }))
