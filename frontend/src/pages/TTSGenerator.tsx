@@ -2538,6 +2538,20 @@ export default function TTSGenerator() {
                                   </div>
                                 </div>
                               )}
+                              {(startDubMutation.isPending || activeJobId !== null) && (
+                                <div 
+                                  className="absolute inset-0 z-50 flex items-center justify-center bg-black/40"
+                                  style={{ 
+                                    backdropFilter: "blur(12px)", 
+                                    WebkitBackdropFilter: "blur(12px)" 
+                                  }}
+                                >
+                                  <CircularLoader 
+                                    text={jobStatusQuery?.data?.progress ? `${jobStatusQuery.data.progress}%` : lang === "mm" ? "ဖန်တီးနေသည်..." : "Generating..."}
+                                    color="#fff"
+                                  />
+                                </div>
+                              )}
                             </div>
                           ) : dubPreviewUrl.startsWith("fallback:") ||
                             isExternalVideoUrl(dubPreviewUrl) ? (
@@ -2600,7 +2614,13 @@ export default function TTSGenerator() {
                                 );
                               })()}
                               {(startDubMutation.isPending || activeJobId !== null) && (
-                                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md">
+                                <div 
+                                  className="absolute inset-0 z-50 flex items-center justify-center bg-black/40"
+                                  style={{ 
+                                    backdropFilter: "blur(12px)", 
+                                    WebkitBackdropFilter: "blur(12px)" 
+                                  }}
+                                >
                                   <CircularLoader 
                                     text={jobStatusQuery?.data?.progress ? `${jobStatusQuery.data.progress}%` : lang === "mm" ? "ဖန်တီးနေသည်..." : "Generating..."}
                                     color="#fff"
