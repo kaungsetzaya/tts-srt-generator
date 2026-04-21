@@ -85,7 +85,7 @@ export class AssBuilderService {
 
         const marginL = fullWidth ? safeMargin : Math.round(playResX * 0.04);
         const marginR = fullWidth ? safeMargin : Math.round(playResX * 0.04);
-        const wrapStyle = 0;
+        const wrapStyle = 1;
 
         const header = `[Script Info]\nScriptType: v4.00+\nWrapStyle: ${wrapStyle}\nPlayResX: ${playResX}\nPlayResY: ${playResY}\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,${fontName},${fontSize},${assColor},&H000000FF,&H00000000,${backColor},-1,0,0,0,100,100,0,0,${borderStyle},${outline},${shadow},2,${marginL},${marginR},${marginV},1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
 
@@ -99,11 +99,20 @@ export class AssBuilderService {
 
     private formatTextForAss(text: string): string {
         const MAX_LINES = 2;
-        let lines = text.split("\n").filter(l => l.trim());
+        const MAX_CHARS_PER_LINE = 50;
+        
+        let lines = text.split(/[\n\r]+/).filter(l => l.trim());
         
         if (lines.length > MAX_LINES) {
             lines = lines.slice(0, MAX_LINES);
         }
+        
+        lines = lines.map(line => {
+            if (line.length > MAX_CHARS_PER_LINE) {
+                return line.substring(0, MAX_CHARS_PER_LINE) + "...";
+            }
+            return line;
+        });
         
         const formatted = lines.join("\\N");
         return formatted.replace(/,/g, "，");
