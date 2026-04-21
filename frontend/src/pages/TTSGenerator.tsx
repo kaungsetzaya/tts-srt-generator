@@ -3238,41 +3238,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                                 }}
                               />
                             </div>
-                            <div className="text-center">
-                              <p
-                                className="text-sm font-bold"
-                                style={{ color: textColor }}
-                              >
-                                {lang === "mm"
-                                  ? "AI ဖြင့် ဖန်တီးနေသည်..."
-                                  : "Creating with AI..."}
-                              </p>
-                              <p
-                                className="text-xs mt-2"
-                                style={{ color: subtextColor }}
-                              >
-                                {lang === "mm"
-                                  ? "ဗီဒီယိုအရှည်ပေါ်မူတည်ပြီး ၃-၅ မိနစ်ကြာနိုင်ပါတယ်"
-                                  : "This may take 3-5 minutes"}
-                              </p>
-                              <div
-                                className="flex items-center justify-center gap-4 sm:gap-6 mt-4 text-xs"
-                                style={{ color: subtextColor }}
-                              >
-                                <span>
-                                  🎙️{" "}
-                                  {lang === "mm"
-                                    ? "အသံထုတ်နေသည်"
-                                    : "Generating TTS"}
-                                </span>
-                                <span>
-                                  🎬{" "}
-                                  {lang === "mm"
-                                    ? "ဗီဒီယိုပေါင်းနေသည်"
-                                    : "Combining video"}
-                                </span>
-                              </div>
-                            </div>
+                            
                           </div>
                         </div>
                       )}
