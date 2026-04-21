@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
+import { useSystemTime } from "@/lib/useSystemTime";
 import { ArrowLeft, Clock, Mic, FileVideo, Wand2, CheckCircle, XCircle } from "lucide-react";
 import { useLocation } from "wouter";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -66,20 +67,10 @@ export default function History() {
   const textColor = isDark ? "#EBE6D8" : "#2B1D1C";
   const subtextColor = isDark ? "rgba(240,238,255,0.6)" : "#6b5c50";
 
-  // Format time in user timezone
+  const { fmtTime } = useSystemTime();
   const formatTime = (date: any) => {
     if (!date) return "-";
-    const d = new Date(date);
-    const userTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    return d.toLocaleString(lang === "mm" ? "my-MM" : "en-US", {
-      timeZone: userTZ,
-      year: "numeric",
-      month: "short",
-      day: "2-digit",
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
+    return fmtTime(date, lang === "mm" ? "my-MM" : "en-US");
   };
 
   const featureLabel = (feat: string) => {

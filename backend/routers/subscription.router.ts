@@ -4,7 +4,7 @@
 import { t } from "./trpc";
 import { getDb } from "../db";
 import { users, subscriptions } from "../../drizzle/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 export const subscriptionRouter = t.router({
   myStatus: t.procedure.query(async ({ ctx }) => {
@@ -17,11 +17,12 @@ export const subscriptionRouter = t.router({
         .from(users)
         .where(eq(users.id, ctx.user!.userId))
         .limit(1);
-      const sub = await db.query.subscriptions.findFirst({
-        where: (s: any, { eq, and, gt }: any) =>
-          and(eq(s.userId, ctx.user!.userId), gt(s.expiresAt, new Date())),
-        orderBy: (s: any, { desc }: any) => desc(s.createdAt),
-      });
+      const [sub] = await db
+        .select()
+        .from(subscriptions)
+        .where(sql`user_id = ${ctx.user!.userId} AND expires_at > NOW()`)
+        .orderBy(sql`created_at DESC`)
+        .limit(1);
       return sub
         ? {
             active: true,

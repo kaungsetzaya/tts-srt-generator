@@ -19,6 +19,18 @@ import { adminRouter } from "./routers/admin.router";
 import { adminStatsRouter } from "./routers/adminStats.router";
 import { errorLoggingRouter } from "./routers/errorLogging.router";
 
+// System info (public)
+const systemRouter = t.router({
+  time: t.procedure.query(() => {
+    const now = new Date();
+    return {
+      now: now.toISOString(),
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      offset: -now.getTimezoneOffset(),
+    };
+  }),
+});
+
 // AI chat stub
 const aiRouter = t.router({
   chat: t.procedure
@@ -47,6 +59,7 @@ export const appRouter = t.router({
   admin: adminRouter,
   adminStats: adminStatsRouter,
   logBrowserError: errorLoggingRouter,
+  system: systemRouter,
 });
 
 export type AppRouter = typeof appRouter;

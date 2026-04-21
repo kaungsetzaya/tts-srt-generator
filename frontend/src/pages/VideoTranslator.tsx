@@ -98,7 +98,7 @@ export default function VideoTranslator() {
       onTabChange={() => {}}
       mainTab="video"
       setMainTab={(t) => { if (t === 'tts') navigate('/lumix'); }}
-      showLogo={false}
+      showLogo={true}
       headerBar={
         <div className="flex items-center justify-between py-1.5 px-1 sm:px-4 w-full h-full">
           <div className="flex items-center gap-1.5 sm:gap-2">

@@ -58,7 +58,7 @@ export const adminRouter = t.router({
 
   banUser: adminProcedure
     .input(z.object({ userId: z.string(), ban: z.boolean() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       await db
@@ -70,7 +70,7 @@ export const adminRouter = t.router({
 
   deleteUser: adminProcedure
     .input(z.object({ userId: z.string() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       await db.delete(users).where(eq(users.id, input.userId));
@@ -88,7 +88,7 @@ export const adminRouter = t.router({
         paymentSlip: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
@@ -110,37 +110,22 @@ export const adminRouter = t.router({
 
       if (existingSubs.length > 0) {
         const existing = existingSubs[0];
-        const now = new Date();
-        const currentExpires = existing.expiresAt && existing.expiresAt > now 
-          ? new Date(existing.expiresAt) 
-          : now;
-          
-        const newExpires = new Date(
-          currentExpires.getTime() + input.days * 86400000
-        );
-        
-        await db
-          .update(subscriptions)
-          .set({
-            expiresAt: newExpires,
-            plan: input.plan,
-            note: input.note || existing.note,
-            paymentMethod: input.paymentMethod || existing.paymentMethod,
-            paymentSlip: input.paymentSlip || existing.paymentSlip,
-          })
-          .where(eq(subscriptions.id, existing.id));
-      } else {
-        await db.insert(subscriptions).values({
-          id: randomUUID(),
-          userId: input.userId,
-          plan: input.plan,
-          startsAt: new Date(),
-          expiresAt: new Date(Date.now() + input.days * 86400000),
-          note: input.note,
-          paymentMethod: input.paymentMethod ?? null,
-          paymentSlip: input.paymentSlip ?? null,
-        });
+        await db.delete(subscriptions).where(eq(subscriptions.id, existing.id));
       }
+
+      const now = new Date();
+      const ctxUserId = ctx.user.userId;
+      await db.insert(subscriptions).values({
+        id: randomUUID(),
+        userId: input.userId,
+        plan: input.plan,
+        startsAt: now,
+        expiresAt: new Date(now.getTime() + input.days * 86400000),
+        note: input.note,
+        paymentMethod: input.paymentMethod ?? null,
+        paymentSlip: input.paymentSlip ?? null,
+        createdByAdmin: ctxUserId,
+      });
 
       const [user] = await db
         .select()
@@ -169,7 +154,7 @@ export const adminRouter = t.router({
 
   cancelSubscription: adminProcedure
     .input(z.object({ userId: z.string() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       await db
@@ -196,7 +181,7 @@ export const adminRouter = t.router({
 
   setRole: adminProcedure
     .input(z.object({ userId: z.string(), role: z.string() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       await db.update(users).set({ role: input.role }).where(eq(users.id, input.userId));

@@ -1015,9 +1015,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
     <div
       className="flex flex-nowrap items-center justify-between py-1 px-2 sm:px-4 w-full h-full gap-1 sm:gap-2 overflow-hidden"
     >
-      <div className="flex flex-nowrap items-center gap-1 sm:gap-2 ml-auto">
-        <div className="font-black text-base sm:text-lg tracking-tighter shrink-0" style={{ color: "#C06F30" }}>LUMIX</div>
-      </div>
+      
       <div className="flex items-center gap-1 sm:gap-2 sm:ml-auto">
         {subLoading ? (
           <div className="flex items-center gap-2 px-2 py-1.5 rounded-xl">
@@ -1175,7 +1173,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
       lang={lang}
       setLang={setLang}
       headerBar={headerBar}
-      showLogo={false}
+      showLogo={true}
     >
       <div
           className="h-full relative transition-colors duration-500 font-sans"
