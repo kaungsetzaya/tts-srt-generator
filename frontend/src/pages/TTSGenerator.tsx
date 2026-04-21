@@ -3618,11 +3618,12 @@ const res = await startDubMutation.mutateAsync({
                   </div>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {unifiedHistory?.map((item: any) => {
                     const isCredit = item.origin === "credit";
                     const isTask = item.origin === "task";
                     const isError = item.status === "fail";
+                    const isRefund = item.type === "REFUND" || item.type === "tts_refund";
                     const isPositive = (item.amount || 0) > 0;
                     
                     const featureLabel = (type: string) => {
@@ -3634,11 +3635,12 @@ const res = await startDubMutation.mutateAsync({
                               translate_link: "Link ဘာသာပြန်",
                               dub_file: "Auto Creator",
                               dub_link: "Auto Creator",
-                              TRIAL: "Trial Rewards",
-                              GEN_AUDIO: "TTS အသံဖန်တီးမှု",
-                              VIDEO_DUB: "Video Dubbing",
-                              SUBSCRIPTION: "Subscription",
-                              REFUND: "ပြန်အမ်းငွေ",
+                              TRIAL: "Trial",
+                              GEN_AUDIO: "TTS",
+                              VIDEO_DUB: "Dubbing",
+                              SUBSCRIPTION: "Plan",
+                              REFUND: "ပြန်အမ်း",
+                              tts_refund: "TTS ပြန်အမ်း",
                             }
                           : {
                               tts: "Text to Speech",
@@ -3646,11 +3648,12 @@ const res = await startDubMutation.mutateAsync({
                               translate_link: "Link Translate",
                               dub_file: "Auto Creator",
                               dub_link: "Auto Creator",
-                              TRIAL: "Trial Credits",
-                              GEN_AUDIO: "TTS Generation",
-                              VIDEO_DUB: "Video Dubbing",
-                              SUBSCRIPTION: "Subscription",
+                              TRIAL: "Trial",
+                              GEN_AUDIO: "TTS",
+                              VIDEO_DUB: "Dubbing",
+                              SUBSCRIPTION: "Plan",
                               REFUND: "Refund",
+                              tts_refund: "TTS Refund",
                             };
                       return labels[type] || type.replace("_", " ");
                     };
@@ -3675,70 +3678,126 @@ const res = await startDubMutation.mutateAsync({
                         ? voiceNameMap[item.voice] || item.voice 
                         : "";
 
-                    const featureEmoji = (type: string) => {
-                      if (type === "tts" || type === "GEN_AUDIO") return "🎙️";
-                      if (type?.includes("translate")) return "📹";
-                      if (type?.includes("dub") || type === "VIDEO_DUB") return "🎬";
-                      if (type === "SUBSCRIPTION") return "👑";
-                      if (type === "REFUND") return "♻️";
-                      if (type === "TRIAL") return "🎁";
-                      return "💰";
-                    };
+                    // Status badge config
+                    let statusConfig = { bg: "", color: "", label: "" };
+                    if (isError) {
+                      statusConfig = { 
+                        bg: "rgba(220,38,38,0.1)", 
+                        color: "#ef4444", 
+                        label: lang === "mm" ? "မအောင်မြင်" : "Failed" 
+                      };
+                    } else if (isRefund) {
+                      statusConfig = { 
+                        bg: "rgba(34,197,94,0.1)", 
+                        color: "#22c55e", 
+                        label: lang === "mm" ? "ပြန်အမ်း" : "Refunded" 
+                      };
+                    } else if (isTask) {
+                      statusConfig = { 
+                        bg: "rgba(192,111,48,0.1)", 
+                        color: accent, 
+                        label: lang === "mm" ? "ပြီးစီး" : "Done" 
+                      };
+                    } else if (isPositive) {
+                      statusConfig = { 
+                        bg: "rgba(34,197,94,0.1)", 
+                        color: "#22c55e", 
+                        label: "+" + item.amount 
+                      };
+                    } else {
+                      statusConfig = { 
+                        bg: "rgba(245,158,11,0.1)", 
+                        color: "#f59e0b", 
+                        label: String(item.amount) 
+                      };
+                    }
 
                     return (
-                      <div
+                      <motion.div
                         key={item.id}
-                        className="flex items-center gap-4 p-4 rounded-2xl border transition-all hover:bg-white/5"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="group relative overflow-hidden rounded-xl border transition-all hover:border-opacity-50"
                         style={{
-                          background: cardBg,
-                          borderColor: cardBorder,
-                          boxShadow,
+                          background: isDark ? "rgba(20,20,20,0.6)" : "rgba(255,255,255,0.7)",
+                          borderColor: isError ? "rgba(220,38,38,0.2)" : isRefund ? "rgba(34,197,94,0.2)" : cardBorder,
                         }}
                       >
-                        <div
-                          className="flex-shrink-0 w-11 h-11 rounded-2xl flex items-center justify-center text-xl"
-                          style={{
-                            background: isError ? "rgba(220,38,38,0.15)" : isCredit ? (isPositive ? "rgba(34,197,94,0.15)" : "rgba(245,158,11,0.15)") : accent15,
-                            color: isError ? "#ef4444" : isCredit ? (isPositive ? "#22c55e" : "#f59e0b") : accent,
+                        {/* Left accent bar */}
+                        <div 
+                          className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl"
+                          style={{ 
+                            background: isError ? "#ef4444" : isRefund ? "#22c55e" : accent 
                           }}
-                        >
-                          {featureEmoji(item.type)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2 mb-1">
-                            <span className="font-bold text-sm sm:text-base truncate" style={{ color: textColor }}>
-                              {featureLabel(item.type)}
-                            </span>
-                            {isCredit && (
-                              <span className={`text-sm font-black whitespace-nowrap ${isPositive ? "text-green-400" : "text-amber-500"}`}>
-                                {isPositive ? "+" : ""}{item.amount}
-                              </span>
-                            )}
-                            {isTask && !isError && (
-                              <span className="text-sm font-black whitespace-nowrap text-amber-500">
-                                -{Math.abs(item.amount || 0)} {lang === "mm" ? "pts" : "pts"}
-                              </span>
-                            )}
-                            {isError && (
-                               <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 font-bold uppercase tracking-wider">
-                                 {lang === "mm" ? "မအောင်မြင်" : "Failed"}
-                               </span>
-                            )}
+                        />
+                        
+                        <div className="flex items-center gap-3 p-3 pl-4">
+                          {/* Feature icon */}
+                          <div
+                            className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-sm font-black"
+                            style={{
+                              background: isError 
+                                ? "rgba(220,38,38,0.15)" 
+                                : isRefund 
+                                  ? "rgba(34,197,94,0.15)" 
+                                  : accent15,
+                              color: isError ? "#ef4444" : isRefund ? "#22c55e" : accent,
+                            }}
+                          >
+                            {item.type?.includes("translate") ? "📹" : item.type?.includes("dub") ? "🎬" : "🎙️"}
                           </div>
-                          <div className="flex items-center justify-between gap-4">
-                            <div className="flex items-center gap-2">
+                          
+                          {/* Content */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <span className="font-bold text-sm truncate" style={{ color: textColor }}>
+                                {featureLabel(item.type)}
+                              </span>
                               {voiceDisplay && (
-                                <span className="text-xs font-medium" style={{ color: accent }}>
+                                <span 
+                                  className="text-[10px] px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider"
+                                  style={{ 
+                                    background: accent15, 
+                                    color: accent 
+                                  }}
+                                >
                                   {voiceDisplay}
                                 </span>
                               )}
-                              <span className="text-[10px] opacity-30 whitespace-nowrap">
-                                {fmtTime(item.createdAt)}
-                              </span>
                             </div>
+                            <span className="text-[10px] opacity-40" style={{ color: subtextColor }}>
+                              {fmtTime(item.createdAt)}
+                            </span>
+                          </div>
+                          
+                          {/* Credits & Status */}
+                          <div className="flex flex-col items-end gap-1">
+                            {!isCredit && (
+                              <span className="text-sm font-black" style={{ 
+                                color: isRefund ? "#22c55e" : isError ? "#ef4444" : "#f59e0b" 
+                              }}>
+                                {isRefund ? "+" : isError ? "" : "-"}{Math.abs(item.amount || 0)}
+                              </span>
+                            )}
+                            {isCredit && (
+                              <span className="text-sm font-black" style={{ 
+                                color: isPositive ? "#22c55e" : "#f59e0b" 
+                              }}>
+                                {isPositive ? "+" : ""}{item.amount}
+                              </span>
+                            )}
+                            <span 
+                              className="text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider"
+                              style={{ 
+                                background: statusConfig.bg, 
+                                color: statusConfig.color 
+                              }}
+                            >
+                              {statusConfig.label}
+                            </span>
                           </div>
                         </div>
-                      </div>
+                      </motion.div>
                     );
                   })}
                 </div>
