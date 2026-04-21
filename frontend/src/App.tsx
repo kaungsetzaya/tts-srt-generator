@@ -16,60 +16,15 @@ import Plans from "./pages/Plans";
 import AuthGuard from "./components/AuthGuard";
 import MaintenanceOverlay from "./components/MaintenanceOverlay";
 import { trpc } from "./lib/trpc";
-
-function Router() {
-  const [location] = useLocation();
-  return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={location}
-        initial={{ opacity: 0, x: 50 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: -50 }}
-        transition={{ duration: 0.25, ease: "easeInOut" }}
-      >
-      <Switch>
-        <Route path={"/"} component={Landing} />
-        <Route path={"/login"} component={Login} />
-      <Route path={"/lumix"}>
-        <AuthGuard>
-          <TTSGenerator />
-        </AuthGuard>
-      </Route>
-      <Route path={"/admin"}>
-        <AuthGuard>
-          <AdminDashboard />
-        </AuthGuard>
-      </Route>
-      <Route path={"/history"}>
-        <AuthGuard>
-          <History />
-        </AuthGuard>
-      </Route>
-      <Route path={"/trial-info"}>
-        <AuthGuard>
-          <TrialInfo />
-        </AuthGuard>
-      </Route>
-      <Route path={"/plans"} component={Plans} />
-      <Route path={"/video"}>
-        <AuthGuard>
-          <VideoTranslator />
-        </AuthGuard>
-      </Route>
-      <Route path={"/404"} component={NotFound} />
-      <Route component={NotFound} />
-    </Switch>
-    </motion.div>
-    </AnimatePresence>
-  );
-}
+import { useAuth } from "./hooks/useAuth";
 
 function App() {
   const [location] = useLocation();
   const { data: settings, isLoading } = trpc.settings.get.useQuery();
+  const { user } = useAuth();
 
   const isMaintenance = settings?.maintenance_mode === "true";
+  const isAdmin = user?.role === "admin";
   const isSafeRoute = location.startsWith("/admin") || location.startsWith("/login");
 
   // Prevent flash while checking maintenance status (unless it's a safe route)
@@ -82,7 +37,7 @@ function App() {
       <ThemeProvider defaultTheme="dark" switchable={true}>
         <TooltipProvider>
           <Toaster />
-          {isMaintenance && !isSafeRoute ? (
+          {isMaintenance && !isSafeRoute && !isAdmin ? (
              <MaintenanceOverlay />
           ) : (
              <Router />
