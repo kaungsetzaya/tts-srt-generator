@@ -98,22 +98,29 @@ export class AssBuilderService {
     }
 
     private formatTextForAss(text: string): string {
-        const MAX_LINES = 2;
-        const MAX_CHARS_PER_LINE = 50;
-        
+        // Split by newlines first
         let lines = text.split(/[\n\r]+/).filter(l => l.trim());
         
-        if (lines.length > MAX_LINES) {
-            lines = lines.slice(0, MAX_LINES);
+        if (lines.length === 0) return "";
+        if (lines.length === 1) {
+            // Single line - check if too long, wrap to 2 lines if needed
+            const singleLine = lines[0];
+            const MAX_CHARS = 45;
+            if (singleLine.length > MAX_CHARS) {
+                const mid = Math.floor(singleLine.length / 2);
+                lines = [
+                    singleLine.slice(0, mid).trim(),
+                    singleLine.slice(mid).trim()
+                ];
+            }
         }
         
-        lines = lines.map(line => {
-            if (line.length > MAX_CHARS_PER_LINE) {
-                return line.substring(0, MAX_CHARS_PER_LINE) + "...";
-            }
-            return line;
-        });
+        // Max 2 lines
+        if (lines.length > 2) {
+            lines = lines.slice(0, 2);
+        }
         
+        // Join with \N for ASS - no truncation
         const formatted = lines.join("\\N");
         return formatted.replace(/,/g, "，");
     }

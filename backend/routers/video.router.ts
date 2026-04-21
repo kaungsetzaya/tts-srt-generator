@@ -20,7 +20,7 @@ export const videoRouter = t.router({
         videoBase64: z.string(),
         filename: z.string(),
         voice: z.enum(["thiha", "nilar", "ryan", "ronnie", "lucas", "daniel", "evander", "michelle", "iris", "charlotte", "amara"]),
-        speed: z.number().optional().default(1.2),
+        speed: z.number().optional().default(1.6),
         pitch: z.number().optional().default(0),
         srtEnabled: z.boolean().optional().default(true),
         srtFontSize: z.number().optional().default(24),
@@ -104,7 +104,7 @@ export const videoRouter = t.router({
       z.object({
         url: z.string(),
         voice: z.enum(["thiha", "nilar", "ryan", "ronnie", "lucas", "daniel", "evander", "michelle", "iris", "charlotte", "amara"]),
-        speed: z.number().optional().default(1.2),
+        speed: z.number().optional().default(1.6),
         pitch: z.number().optional().default(0),
         srtEnabled: z.boolean().optional().default(true),
         srtFontSize: z.number().optional().default(24),

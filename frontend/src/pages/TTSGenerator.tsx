@@ -395,16 +395,20 @@ export default function TTSGenerator() {
   const computeSrtPreviewStyle = useMemo(() => {
     const vw = dubVideoWidth;
     const vh = dubVideoHeight;
-    const fontScaleFactor = vh / 490;
-    const assFontSize = Math.round((srtFontSize ?? 24) * fontScaleFactor * 2.0);
     const containerWidth = dubDetectedRatio === "9:16" ? Math.min(240, window.innerWidth * 0.55) : window.innerWidth;
     const scale = containerWidth / vw;
-    const scaledFontSize = assFontSize * scale;
-    const assMarginV = Math.round((80 + (srtMarginV ?? 30) * 3) * (vh / 1080));
-    const topPercent = ((vh - assMarginV) / vh) * 100;
+    
+    // Match backend calculation: fontSize = srtFontSize * fontScaleFactor * 1.5
+    const fontScaleFactor = vh / 720;
+    const baseFontSize = (srtFontSize ?? 24) * fontScaleFactor * 1.5;
+    const scaledFontSize = baseFontSize * scale;
+    
+    // Match backend margin calculation
+    const marginV = 80 + (srtMarginV ?? 30) * 3 * (vh / 1080);
+    const topPercent = ((vh - marginV) / vh) * 100;
     const bgAlpha = srtBlurOpacity / 100;
-    const assOutline = Math.max(4, (srtBoxPadding ?? 4) * 3);
-    const scaledPadding = assOutline * scale;
+    const outline = Math.max(4, (srtBoxPadding ?? 4) * 3);
+    const scaledPadding = outline * scale;
     const shadowSize = 2 * scale;
 
     return {
@@ -3795,7 +3799,7 @@ export default function TTSGenerator() {
                               </span>
                             )}
                             {!isCredit && !isError && !isRefund && item.amount > 0 && (
-                              <span className="text-sm font-black" style={{ color: "#f59e0b" }}>
+                              <span className="text-sm font-black" style={{ color: "#ef4444" }}>
                                 -{item.amount}
                               </span>
                             )}

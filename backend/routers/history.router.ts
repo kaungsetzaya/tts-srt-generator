@@ -4,29 +4,10 @@
 import { z } from "zod";
 import { t, protectedProcedure } from "./trpc";
 import { getDb } from "../db";
-import { ttsConversions, creditTransactions } from "../../drizzle/schema";
+import { creditTransactions } from "../../drizzle/schema";
 import { eq, desc } from "drizzle-orm";
 
 export const historyRouter = t.router({
-  getMyHistory: t.procedure
-    .input(z.object({ limit: z.number().optional() }))
-    .query(async ({ ctx, input }) => {
-      if (!ctx.user) return [];
-      const db = await getDb();
-      if (!db) return [];
-      try {
-        const rows = await db
-          .select()
-          .from(ttsConversions)
-          .where(eq(ttsConversions.userId, ctx.user.userId))
-          .orderBy(desc(ttsConversions.createdAt))
-          .limit(input.limit ?? 100);
-        return rows;
-      } catch {
-        return [];
-      }
-    }),
-
   getCreditHistory: protectedProcedure
     .input(z.object({ limit: z.number().min(1).max(200).default(50) }))
     .query(async ({ input, ctx }) => {
@@ -59,15 +40,7 @@ export const historyRouter = t.router({
       try {
         const limit = input.limit ?? 50;
         
-        // Fetch tasks
-        const tasks = await db
-          .select()
-          .from(ttsConversions)
-          .where(eq(ttsConversions.userId, ctx.user!.userId))
-          .orderBy(desc(ttsConversions.createdAt))
-          .limit(limit);
-
-        // Fetch credit transactions
+        // Fetch credit transactions - contains all deductions, refunds, and plan purchases
         const credits = await db
           .select()
           .from(creditTransactions)
@@ -75,35 +48,20 @@ export const historyRouter = t.router({
           .orderBy(desc(creditTransactions.createdAt))
           .limit(limit);
 
-        // Combine and map to a unified shape
-        const unified = [
-          ...tasks.map((t: typeof tasks[0]) => ({
-            id: t.id,
-            origin: "task" as const,
-            type: t.feature || "tts",
-            amount: t.credits || 0,
-            status: t.status,
-            voice: t.voice || "",
-            character: t.character || "",
-            charCount: t.charCount || 0,
-            durationMs: t.durationMs || 0,
-            description: t.text?.slice(0, 100) || t.errorMsg || "",
-            createdAt: t.createdAt!,
-          })),
-          ...credits.map((c: typeof credits[0]) => ({
-            id: c.id,
-            origin: "credit" as const,
-            type: c.type,
-            amount: c.amount,
-            status: "success",
-            voice: "",
-            character: "",
-            charCount: 0,
-            durationMs: 0,
-            description: c.description || "",
-            createdAt: c.createdAt!,
-          }))
-        ];
+        // Map to unified shape with proper type labels
+        const unified = credits.map((c: typeof credits[0]) => ({
+          id: c.id,
+          origin: "credit" as const,
+          type: c.type,
+          amount: c.amount,
+          status: c.amount > 0 ? "success" : "fail",
+          voice: "",
+          character: "",
+          charCount: 0,
+          durationMs: 0,
+          description: c.description || "",
+          createdAt: c.createdAt!,
+        }));
 
         // Sort by date desc
         return unified.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, limit);

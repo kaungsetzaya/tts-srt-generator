@@ -64,7 +64,7 @@ export const jobsRouter = t.router({
         const jobId = createJob("dub_link", {
           url: input.url,
           voice: input.voice,
-          speed: 1.2,
+          speed: 1.6,
           pitch: 0,
           srtEnabled: input.srtEnabled,
           srtFontSize: input.srtFontSize,

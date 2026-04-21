@@ -22,6 +22,15 @@ export const adminRouter = t.router({
         .select()
         .from(subscriptions)
         .where(sql`expires_at > NOW()`);
+
+      // Count from all generation tables (ttsConversions + credit transactions for dubbing/translate)
+      // Include credit transactions as gen counts since they track actual job usage
+      const allCreditCounts = await db
+        .select({ userId: creditTransactions.userId, count: count() })
+        .from(creditTransactions)
+        .where(sql`type LIKE 'video_%' OR type LIKE 'dub_%'`)
+        .groupBy(creditTransactions.userId);
+      
       const allGenCounts = await db
         .select({ userId: ttsConversions.userId, count: count() })
         .from(ttsConversions)
@@ -29,7 +38,9 @@ export const adminRouter = t.router({
 
       return userList.map((user: any) => {
         const userSub = allSubs.find((s: any) => s.userId === user.id);
-        const userGen = allGenCounts.find((g: any) => g.userId === user.id);
+        const ttsGen = allGenCounts.find((g: any) => g.userId === user.id);
+        const jobGen = allCreditCounts.find((j: any) => j.userId === user.id);
+        const totalGens = (ttsGen?.count || 0) + (jobGen?.count || 0);
         return {
           id: user.id,
           name: user.telegramFirstName || user.name || "Unknown",
@@ -39,7 +50,7 @@ export const adminRouter = t.router({
           banned: !!user.bannedAt,
           credits: user.credits || 0,
           subscription: userSub || null,
-          genCount: userGen?.count || 0,
+          genCount: totalGens,
           daysLeft: userSub
             ? Math.ceil(
                 (new Date(userSub.expiresAt).getTime() - Date.now()) /

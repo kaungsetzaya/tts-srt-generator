@@ -283,6 +283,7 @@ const ALLOWED_VIDEO_DOMAINS = [
   "tiktok.com", "www.tiktok.com", "vm.tiktok.com",
   "facebook.com", "www.facebook.com", "m.facebook.com",
   "fb.watch",
+  "instagram.com",
 ];
 
 export function isAllowedVideoUrl(url: string): boolean {

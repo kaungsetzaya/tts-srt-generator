@@ -23,6 +23,14 @@ function formatTimestamp(ms: number): string {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')},${String(millis).padStart(3, '0')}`;
 }
 
+function limitTo2Lines(text: string): string {
+    const lines = text.split(/[\n\r]+/).filter(l => l.trim());
+    if (lines.length > 2) {
+        return lines.slice(0, 2).join("\n");
+    }
+    return lines.join("\n");
+}
+
 export interface DubOptions {
   voice: string;
   speed?: number;
@@ -290,14 +298,6 @@ export class DubVideoPipeline {
           : 0;
 
       const allTranslatedText = translatedSegments.map(s => s.translatedText).join("\n");
-      
-      const limitTo2Lines = (text: string): string => {
-          const lines = text.split(/[\n\r]+/).filter(l => l.trim());
-          if (lines.length > 2) {
-              return lines.slice(0, 2).join("\n");
-          }
-          return lines.join("\n");
-      };
       
       const allSrtContent = processedForSrt
           .map((s, i) => {
