@@ -3021,7 +3021,7 @@ export default function TTSGenerator() {
                               setSrtEnabled(next);
                               setSrtAccordionOpen(next);
                             }}
-                            className={`relative w-12 h-6 sm:w-14 sm:h-7 rounded-full transition-all duration-300`}
+                            className={`relative w-10 h-5 sm:w-11 sm:h-6 rounded-full transition-all duration-300 flex-shrink-0`}
                             style={{
                               background: srtEnabled
                                 ? "linear-gradient(135deg, #C06F30, #F4B34F)"
@@ -3030,7 +3030,7 @@ export default function TTSGenerator() {
                             }}
                           >
                             <div
-                              className={`absolute top-0.5 left-0.5 w-5 h-5 sm:top-0.5 sm:left-0.5 sm:w-6 sm:h-6 bg-white rounded-full transition-transform duration-300 ${srtEnabled ? "translate-x-6 sm:translate-x-7" : "translate-x-0"}`}
+                              className={`absolute top-0.5 left-0.5 w-4 h-4 sm:w-5 sm:h-5 bg-white rounded-full transition-transform duration-300 ${srtEnabled ? "translate-x-5" : "translate-x-0"}`}
                               style={{ boxShadow: "0 2px 6px rgba(0,0,0,0.15)" }}
                             />
                           </button>
@@ -3089,10 +3089,11 @@ export default function TTSGenerator() {
                                   <button
                                     key={color}
                                     onClick={() => setSrtColor(color)}
-                                    className={`color-swatch ${srtColor === color ? "active" : ""}`}
+                                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex-shrink-0 transition-transform hover:scale-110`}
                                     style={{ 
                                       background: color,
-                                      borderColor: srtColor === color ? accent : "transparent",
+                                      border: `2px solid ${srtColor === color ? accent : "transparent"}`,
+                                      boxShadow: "0 2px 5px rgba(0,0,0,0.1)"
                                     }}
                                   />
                                 ))}
@@ -3159,7 +3160,7 @@ export default function TTSGenerator() {
                               </span>
                               <button
                                 onClick={() => setSrtFullWidth(!srtFullWidth)}
-                                className="relative w-12 h-6 rounded-full transition-all duration-300"
+                                className="relative w-10 h-5 sm:w-11 sm:h-6 rounded-full transition-all duration-300 flex-shrink-0"
                                 style={{
                                   background: srtFullWidth
                                     ? "linear-gradient(135deg, #C06F30, #F4B34F)"
@@ -3168,7 +3169,7 @@ export default function TTSGenerator() {
                                 }}
                               >
                                 <div
-                                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${srtFullWidth ? "translate-x-6" : "translate-x-0"}`}
+                                  className={`absolute top-0.5 left-0.5 w-4 h-4 sm:w-5 sm:h-5 bg-white rounded-full shadow transition-transform duration-300 ${srtFullWidth ? "translate-x-5" : "translate-x-0"}`}
                                 />
                               </button>
                             </div>
@@ -3191,7 +3192,7 @@ export default function TTSGenerator() {
                               </span>
                               <button
                                 onClick={() => setSrtBlurBg(!srtBlurBg)}
-                                className="relative w-12 h-6 rounded-full transition-all duration-300"
+                                className="relative w-10 h-5 sm:w-11 sm:h-6 rounded-full transition-all duration-300 flex-shrink-0"
                                 style={{
                                   background: srtBlurBg
                                     ? "linear-gradient(135deg, #C06F30, #F4B34F)"
@@ -3200,7 +3201,7 @@ export default function TTSGenerator() {
                                 }}
                               >
                                 <div
-                                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${srtBlurBg ? "translate-x-6" : "translate-x-0"}`}
+                                  className={`absolute top-0.5 left-0.5 w-4 h-4 sm:w-5 sm:h-5 bg-white rounded-full shadow transition-transform duration-300 ${srtBlurBg ? "translate-x-5" : "translate-x-0"}`}
                                 />
                               </button>
                             </div>
