@@ -374,11 +374,8 @@ export default function TTSGenerator() {
   const [dubVideoHeight, setDubVideoHeight] = useState(1080);
   const [videoPreviewError, setVideoPreviewError] = useState<string>("");
   const [videoLoading, setVideoLoading] = useState(false);
-  const [dubVoice, setDubVoice] = useState<"thiha" | "nilar">("thiha");
-  const [dubCharacter, setDubCharacter] = useState<string>("");
-const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
-      "standard"
-    );
+  const [dubSelectedVoice, setDubSelectedVoice] = useState<string>("thiha");
+  const [dubSelectedTier, setDubSelectedTier] = useState<VoiceTier>("tier1");
 
   // Dubbing SRT overlay settings
   const [srtEnabled, setSrtEnabled] = useState(true);
@@ -818,13 +815,12 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
     amara: { base: "nilar" },
   };
   const handleDubGenerate = async () => {
-    const dubVoiceToUse =
-      dubVoiceMode === "standard" ? dubVoice : dubCharacter;
+    const dubVoiceToUse = dubSelectedVoice;
 
     // Use job-based API for dubbing (handles long processing time)
     if (dubVideoUrl.trim()) {
       try {
-const res = await startDubMutation.mutateAsync({
+        const res = await startDubMutation.mutateAsync({
            url: dubVideoUrl.trim(),
            voice: dubVoiceToUse,
            srtEnabled,
@@ -2799,100 +2795,94 @@ const res = await startDubMutation.mutateAsync({
                             style={{ color: accent }}
                           />
                         </button>
-                        {voiceAccordionOpen && (
-                          <div className="space-y-4 mt-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                            {[
-                              {
-                                label: t.male,
-                                voices: [
-                                  { id: "thiha", name: "သီဟ", isStd: true },
-                                  { id: "ryan", name: "ရဲရင့်", isStd: false },
-                                  {
-                                    id: "ronnie",
-                                    name: "ရောင်နီ",
-                                    isStd: false,
-                                  },
-                                  {
-                                    id: "lucas",
-                                    name: "လင်းခန့်",
-                                    isStd: false,
-                                  },
-                                  { id: "daniel", name: "ဒေဝ", isStd: false },
-                                  { id: "evander", name: "အဂ္ဂ", isStd: false },
-                                ],
-                              },
-                              {
-                                label: t.female,
-                                voices: [
-                                  { id: "nilar", name: "နီလာ", isStd: true },
-                                  {
-                                    id: "michelle",
-                                    name: "မေချို",
-                                    isStd: false,
-                                  },
-                                  { id: "iris", name: "အိန္ဒြာ", isStd: false },
-                                  {
-                                    id: "charlotte",
-                                    name: "သီရိ",
-                                    isStd: false,
-                                  },
-                                  { id: "amara", name: "အမရာ", isStd: false },
-                                ],
-                              },
-                            ].map(({ label: grpLabel, voices }) => (
-                              <div key={grpLabel}>
-                                <p
-                                  className="text-xs font-bold uppercase tracking-wider mb-2"
-                                  style={{ color: subtextColor }}
+{voiceAccordionOpen && (
+                          <div className="space-y-3 mt-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                            {/* Tier Tabs */}
+                            <div className="flex gap-1 p-1 bg-black/10 rounded-lg">
+                              {([
+                                { id: "tier1" as VoiceTier, label: "Tier 1", subLabel: "Myanmar" },
+                                { id: "tier2" as VoiceTier, label: "Tier 2", subLabel: "Murf AI" },
+                                { id: "tier3" as VoiceTier, label: "Tier 3", subLabel: "Gemini" },
+                              ] as const).map(tier => (
+                                <button
+                                  key={tier.id}
+                                  onClick={() => setDubSelectedTier(tier.id)}
+                                  className="flex-1 py-1.5 px-2 rounded-md text-[10px] font-bold transition-all"
+                                  style={{
+                                    background: dubSelectedTier === tier.id
+                                      ? `linear-gradient(135deg, ${accent}40, ${accentSecondary}30)`
+                                      : "transparent",
+                                    border: `1px solid ${dubSelectedTier === tier.id ? accent : "transparent"}`,
+                                    color: dubSelectedTier === tier.id ? accent : subtextColor,
+                                  }}
                                 >
-                                  {grpLabel}
-                                </p>
-                                <div className="grid grid-cols-3 gap-2">
-                                  {voices.map(v => {
-                                    const isSelected = v.isStd
-                                      ? dubVoiceMode === "standard" &&
-                                        dubVoice ===
-                                          (v.id === "thiha" ? "thiha" : "nilar")
-                                      : dubVoiceMode === "character" &&
-                                        dubCharacter === v.id;
-                                    return (
-                                      <button
-                                        key={v.id}
-                                        onClick={() => {
-                                          if (v.isStd) {
-                                            setDubVoiceMode("standard");
-                                            setDubVoice(v.id as any);
-                                            setDubCharacter("");
-                                          } else {
-                                            setDubVoiceMode("character");
-                                            setDubCharacter(v.id);
-                                          }
-                                        }}
-                                        className="py-2 px-2 border rounded-xl text-xs font-bold transition-all"
-                                        style={{
-                                          borderColor: isSelected
-                                            ? accent
-                                            : cardBorder,
-                                          background: isSelected
-                                            ? isDark
-                                              ? "rgba(192,111,48,0.2)"
-                                              : "rgba(244,179,79,0.08)"
-                                            : "transparent",
-                                          color: isSelected
-                                            ? accent
-                                            : textColor,
-                                          boxShadow: "none",
-                                        }}
-                                      >
-                                        {v.name}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
+                                  <div>{tier.label}</div>
+                                  <div className="text-[9px] font-normal opacity-60">{tier.subLabel}</div>
+                                </button>
+                              ))}
+                            </div>
+
+                            {/* Males */}
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5 px-1" style={{ color: subtextColor }}>
+                                {t.male}
+                              </p>
+                              <div className="grid grid-cols-4 gap-1.5">
+                                {ALL_VOICES.filter(v => v.tier === dubSelectedTier && v.gender === "male").map(v => (
+                                  <button
+                                    key={v.id}
+                                    onClick={() => setDubSelectedVoice(v.id)}
+                                    className="py-1.5 px-1 border rounded-lg text-[10px] font-bold transition-all"
+                                    style={{
+                                      borderColor: dubSelectedVoice === v.id ? accent : cardBorder,
+                                      background: dubSelectedVoice === v.id
+                                        ? isDark ? "rgba(192,111,48,0.2)" : "rgba(244,179,79,0.08)"
+                                        : "transparent",
+                                      color: dubSelectedVoice === v.id ? accent : textColor,
+                                    }}
+                                  >
+                                    <div className="truncate">{lang === "mm" ? v.nameMm : v.name}</div>
+                                  </button>
+                                ))}
                               </div>
-                            ))}
+                            </div>
+
+                            {/* Females */}
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5 px-1" style={{ color: subtextColor }}>
+                                {t.female}
+                              </p>
+                              <div className="grid grid-cols-4 gap-1.5">
+                                {ALL_VOICES.filter(v => v.tier === dubSelectedTier && v.gender === "female").map(v => (
+                                  <button
+                                    key={v.id}
+                                    onClick={() => setDubSelectedVoice(v.id)}
+                                    className="py-1.5 px-1 border rounded-lg text-[10px] font-bold transition-all"
+                                    style={{
+                                      borderColor: dubSelectedVoice === v.id ? accent : cardBorder,
+                                      background: dubSelectedVoice === v.id
+                                        ? isDark ? "rgba(192,111,48,0.2)" : "rgba(244,179,79,0.08)"
+                                        : "transparent",
+                                      color: dubSelectedVoice === v.id ? accent : textColor,
+                                    }}
+                                  >
+                                    <div className="truncate">{lang === "mm" ? v.nameMm : v.name}</div>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Credits info */}
+                            <div className="text-center">
+                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{
+                                background: `rgba(192,111,48,0.1)`,
+                                color: accent,
+                              }}>
+                                {getVoiceCredits(dubSelectedVoice)} credits
+                              </span>
+                            </div>
                           </div>
-)}
+                        )}
                         </div>
 
                       {/* ═══ Premium 3D Subtitle Settings Panel ═══ */}

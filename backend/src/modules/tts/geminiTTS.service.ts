@@ -8,6 +8,7 @@ interface GeminiTTSRequest {
     parts: Array<{ text: string }>;
   }>;
   generationConfig: {
+    responseModalities: string;
     speechConfig: {
       voiceConfig: {
         prebuiltVoiceConfig: {
@@ -16,12 +17,6 @@ interface GeminiTTSRequest {
       };
     };
   };
-}
-
-interface GeminiTTSResponse {
-  audioBuffer?: Buffer;
-  durationMs?: number;
-  error?: string;
 }
 
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent";
@@ -49,6 +44,7 @@ export async function generateGeminiSpeech(
       parts: [{ text }]
     }],
     generationConfig: {
+      responseModalities: ["AUDIO"],
       speechConfig: {
         voiceConfig: {
           prebuiltVoiceConfig: {
@@ -59,7 +55,7 @@ export async function generateGeminiSpeech(
     },
   };
 
-  console.log(`[Gemini TTS] Generating: "${text.slice(0, 50)}..." [Voice: ${voice.name}, Language: ${languageCode}]`);
+  console.log(`[Gemini TTS] Generating: "${text.slice(0, 50)}..." [Voice: ${voice.name}]`);
 
   const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
     method: "POST",
@@ -81,14 +77,14 @@ export async function generateGeminiSpeech(
     throw new Error(`Gemini TTS error: ${data.error.message}`);
   }
 
-  // Gemini returns base64 encoded audio
+  // Gemini returns base64 encoded audio in the response
   const audioBase64 = data.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
   if (!audioBase64) {
     throw new Error("No audio data in Gemini response");
   }
 
   const audioBuffer = Buffer.from(audioBase64, "base64");
-  
+
   // Estimate duration (roughly 150 chars per second for TTS)
   const estimatedDurationMs = Math.round(text.length * (1000 / 150));
 
@@ -109,7 +105,6 @@ export async function generateGeminiSpeechWithSRT(
   const { audioBuffer, durationMs } = await generateGeminiSpeech(text, voiceId);
 
   // For now, return empty SRT - subtitle generation would need audio analysis
-  // which requires additional processing
   const srtContent = "";
 
   return {
