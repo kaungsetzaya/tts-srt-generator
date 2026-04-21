@@ -181,9 +181,10 @@ function UserDetailDrawer({
     { userId },
     { refetchInterval: 3000 }
   );
-  // Load this user's credit transactions directly
-  const { data: allTx } = trpc.admin.getTransactions.useQuery(undefined, {});
-  const userCredits = (allTx ?? []).filter((t: any) => t.userId === userId);
+  // Load this user's credit transactions directly - OPTIMIZED
+  const { data: userCredits } = trpc.admin.getTransactions.useQuery({ userId }, {
+    enabled: !!userId,
+  });
 
   const fmtDuration = (ms: number) => {
     const s = Math.floor(ms / 1000);
@@ -304,7 +305,7 @@ function UserDetailDrawer({
                 <History className="w-3.5 h-3.5" /> Credit History
               </p>
               <div className="space-y-1 max-h-64 overflow-y-auto pr-1">
-                {userCredits.length === 0 ? (
+                {!userCredits || userCredits.length === 0 ? (
                   <p className="text-xs opacity-40 text-center py-8 italic">No credit transactions found</p>
                 ) : (
                   userCredits.map((t: any) => {
@@ -521,7 +522,7 @@ export default function AdminDashboard() {
   const { data: users, refetch } = trpc.admin.getUsers.useQuery(undefined, {
     refetchInterval: 3000,
   });
-  const { data: analytics } = trpc.admin.getAnalytics.useQuery();
+  const { data: analytics } = trpc.admin.getAnalytics.useQuery({ month: revenueMonth });
   const { data: health } = trpc.admin.getServerHealth.useQuery(undefined, {
     refetchInterval: 30000,
   });
@@ -753,21 +754,21 @@ export default function AdminDashboard() {
               },
               {
                 label: "🎙️ TTS (Month)",
-                value: analytics?.totalConversions ?? 0,
+                value: (analytics as any)?.ttsCount ?? 0,
                 color: C,
-                sub: `${analytics?.totalConversions ?? 0} total conversions`,
+                sub: `${(analytics as any)?.ttsCount ?? 0} generations`,
               },
               {
                 label: "🎬 Video (Month)",
-                value: analytics?.totalConversions ?? 0,
+                value: (analytics as any)?.videoCount ?? 0,
                 color: C_GOLD,
-                sub: `${analytics?.activeSubs ?? 0} active subs`,
+                sub: `${(analytics as any)?.videoCount ?? 0} conversions`,
               },
               {
                 label: "Total Users",
                 value: analytics?.totalUsers ?? 0,
                 color: C,
-                sub: `${analytics?.activeSubs ?? 0} subscribed`,
+                sub: `${analytics?.activeSubs ?? 0} active subs`,
               },
             ].map(({ label, value, color, sub }) => (
               <div

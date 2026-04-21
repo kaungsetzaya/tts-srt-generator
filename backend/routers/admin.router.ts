@@ -100,21 +100,25 @@ export const adminRouter = t.router({
       };
       const creditsToAdd = planCredits[input.plan] ?? 10;
 
+      // Use a more robust check: any active sub or the latest sub (even if expired)
       const existingSubs = await db
         .select()
         .from(subscriptions)
-        .where(and(
-          eq(subscriptions.userId, input.userId),
-          gt(subscriptions.expiresAt, new Date())
-        ))
+        .where(eq(subscriptions.userId, input.userId))
+        .orderBy(desc(subscriptions.expiresAt))
         .limit(1);
 
       if (existingSubs.length > 0) {
         const existing = existingSubs[0];
-        const currentExpires = new Date(existing.expiresAt!);
+        const now = new Date();
+        const currentExpires = existing.expiresAt && existing.expiresAt > now 
+          ? new Date(existing.expiresAt) 
+          : now;
+          
         const newExpires = new Date(
           currentExpires.getTime() + input.days * 86400000
         );
+        
         await db
           .update(subscriptions)
           .set({
@@ -143,18 +147,20 @@ export const adminRouter = t.router({
         .from(users)
         .where(eq(users.id, input.userId))
         .limit(1);
+        
       if (user) {
         const currentCredits = user.credits ?? 0;
         await db
           .update(users)
           .set({ credits: currentCredits + creditsToAdd })
           .where(eq(users.id, input.userId));
+          
         await db.insert(creditTransactions).values({
           id: randomUUID(),
           userId: input.userId,
           amount: creditsToAdd,
           type: "subscription",
-          description: `Subscribe: ${input.plan} plan`,
+          description: `Subscribe: ${input.plan} plan (${input.days} days added)`,
         });
       }
 
@@ -197,48 +203,75 @@ export const adminRouter = t.router({
       return { success: true };
     }),
 
-  getAnalytics: adminProcedure.query(async () => {
-    const db = await getDb();
-    if (!db)
-      return { totalUsers: 0, activeSubs: 0, totalConversions: 0, revenue: 0, planCounts: [] };
-    try {
-      const PLAN_PRICE: Record<string, number> = {
-        trial: 0, starter: 5000, creator: 15000, pro: 30000,
-      };
+  getAnalytics: adminProcedure
+    .input(z.object({ month: z.string().optional() }).optional())
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db)
+        return { totalUsers: 0, activeSubs: 0, totalConversions: 0, ttsCount: 0, videoCount: 0, revenue: 0, planCounts: [] };
+      try {
+        const PLAN_PRICE: Record<string, number> = {
+          trial: 0, starter: 15000, creator: 35000, pro: 75000,
+        };
 
-      const [totalUsersRow] = await db.select({ count: count() }).from(users);
-      const [activeSubsRow] = await db
-        .select({ count: count() })
-        .from(subscriptions)
-        .where(sql`expires_at > NOW()`);
-      const [totalConvRow] = await db.select({ count: count() }).from(ttsConversions);
-      const planRows = await db
-        .select({ plan: subscriptions.plan, count: count() })
-        .from(subscriptions)
-        .where(sql`payment_method IS NOT NULL AND payment_method != 'free' AND created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)`)
-        .groupBy(subscriptions.plan);
+        const targetMonth = input?.month || new Date().toISOString().slice(0, 7); // e.g. "2024-04"
 
-      const revenue = planRows.reduce(
-        (sum: number, p: any) => sum + (PLAN_PRICE[p.plan] ?? 0) * p.count,
-        0
-      );
+        const [totalUsersRow] = await db.select({ count: count() }).from(users);
+        const [activeSubsRow] = await db
+          .select({ count: count() })
+          .from(subscriptions)
+          .where(sql`expires_at > NOW()`);
+          
+        const [totalConvRow] = await db.select({ count: count() }).from(ttsConversions)
+          .where(sql`DATE_FORMAT(created_at, '%Y-%m') = ${targetMonth}`);
 
-      const allPlanRows = await db
-        .select({ plan: subscriptions.plan, count: count() })
-        .from(subscriptions)
-        .groupBy(subscriptions.plan);
+        const featureCounts = await db
+          .select({ feature: ttsConversions.feature, count: count() })
+          .from(ttsConversions)
+          .where(sql`DATE_FORMAT(created_at, '%Y-%m') = ${targetMonth}`)
+          .groupBy(ttsConversions.feature);
 
-      return {
-        totalUsers: totalUsersRow?.count || 0,
-        activeSubs: activeSubsRow?.count || 0,
-        totalConversions: totalConvRow?.count || 0,
-        revenue,
-        planCounts: allPlanRows,
-      };
-    } catch {
-      return { totalUsers: 0, activeSubs: 0, totalConversions: 0, revenue: 0, planCounts: [] };
-    }
-  }),
+        let ttsCount = 0;
+        let videoCount = 0;
+        featureCounts.forEach((f: any) => {
+          if (f.feature === "tts") ttsCount = f.count;
+          else if (f.feature === "video_link" || f.feature === "video_upload") videoCount += f.count;
+        });
+
+        const planRows = await db
+          .select({ plan: subscriptions.plan, count: count() })
+          .from(subscriptions)
+          .where(and(
+            sql`payment_method IS NOT NULL AND payment_method != 'free'`,
+            sql`DATE_FORMAT(created_at, '%Y-%m') = ${targetMonth}`
+          ))
+          .groupBy(subscriptions.plan);
+
+        const revenue = planRows.reduce(
+          (sum: number, p: any) => sum + (PLAN_PRICE[p.plan] ?? 0) * p.count,
+          0
+        );
+
+        const allPlanRows = await db
+          .select({ plan: subscriptions.plan, count: count() })
+          .from(subscriptions)
+          .where(sql`DATE_FORMAT(created_at, '%Y-%m') = ${targetMonth}`)
+          .groupBy(subscriptions.plan);
+
+        return {
+          totalUsers: totalUsersRow?.count || 0,
+          activeSubs: activeSubsRow?.count || 0,
+          totalConversions: totalConvRow?.count || 0,
+          ttsCount,
+          videoCount,
+          revenue,
+          planCounts: allPlanRows,
+        };
+      } catch (e) {
+        console.error("[getAnalytics Error]", e);
+        return { totalUsers: 0, activeSubs: 0, totalConversions: 0, ttsCount: 0, videoCount: 0, revenue: 0, planCounts: [] };
+      }
+    }),
 
   getServerHealth: adminProcedure.query(async () => {
     const mem = process.memoryUsage();
@@ -261,25 +294,28 @@ export const adminRouter = t.router({
       status: "ok",
     };
   }),
-  getTransactions: adminProcedure.query(async () => {
-    const db = await getDb();
-    if (!db) return [];
-    try {
-      const transactions = await db
-        .select({
-          id: creditTransactions.id,
-          userId: creditTransactions.userId,
-          amount: creditTransactions.amount,
-          type: creditTransactions.type,
-          description: creditTransactions.description,
-          createdAt: creditTransactions.createdAt,
-          userName: users.telegramFirstName,
-          userUsername: users.telegramUsername,
-        })
-        .from(creditTransactions)
-        .leftJoin(users, eq(creditTransactions.userId, users.id))
-        .orderBy(desc(creditTransactions.createdAt))
-        .limit(200);
+  getTransactions: adminProcedure
+    .input(z.object({ userId: z.string().optional() }).optional())
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return [];
+      try {
+        const transactions = await db
+          .select({
+            id: creditTransactions.id,
+            userId: creditTransactions.userId,
+            amount: creditTransactions.amount,
+            type: creditTransactions.type,
+            description: creditTransactions.description,
+            createdAt: creditTransactions.createdAt,
+            userName: users.telegramFirstName,
+            userUsername: users.telegramUsername,
+          })
+          .from(creditTransactions)
+          .leftJoin(users, eq(creditTransactions.userId, users.id))
+          .where(input?.userId ? eq(creditTransactions.userId, input.userId) : sql`1=1`)
+          .orderBy(desc(creditTransactions.createdAt))
+          .limit(input?.userId ? 500 : 200);
 
       return transactions.map((t: any) => ({
         ...t,

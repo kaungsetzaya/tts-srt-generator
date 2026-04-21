@@ -24,23 +24,33 @@ export const adminStatsRouter = t.router({
       const db = await getDb();
       if (!db) return { failedGenerations: [], systemLogs: [] };
       try {
-        const logs = await db
+        const unresolvedFilter = input.onlyUnresolved ? eq(errorLogs.resolved, false) : sql`1=1`;
+        
+        const systemLogs = await db
           .select()
           .from(errorLogs)
-          .where(
-            input.onlyUnresolved
-              ? eq(errorLogs.resolved, false)
-              : sql`1=1`
-          )
+          .where(unresolvedFilter)
           .orderBy(desc(errorLogs.createdAt))
-          .limit(input.limit || 50);
+          .limit(input.limit || 100);
 
-        const failedGenerations = logs.filter(
-          (l: any) => l.type === "generation" || l.severity === "error"
-        );
-        const systemLogs = logs;
+        // Also fetch business-level task failures from tts_conversions
+        const failedGens = await db
+          .select()
+          .from(ttsConversions)
+          .where(eq(ttsConversions.status, "fail"))
+          .orderBy(desc(ttsConversions.createdAt))
+          .limit(50);
 
-        return { failedGenerations, systemLogs };
+        return { 
+          failedGenerations: failedGens.map((g: any) => ({
+            id: g.id,
+            userId: g.userId,
+            feature: g.feature || "tts",
+            errorMsg: g.errorMsg || "Unknown error",
+            createdAt: g.createdAt
+          })), 
+          systemLogs 
+        };
       } catch (e) {
         console.error("[getErrorLogs Error]", e);
         return { failedGenerations: [], systemLogs: [] };
@@ -216,6 +226,9 @@ export const adminStatsRouter = t.router({
         activeCount: 0, inactiveCount: 0,
       };
     try {
+      const [totalCountRow] = await db.select({ count: count() }).from(users);
+      const totalUsers = totalCountRow?.count || 0;
+
       const [newUsersRow] = await db
         .select({ count: count() })
         .from(users)
@@ -231,9 +244,17 @@ export const adminStatsRouter = t.router({
       const inactiveUsersList = await db
         .select()
         .from(users)
-        .where(sql`last_login_at < DATE_SUB(NOW(), INTERVAL 30 DAY) OR last_login_at IS NULL`)
+        .where(sql`last_login_at < DATE_SUB(NOW(), INTERVAL 14 DAY) OR last_login_at IS NULL`)
         .orderBy(desc(users.lastLoginAt))
         .limit(50);
+
+      const [inactiveCountRow] = await db
+        .select({ count: count() })
+        .from(users)
+        .where(sql`last_login_at < DATE_SUB(NOW(), INTERVAL 14 DAY) OR last_login_at IS NULL`);
+      
+      const inactiveCount = inactiveCountRow?.count || 0;
+      const churnRate = totalUsers > 0 ? Math.round((inactiveCount / totalUsers) * 100) : 0;
 
       const genCounts = await db
         .select({ userId: ttsConversions.userId, count: count() })
@@ -250,13 +271,13 @@ export const adminStatsRouter = t.router({
       });
 
       return {
-        churnRate: 0,
+        churnRate,
         newUsers: newUsersRow?.count || 0,
-        lostUsers: 0,
+        lostUsers: inactiveCount,
         activeUsers: activeUsersList.map(formatUser),
         inactiveUsers: inactiveUsersList.map(formatUser),
         activeCount: activeUsersList.length,
-        inactiveCount: inactiveUsersList.length,
+        inactiveCount: inactiveCount,
       };
     } catch (e) {
       console.error("[getChurnStats Error]", e);

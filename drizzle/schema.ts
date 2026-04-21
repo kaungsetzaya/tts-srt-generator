@@ -1,4 +1,4 @@
-import { mysqlTable, varchar, timestamp, text, int, boolean } from "drizzle-orm/mysql-core";
+import { mysqlTable, varchar, timestamp, text, int, boolean, datetime } from "drizzle-orm/mysql-core";
 import { sql } from "drizzle-orm";
 
 export const users = mysqlTable("users", {
@@ -8,21 +8,21 @@ export const users = mysqlTable("users", {
   telegramFirstName: varchar("telegram_first_name", { length: 100 }),
   telegramCode: varchar("telegram_code", { length: 6 }),
   // 🔐 Dynamic OTP — code expiry (10 minutes)
-  telegramCodeExpiresAt: timestamp("telegram_code_expires_at"),
+  telegramCodeExpiresAt: datetime("telegram_code_expires_at"),
   role: varchar("role", { length: 20 }).default("user"),
-  bannedAt: timestamp("banned_at"),
+  bannedAt: datetime("banned_at"),
   credits: int("credits").default(0),
   // 🔐 One-Device Session — login တိုင်း token အသစ်ထုတ်ပြီး JWT ထဲ ထည့်သည်
   sessionToken: varchar("session_token", { length: 36 }),
-  lastLoginAt: timestamp("last_login_at"),
+  lastLoginAt: datetime("last_login_at"),
   // OAuth fields
   openId: varchar("open_id", { length: 255 }).unique(),
   name: varchar("name", { length: 255 }),
   email: varchar("email", { length: 255 }),
   loginMethod: varchar("login_method", { length: 50 }),
-  lastSignedIn: timestamp("last_signed_in"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  lastSignedIn: datetime("last_signed_in"),
+  createdAt: datetime("created_at").default(sql`(CURRENT_TIMESTAMP)`),
+  updatedAt: datetime("updated_at").default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 // Type exports
@@ -33,13 +33,13 @@ export const subscriptions = mysqlTable("subscriptions", {
   id: varchar("id", { length: 36 }).primaryKey(),
   userId: varchar("user_id", { length: 36 }).notNull(),
   plan: varchar("plan", { length: 50 }).notNull(),
-  startsAt: timestamp("starts_at").notNull(),
-  expiresAt: timestamp("expires_at"),
+  startsAt: datetime("starts_at").notNull(),
+  expiresAt: datetime("expires_at"),
   createdByAdmin: varchar("created_by_admin", { length: 36 }),
   paymentMethod: varchar("payment_method", { length: 30 }),
   paymentSlip: text("payment_slip"),
   note: text("note"),
-  createdAt: timestamp("created_at").defaultNow(),
+  createdAt: datetime("created_at").default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const ttsConversions = mysqlTable("tts_conversions", {
