@@ -3686,7 +3686,18 @@ export default function TTSGenerator() {
               ) : (
                 <div className="space-y-2">
                   {(unifiedHistory?.reduce((acc: any[], item: any) => {
-                    if (!acc.find(x => x.id === item.id)) acc.push(item);
+                    if (acc.find(x => x.id === item.id)) return acc;
+                    
+                    if (item.origin === "credit" && item.amount > 0) {
+                      const isDupRefund = acc.find(x => 
+                        x.origin === "credit" && 
+                        x.amount === item.amount &&
+                        Math.abs(new Date(x.createdAt).getTime() - new Date(item.createdAt).getTime()) < 60000
+                      );
+                      if (isDupRefund) return acc;
+                    }
+                    
+                    acc.push(item);
                     return acc;
                   }, []) || []).map((item: any) => {
                     const isCredit = item.origin === "credit";
@@ -3741,11 +3752,13 @@ export default function TTSGenerator() {
                       amara: lang === "mm" ? "အမရာ" : "Amara",
                     };
                     
-                    const voiceDisplay = item.character 
-                      ? voiceNameMap[item.character] || item.character
-                      : item.voice 
-                        ? voiceNameMap[item.voice] || item.voice 
-                        : "";
+                    const voiceDisplayRegex = /(?:TTS:\s*|Dub:\s*|Refund:\s*)(thiha|nilar|ryan|ronnie|lucas|daniel|evander|michelle|iris|charlotte|amara)/i;
+                    const parsedVoiceMatch = item.description?.match(voiceDisplayRegex);
+                    const rawVoice = parsedVoiceMatch ? parsedVoiceMatch[1].toLowerCase() : (item.character || item.voice || "");
+                    
+                    const voiceDisplay = rawVoice 
+                      ? (voiceNameMap[rawVoice] || rawVoice)
+                      : "";
 
                     // Status badge config
                     let statusConfig = { bg: "", color: "", label: "" };
@@ -3813,7 +3826,7 @@ export default function TTSGenerator() {
                               color: isError ? "#ef4444" : isRefund ? "#22c55e" : accent,
                             }}
                           >
-                            {item.type?.includes("translate") ? "✦" : item.type?.includes("dub") ? "❖" : "◈"}
+                            {item.type?.includes("translate") ? <FileVideo className="w-4 h-4" /> : item.type?.includes("dub") ? <Wand2 className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                           </div>
                           
                           {/* Content */}
