@@ -104,7 +104,7 @@ export class DubVideoPipeline {
       // Step 5: Generate TTS per segment (concurrent with limiter)
       const FIXED_SPEED = 1.2;
       const TINY_PAUSE_MS = 150;
-      const CONCURRENCY = 3;
+      const CONCURRENCY = 1;
 
       const activeSegments = translatedSegments.filter(seg => seg.translatedText.trim());
 
@@ -167,7 +167,7 @@ export class DubVideoPipeline {
       const audioParts: string[] = [];
       const processedForSrt: any[] = [];
       let timelinePosMs = 0;
-      const NATURAL_PAUSE_MS = 300; // Natural gap between lines
+      const NATURAL_PAUSE_MS = 200; // Natural gap between lines
 
       for (let i = 0; i < activeSegments.length; i++) {
         const result = ttsResults[i];

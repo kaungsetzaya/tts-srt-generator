@@ -87,12 +87,7 @@ function getAllSystemKeys(): string[] {
     return keysStr.split(",").map(k => k.trim()).filter(k => k.length > 0);
 }
 
-const PHONETIC_DICTIONARY: Record<string, string> = {
-    CEO: "စီအီးအို",
-    FBI: "အက်ဖ်ဘီအိုင်",
-    Zombies: "ဇွန်ဘီး",
-    Zombie: "ဇွန်ဘီး",
-};
+import { PHONETIC_DICTIONARY } from "./phonetic-dictionary";
 
 interface Segment {
     index: number;

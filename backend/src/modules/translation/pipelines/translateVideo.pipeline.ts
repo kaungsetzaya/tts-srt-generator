@@ -55,7 +55,7 @@ export class TranslateVideoPipeline {
             // Step 3: Transcription
             if (jobId) updateJob(jobId, { progress: 60, message: "Transcribing speech..." });
             const { text: englishText } = await whisperService.transcribe(tempAudioPath).then(segs => ({
-                text: segs.map(s => s.text).join(" ")
+                text: segs.map(s => s.text).join(" ။ ")
             }));
 
             if (!englishText.trim()) throw new Error("No speech detected.");
