@@ -385,7 +385,7 @@ export default function TTSGenerator() {
   const [srtBlurBg, setSrtBlurBg] = useState(true);
   const [srtMarginV, setSrtMarginV] = useState(30);
   const [srtBlurOpacity, setSrtBlurOpacity] = useState(80);
-  const [srtBlurColor, setSrtBlurColor] = useState<"black" | "white">("black");
+  const [srtBlurColor, setSrtBlurColor] = useState<"black" | "white" | "transparent">("black");
   const [srtFullWidth, setSrtFullWidth] = useState(false);
   const [srtBorderRadius, setSrtBorderRadius] = useState<"rounded" | "square">(
     "rounded"
@@ -420,8 +420,11 @@ export default function TTSGenerator() {
       background: srtBlurBg
         ? srtBlurColor === "black"
           ? `rgba(0,0,0,${bgAlpha.toFixed(2)})`
-          : `rgba(255,255,255,${bgAlpha.toFixed(2)})`
+          : srtBlurColor === "white"
+            ? `rgba(255,255,255,${bgAlpha.toFixed(2)})`
+            : "transparent"
         : "transparent",
+      backdropFilter: srtBlurBg && srtBlurColor === "transparent" ? `blur(${Math.max(4, srtBlurOpacity / 8)}px)` : "none",
       textShadow: srtDropShadow
         ? `${shadowSize}px ${shadowSize}px ${4 * scale}px rgba(0,0,0,0.8)`
         : "none",
@@ -2386,19 +2389,17 @@ export default function TTSGenerator() {
 
                   {/* ── STEP: Video Preview + Settings ── */}
                   {dubPreviewUrl && !dubResult && (
-                    <div className="space-y-4">
-                      {/* Video Preview — Sticky at top, always visible */}
-                      <div
-                        className={box}
-                        style={{
-                          background: cardBg,
-                          borderColor: cardBorder,
-                          boxShadow,
-                          position: "sticky",
-                          top: "60px",
-                          zIndex: 45,
-                        }}
-                      >
+                    <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_400px] lg:items-start gap-4 space-y-4 lg:space-y-0">
+                      {/* Left Column: Video Preview & Progress (Sticky on Desktop) */}
+                      <div className="lg:sticky lg:top-[80px] space-y-4 z-40">
+                        <div
+                          className={box}
+                          style={{
+                            background: cardBg,
+                            borderColor: cardBorder,
+                            boxShadow,
+                          }}
+                        >
                         <div className="flex items-center justify-between">
                           <div
                             className={labelStyle}
@@ -2599,7 +2600,7 @@ export default function TTSGenerator() {
                                       color: srtColor,
                                       textShadow: computeSrtPreviewStyle.textShadow,
                                       background: computeSrtPreviewStyle.background,
-                                      backdropFilter: "none",
+                                      backdropFilter: computeSrtPreviewStyle.backdropFilter,
                                       textAlign: "center",
                                       width: srtFullWidth ? "100%" : "auto",
                                       maxWidth: srtFullWidth ? "100%" : "90%",
@@ -2768,7 +2769,7 @@ export default function TTSGenerator() {
                                       color: srtColor,
                                       textShadow: computeSrtPreviewStyle.textShadow,
                                       background: computeSrtPreviewStyle.background,
-                                      backdropFilter: "none",
+                                      backdropFilter: computeSrtPreviewStyle.backdropFilter,
                                       textAlign: "center",
                                       width: srtFullWidth ? "100%" : "auto",
                                       maxWidth: srtFullWidth ? "100%" : "90%",
@@ -2800,7 +2801,71 @@ export default function TTSGenerator() {
                             </span>
                           </div>
                         )}
+                        )}
                       </div>
+
+                      {/* Generating Progress inside Sticky Left Column */}
+                      {(startDubMutation.isPending || activeJobId !== null) && (
+                        <div
+                          className={box}
+                          style={{
+                            background: cardBg,
+                            borderColor: cardBorder,
+                            boxShadow,
+                          }}
+                        >
+                          <style>{`
+                            .loader-rotate {
+                              animation: loader-rotate 2s linear infinite;
+                            }
+                            @keyframes loader-rotate {
+                              0% { transform: rotate(90deg); box-shadow: 0 10px 20px 0 #fff inset, 0 20px 30px 0 #ad5fff inset, 0 60px 60px 0 #471eec inset; }
+                              50% { transform: rotate(270deg); box-shadow: 0 10px 20px 0 #fff inset, 0 20px 10px 0 #d60a47 inset, 0 40px 60px 0 #311e80 inset; }
+                              100% { transform: rotate(450deg); box-shadow: 0 10px 20px 0 #fff inset, 0 20px 30px 0 #ad5fff inset, 0 60px 60px 0 #471eec inset; }
+                            }
+                            .loader-letter {
+                              display: inline-block;
+                              opacity: 0.4;
+                              transform: translateY(0);
+                              animation: loader-letter-anim 2s infinite;
+                              border-radius: 50ch;
+                              border: none;
+                            }
+                            .loader-letter:nth-child(1) { animation-delay: 0s; }
+                            .loader-letter:nth-child(2) { animation-delay: 0.1s; }
+                            .loader-letter:nth-child(3) { animation-delay: 0.2s; }
+                            .loader-letter:nth-child(4) { animation-delay: 0.3s; }
+                            .loader-letter:nth-child(5) { animation-delay: 0.4s; }
+                            .loader-letter:nth-child(6) { animation-delay: 0.5s; }
+                            .loader-letter:nth-child(7) { animation-delay: 0.6s; }
+                            .loader-letter:nth-child(8) { animation-delay: 0.7s; }
+                            .loader-letter:nth-child(9) { animation-delay: 0.8s; }
+                            @keyframes loader-letter-anim {
+                              0%, 100% { opacity: 0.4; transform: translateY(0); }
+                              20% { opacity: 1; transform: scale(1.15); }
+                              40% { opacity: 0.7; transform: translateY(0); }
+                            }
+                          `}</style>
+                          <div className="flex flex-col items-center justify-center gap-4 py-6">
+                            <div className="loader-wrapper relative flex items-center justify-center w-[140px] h-[140px] font-['Inter',sans-serif] text-white rounded-full bg-transparent select-none">
+                              <div className="loader absolute top-0 left-0 w-full aspect-square rounded-full bg-transparent loader-rotate" />
+                              <div className="z-10 flex gap-1">
+                                {["G","E","N","E","R","A","T","I","N","G"].map((letter, i) => (
+                                  <span key={i} className="loader-letter text-sm font-bold">{letter}</span>
+                                ))}
+                              </div>
+                            </div>
+                            <p className="text-sm font-semibold" style={{ color: accent }}>
+                              {jobStatusQuery?.data?.progress ? `${jobStatusQuery.data.progress}%` : lang === "mm" ? "ဖန်တီးနေသည်..." : "Generating..."}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      </div> {/* End Left Column */}
+
+                      {/* Right Column: Settings */}
+                      <div className="space-y-4">
 
                       {/* ── ACCORDION: Voice Selection ── */}
                       <div
@@ -2958,7 +3023,7 @@ export default function TTSGenerator() {
                               setSrtEnabled(next);
                               setSrtAccordionOpen(next);
                             }}
-                            className={`relative w-10 h-5 sm:w-14 sm:h-7 rounded-full transition-all duration-300`}
+                            className={`relative w-12 h-6 sm:w-14 sm:h-7 rounded-full transition-all duration-300`}
                             style={{
                               background: srtEnabled
                                 ? "linear-gradient(135deg, #C06F30, #F4B34F)"
@@ -2967,7 +3032,7 @@ export default function TTSGenerator() {
                             }}
                           >
                             <div
-                              className={`absolute top-0.5 w-5 h-5 sm:w-6 sm:h-6 bg-white rounded-full transition-transform duration-300 ${srtEnabled ? "translate-x-[22px] sm:translate-x-7" : "translate-x-0.5"}`}
+                              className={`absolute top-0.5 left-0.5 w-5 h-5 sm:top-0.5 sm:left-0.5 sm:w-6 sm:h-6 bg-white rounded-full transition-transform duration-300 ${srtEnabled ? "translate-x-6 sm:translate-x-7" : "translate-x-0"}`}
                               style={{ boxShadow: "0 2px 6px rgba(0,0,0,0.15)" }}
                             />
                           </button>
@@ -3105,7 +3170,7 @@ export default function TTSGenerator() {
                                 }}
                               >
                                 <div
-                                  className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${srtFullWidth ? "translate-x-6" : "translate-x-0.5"}`}
+                                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${srtFullWidth ? "translate-x-6" : "translate-x-0"}`}
                                 />
                               </button>
                             </div>
@@ -3137,7 +3202,7 @@ export default function TTSGenerator() {
                                 }}
                               >
                                 <div
-                                  className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${srtBlurBg ? "translate-x-6" : "translate-x-0.5"}`}
+                                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${srtBlurBg ? "translate-x-6" : "translate-x-0"}`}
                                 />
                               </button>
                             </div>
@@ -3199,6 +3264,20 @@ export default function TTSGenerator() {
                                       }}
 >
                                       {lang === "mm" ? "ဖြူ" : "Light"}
+                                    </button>
+                                    <button
+                                      onClick={() => setSrtBlurColor("transparent")}
+                                      className="px-4 py-1.5 rounded-xl text-xs font-bold transition-all"
+                                      style={{
+                                        background: srtBlurColor === "transparent"
+                                          ? "linear-gradient(135deg, rgba(200,200,200,0.3), rgba(150,150,150,0.1))"
+                                          : isDark ? "rgba(255,255,255,0.05)" : "#F0EBE3",
+                                        color: srtBlurColor === "transparent" ? "#3b82f6" : subtextColor,
+                                        border: `1px solid ${srtBlurColor === "transparent" ? accent : "transparent"}`,
+                                        boxShadow: srtBlurColor === "transparent" ? `0 2px 8px rgba(192,111,48,0.2)` : "none",
+                                      }}
+                                    >
+                                      {lang === "mm" ? "ဖောက်ထွင်း" : "Glass"}
                                     </button>
                                   </div>
                                 </div>
@@ -3267,63 +3346,6 @@ export default function TTSGenerator() {
                         )}
                       </motion.button>
 
-                      {(startDubMutation.isPending || activeJobId !== null) && (
-                        <div
-                          className={box}
-                          style={{
-                            background: cardBg,
-                            borderColor: cardBorder,
-                            boxShadow,
-                          }}
-                        >
-                          <style>{`
-                            .loader-rotate {
-                              animation: loader-rotate 2s linear infinite;
-                            }
-                            @keyframes loader-rotate {
-                              0% { transform: rotate(90deg); box-shadow: 0 10px 20px 0 #fff inset, 0 20px 30px 0 #ad5fff inset, 0 60px 60px 0 #471eec inset; }
-                              50% { transform: rotate(270deg); box-shadow: 0 10px 20px 0 #fff inset, 0 20px 10px 0 #d60a47 inset, 0 40px 60px 0 #311e80 inset; }
-                              100% { transform: rotate(450deg); box-shadow: 0 10px 20px 0 #fff inset, 0 20px 30px 0 #ad5fff inset, 0 60px 60px 0 #471eec inset; }
-                            }
-                            .loader-letter {
-                              display: inline-block;
-                              opacity: 0.4;
-                              transform: translateY(0);
-                              animation: loader-letter-anim 2s infinite;
-                              border-radius: 50ch;
-                              border: none;
-                            }
-                            .loader-letter:nth-child(1) { animation-delay: 0s; }
-                            .loader-letter:nth-child(2) { animation-delay: 0.1s; }
-                            .loader-letter:nth-child(3) { animation-delay: 0.2s; }
-                            .loader-letter:nth-child(4) { animation-delay: 0.3s; }
-                            .loader-letter:nth-child(5) { animation-delay: 0.4s; }
-                            .loader-letter:nth-child(6) { animation-delay: 0.5s; }
-                            .loader-letter:nth-child(7) { animation-delay: 0.6s; }
-                            .loader-letter:nth-child(8) { animation-delay: 0.7s; }
-                            .loader-letter:nth-child(9) { animation-delay: 0.8s; }
-                            @keyframes loader-letter-anim {
-                              0%, 100% { opacity: 0.4; transform: translateY(0); }
-                              20% { opacity: 1; transform: scale(1.15); }
-                              40% { opacity: 0.7; transform: translateY(0); }
-                            }
-                          `}</style>
-                          <div className="flex flex-col items-center justify-center gap-4 py-6">
-                            <div className="loader-wrapper relative flex items-center justify-center w-[140px] h-[140px] font-['Inter',sans-serif] text-white rounded-full bg-transparent select-none">
-                              <div className="loader absolute top-0 left-0 w-full aspect-square rounded-full bg-transparent loader-rotate" />
-                              <div className="z-10 flex gap-1">
-                                {["G","E","N","E","R","A","T","I","N","G"].map((letter, i) => (
-                                  <span key={i} className="loader-letter text-sm font-bold">{letter}</span>
-                                ))}
-                              </div>
-                            </div>
-                            <p className="text-sm font-semibold" style={{ color: accent }}>
-                              {jobStatusQuery?.data?.progress ? `${jobStatusQuery.data.progress}%` : lang === "mm" ? "ဖန်တီးနေသည်..." : "Generating..."}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-
                       <button
                         onClick={handleDubReset}
                         className="w-full py-2.5 rounded-xl border font-bold text-xs uppercase tracking-wider opacity-50 hover:opacity-100 transition-all"
@@ -3331,6 +3353,7 @@ export default function TTSGenerator() {
                       >
                         ← {lang === "mm" ? "ဗီဒီယိုပြောင်းမည်" : "Change Video"}
                       </button>
+                      </div> {/* End Right Column */}
                     </div>
                   )}
 
@@ -3664,7 +3687,10 @@ export default function TTSGenerator() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {unifiedHistory?.map((item: any) => {
+                  {(unifiedHistory?.reduce((acc: any[], item: any) => {
+                    if (!acc.find(x => x.id === item.id)) acc.push(item);
+                    return acc;
+                  }, []) || []).map((item: any) => {
                     const isCredit = item.origin === "credit";
                     const isTask = item.origin === "task";
                     const isError = item.status === "fail";
@@ -3789,7 +3815,7 @@ export default function TTSGenerator() {
                               color: isError ? "#ef4444" : isRefund ? "#22c55e" : accent,
                             }}
                           >
-                            {item.type?.includes("translate") ? "📹" : item.type?.includes("dub") ? "🎬" : "🎙️"}
+                            {item.type?.includes("translate") ? "✦" : item.type?.includes("dub") ? "❖" : "◈"}
                           </div>
                           
                           {/* Content */}

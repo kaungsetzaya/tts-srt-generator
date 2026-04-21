@@ -34,7 +34,8 @@ export const jobsRouter = t.router({
         srtMarginV: z.number().optional().default(30),
         srtBlurBg: z.boolean().optional().default(true),
         srtBlurSize: z.number().optional().default(8),
-        srtBlurColor: z.enum(["black", "white"]).optional().default("black"),
+        srtBlurOpacity: z.number().optional().default(80),
+        srtBlurColor: z.enum(["black", "white", "transparent"]).optional().default("black"),
         srtBoxPadding: z.number().optional().default(4),
         srtFullWidth: z.boolean().optional().default(false),
         srtDropShadow: z.boolean().optional().default(true),
@@ -64,7 +65,7 @@ export const jobsRouter = t.router({
         const jobId = createJob("dub_link", {
           url: input.url,
           voice: input.voice,
-          speed: 1.6,
+          speed: 1.1,
           pitch: 0,
           srtEnabled: input.srtEnabled,
           srtFontSize: input.srtFontSize,

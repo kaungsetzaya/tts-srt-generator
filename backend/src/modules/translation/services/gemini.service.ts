@@ -210,7 +210,8 @@ STRICT RULES:
 4. DYNAMIC ENDINGS: Mix "ခဲ့တာပါ", "ပါတော့တယ်", "နေကြတာပါ", "သွားခဲ့ရတယ်", "လိုက်မိပါတယ်", "ကြတာပါ", "နေခဲ့တယ်".
 5. NO "ပါတယ်" repetition.
 6. SPOKEN STYLE: Natural conversational Myanmar.
-7. CLEAN OUTPUT: JSON array ONLY. No intro/notes.`;
+7. CLEAN OUTPUT: JSON array ONLY. No intro/notes.
+8. KEEP SHORT: Each translation MUST be concise — max ~30 Myanmar characters per segment. Prefer shorter sentences. Do NOT expand or add unnecessary words.`;
 
         const body = {
             contents: [{ parts: [{ text: `Translate to Myanmar:\n\n${text}` }] }],
@@ -241,7 +242,8 @@ STRICT RULES:
 4. DYNAMIC ENDINGS: Mix "ခဲ့တာပါ", "ပါတော့တယ်", "နေကြတာပါ", "သွားခဲ့ရတယ်", "လိုက်မိပါတယ်", "ကြတာပါ", "နေခဲ့တယ်".
 5. NO "ပါတယ်" repetition.
 6. SPOKEN STYLE: Natural conversational Myanmar.
-7. CLEAN OUTPUT: JSON array ONLY. No intro/notes.`;
+7. CLEAN OUTPUT: JSON array ONLY. No intro/notes.
+8. KEEP SHORT: Each translation MUST be concise — max ~30 Myanmar characters per segment. Prefer shorter sentences. Do NOT expand or add unnecessary words.`;
 
         const body = {
             contents: [{ parts: [{ text: `TEXT TO TRANSLATE (JSON Array):\n${JSON.stringify(lines)}` }] }],

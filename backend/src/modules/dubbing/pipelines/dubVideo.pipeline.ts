@@ -23,12 +23,60 @@ function formatTimestamp(ms: number): string {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')},${String(millis).padStart(3, '0')}`;
 }
 
-function limitTo2Lines(text: string): string {
-    const lines = text.split(/[\n\r]+/).filter(l => l.trim());
-    if (lines.length > 2) {
-        return lines.slice(0, 2).join("\n");
+/**
+ * Split text into chunks of max 2 lines each, based on grapheme length.
+ * Returns an array of text chunks, each fitting within 2 lines.
+ */
+const segmenter = new Intl.Segmenter("my", { granularity: "grapheme" });
+function graphemeLen(s: string): number {
+    return [...segmenter.segment(s)].length;
+}
+
+function splitToSubtitleChunks(text: string, maxCharsPerLine: number): string[] {
+    // Clean up text — flatten newlines
+    const clean = text.replace(/[\n\r]+/g, " ").trim();
+    if (!clean) return [""];
+
+    const maxCharsPerEntry = maxCharsPerLine * 2;
+    const glen = graphemeLen(clean);
+
+    // If it fits in one entry (1 or 2 lines), just return it
+    if (glen <= maxCharsPerEntry) {
+        // Split to 2 lines if needed
+        if (glen > maxCharsPerLine) {
+            const mid = Math.ceil(glen / 2);
+            const graphemes = [...segmenter.segment(clean)].map(g => g.segment);
+            const line1 = graphemes.slice(0, mid).join("").trim();
+            const line2 = graphemes.slice(mid).join("").trim();
+            return [line1 + "\n" + line2];
+        }
+        return [clean];
     }
-    return lines.join("\n");
+
+    // Text is too long for 2 lines — split into multiple entries
+    const graphemes = [...segmenter.segment(clean)].map(g => g.segment);
+    const chunks: string[] = [];
+    let pos = 0;
+
+    while (pos < graphemes.length) {
+        const remaining = graphemes.length - pos;
+        const chunkSize = Math.min(maxCharsPerEntry, remaining);
+        const chunkGraphemes = graphemes.slice(pos, pos + chunkSize);
+        const chunkText = chunkGraphemes.join("");
+
+        // Split this chunk into 2 lines if it's longer than 1 line
+        if (graphemeLen(chunkText) > maxCharsPerLine) {
+            const halfLen = Math.ceil(chunkSize / 2);
+            const line1 = graphemes.slice(pos, pos + halfLen).join("").trim();
+            const line2 = graphemes.slice(pos + halfLen, pos + chunkSize).join("").trim();
+            chunks.push(line1 + "\n" + line2);
+        } else {
+            chunks.push(chunkText.trim());
+        }
+        pos += chunkSize;
+    }
+
+    return chunks.filter(c => c.trim());
 }
 
 export interface DubOptions {
@@ -110,8 +158,8 @@ export class DubVideoPipeline {
       );
 
       // Step 5: Generate TTS per segment (concurrent with limiter)
-      const FIXED_SPEED = 1.2;
-      const TINY_PAUSE_MS = 150;
+      const FIXED_SPEED = 1.1;
+      const TINY_PAUSE_MS = 100;
       const CONCURRENCY = 1;
 
       const activeSegments = translatedSegments.filter(seg => seg.translatedText.trim());
@@ -173,9 +221,10 @@ export class DubVideoPipeline {
       const ttsResults = await runWithConcurrency(activeSegments, generateTtsForSegment, CONCURRENCY);
 
       const audioParts: string[] = [];
-      const processedForSrt: any[] = [];
+      // Raw audio timeline: startMs/endMs based on audio playback position
+      const audioTimeline: Array<{ startMs: number; endMs: number; text: string }> = [];
       let timelinePosMs = 0;
-      const NATURAL_PAUSE_MS = 200; // Natural gap between lines
+      const NATURAL_PAUSE_MS = 100; // Minimal gap between lines (same as word-space)
 
       for (let i = 0; i < activeSegments.length; i++) {
         const result = ttsResults[i];
@@ -199,7 +248,7 @@ export class DubVideoPipeline {
         
         // Add the translated speech
         audioParts.push(result.partPath);
-        processedForSrt.push({ 
+        audioTimeline.push({ 
           startMs: timelinePosMs, 
           endMs: timelinePosMs + result.duration, 
           text: result.text 
@@ -208,11 +257,52 @@ export class DubVideoPipeline {
         timelinePosMs += result.duration;
       }
 
+      // Build subtitle entries with proper timing:
+      // Each subtitle starts when its audio starts.
+      // Each subtitle ENDS when the NEXT audio starts (so it stays visible during pauses).
+      // The last subtitle ends when its audio ends.
+      // Also split long text into multiple max-2-line entries.
+      const maxCharsPerLine = Math.max(12, Math.round(40 - (options.srtFontSize ?? 24) * 0.5));
+      const processedForSrt: Array<{ startMs: number; endMs: number; text: string }> = [];
+
+      for (let i = 0; i < audioTimeline.length; i++) {
+        const seg = audioTimeline[i];
+        const subtitleStartMs = seg.startMs;
+        // Subtitle stays visible until the next segment's audio starts
+        const subtitleEndMs = (i < audioTimeline.length - 1)
+          ? audioTimeline[i + 1].startMs
+          : seg.endMs;
+        
+        // Split text into max-2-line chunks
+        const chunks = splitToSubtitleChunks(seg.text, maxCharsPerLine);
+        
+        if (chunks.length === 1) {
+          // Single entry — shows for the full duration
+          processedForSrt.push({
+            startMs: subtitleStartMs,
+            endMs: subtitleEndMs,
+            text: chunks[0]
+          });
+        } else {
+          // Multiple entries — divide the time span equally
+          const totalDuration = subtitleEndMs - subtitleStartMs;
+          const perChunkDuration = Math.floor(totalDuration / chunks.length);
+          for (let c = 0; c < chunks.length; c++) {
+            processedForSrt.push({
+              startMs: subtitleStartMs + c * perChunkDuration,
+              endMs: c < chunks.length - 1
+                ? subtitleStartMs + (c + 1) * perChunkDuration
+                : subtitleEndMs,
+              text: chunks[c]
+            });
+          }
+        }
+      }
+
       // Final audio duration
       const totalAudioDurationSec = timelinePosMs / 1000;
       
       // Calculate speed ratio to make video match narration
-      // If audio is 65s and video is 60s, ratio is 1.083 (slows video down)
       const videoSpeedRatio = totalAudioDurationSec / videoDurationSec;
 
       console.log(`[Dubbing Pipeline] Narration duration: ${totalAudioDurationSec.toFixed(2)}s, Original video: ${videoDurationSec.toFixed(2)}s`);
@@ -254,12 +344,7 @@ export class DubVideoPipeline {
         console.log(`[Dubbing Pipeline] Merging video with audio and subtitles...`);
         const videoDimensions = await ffmpegService.getVideoSize(tempVideoPath);
         
-        const limitedSegments = processedForSrt.map(s => ({
-            ...s,
-            text: limitTo2Lines(s.text)
-        }));
-        
-        const assContent = assBuilderService.buildAssContent(limitedSegments, fontPath, videoDimensions.width, videoDimensions.height, options as any);
+        const assContent = assBuilderService.buildAssContent(processedForSrt, fontPath, videoDimensions.width, videoDimensions.height, options as any);
         await fs.writeFile(tempAssPath, assContent);
         await ffmpegService.mergeVideoAudioSubtitles(tempVideoPath, finalAudioPath, tempAssPath, tempOutputPath, {
           videoDurationSec: totalAudioDurationSec, // New duration
@@ -303,8 +388,7 @@ export class DubVideoPipeline {
           .map((s, i) => {
               const start = formatTimestamp(s.startMs);
               const end = formatTimestamp(s.endMs);
-              const limitedText = limitTo2Lines(s.text);
-              return `${i + 1}\n${start} --> ${end}\n${limitedText}\n`;
+              return `${i + 1}\n${start} --> ${end}\n${s.text}\n`;
           })
           .join("\n");
 

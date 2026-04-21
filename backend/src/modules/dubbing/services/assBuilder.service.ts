@@ -73,12 +73,21 @@ export class AssBuilderService {
         let shadow = dropShadow ? 1 : 0;
 
         if (blurBg) {
-            const alphaInt = Math.round((1 - (blurOpacity / 100)) * 255);
-            const alphaHex = alphaInt.toString(16).padStart(2, "0").toUpperCase();
-            backColor = `&H${alphaHex}${bgHex}`;
-            borderStyle = 3;
-            outline = Math.max(4, blurSize * 2);
-            shadow = 0;
+            if (blurColor === "transparent") {
+                // Completely transparent background box, but keeps the border/outline if needed.
+                // &HFF000000 means 100% transparent.
+                backColor = `&HFF000000`;
+                borderStyle = 3;
+                outline = Math.max(4, blurSize * 2);
+                shadow = 0;
+            } else {
+                const alphaInt = Math.round((1 - (blurOpacity / 100)) * 255);
+                const alphaHex = alphaInt.toString(16).padStart(2, "0").toUpperCase();
+                backColor = `&H${alphaHex}${bgHex}`;
+                borderStyle = 3;
+                outline = Math.max(4, blurSize * 2);
+                shadow = 0;
+            }
         } else if (!dropShadow) {
             shadow = 0;
         }
@@ -102,25 +111,14 @@ export class AssBuilderService {
         let lines = text.split(/[\n\r]+/).filter(l => l.trim());
         
         if (lines.length === 0) return "";
-        if (lines.length === 1) {
-            // Single line - check if too long, wrap to 2 lines if needed
-            const singleLine = lines[0];
-            const MAX_CHARS = 45;
-            if (singleLine.length > MAX_CHARS) {
-                const mid = Math.floor(singleLine.length / 2);
-                lines = [
-                    singleLine.slice(0, mid).trim(),
-                    singleLine.slice(mid).trim()
-                ];
-            }
-        }
         
-        // Max 2 lines
+        // Max 2 lines — the pipeline already handles splitting,
+        // but enforce here as a safety net
         if (lines.length > 2) {
             lines = lines.slice(0, 2);
         }
         
-        // Join with \N for ASS - no truncation
+        // Join with \N for ASS
         const formatted = lines.join("\\N");
         return formatted.replace(/,/g, "，");
     }
