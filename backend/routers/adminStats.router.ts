@@ -70,8 +70,8 @@ export const adminStatsRouter = t.router({
         const tfDays: Record<string, number> = { week: 7, month: 30, year: 365 };
         const days = input.timeframe ? tfDays[input.timeframe] : undefined;
         const dateFilter = days
-          ? sql`created_at > DATE_SUB(NOW(), INTERVAL ${days} DAY)`
-          : sql`1=1`;
+          ? sql.raw(`created_at > DATE_SUB(NOW(), INTERVAL ${days} DAY)`)
+          : sql.raw(`1=1`);
 
         const voiceRows = await db
           .select({ voice: ttsConversions.voice, count: count() })
@@ -101,6 +101,10 @@ export const adminStatsRouter = t.router({
           .where(dateFilter);
 
         // Get base voice usage (thiha/nilar) - excluding character voices
+        const baseVoiceWhere = days
+          ? sql.raw(`voice IN ('thiha', 'nilar') AND (\`character\` IS NULL OR \`character\` = '') AND created_at > DATE_SUB(NOW(), INTERVAL ${days} DAY)`)
+          : sql.raw(`voice IN ('thiha', 'nilar') AND (\`character\` IS NULL OR \`character\` = '')`);
+        
         const baseVoiceDetails = await db
           .select({
             voice: ttsConversions.voice,
@@ -109,12 +113,14 @@ export const adminStatsRouter = t.router({
             duration: sql`COALESCE(SUM(duration_ms), 0)`,
           })
           .from(ttsConversions)
-          .where(days
-            ? sql`voice IN ('thiha', 'nilar') AND (\`character\` IS NULL OR \`character\` = '') AND created_at > DATE_SUB(NOW(), INTERVAL ${days} DAY)`
-            : sql`voice IN ('thiha', 'nilar') AND (\`character\` IS NULL OR \`character\` = '')`)
+          .where(baseVoiceWhere)
           .groupBy(ttsConversions.voice);
 
         // Get character voice usage
+        const charWhere = days
+          ? sql.raw(`\`character\` IS NOT NULL AND \`character\` != '' AND created_at > DATE_SUB(NOW(), INTERVAL ${days} DAY)`)
+          : sql.raw(`\`character\` IS NOT NULL AND \`character\` != ''`);
+        
         const charDetails = await db
           .select({
             character: ttsConversions.character,
@@ -124,9 +130,7 @@ export const adminStatsRouter = t.router({
             duration: sql`COALESCE(SUM(duration_ms), 0)`,
           })
           .from(ttsConversions)
-          .where(days
-            ? sql`\`character\` IS NOT NULL AND \`character\` != '' AND created_at > DATE_SUB(NOW(), INTERVAL ${days} DAY)`
-            : sql`\`character\` IS NOT NULL AND \`character\` != ''`)
+          .where(charWhere)
           .groupBy(ttsConversions.character, ttsConversions.voice);
 
         // Build all voices ranked list (base + characters)
