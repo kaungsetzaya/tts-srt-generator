@@ -41,6 +41,7 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
 } from "lucide-react";
+import { ACCENT, ACCENT_SECONDARY } from "@shared/const";
 
 type Plan =
   | "trial"
@@ -97,8 +98,8 @@ const FEATURE_ICONS: Record<string, any> = {
 };
 
 // ── Accent colors ──────────────────────────────────────────────
-const C = "#C06F30"; // copper
-const C_GOLD = "#F4B34F"; // gold
+const C = ACCENT; // copper
+const C_GOLD = ACCENT_SECONDARY; // gold
 const C_BG = "#070707"; // deep black background
 const cardBg = "linear-gradient(145deg, rgba(20,18,16,0.95) 0%, rgba(14,12,10,0.98) 100%)"; // rich dark card
 const border = "rgba(192,111,48,0.2)";
