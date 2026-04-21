@@ -2444,19 +2444,13 @@ export default function TTSGenerator() {
                             </div>
                           ) : dubPreviewUrl.startsWith("blob:") ? (
                             <div
+                              className={dubDetectedRatio === "9:16" ? "w-[240px] sm:w-[280px]" : "w-full max-w-[640px]"}
                               style={{
-                                width:
-                                  dubDetectedRatio === "9:16"
-                                    ? "min(240px, 55vw)"
-                                    : "100%",
-                                margin:
-                                  dubDetectedRatio === "9:16" ? "0 auto" : "0",
-                                aspectRatio:
-                                  dubDetectedRatio === "9:16" ? "9/16" : "16/9",
+                                aspectRatio: dubDetectedRatio === "9:16" ? "9/16" : "16/9",
                                 borderRadius: "12px",
                                 overflow: "hidden",
                                 position: "relative",
-                                background: "var(--background)",
+                                margin: dubDetectedRatio === "9:16" ? "0 auto" : "0",
                               }}
                             >
                               <video
@@ -2465,8 +2459,6 @@ export default function TTSGenerator() {
                                 controls
                                 className="w-full h-full"
                                 style={{
-                                  objectFit: "cover",
-                                  borderRadius: "12px",
                                   display: "block",
                                 }}
                                 onLoadedMetadata={e => {
@@ -2625,19 +2617,13 @@ export default function TTSGenerator() {
                           ) : (
                             <div
                               style={{
-                                width:
-                                  dubDetectedRatio === "9:16"
-                                    ? "min(240px, 55vw)"
-                                    : "100%",
-                                maxWidth:
-                                  dubDetectedRatio === "9:16"
-                                    ? "240px"
-                                    : "100%",
-                                aspectRatio:
-                                  dubDetectedRatio === "9:16" ? "9/16" : "16/9",
+                                className: dubDetectedRatio === "9:16" ? "w-[240px] sm:w-[280px]" : "w-full max-w-[640px]",
+                                style={{
+                                aspectRatio: dubDetectedRatio === "9:16" ? "9/16" : "16/9",
                                 position: "relative",
                                 overflow: "hidden",
                                 borderRadius: "12px",
+                                margin: dubDetectedRatio === "9:16" ? "0 auto" : "0",
                               }}
                             >
                               {getYouTubeEmbedUrl(dubVideoUrl) ? (
@@ -2693,10 +2679,58 @@ export default function TTSGenerator() {
                               )}
                               {videoLoading && (
                                 <div
-                                  className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-xl"
-                                  style={{ zIndex: 20 }}
+                                  className="absolute inset-0 flex flex-col items-center justify-center rounded-xl"
+                                  style={{ 
+                                    zIndex: 20,
+                                    background: 'rgba(0,0,0,0.6)',
+                                    backdropFilter: 'blur(8px)'
+                                  }}
                                 >
-                                  <Loader2 className="w-8 h-8 animate-spin text-white" />
+                                  <style>{`
+                                    .loader-rotate {
+                                      animation: loader-rotate 2s linear infinite;
+                                    }
+                                    @keyframes loader-rotate {
+                                      0% { transform: rotate(90deg); box-shadow: 0 10px 20px 0 #fff inset, 0 20px 30px 0 #ad5fff inset, 0 60px 60px 0 #471eec inset; }
+                                      50% { transform: rotate(270deg); box-shadow: 0 10px 20px 0 #fff inset, 0 20px 10px 0 #d60a47 inset, 0 40px 60px 0 #311e80 inset; }
+                                      100% { transform: rotate(450deg); box-shadow: 0 10px 20px 0 #fff inset, 0 20px 30px 0 #ad5fff inset, 0 60px 60px 0 #471eec inset; }
+                                    }
+                                    .loader-letter {
+                                      display: inline-block;
+                                      opacity: 0.4;
+                                      transform: translateY(0);
+                                      animation: loader-letter-anim 2s infinite;
+                                      border-radius: 50ch;
+                                      border: none;
+                                    }
+                                    .loader-letter:nth-child(1) { animation-delay: 0s; }
+                                    .loader-letter:nth-child(2) { animation-delay: 0.1s; }
+                                    .loader-letter:nth-child(3) { animation-delay: 0.2s; }
+                                    .loader-letter:nth-child(4) { animation-delay: 0.3s; }
+                                    .loader-letter:nth-child(5) { animation-delay: 0.4s; }
+                                    .loader-letter:nth-child(6) { animation-delay: 0.5s; }
+                                    .loader-letter:nth-child(7) { animation-delay: 0.6s; }
+                                    .loader-letter:nth-child(8) { animation-delay: 0.7s; }
+                                    .loader-letter:nth-child(9) { animation-delay: 0.8s; }
+                                    @keyframes loader-letter-anim {
+                                      0%, 100% { opacity: 0.4; transform: translateY(0); }
+                                      20% { opacity: 1; transform: scale(1.15); }
+                                      40% { opacity: 0.7; transform: translateY(0); }
+                                    }
+                                  `}</style>
+                                  <div className="loader-wrapper relative flex items-center justify-center w-[140px] h-[140px] font-['Inter',sans-serif] text-white rounded-full bg-transparent select-none">
+                                    <div className="loader absolute top-0 left-0 w-full aspect-square rounded-full bg-transparent loader-rotate" />
+                                    <div className="z-10 flex gap-1">
+                                      {["G","E","N","E","R","A","T","I","N","G"].map((letter, i) => (
+                                        <span key={i} className="loader-letter text-sm font-bold">{letter}</span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  <p className="mt-4 text-sm font-semibold text-white/80">
+                                    {activeJobId && jobStatusQuery?.data?.progress 
+                                      ? `${jobStatusQuery.data.progress}%` 
+                                      : lang === "mm" ? "ဖန်တီးနေသည်..." : "Generating..."}
+                                  </p>
                                 </div>
                               )}
                               {videoPreviewError && (
@@ -3242,28 +3276,50 @@ export default function TTSGenerator() {
                             boxShadow,
                           }}
                         >
+                          <style>{`
+                            .loader-rotate {
+                              animation: loader-rotate 2s linear infinite;
+                            }
+                            @keyframes loader-rotate {
+                              0% { transform: rotate(90deg); box-shadow: 0 10px 20px 0 #fff inset, 0 20px 30px 0 #ad5fff inset, 0 60px 60px 0 #471eec inset; }
+                              50% { transform: rotate(270deg); box-shadow: 0 10px 20px 0 #fff inset, 0 20px 10px 0 #d60a47 inset, 0 40px 60px 0 #311e80 inset; }
+                              100% { transform: rotate(450deg); box-shadow: 0 10px 20px 0 #fff inset, 0 20px 30px 0 #ad5fff inset, 0 60px 60px 0 #471eec inset; }
+                            }
+                            .loader-letter {
+                              display: inline-block;
+                              opacity: 0.4;
+                              transform: translateY(0);
+                              animation: loader-letter-anim 2s infinite;
+                              border-radius: 50ch;
+                              border: none;
+                            }
+                            .loader-letter:nth-child(1) { animation-delay: 0s; }
+                            .loader-letter:nth-child(2) { animation-delay: 0.1s; }
+                            .loader-letter:nth-child(3) { animation-delay: 0.2s; }
+                            .loader-letter:nth-child(4) { animation-delay: 0.3s; }
+                            .loader-letter:nth-child(5) { animation-delay: 0.4s; }
+                            .loader-letter:nth-child(6) { animation-delay: 0.5s; }
+                            .loader-letter:nth-child(7) { animation-delay: 0.6s; }
+                            .loader-letter:nth-child(8) { animation-delay: 0.7s; }
+                            .loader-letter:nth-child(9) { animation-delay: 0.8s; }
+                            @keyframes loader-letter-anim {
+                              0%, 100% { opacity: 0.4; transform: translateY(0); }
+                              20% { opacity: 1; transform: scale(1.15); }
+                              40% { opacity: 0.7; transform: translateY(0); }
+                            }
+                          `}</style>
                           <div className="flex flex-col items-center justify-center gap-4 py-6">
-                            <div className="flex items-center gap-2">
-                              <div
-                                className="w-3 h-3 rounded-full animate-pulse"
-                                style={{ background: accent }}
-                              />
-                              <div
-                                className="w-3 h-3 rounded-full animate-pulse"
-                                style={{
-                                  background: accent,
-                                  animationDelay: "0.3s",
-                                }}
-                              />
-                              <div
-                                className="w-3 h-3 rounded-full animate-pulse"
-                                style={{
-                                  background: accent,
-                                  animationDelay: "0.6s",
-                                }}
-                              />
+                            <div className="loader-wrapper relative flex items-center justify-center w-[140px] h-[140px] font-['Inter',sans-serif] text-white rounded-full bg-transparent select-none">
+                              <div className="loader absolute top-0 left-0 w-full aspect-square rounded-full bg-transparent loader-rotate" />
+                              <div className="z-10 flex gap-1">
+                                {["G","E","N","E","R","A","T","I","N","G"].map((letter, i) => (
+                                  <span key={i} className="loader-letter text-sm font-bold">{letter}</span>
+                                ))}
+                              </div>
                             </div>
-                            
+                            <p className="text-sm font-semibold" style={{ color: accent }}>
+                              {jobStatusQuery?.data?.progress ? `${jobStatusQuery.data.progress}%` : lang === "mm" ? "ဖန်တီးနေသည်..." : "Generating..."}
+                            </p>
                           </div>
                         </div>
                       )}
@@ -3304,39 +3360,22 @@ export default function TTSGenerator() {
                         </div>
                         <div className="flex justify-center mt-2">
                           <div
+                            className={dubDetectedRatio === "9:16" ? "w-[240px] sm:w-[280px]" : "w-full max-w-[640px]"}
                             style={{
-                              width: dubDetectedRatio === "9:16" ? "min(240px, 55vw)" : "100%",
-                              margin: dubDetectedRatio === "9:16" ? "0 auto" : "0",
-                              aspectRatio:
-                                dubDetectedRatio === "9:16" ? "9/16" : "16/9",
+                              aspectRatio: dubDetectedRatio === "9:16" ? "9/16" : "16/9",
                               borderRadius: "12px",
                               overflow: "hidden",
+                              margin: dubDetectedRatio === "9:16" ? "0 auto" : "0",
                             }}
                           >
                             <video
                               ref={dubResultVideoRef}
                               controls
-                              className="w-full h-full rounded-xl"
+                              className="w-full h-full"
                               style={{
-                                objectFit: "cover",
-                                background: "var(--background)",
+                                display: "block",
                               }}
-                              src={
-                                dubResult.videoUrl ||
-                                (() => {
-                                  try {
-                                    const b = atob(dubResult.videoBase64 || "");
-                                    const arr = new Uint8Array(b.length);
-                                    for (let i = 0; i < b.length; i++)
-                                      arr[i] = b.charCodeAt(i);
-                                    return URL.createObjectURL(
-                                      new Blob([arr], { type: "video/mp4" })
-                                    );
-                                  } catch {
-                                    return "";
-                                  }
-                                })()
-                              }
+                              src={dubResult.videoUrl}
                             />
                           </div>
                         </div>
