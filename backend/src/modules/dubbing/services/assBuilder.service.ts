@@ -21,7 +21,7 @@ export class AssBuilderService {
             srtBlurBg?: boolean;
             srtBlurOpacity?: number;
             srtBlurSize?: number;
-            srtBlurColor?: "black" | "white";
+            srtBlurColor?: "black" | "white" | "transparent" | "blue" | "yellow";
             srtBoxPadding?: number;
             srtFullWidth?: boolean;
             srtDropShadow?: boolean;
@@ -48,6 +48,15 @@ export class AssBuilderService {
         const fullWidth = opts?.srtFullWidth ?? false;
         const dropShadow = opts?.srtDropShadow ?? true;
 
+        const blurColorMap: Record<string, string> = {
+            black: "000000",
+            white: "FFFFFF",
+            transparent: "000000",
+            blue: "0000FF",
+            yellow: "FFFF00"
+        };
+        const bgHex = blurColorMap[blurColor] || "000000";
+
         const hex = (fontColor.replace("#", "") + "000000").substring(0, 6);
         const r = parseInt(hex.substring(0, 2), 16) || 255;
         const g = parseInt(hex.substring(2, 4), 16) || 255;
@@ -69,7 +78,6 @@ export class AssBuilderService {
         if (blurBg) {
             const alphaInt = Math.round((1 - (blurOpacity / 100)) * 255);
             const alphaHex = alphaInt.toString(16).padStart(2, "0").toUpperCase();
-            const bgHex = blurColor === "black" ? "000000" : "FFFFFF";
             backColor = `&H${alphaHex}${bgHex}`;
             borderStyle = 3;
             outline = Math.max(4, blurSize * 2);

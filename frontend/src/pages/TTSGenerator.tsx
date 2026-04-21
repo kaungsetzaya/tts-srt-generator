@@ -382,7 +382,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
   const [srtBlurBg, setSrtBlurBg] = useState(true);
   const [srtMarginV, setSrtMarginV] = useState(30);
   const [srtBlurSize, setSrtBlurSize] = useState(8);
-  const [srtBlurColor, setSrtBlurColor] = useState<"black" | "white">("black");
+  const [srtBlurColor, setSrtBlurColor] = useState<"black" | "white" | "transparent" | "blue" | "yellow">("black");
   const [srtFullWidth, setSrtFullWidth] = useState(false);
   const [srtBorderRadius, setSrtBorderRadius] = useState<"rounded" | "square">(
     "rounded"
@@ -2492,7 +2492,15 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                                       background: srtBlurBg 
                                         ? srtBlurColor === "black" 
                                           ? `rgba(0,0,0,${Math.min(1, srtBlurSize / 100)})` 
-                                          : `rgba(255,255,255,${Math.min(1, srtBlurSize / 100)})`
+                                          : srtBlurColor === "white"
+                                            ? `rgba(255,255,255,${Math.min(1, srtBlurSize / 100)})`
+                                            : srtBlurColor === "transparent"
+                                              ? `rgba(0,0,0,0)`
+                                              : srtBlurColor === "blue"
+                                                ? `rgba(59,130,246,${Math.min(1, srtBlurSize / 100)})`
+                                                : srtBlurColor === "yellow"
+                                                  ? `rgba(234,179,8,${Math.min(1, srtBlurSize / 100)})`
+                                                  : "transparent"
                                         : "transparent",
                                       textAlign: "center",
                                       width: srtFullWidth ? "100%" : "auto",
@@ -3159,6 +3167,48 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                                       }}
                                     >
                                       {lang === "mm" ? "ဖြူ" : "Light"}
+                                    </button>
+                                    <button
+                                      onClick={() => setSrtBlurColor("transparent")}
+                                      className="px-4 py-1.5 rounded-xl text-xs font-bold transition-all"
+                                      style={{
+                                        background: srtBlurColor === "transparent"
+                                          ? "linear-gradient(135deg, rgba(0,0,0,0.3), rgba(0,0,0,0.1))"
+                                          : isDark ? "rgba(255,255,255,0.05)" : "#F0EBE3",
+                                        color: srtBlurColor === "transparent" ? "#fff" : subtextColor,
+                                        border: `1px solid ${srtBlurColor === "transparent" ? accent : "transparent"}`,
+                                        boxShadow: srtBlurColor === "transparent" ? `0 2px 8px rgba(192,111,48,0.2)` : "none",
+                                      }}
+                                    >
+                                      {lang === "mm" ? "ဖောက်ပါး" : "Clear"}
+                                    </button>
+                                    <button
+                                      onClick={() => setSrtBlurColor("blue")}
+                                      className="px-4 py-1.5 rounded-xl text-xs font-bold transition-all"
+                                      style={{
+                                        background: srtBlurColor === "blue"
+                                          ? "linear-gradient(135deg, #3b82f6, #1d4ed8)"
+                                          : isDark ? "rgba(255,255,255,0.05)" : "#F0EBE3",
+                                        color: srtBlurColor === "blue" ? "#fff" : subtextColor,
+                                        border: `1px solid ${srtBlurColor === "blue" ? accent : "transparent"}`,
+                                        boxShadow: srtBlurColor === "blue" ? `0 2px 8px rgba(192,111,48,0.2)` : "none",
+                                      }}
+                                    >
+                                      {lang === "mm" ? "အပြာ" : "Blue"}
+                                    </button>
+                                    <button
+                                      onClick={() => setSrtBlurColor("yellow")}
+                                      className="px-4 py-1.5 rounded-xl text-xs font-bold transition-all"
+                                      style={{
+                                        background: srtBlurColor === "yellow"
+                                          ? "linear-gradient(135deg, #eab308, #ca8a04)"
+                                          : isDark ? "rgba(255,255,255,0.05)" : "#F0EBE3",
+                                        color: srtBlurColor === "yellow" ? "#000" : subtextColor,
+                                        border: `1px solid ${srtBlurColor === "yellow" ? accent : "transparent"}`,
+                                        boxShadow: srtBlurColor === "yellow" ? `0 2px 8px rgba(192,111,48,0.2)` : "none",
+                                      }}
+                                    >
+                                      {lang === "mm" ? "အဝါ" : "Yellow"}
                                     </button>
                                   </div>
                                 </div>
