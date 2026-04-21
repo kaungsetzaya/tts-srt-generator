@@ -383,7 +383,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
   const [srtMarginV, setSrtMarginV] = useState(30);
   const [srtBlurSize, setSrtBlurSize] = useState(8);
   const [srtBlurOpacity, setSrtBlurOpacity] = useState(80);
-  const [srtBlurColor, setSrtBlurColor] = useState<"black" | "white" | "transparent">("black");
+  const [srtBlurColor, setSrtBlurColor] = useState<"black" | "white">("black");
   const [srtFullWidth, setSrtFullWidth] = useState(false);
   const [srtBorderRadius, setSrtBorderRadius] = useState<"rounded" | "square">(
     "rounded"
@@ -2495,9 +2495,7 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                                           ? `rgba(0,0,0,${Math.min(1, srtBlurOpacity / 100)})` 
                                           : srtBlurColor === "white"
                                             ? `rgba(255,255,255,${Math.min(1, srtBlurOpacity / 100)})`
-                                            : srtBlurColor === "transparent"
-                                              ? `rgba(0,0,0,0)`
-                                              : "transparent"
+                                            : "transparent"
                                         : "transparent",
                                       textAlign: "center",
                                       width: srtFullWidth ? "100%" : "auto",
@@ -3182,23 +3180,9 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
                                         border: `1px solid ${srtBlurColor === "white" ? accent : "transparent"}`,
                                         boxShadow: srtBlurColor === "white" ? `0 2px 8px rgba(192,111,48,0.2)` : "none",
                                       }}
-                                    >
+>
                                       {lang === "mm" ? "ဖြူ" : "Light"}
                                     </button>
-                                    <button
-                                      onClick={() => setSrtBlurColor("transparent")}
-                                      className="px-4 py-1.5 rounded-xl text-xs font-bold transition-all"
-                                      style={{
-                                        background: srtBlurColor === "transparent"
-                                          ? "linear-gradient(135deg, rgba(0,0,0,0.3), rgba(0,0,0,0.1))"
-                                          : isDark ? "rgba(255,255,255,0.05)" : "#F0EBE3",
-                                        color: srtBlurColor === "transparent" ? "#fff" : subtextColor,
-                                        border: `1px solid ${srtBlurColor === "transparent" ? accent : "transparent"}`,
-                                        boxShadow: srtBlurColor === "transparent" ? `0 2px 8px rgba(192,111,48,0.2)` : "none",
-                                      }}
-                                    >
-                                      {lang === "mm" ? "ဖောက်ပါး" : "Clear"}
-</button>
                                   </div>
                                 </div>
                               </div>
