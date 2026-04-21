@@ -750,7 +750,6 @@ const [dubVoiceMode, setDubVoiceMode] = useState<"standard" | "character">(
     try {
       await navigator.clipboard.writeText(editedVideoText);
       setVideoCopied(true);
-      showSuccess(lang === "mm" ? "SRT ကူးယူပြီးပါပြီ!" : "SRT copied!");
       setTimeout(() => setVideoCopied(false), 2000);
     } catch {
       /* fallback */
