@@ -244,17 +244,21 @@ export async function mergeVideoAudioSubtitles(
       ? `${subFilter},setpts=${speedRatio.toFixed(6)}*PTS`
       : subFilter;
 
+    // We use sidechaincompress to naturally return original audio to full volume during pauses!
+    const audioDuckingFilter = `[0:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,volume=0.8[a0];[1:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,volume=1.5[a1];[a0][a1]sidechaincompress=threshold=0.015:ratio=10:attack=10:release=1000[bg];[bg][a1]amix=inputs=2:duration=first:weights=1 1[aout]`;
+    const complexFilterStr = `[0:v]${videoFilter}[vout];${audioDuckingFilter}`;
+
     ffmpeg(videoPath)
       .input(audioPath)
       .outputOptions([
-        '-vf',         videoFilter,
+        '-filter_complex', complexFilterStr,
         '-c:v',        'libx264',
         '-preset',     'ultrafast',
         '-crf',        '28',
         '-c:a',        'aac',
         '-b:a',        '128k',
-        '-map',        '0:v',
-        '-map',        '1:a',
+        '-map',        '[vout]',
+        '-map',        '[aout]',
         '-t',          options.videoDurationSec.toFixed(3),
         '-map_metadata', '-1',
         '-movflags',   '+faststart',
@@ -298,22 +302,23 @@ export async function mergeVideoAudio(
     const applyStretch = needsSpeedChange(speedRatio);
     const videoFilter  = applyStretch ? `setpts=${speedRatio.toFixed(6)}*PTS` : null;
 
-    const ff = ffmpeg(videoPath).input(audioPath);
+    const audioDuckingFilter = `[0:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,volume=0.8[a0];[1:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,volume=1.5[a1];[a0][a1]sidechaincompress=threshold=0.015:ratio=10:attack=10:release=1000[bg];[bg][a1]amix=inputs=2:duration=first:weights=1 1[aout]`;
 
+    let filterStr = audioDuckingFilter;
     if (videoFilter) {
-      ff.videoFilters(videoFilter);
+      filterStr = `[0:v]${videoFilter}[vout];` + audioDuckingFilter;
     }
 
-    // FIXED: was `videoFilter ? "-c:v libx264" : "-c:v copy"` as one string —
-    // that made ffmpeg receive "-c:v libx264" as a single unrecognized flag.
-    // Now split into separate '-c:v' and codec value entries.
+    const ff = ffmpeg(videoPath).input(audioPath);
+
     ff.outputOptions([
+        '-filter_complex', filterStr,
         '-c:v',  applyStretch ? 'libx264' : 'copy',
         ...(applyStretch ? ['-preset', 'ultrafast', '-crf', '28'] : []),
         '-c:a',  'aac',
         '-b:a',  '128k',
-        '-map',  '0:v',
-        '-map',  '1:a',
+        '-map',  videoFilter ? '[vout]' : '0:v',
+        '-map',  '[aout]',
         '-t',    options.videoDurationSec.toFixed(3),
         '-map_metadata', '-1',
         '-movflags', '+faststart',

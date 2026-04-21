@@ -183,7 +183,16 @@ export class DubVideoPipeline {
         }
 
         const partPath = path.join(tempDir, `tts_${seg.index}.mp3`);
-        await fs.writeFile(partPath, audioBuffer);
+        const tempPartPath = path.join(tempDir, `tts_raw_${seg.index}.mp3`);
+        await fs.writeFile(tempPartPath, audioBuffer);
+        
+        // Strictly trim hidden baked-in silence padding from TTS engine to deeply reduce auto-creator pauses
+        await ffmpegService.runFilter(
+            tempPartPath, 
+            'silenceremove=start_periods=1:start_duration=0.01:start_threshold=-40dB:stop_periods=1:stop_duration=0.01:stop_threshold=-40dB', 
+            partPath
+        );
+
         const duration = await ffmpegService.getAudioDurationMs(partPath);
 
         return { partPath, duration, text: seg.translatedText, index: seg.index };
@@ -224,7 +233,7 @@ export class DubVideoPipeline {
       // Raw audio timeline: startMs/endMs based on audio playback position
       const audioTimeline: Array<{ startMs: number; endMs: number; text: string }> = [];
       let timelinePosMs = 0;
-      const NATURAL_PAUSE_MS = 100; // Minimal gap between lines (same as word-space)
+      const NATURAL_PAUSE_MS = 0; // Removed extra gap to perfectly satisfy user's request for faster dialogue
 
       for (let i = 0; i < activeSegments.length; i++) {
         const result = ttsResults[i];
