@@ -1813,18 +1813,6 @@ export default function TTSGenerator() {
               {mainTab === "video" && (
                 <div className="max-w-xl mx-auto animate-in fade-in zoom-in-95 duration-300 space-y-4">
                   <div className="text-center mb-2 sm:mb-4">
-                    <h2
-                      className="text-2xl sm:text-3xl md:text-4xl font-black uppercase tracking-wider sm:tracking-widest mb-2 leading-normal"
-                      style={{ textShadow: "none", color: accent }}
-                    >
-                      {t.videoTitle}
-                    </h2>
-                    <p
-                      className="font-bold tracking-wider text-xs sm:text-sm mt-1"
-                      style={{ color: subtextColor }}
-                    >
-                      {t.videoDesc}
-                    </p>
                     <p className="text-xs mt-1" style={{ color: subtextColor }}>
                       {t.videoLimit}
                     </p>
