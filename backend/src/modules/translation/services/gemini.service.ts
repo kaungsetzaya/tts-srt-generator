@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Gemini Service - Strictly isolates all Google Gemini API logic.
  * Aligned with ARCHITECTURE.md requirements.
  */
@@ -115,12 +115,9 @@ export class GeminiService {
         return result;
     }
 
-    private sanitize(text: string): string {
+private sanitize(text: string): string {
         if (!text || typeof text !== 'string') return "";
-        let cleaned = text.replace(/Ã¡â‚¬Â¤Ã¡â‚¬Å¾Ã¡â‚¬Å Ã¡â‚¬ÂºÃ¡â‚¬â„¢Ã¡â‚¬Â¾Ã¡â‚¬Â¬ Ã¡â‚¬Å¾Ã¡â‚¬â€žÃ¡â‚¬ÂºÃ¡â‚¬â€¢Ã¡â‚¬Â±Ã¡â‚¬Â¸Ã¡â‚¬â€¢Ã¡â‚¬Â­Ã¡â‚¬Â¯Ã¡â‚¬Â·.*?(Ã¡â‚¬â€“Ã¡â‚¬Â¼Ã¡â‚¬Â±|Ã¡â‚¬â€¢Ã¡â‚¬Â«Ã¡â‚¬Å¾Ã¡â‚¬Å Ã¡â‚¬Âº|Ã¡â‚¬â€¢Ã¡â‚¬Â¼Ã¡â‚¬â€Ã¡â‚¬ÂºÃ¡â‚¬â€ Ã¡â‚¬Â­Ã¡â‚¬Â¯Ã¡â‚¬â€˜Ã¡â‚¬Â¬Ã¡â‚¬Â¸Ã¡â‚¬â€¢Ã¡â‚¬Â«Ã¡â‚¬Å¾Ã¡â‚¬Å Ã¡â‚¬ÂºÃ¡Ââ€¹)/g, ""); 
-        cleaned = cleaned.replace(/Ã¡â‚¬â„¢Ã¡â‚¬Â¼Ã¡â‚¬â€Ã¡â‚¬ÂºÃ¡â‚¬â„¢Ã¡â‚¬Â¬Ã¡â‚¬ËœÃ¡â‚¬Â¬Ã¡â‚¬Å¾Ã¡â‚¬Â¬Ã¡â‚¬â€“Ã¡â‚¬Â¼Ã¡â‚¬â€žÃ¡â‚¬Â·Ã¡â‚¬Âº Ã¡â‚¬Â¡Ã¡â‚¬Â±Ã¡â‚¬Â¬Ã¡â‚¬â‚¬Ã¡â‚¬ÂºÃ¡â‚¬â€¢Ã¡â‚¬Â«Ã¡â‚¬Â¡Ã¡â‚¬ÂÃ¡â‚¬Â­Ã¡â‚¬Â¯Ã¡â‚¬â€žÃ¡â‚¬ÂºÃ¡â‚¬Â¸.*?Ã¡â‚¬â€¢Ã¡â‚¬Â«Ã¡â‚¬Å¾Ã¡â‚¬Å Ã¡â‚¬Âº/g, "");
-        cleaned = cleaned.replace(/Here is the.*/gi, "");
-        cleaned = cleaned.replace(/\*\*Ã¡â‚¬â€¡Ã¡â‚¬Â¬Ã¡â‚¬ÂÃ¡â‚¬ÂºÃ¡â‚¬Å Ã¡â‚¬Â½Ã¡â‚¬Â¾Ã¡â‚¬â€Ã¡â‚¬ÂºÃ¡â‚¬Â¸[^\*]*\*\*/g, ""); 
+        let cleaned = text.replace(/Here is the.*/gi, "");
         cleaned = cleaned.replace(/\*\*.+?\*\*/g, ""); 
         cleaned = cleaned.replace(/[#_*\[\]]/g, ""); 
         cleaned = cleaned.replace(/"/g, "");

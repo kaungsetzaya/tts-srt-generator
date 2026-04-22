@@ -166,11 +166,7 @@ export default function VideoTranslator() {
         {/* Processing animation */}
         {(isLoading || jobId) && (
           <div className="border border-border bg-card p-6 sm:p-8 rounded-2xl text-center space-y-4">
-            <div className="flex items-center justify-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full animate-bounce" style={{ background: C }} />
-              <div className="w-2.5 h-2.5 rounded-full animate-bounce" style={{ background: C, animationDelay: "0.2s" }} />
-              <div className="w-2.5 h-2.5 rounded-full animate-bounce" style={{ background: C, animationDelay: "0.4s" }} />
-            </div>
+            <Loader2 className="w-8 h-8 animate-spin mx-auto" style={{ color: C }} />
             <p className="text-xs sm:text-sm font-bold opacity-60">Translating your video...</p>
             {jobId && <p className="text-[10px] sm:text-xs font-mono opacity-40">Progress: {jobProgress}%</p>}
           </div>
