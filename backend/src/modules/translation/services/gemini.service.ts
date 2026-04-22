@@ -208,17 +208,22 @@ private sanitize(text: string): string {
 
 private async callApi(text: string, modelId: string, apiKey: string): Promise<string | null> {
         const url = `https://generativelanguage.googleapis.com/v1beta/${modelId}:generateContent?key=${apiKey}`;
-        const systemPrompt = `You are a professional Movie Dubbing Script Writer.
-TASK: Translate English script into Natural, Expressive Spoken Burmese (အပြောစကား).
+        const systemPrompt = `You are a Professional Movie Recap Narrator. 
+TASK: Translate the script into "High-Impact Spoken Burmese" for social media video recaps (TikTok/FB/YouTube).
 
-STRICT RULES:
-1. **DEEP NARRATIVE**: Use a detailed storytelling tone. Don't simplify or shorten too much. Keep the emotional depth of the script.
-2. **FAVORITE ENDINGS**: Use expressive spoken endings like "ခဲ့တာပါ။", "နေမိတော့တာပဲ။", "ထင်နေတာပေါ့။", "မြင်လိုက်ရတယ်...", "သေးတယ်။", "မသိဘူးပေါ့။".
-3. **STYLE**: Use "အဲ့ဒီနောက်ပိုင်း" instead of "အဲဒီနောက်", and "ဒါပေမယ့်" instead of "ဒါပေမဲ့" to match the user's preferred Recap style.
-4. **PUNCTUATION**: Use ONLY Myanmar (။) for sentence ends and (၊) for natural pauses. Use (...) for dramatic effect. NEVER use English punctuation.
-5. **DUBBING FLOW**: Ensure the Burmese words flow naturally like a real person telling a story to a friend.
+STRICT STYLE RULES:
+1. **NARRATIVE VOICE**: Tell it like a story to a friend. Use descriptive, immersive language.
+2. **FAVORITE ENDINGS**: 
+   - Frequently use: "တာပေါ့", "တာပဲ", "နေမိတာ", "သွားခဲ့ရတယ်", "လိုက်တာ", "လေ", "သေးတယ်", "နေတာပါ", "ခဲ့တာပါ။"
+3. **SPECIFIC VOCABULARY**:
+   - Use "ဒါပေမယ့်" (instead of ဒါပေမဲ့)
+   - Use "အဲ့ဒီ" (instead of အဲဒီ)
+   - Use "အခုမှ စတာပါ" (for transitions)
+4. **DRAMATIC PAUSES**: Use "..." for tension (e.g., "...သူ့ရည်းစားနဲ့လေ").
+5. **STRICT PUNCTUATION**: Use (၊) for pauses and (။) for sentence ends. NEVER use English (, .).
+6. **NO LITERARY BURMESE**: Strictly ban "သည်", "ပါသည်", "သနည်း".
 
-OUTPUT: Return a JSON array of strings ONLY.`;
+GOAL: The output must sound exactly like a high-quality Myanmar movie recap script.`;
 
         const body = {
             contents: [{ parts: [{ text: `Translate to Myanmar:\n\n${text}` }] }],
@@ -238,17 +243,22 @@ OUTPUT: Return a JSON array of strings ONLY.`;
 
 private async callBatchApi(lines: string[], modelId: string, apiKey: string): Promise<string[] | null> {
         const url = `https://generativelanguage.googleapis.com/v1beta/${modelId}:generateContent?key=${apiKey}`;
-        const systemPrompt = `You are a professional Movie Dubbing Script Writer.
-TASK: Translate English script into Natural, Expressive Spoken Burmese (အပြောစကား).
+        const systemPrompt = `You are a Professional Movie Recap Narrator. 
+TASK: Translate the script into "High-Impact Spoken Burmese" for social media video recaps (TikTok/FB/YouTube).
 
-STRICT RULES:
-1. **DEEP NARRATIVE**: Use a detailed storytelling tone. Don't simplify or shorten too much. Keep the emotional depth of the script.
-2. **FAVORITE ENDINGS**: Use expressive spoken endings like "ခဲ့တာပါ။", "နေမိတော့တာပဲ။", "ထင်နေတာပေါ့။", "မြင်လိုက်ရတယ်...", "သေးတယ်။", "မသိဘူးပေါ့။".
-3. **STYLE**: Use "အဲ့ဒီနောက်ပိုင်း" instead of "အဲဒီနောက်", and "ဒါပေမယ့်" instead of "ဒါပေမဲ့" to match the user's preferred Recap style.
-4. **PUNCTUATION**: Use ONLY Myanmar (။) for sentence ends and (၊) for natural pauses. Use (...) for dramatic effect. NEVER use English punctuation.
-5. **DUBBING FLOW**: Ensure the Burmese words flow naturally like a real person telling a story to a friend.
+STRICT STYLE RULES:
+1. **NARRATIVE VOICE**: Tell it like a story to a friend. Use descriptive, immersive language.
+2. **FAVORITE ENDINGS**: 
+   - Frequently use: "တာပေါ့", "တာပဲ", "နေမိတာ", "သွားခဲ့ရတယ်", "လိုက်တာ", "လေ", "သေးတယ်", "နေတာပါ", "ခဲ့တာပါ။"
+3. **SPECIFIC VOCABULARY**:
+   - Use "ဒါပေမယ့်" (instead of ဒါပေမဲ့)
+   - Use "အဲ့ဒီ" (instead of အဲဒီ)
+   - Use "အခုမှ စတာပါ" (for transitions)
+4. **DRAMATIC PAUSES**: Use "..." for tension (e.g., "...သူ့ရည်းစားနဲ့လေ").
+5. **STRICT PUNCTUATION**: Use (၊) for pauses and (။) for sentence ends. NEVER use English (, .).
+6. **NO LITERARY BURMESE**: Strictly ban "သည်", "ပါသည်", "သနည်း".
 
-OUTPUT: Return a JSON array of strings ONLY.`;
+GOAL: The output must sound exactly like a high-quality Myanmar movie recap script.`;
 
         const body = {
             contents: [{ parts: [{ text: `TEXT TO TRANSLATE (JSON Array):\n${JSON.stringify(lines)}` }] }],
