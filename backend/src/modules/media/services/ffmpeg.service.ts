@@ -280,10 +280,6 @@ function buildPerSegmentVideoFilter(
     parts.push(`[vconcat]${subFilter}[vout]`);
   }
 
-  // Hold the last frame for 5 seconds so video is always longer than audio.
-  // With -shortest, output ends exactly when the audio stream ends.
-  parts.push(`[vout]tpad=stop_mode=clone:stop_duration=5[vfinal]`);
-
   return parts.join(';');
 }
 
@@ -326,14 +322,13 @@ export async function mergeVideoAudioSubtitlesPerSegment(
       .input(audioPath)
       .outputOptions([
         '-filter_complex', filterComplex,
-        '-map',    '[vfinal]',
+        '-map',    '[vout]',
         '-map',    '1:a',
         '-c:v',    'libx264',
         '-preset', 'fast',
         '-crf',    '23',
         '-c:a',    'aac',
         '-b:a',    '128k',
-        '-af',     'apad=pad_dur=2',
         '-shortest',
         '-map_metadata', '-1',
         '-movflags', '+faststart',
@@ -366,14 +361,13 @@ export async function mergeVideoAudioPerSegment(
       .input(audioPath)
       .outputOptions([
         '-filter_complex', filterComplex,
-        '-map',    '[vfinal]',
+        '-map',    '[vout]',
         '-map',    '1:a',
         '-c:v',    'libx264',
         '-preset', 'fast',
         '-crf',    '23',
         '-c:a',    'aac',
         '-b:a',    '128k',
-        '-af',     'apad=pad_dur=2',
         '-shortest',
         '-map_metadata', '-1',
         '-movflags', '+faststart',
