@@ -202,13 +202,21 @@ export class DubVideoPipeline {
         await fs.writeFile(tempPartPath, audioBuffer);
         
         // Strictly trim hidden baked-in silence padding from TTS engine to deeply reduce auto-creator pauses
-        await ffmpegService.runFilter(
-            tempPartPath, 
-            'silenceremove=start_periods=1:start_duration=0.01:start_threshold=-40dB:stop_periods=1:stop_duration=0.01:stop_threshold=-40dB', 
-            partPath
-        );
+        let finalPartPath = tempPartPath;
+        try {
+            await ffmpegService.runFilter(
+                tempPartPath, 
+                'silenceremove=start_periods=1:start_duration=0.01:start_threshold=-40dB:stop_periods=1:stop_duration=0.01:stop_threshold=-40dB', 
+                partPath
+            );
+            finalPartPath = partPath;
+        } catch (err: any) {
+            console.warn(`[Dubbing Pipeline] Silence trim failed for segment ${seg.index}, using original: ${err.message}`);
+            // Copy original to partPath if trim failed
+            await fs.copyFile(tempPartPath, partPath).catch(() => {});
+        }
 
-        const duration = await ffmpegService.getAudioDurationMs(partPath);
+        const duration = await ffmpegService.getAudioDurationMs(finalPartPath);
 
         return { partPath, duration, text: seg.translatedText, index: seg.index };
       }
@@ -253,6 +261,10 @@ export class DubVideoPipeline {
 
       for (let i = 0; i < activeSegments.length; i++) {
         const result = ttsResults[i];
+        if (!result) {
+          console.error(`[Dubbing Pipeline] Missing TTS result for segment ${i}`);
+          continue;
+        }
         
         // Add natural pause before segment (except the first one if it starts at 0)
         if (i > 0) {
@@ -273,13 +285,18 @@ export class DubVideoPipeline {
         
         // Add the translated speech
         audioParts.push(result.partPath);
+        const safeDuration = Math.max(result.duration, 100); // Minimum 100ms
         audioTimeline.push({ 
           startMs: timelinePosMs, 
-          endMs: timelinePosMs + result.duration, 
+          endMs: timelinePosMs + safeDuration, 
           text: result.text 
         });
         
-        timelinePosMs += result.duration;
+        timelinePosMs += safeDuration;
+      }
+      
+      if (audioParts.length === 0) {
+        throw new Error("No audio parts generated - all TTS segments failed");
       }
 
       // Build subtitle entries with proper timing:
