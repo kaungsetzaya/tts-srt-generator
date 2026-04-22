@@ -117,11 +117,23 @@ export class GeminiService {
 
 private sanitize(text: string): string {
         if (!text || typeof text !== 'string') return "";
-        let cleaned = text.replace(/Here is the.*/gi, "");
+        let cleaned = text.trim();
+
+        cleaned = cleaned.replace(/,/g, "၊");
+        cleaned = cleaned.replace(/\./g, "။");
+
+        cleaned = cleaned.replace(/၊$/, "။");
+
+        if (cleaned.length > 0 && !cleaned.endsWith("။") && !cleaned.endsWith("၊")) {
+            cleaned += "။";
+        }
+
+        cleaned = cleaned.replace(/Here is the.*/gi, "");
         cleaned = cleaned.replace(/\*\*.+?\*\*/g, ""); 
         cleaned = cleaned.replace(/[#_*\[\]]/g, ""); 
         cleaned = cleaned.replace(/"/g, "");
         cleaned = cleaned.replace(/'/g, "");
+
         return cleaned.trim();
     }
 
@@ -200,13 +212,14 @@ private async callApi(text: string, modelId: string, apiKey: string): Promise<st
 Translate English video script to natural Spoken Burmese (အပြောစကား).
 
 STRICT RULES:
-1. NO LITERARY BURMESE: Avoid "သည်", "ပါသည်", "သနည်း" endings. Use natural endings like "တယ်", "နေတယ်", "ခဲ့တာ", "တာပေါ့".
+1. NO LITERARY BURMESE: Avoid "သည်", "ပါသည်", "သနည်း". Use endings like "တယ်", "နေတယ်", "ခဲ့တာ", "တာပေါ့".
 2. DUBBING SYNC: Keep translation length similar to English for timing.
 3. NATURAL FLOW: Break long sentences into shorter, punchy ones.
 4. EMOTIONAL PARTICLES: Add particles (ပေါ့, လေ, နော်, ကွ) to match speaker tone.
-5. KEEP SHORT: Max ~30-40 characters per segment.
+5. STRICT PUNCTUATION: Use ONLY Myanmar Full-stop (။) for ends and Myanmar Comma (၊) for pauses. NEVER use English (, .).
+6. KEEP SHORT: Max ~30-40 characters per segment.
 
-OUTPUT: JSON array of strings ONLY. No explanations.`;
+OUTPUT: JSON array of strings ONLY.`;
 
         const body = {
             contents: [{ parts: [{ text: `Translate to Myanmar:\n\n${text}` }] }],
@@ -226,17 +239,18 @@ OUTPUT: JSON array of strings ONLY. No explanations.`;
 
 private async callBatchApi(lines: string[], modelId: string, apiKey: string): Promise<string[] | null> {
         const url = `https://generativelanguage.googleapis.com/v1beta/${modelId}:generateContent?key=${apiKey}`;
-        const systemPrompt = `You are a professional Movie Dubbing Script Writer.
+const systemPrompt = `You are a professional Movie Dubbing Script Writer.
 Translate English video script to natural Spoken Burmese (အပြောစကား).
 
 STRICT RULES:
-1. NO LITERARY BURMESE: Avoid "သည်", "ပါသည်", "သနည်း" endings. Use natural endings like "တယ်", "နေတယ်", "ခဲ့တာ", "တာပေါ့".
+1. NO LITERARY BURMESE: Avoid "သည်", "ပါသည်", "သနည်း" endings. Use endings like "တယ်", "နေတယ်", "ခဲ့တာ", "တာပေါ့".
 2. DUBBING SYNC: Keep translation length similar to English for timing.
 3. NATURAL FLOW: Break long sentences into shorter, punchy ones.
 4. EMOTIONAL PARTICLES: Add particles (ပေါ့, လေ, နော်, ကွ) to match speaker tone.
-5. KEEP SHORT: Max ~30-40 characters per segment.
+5. STRICT PUNCTUATION: Use ONLY Myanmar Full-stop (။) for ends and Myanmar Comma (၊) for pauses. NEVER use English (, .).
+6. KEEP SHORT: Max ~30-40 characters per segment.
 
-OUTPUT: JSON array of strings ONLY. No explanations.`;
+OUTPUT: JSON array of strings ONLY.`;
 
         const body = {
             contents: [{ parts: [{ text: `TEXT TO TRANSLATE (JSON Array):\n${JSON.stringify(lines)}` }] }],
