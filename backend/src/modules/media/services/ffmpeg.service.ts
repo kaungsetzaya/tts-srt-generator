@@ -247,12 +247,10 @@ export interface VideoSegmentWarp {
 /**
  * Build a filter_complex string that warps each video segment independently.
  * Each segment is trimmed from the original, its PTS scaled (setpts), then
- * motion-interpolated (minterpolate) for smooth slow-motion, then all
- * segments are concatenated. The result perfectly matches the audio timeline.
+ * all segments are concatenated. The result perfectly matches the audio timeline.
  *
- * For ratios > 1.5 (heavy slow-down) we use minterpolate to generate
- * intermediate frames instead of duplicating, giving smooth motion.
- * For lighter ratios we just use fps normalization.
+ * We keep the filter chain minimal (trim + setpts only) to avoid any
+ * frame-level duration drift from fps rounding or interpolation.
  */
 function buildPerSegmentVideoFilter(
   segments: VideoSegmentWarp[],
@@ -268,29 +266,12 @@ function buildPerSegmentVideoFilter(
     const ratio = seg.speedRatio.toFixed(6);
     const label = `v${i}`;
 
-    // Build filter chain: trim → setpts warp → smooth interpolation → consistent fps
-    const filters: string[] = [
-      `trim=start=${start}:end=${end}`,
-      `setpts=(PTS-STARTPTS)*${ratio}`,
-    ];
-
-    // For heavy slow-down (>1.5x), add motion-compensated frame interpolation
-    // so the video doesn't look choppy from duplicated frames.
-    if (seg.speedRatio > 1.5) {
-      filters.push(
-        `minterpolate='mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1:fps=30'`
-      );
-    }
-
-    // Normalize to consistent 30fps output for clean concatenation
-    filters.push('fps=fps=30:round=near');
-
-    parts.push(`[0:v]${filters.join(',')}[${label}]`);
+    // Minimal chain: trim → setpts warp. No fps/minterpolate to avoid drift.
+    parts.push(`[0:v]trim=start=${start}:end=${end},setpts=(PTS-STARTPTS)*${ratio}[${label}]`);
     labels.push(`[${label}]`);
   });
 
   // Only include speech segments — no intro/outro.
-  // This guarantees video duration == audio duration exactly.
   const n = labels.length;
   const concatOut = subFilter ? `vconcat` : `vout`;
   parts.push(`${labels.join('')}concat=n=${n}:v=1:a=0[${concatOut}]`);

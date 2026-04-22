@@ -385,9 +385,11 @@ export class DubVideoPipeline {
       await ffmpegService.concatAudioFiles(audioParts, tempConcatAudio);
       console.log(`[Dubbing Pipeline] Audio concatenated to ${tempConcatAudio}`);
 
-      // Step 6b: Audio is already PCM WAV from concatAudioFiles — no re-encode needed.
+      // Step 6b: Measure ACTUAL audio duration from the file — not the calculated sum.
+      // WAV sample counts can differ from millisecond sums by a few ms.
+      const exactAudioDurationSec = await ffmpegService.getAudioDurationMs(tempConcatAudio) / 1000;
+      console.log(`[Dubbing Pipeline] Exact audio duration: ${exactAudioDurationSec.toFixed(3)}s (calculated was ${totalAudioDurationSec.toFixed(3)}s)`);
       const tempWavAudio = tempConcatAudio;
-      console.log(`[Dubbing Pipeline] Using WAV audio: ${tempWavAudio}`);
       let finalAudioPath = tempWavAudio;
       
       // Step 6c: Subtitles - cross-platform font resolution
@@ -418,7 +420,7 @@ export class DubVideoPipeline {
             tempVideoPath, finalAudioPath, tempAssPath, tempOutputPath,
             {
               videoSegments,
-              totalAudioDurationSec,
+              totalAudioDurationSec: exactAudioDurationSec,
               videoDurationSec,
               fontPath,
               onProgress: (p: number) => {
@@ -434,7 +436,7 @@ export class DubVideoPipeline {
             tempVideoPath, finalAudioPath, tempOutputPath,
             {
               videoSegments,
-              totalAudioDurationSec,
+              totalAudioDurationSec: exactAudioDurationSec,
               videoDurationSec,
               onProgress: (p: number) => {
                 if (jobId) {
