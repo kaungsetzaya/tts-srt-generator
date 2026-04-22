@@ -1,4 +1,4 @@
-﻿import { execFile } from "child_process";
+import { execFile } from "child_process";
 import { promisify } from "util";
 import path from "path";
 import fs from "fs/promises";
@@ -223,17 +223,13 @@ function buildSRTFromRaw(rawSrt: string, originalText: string, aspectRatio: "9:1
   
   let currentGroup: typeof rawSegments = [];
   let currentChars = 0;
-  let currentDuration = 0;
 
-  const MIN_DURATION_MS = 1200; // Minimum 1.2s for a block
   const MAX_CHARS = charsPerLine * 2; // Up to 2 lines
 
   for (const seg of rawSegments) {
     const glen = graphemeLen(seg.text);
     
-    const shouldFlush = 
-      (currentDuration >= MIN_DURATION_MS && currentChars + glen > charsPerLine) ||
-      (currentChars + glen > MAX_CHARS);
+    const shouldFlush = currentChars + glen > MAX_CHARS;
 
     if (shouldFlush && currentGroup.length > 0) {
       finalSegments.push({
@@ -243,12 +239,10 @@ function buildSRTFromRaw(rawSrt: string, originalText: string, aspectRatio: "9:1
       });
       currentGroup = [];
       currentChars = 0;
-      currentDuration = 0;
     }
 
     currentGroup.push(seg);
     currentChars += glen;
-    currentDuration = currentGroup[currentGroup.length - 1].endMs - currentGroup[0].startMs;
   }
 
   if (currentGroup.length > 0) {

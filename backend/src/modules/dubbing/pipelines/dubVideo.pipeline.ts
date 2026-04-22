@@ -1,4 +1,4 @@
-﻿import { randomUUID } from "crypto";
+import { randomUUID } from "crypto";
 import { promises as fs } from 'fs';
 import { existsSync } from 'fs';
 import * as path from 'path';
@@ -140,15 +140,18 @@ export class DubVideoPipeline {
       await fs.writeFile(tempVideoPath, videoBuffer);
       const videoDurationSec = await ffmpegService.getVideoDuration(tempVideoPath);
       if (videoDurationSec > 150) throw new Error("Video too long. Max 2min 30sec.");
+      console.log(`[Dubbing Pipeline] Step 1 OK: video duration ${videoDurationSec}s`);
 
       // Step 2: Extract audio for transcription
       if (jobId) updateJob(jobId, { progress: 20, message: "Extracting audio for analysis..." });
       await ffmpegService.extractAudio(tempVideoPath, tempAudioExtract);
+      console.log(`[Dubbing Pipeline] Step 2 OK: audio extracted`);
 
       // Step 3: Transcribe with Whisper
       if (jobId) updateJob(jobId, { progress: 35, message: "Transcribing speech..." });
       const segments = await whisperService.transcribe(tempAudioExtract);
       if (segments.length === 0) throw new Error("No speech detected in video");
+      console.log(`[Dubbing Pipeline] Step 3 OK: ${segments.length} segments transcribed`);
 
       // Step 4: Translate segments with Gemini
       if (jobId) updateJob(jobId, { progress: 50, message: "Translating to Myanmar..." });
@@ -156,6 +159,7 @@ export class DubVideoPipeline {
         segments.map((s, i) => ({ index: i, start: s.start, end: s.end, text: s.text })),
         options.userApiKey
       );
+      console.log(`[Dubbing Pipeline] Step 4 OK: translated segments ready`);
 
       // Step 5: Generate TTS per segment (concurrent with limiter)
       const FIXED_SPEED = 1.1;
@@ -164,22 +168,31 @@ export class DubVideoPipeline {
 
       const activeSegments = translatedSegments.filter(seg => seg.translatedText.trim());
 
+      if (activeSegments.length === 0) {
+        throw new Error("No translated segments to generate voice for.");
+      }
+
       async function generateTtsForSegment(seg: typeof translatedSegments[0]): Promise<{ partPath: string; duration: number; text: string; index: number }> {
         const isCharacter = options.voice in CHARACTER_VOICES;
         let audioBuffer: Buffer;
 
-        if (isCharacter) {
-            const ttsResult = await ttsService.generateSpeechWithCharacter(
-                seg.translatedText,
-                options.voice as CharacterKey,
-                FIXED_SPEED,
-                undefined,
-                options.pitch ?? 0
-            );
-            audioBuffer = ttsResult.audioBuffer;
-        } else {
-            const ttsResult = await ttsService.generateSpeech(seg.translatedText, options.voice as VoiceKey, FIXED_SPEED, options.pitch ?? 0);
-            audioBuffer = ttsResult.audioBuffer;
+        try {
+          if (isCharacter) {
+              const ttsResult = await ttsService.generateSpeechWithCharacter(
+                  seg.translatedText,
+                  options.voice as CharacterKey,
+                  FIXED_SPEED,
+                  undefined,
+                  options.pitch ?? 0
+              );
+              audioBuffer = ttsResult.audioBuffer;
+          } else {
+              const ttsResult = await ttsService.generateSpeech(seg.translatedText, options.voice as VoiceKey, FIXED_SPEED, options.pitch ?? 0);
+              audioBuffer = ttsResult.audioBuffer;
+          }
+        } catch (err: any) {
+          console.error(`[Dubbing Pipeline] TTS generation failed for segment ${seg.index}:`, err.message);
+          throw new Error(`Voice generation failed: ${err.message}`);
         }
 
         const partPath = path.join(tempDir, `tts_${seg.index}.mp3`);
@@ -349,35 +362,40 @@ export class DubVideoPipeline {
         throw new Error("Final concatenated audio file is empty.");
       }
 
-      if (options.srtEnabled !== false && processedForSrt.length > 0) {
-        console.log(`[Dubbing Pipeline] Merging video with audio and subtitles...`);
-        const videoDimensions = await ffmpegService.getVideoSize(tempVideoPath);
-        
-        const assContent = assBuilderService.buildAssContent(processedForSrt, fontPath, videoDimensions.width, videoDimensions.height, options as any);
-        await fs.writeFile(tempAssPath, assContent);
-        await ffmpegService.mergeVideoAudioSubtitles(tempVideoPath, finalAudioPath, tempAssPath, tempOutputPath, {
-          videoDurationSec: totalAudioDurationSec, // New duration
-          videoSpeedRatio,
-          fontPath,
-          onProgress: (p: number) => {
-            if (jobId) {
-              const mergeProgress = 85 + Math.floor((p / 100) * 10);
-              updateJob(jobId, { progress: mergeProgress, message: "Merging visuals with audio..." });
+      try {
+        if (options.srtEnabled !== false && processedForSrt.length > 0) {
+          console.log(`[Dubbing Pipeline] Merging video with audio and subtitles...`);
+          const videoDimensions = await ffmpegService.getVideoSize(tempVideoPath);
+          
+          const assContent = assBuilderService.buildAssContent(processedForSrt, fontPath, videoDimensions.width, videoDimensions.height, options as any);
+          await fs.writeFile(tempAssPath, assContent);
+          await ffmpegService.mergeVideoAudioSubtitles(tempVideoPath, finalAudioPath, tempAssPath, tempOutputPath, {
+            videoDurationSec: totalAudioDurationSec, // New duration
+            videoSpeedRatio,
+            fontPath,
+            onProgress: (p: number) => {
+              if (jobId) {
+                const mergeProgress = 85 + Math.floor((p / 100) * 10);
+                updateJob(jobId, { progress: mergeProgress, message: "Merging visuals with audio..." });
+              }
             }
-          }
-        });
-      } else {
-        console.log(`[Dubbing Pipeline] Merging video with audio...`);
-        await ffmpegService.mergeVideoAudio(tempVideoPath, finalAudioPath, tempOutputPath, {
-          videoDurationSec: totalAudioDurationSec, // New duration
-          videoSpeedRatio,
-          onProgress: (p: number) => {
-            if (jobId) {
-              const mergeProgress = 85 + Math.floor((p / 100) * 10);
-              updateJob(jobId, { progress: mergeProgress, message: "Merging visuals with audio..." });
+          });
+        } else {
+          console.log(`[Dubbing Pipeline] Merging video with audio...`);
+          await ffmpegService.mergeVideoAudio(tempVideoPath, finalAudioPath, tempOutputPath, {
+            videoDurationSec: totalAudioDurationSec, // New duration
+            videoSpeedRatio,
+            onProgress: (p: number) => {
+              if (jobId) {
+                const mergeProgress = 85 + Math.floor((p / 100) * 10);
+                updateJob(jobId, { progress: mergeProgress, message: "Merging visuals with audio..." });
+              }
             }
-          }
-        });
+          });
+        }
+      } catch (err: any) {
+        console.error("[Dubbing Pipeline] Merge step failed:", err.message);
+        throw err;
       }
 
       // Step 8: Move to final storage

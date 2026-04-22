@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Jobs Router Ã¢â‚¬â€ start dub jobs, check status
  */
 import { z } from "zod";
@@ -83,7 +83,8 @@ export const jobsRouter = t.router({
 
         return { jobId };
       } catch (error: any) {
-        await addCredits(userId, creditsNeeded, "video_dub_refund", "Refund: Dub link job creation failed");
+        console.error("[Jobs] startDub error:", error);
+        await addCredits(userId, creditsNeeded, "video_dub_refund", "Refund: Dub link job creation failed").catch(() => {});
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: error.message || "Failed to start dub job.",

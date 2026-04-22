@@ -1822,7 +1822,7 @@ export default function TTSGenerator() {
                   </div>
 
                   {!videoResult && (
-                    <>
+                    <React.Fragment>
                       <div
                         className={box}
                         style={{
@@ -2018,13 +2018,15 @@ export default function TTSGenerator() {
                                 }}
                               >
                                 5 credits
-                              </span>
-                            </>
-                          )}
-                        </button>
-)}
-
-                      {videoResult && (
+                               </span>
+                             </>
+                           )}
+                         </button>
+                       )}
+                     </React.Fragment>
+                   )}
+ 
+                   {videoResult && (
                     <div
                       className={box}
                       style={{

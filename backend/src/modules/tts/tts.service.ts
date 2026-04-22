@@ -1,4 +1,4 @@
-﻿/**
+/**
  * TTS Service Ã¢â‚¬â€ Unified text-to-speech generation
  *
  * Supports:
@@ -279,17 +279,13 @@ function buildSRTFromRaw(rawSrt: string, originalText: string, aspectRatio: "9:1
   const finalSegments: { startMs: number; endMs: number; text: string }[] = [];
   let currentGroup: typeof rawSegments = [];
   let currentChars = 0;
-  let currentDuration = 0;
 
-  const MIN_DURATION_MS = 1200;
   const MAX_CHARS = charsPerLine * 2;
 
   for (const seg of rawSegments) {
     const glen = graphemeLen(seg.text);
 
-    const shouldFlush =
-      (currentDuration >= MIN_DURATION_MS && currentChars + glen > charsPerLine) ||
-      (currentChars + glen > MAX_CHARS);
+    const shouldFlush = currentChars + glen > MAX_CHARS;
 
     if (shouldFlush && currentGroup.length > 0) {
       finalSegments.push({
@@ -299,12 +295,10 @@ function buildSRTFromRaw(rawSrt: string, originalText: string, aspectRatio: "9:1
       });
       currentGroup = [];
       currentChars = 0;
-      currentDuration = 0;
     }
 
     currentGroup.push(seg);
     currentChars += glen;
-    currentDuration = currentGroup[currentGroup.length - 1].endMs - currentGroup[0].startMs;
   }
 
   if (currentGroup.length > 0) {
