@@ -230,7 +230,7 @@ export interface VideoSegmentWarp {
  */
 function buildPerSegmentVideoFilter(
   segments: VideoSegmentWarp[],
-  videoDurationSec: number,
+  _videoDurationSec: number,
   subFilter?: string
 ): string {
   const parts: string[] = [];
@@ -247,22 +247,8 @@ function buildPerSegmentVideoFilter(
     labels.push(`[${label}]`);
   });
 
-  // Handle any video before the first segment (intro) at 1x speed
-  const firstSeg = segments[0];
-  if (firstSeg && firstSeg.origStartSec > 0.01) {
-    const introLabel = `vIntro`;
-    parts.unshift(`[0:v]trim=start=0:end=${firstSeg.origStartSec.toFixed(6)},setpts=PTS-STARTPTS[${introLabel}]`);
-    labels.unshift(`[${introLabel}]`);
-  }
-
-  // Handle any video after the last segment (outro) at 1x speed
-  const lastSeg = segments[segments.length - 1];
-  if (lastSeg && lastSeg.origEndSec < videoDurationSec - 0.1) {
-    const outroLabel = `vOutro`;
-    parts.push(`[0:v]trim=start=${lastSeg.origEndSec.toFixed(6)},setpts=PTS-STARTPTS[${outroLabel}]`);
-    labels.push(`[${outroLabel}]`);
-  }
-
+  // Only include speech segments — no intro/outro.
+  // This guarantees video duration == audio duration exactly.
   const n = labels.length;
   const concatOut = subFilter ? `vconcat` : `vout`;
   parts.push(`${labels.join('')}concat=n=${n}:v=1:a=0[${concatOut}]`);
