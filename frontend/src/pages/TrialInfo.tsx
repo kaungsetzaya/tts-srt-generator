@@ -1,3 +1,4 @@
+import * as React from "react";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { ArrowLeft, Crown, Mic, FileVideo, Wand2, CheckCircle, AlertCircle, Sparkles } from "lucide-react";

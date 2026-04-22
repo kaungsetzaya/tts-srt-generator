@@ -1,3 +1,4 @@
+import * as React from "react";
 import { useLocation } from "wouter";
 import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import { useRef, useEffect, useState } from "react";

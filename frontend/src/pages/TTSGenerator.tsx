@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo, useEffect } from "react";
+import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { trpc } from "@/lib/trpc";
 import { useSystemTime } from "@/lib/useSystemTime";
@@ -3192,8 +3193,8 @@ export default function TTSGenerator() {
                             </motion.div>
                             <span className="relative z-10 text-xs sm:text-sm">
                               {lang === "mm"
-                                ? "ဖန်တီးနေသည်... (၃-၅ မိနစ်)"
-                                : "Generating... (3-5 min)"}
+                                ? "ဖန်တီးနေသည်..."
+                                : "Generating..."}
                             </span>
                           </>
                         ) : (
@@ -4255,7 +4256,7 @@ export default function TTSGenerator() {
                           "④ အသံ ရွေးပါ — Standard သို့ Premium Voice",
                           "⑤ Speed / Pitch ချိန်ညှိပါ",
                           "⑥ စာတန်းထိုး ဆက်တင် ရွေးပါ",
-                          '⑦ "ဖန်တီးမည်" နှိပ်ပါ (၃-၅ မိနစ် ကြာနိုင်)',
+                          '⑦ "ဖန်တီးမည်" နှိပ်ပါ',
                           "⑧ ရလဒ်ဗီဒီယိုကို Download ယူပါ",
                         ]
                       : [
@@ -4265,7 +4266,7 @@ export default function TTSGenerator() {
                           "④ Select a voice — Standard or Premium",
                           "⑤ Adjust Speed / Pitch",
                           "⑥ Configure subtitle settings",
-                          '⑦ Click "Generate" (may take 3-5 minutes)',
+                          '⑦ Click "Generate"',
                           "⑧ Download the final video",
                         ]
                     ).map((step, i) => (

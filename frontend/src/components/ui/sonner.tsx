@@ -1,5 +1,6 @@
 import { useTheme } from "@/contexts/ThemeContext";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
+import * as React from "react";
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme } = useTheme();

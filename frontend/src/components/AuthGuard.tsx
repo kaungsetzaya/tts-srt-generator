@@ -1,3 +1,4 @@
+import * as React from "react";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
