@@ -296,6 +296,12 @@ export class DubVideoPipeline {
         // Therefore: ratio = actualDuration / origDuration
         const segVideoSpeedRatio = actualDurationMs / origDurationMs;
 
+        console.log(
+          `[Dubbing Pipeline] seg ${seg.index}: audio=${actualDurationMs}ms, ` +
+          `origVideo=${origDurationMs}ms, ratio=${segVideoSpeedRatio.toFixed(3)}, ` +
+          `timeline=${segStartMs}-${segEndMs}ms, videoTrim=${origStartMs}-${origEndMs}ms`
+        );
+
         audioParts.push(result.partPath);
         audioTimeline.push({
           startMs:          segStartMs,

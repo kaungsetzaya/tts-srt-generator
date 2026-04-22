@@ -254,7 +254,7 @@ export interface VideoSegmentWarp {
  */
 function buildPerSegmentVideoFilter(
   segments: VideoSegmentWarp[],
-  _videoDurationSec: number,
+  exactAudioDurationSec: number,
   subFilter?: string
 ): string {
   const parts: string[] = [];
@@ -279,6 +279,15 @@ function buildPerSegmentVideoFilter(
   if (subFilter) {
     parts.push(`[vconcat]${subFilter}[vout]`);
   }
+
+  // Force video to exact audio duration:
+  // 1. tpad: extend video by 2s (clone last frame) so it's always longer
+  // 2. trim: cut to exact audio duration
+  // This guarantees video ends exactly when audio ends, regardless of
+  // setpts rounding or frame boundary issues.
+  const t = exactAudioDurationSec.toFixed(6);
+  parts.push(`[vout]tpad=stop_mode=clone:stop_duration=2[vpad]`);
+  parts.push(`[vpad]trim=start=0:end=${t}[vfinal]`);
 
   return parts.join(';');
 }
@@ -313,23 +322,25 @@ export async function mergeVideoAudioSubtitlesPerSegment(
 
   const filterComplex = buildPerSegmentVideoFilter(
     options.videoSegments,
-    options.videoDurationSec,
+    options.totalAudioDurationSec,
     subFilter
   );
+
+  console.log(`[FFmpeg Merge] Video filter_complex:\n${filterComplex}`);
+  console.log(`[FFmpeg Merge] Target duration: ${options.totalAudioDurationSec.toFixed(3)}s`);
 
   return new Promise((resolve, reject) => {
     ffmpeg(videoPath)
       .input(audioPath)
       .outputOptions([
         '-filter_complex', filterComplex,
-        '-map',    '[vout]',
+        '-map',    '[vfinal]',
         '-map',    '1:a',
         '-c:v',    'libx264',
         '-preset', 'fast',
         '-crf',    '23',
         '-c:a',    'aac',
         '-b:a',    '128k',
-        '-shortest',
         '-map_metadata', '-1',
         '-movflags', '+faststart',
       ])
@@ -353,22 +364,24 @@ export async function mergeVideoAudioPerSegment(
 ): Promise<void> {
   const filterComplex = buildPerSegmentVideoFilter(
     options.videoSegments,
-    options.videoDurationSec
+    options.totalAudioDurationSec
   );
+
+  console.log(`[FFmpeg Merge] Video filter_complex:\n${filterComplex}`);
+  console.log(`[FFmpeg Merge] Target duration: ${options.totalAudioDurationSec.toFixed(3)}s`);
 
   return new Promise((resolve, reject) => {
     ffmpeg(videoPath)
       .input(audioPath)
       .outputOptions([
         '-filter_complex', filterComplex,
-        '-map',    '[vout]',
+        '-map',    '[vfinal]',
         '-map',    '1:a',
         '-c:v',    'libx264',
         '-preset', 'fast',
         '-crf',    '23',
         '-c:a',    'aac',
         '-b:a',    '128k',
-        '-shortest',
         '-map_metadata', '-1',
         '-movflags', '+faststart',
       ])
