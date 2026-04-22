@@ -1,7 +1,7 @@
-import { randomBytes, randomUUID } from "crypto";
+﻿import { randomBytes, randomUUID } from "crypto";
 import { getDb } from "./db";
 import { eq } from "drizzle-orm";
-import { users, settings, subscriptions, creditTransactions } from "../drizzle/schema";
+import { users, settings, subscriptions, creditTransactions } from "../shared/drizzle/schema";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
@@ -40,7 +40,7 @@ export async function handleTelegramUpdate(update: any) {
     try {
       const db = await getDb();
       if (!db) {
-        await sendMessage(chatId, "⚠️ Database unavailable.");
+        await sendMessage(chatId, "Ã¢Å¡Â Ã¯Â¸Â Database unavailable.");
         return;
       }
 
@@ -125,15 +125,15 @@ export async function handleTelegramUpdate(update: any) {
         }
       }
 
-      const formattedMessage = `👋 မင်္ဂလာပါ, ${firstName}!\n\n🔑 *သင့် login code:*\n\n\`${loginCode}\`\n\n⏰ Code သက်တမ်း: *၁၀ မိနစ်*\nဒီ code ကို ${APP_URL} မှာ login ဝင်ဖို့ သုံးပါ။\n\n⚠️ Code သက်တမ်းကုန်ရင် /code ကို ထပ်နှိပ်ပါ!`;
+      const formattedMessage = `Ã°Å¸â€˜â€¹ Ã¡â‚¬â„¢Ã¡â‚¬â€žÃ¡â‚¬ÂºÃ¡â‚¬Â¹Ã¡â‚¬â€šÃ¡â‚¬Å“Ã¡â‚¬Â¬Ã¡â‚¬â€¢Ã¡â‚¬Â«, ${firstName}!\n\nÃ°Å¸â€â€˜ *Ã¡â‚¬Å¾Ã¡â‚¬â€žÃ¡â‚¬Â·Ã¡â‚¬Âº login code:*\n\n\`${loginCode}\`\n\nÃ¢ÂÂ° Code Ã¡â‚¬Å¾Ã¡â‚¬â‚¬Ã¡â‚¬ÂºÃ¡â‚¬ÂÃ¡â‚¬â„¢Ã¡â‚¬ÂºÃ¡â‚¬Â¸: *Ã¡ÂÂÃ¡Ââ‚¬ Ã¡â‚¬â„¢Ã¡â‚¬Â­Ã¡â‚¬â€Ã¡â‚¬â€¦Ã¡â‚¬Âº*\nÃ¡â‚¬â€™Ã¡â‚¬Â® code Ã¡â‚¬â‚¬Ã¡â‚¬Â­Ã¡â‚¬Â¯ ${APP_URL} Ã¡â‚¬â„¢Ã¡â‚¬Â¾Ã¡â‚¬Â¬ login Ã¡â‚¬ÂÃ¡â‚¬â€žÃ¡â‚¬ÂºÃ¡â‚¬â€“Ã¡â‚¬Â­Ã¡â‚¬Â¯Ã¡â‚¬Â· Ã¡â‚¬Å¾Ã¡â‚¬Â¯Ã¡â‚¬Â¶Ã¡â‚¬Â¸Ã¡â‚¬â€¢Ã¡â‚¬Â«Ã¡Ââ€¹\n\nÃ¢Å¡Â Ã¯Â¸Â Code Ã¡â‚¬Å¾Ã¡â‚¬â‚¬Ã¡â‚¬ÂºÃ¡â‚¬ÂÃ¡â‚¬â„¢Ã¡â‚¬ÂºÃ¡â‚¬Â¸Ã¡â‚¬â‚¬Ã¡â‚¬Â¯Ã¡â‚¬â€Ã¡â‚¬ÂºÃ¡â‚¬â€ºÃ¡â‚¬â€žÃ¡â‚¬Âº /code Ã¡â‚¬â‚¬Ã¡â‚¬Â­Ã¡â‚¬Â¯ Ã¡â‚¬â€˜Ã¡â‚¬â€¢Ã¡â‚¬ÂºÃ¡â‚¬â€Ã¡â‚¬Â¾Ã¡â‚¬Â­Ã¡â‚¬â€¢Ã¡â‚¬ÂºÃ¡â‚¬â€¢Ã¡â‚¬Â«!`;
       await sendMessage(chatId, formattedMessage);
 
     } catch (error) {
       console.error("[Telegram Login Code Error]", error);
-      await sendMessage(chatId, "❌ အမှားတစ်ခုခုဖြစ်သွားပါတယ်။ ခဏနေမှ ထပ်ကြိုးစားကြည့်ပေးပါ။");
+      await sendMessage(chatId, "Ã¢ÂÅ’ Ã¡â‚¬Â¡Ã¡â‚¬â„¢Ã¡â‚¬Â¾Ã¡â‚¬Â¬Ã¡â‚¬Â¸Ã¡â‚¬ÂÃ¡â‚¬â€¦Ã¡â‚¬ÂºÃ¡â‚¬ÂÃ¡â‚¬Â¯Ã¡â‚¬ÂÃ¡â‚¬Â¯Ã¡â‚¬â€“Ã¡â‚¬Â¼Ã¡â‚¬â€¦Ã¡â‚¬ÂºÃ¡â‚¬Å¾Ã¡â‚¬Â½Ã¡â‚¬Â¬Ã¡â‚¬Â¸Ã¡â‚¬â€¢Ã¡â‚¬Â«Ã¡â‚¬ÂÃ¡â‚¬Å¡Ã¡â‚¬ÂºÃ¡Ââ€¹ Ã¡â‚¬ÂÃ¡â‚¬ÂÃ¡â‚¬â€Ã¡â‚¬Â±Ã¡â‚¬â„¢Ã¡â‚¬Â¾ Ã¡â‚¬â€˜Ã¡â‚¬â€¢Ã¡â‚¬ÂºÃ¡â‚¬â‚¬Ã¡â‚¬Â¼Ã¡â‚¬Â­Ã¡â‚¬Â¯Ã¡â‚¬Â¸Ã¡â‚¬â€¦Ã¡â‚¬Â¬Ã¡â‚¬Â¸Ã¡â‚¬â‚¬Ã¡â‚¬Â¼Ã¡â‚¬Å Ã¡â‚¬Â·Ã¡â‚¬ÂºÃ¡â‚¬â€¢Ã¡â‚¬Â±Ã¡â‚¬Â¸Ã¡â‚¬â€¢Ã¡â‚¬Â«Ã¡Ââ€¹");
     }
   } else {
-    await sendMessage(chatId, "login code ရယူဖို့ /code ကို ရိုက်ပေးပါ။");
+    await sendMessage(chatId, "login code Ã¡â‚¬â€ºÃ¡â‚¬Å¡Ã¡â‚¬Â°Ã¡â‚¬â€“Ã¡â‚¬Â­Ã¡â‚¬Â¯Ã¡â‚¬Â· /code Ã¡â‚¬â‚¬Ã¡â‚¬Â­Ã¡â‚¬Â¯ Ã¡â‚¬â€ºÃ¡â‚¬Â­Ã¡â‚¬Â¯Ã¡â‚¬â‚¬Ã¡â‚¬ÂºÃ¡â‚¬â€¢Ã¡â‚¬Â±Ã¡â‚¬Â¸Ã¡â‚¬â€¢Ã¡â‚¬Â«Ã¡Ââ€¹");
   }
 }
 

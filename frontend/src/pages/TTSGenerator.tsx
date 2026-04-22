@@ -360,8 +360,8 @@ export default function TTSGenerator() {
     { jobId: translateJobId ?? "" },
     {
       enabled: !!translateJobId && translateJobType === "file",
-      refetchInterval: (data) => {
-        // Stop polling once done
+      refetchInterval: (query) => {
+        const data = query.state.data;
         if (data?.status === "completed" || data?.status === "failed") return false;
         return 3000;
       },
@@ -373,7 +373,8 @@ export default function TTSGenerator() {
     { jobId: translateJobId ?? "" },
     {
       enabled: !!translateJobId && translateJobType === "link",
-      refetchInterval: (data) => {
+      refetchInterval: (query) => {
+        const data = query.state.data;
         if (data?.status === "completed" || data?.status === "failed") return false;
         return 3000;
       },
@@ -509,7 +510,8 @@ export default function TTSGenerator() {
     { jobId: activeJobId ?? "" },
     {
       enabled: !!activeJobId,
-      refetchInterval: (data) => {
+      refetchInterval: (query) => {
+        const data = query.state.data;
         if (data?.status === "completed" || data?.status === "failed") return false;
         return 3000;
       },
@@ -867,7 +869,7 @@ export default function TTSGenerator() {
       try {
         const res = await startDubMutation.mutateAsync({
            url: dubVideoUrl.trim(),
-           voice: dubVoiceToUse,
+           voice: dubVoiceToUse as any,
            srtEnabled,
            srtFontSize,
            srtColor,
@@ -898,7 +900,7 @@ export default function TTSGenerator() {
          const res = await dubFileMutation.mutateAsync({
           videoBase64: base64,
           filename: dubVideoFile.name,
-          voice: dubVoiceToUse,
+          voice: dubVoiceToUse as any,
           srtEnabled,
           srtFontSize,
           srtColor,
@@ -2713,7 +2715,7 @@ export default function TTSGenerator() {
                                     const v = e.currentTarget;
                                     setDubVideoWidth(v.videoWidth);
                                     setDubVideoHeight(v.videoHeight);
-                                    if (h > w) setDubDetectedRatio("9:16");
+                                    if (v.videoHeight > v.videoWidth) setDubDetectedRatio("9:16");
                                     else setDubDetectedRatio("16:9");
                                     setVideoLoading(false);
                                     setVideoPreviewError("");

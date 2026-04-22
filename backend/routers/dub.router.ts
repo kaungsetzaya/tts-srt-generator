@@ -1,5 +1,5 @@
-/**
- * Dub Router — legacy video dubbing from link
+﻿/**
+ * Dub Router Ã¢â‚¬â€ legacy video dubbing from link
  */
 import { z } from "zod";
 import { t, protectedProcedure } from "./trpc";

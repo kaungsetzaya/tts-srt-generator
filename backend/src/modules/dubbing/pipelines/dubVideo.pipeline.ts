@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+﻿import { randomUUID } from "crypto";
 import { promises as fs } from 'fs';
 import { existsSync } from 'fs';
 import * as path from 'path';
@@ -33,7 +33,7 @@ function graphemeLen(s: string): number {
 }
 
 function splitToSubtitleChunks(text: string, maxCharsPerLine: number): string[] {
-    // Clean up text — flatten newlines
+    // Clean up text Ã¢â‚¬â€ flatten newlines
     const clean = text.replace(/[\n\r]+/g, " ").trim();
     if (!clean) return [""];
 
@@ -53,7 +53,7 @@ function splitToSubtitleChunks(text: string, maxCharsPerLine: number): string[] 
         return [clean];
     }
 
-    // Text is too long for 2 lines — split into multiple entries
+    // Text is too long for 2 lines Ã¢â‚¬â€ split into multiple entries
     const graphemes = [...segmenter.segment(clean)].map(g => g.segment);
     const chunks: string[] = [];
     let pos = 0;
@@ -286,14 +286,14 @@ export class DubVideoPipeline {
         const chunks = splitToSubtitleChunks(seg.text, maxCharsPerLine);
         
         if (chunks.length === 1) {
-          // Single entry — shows for the full duration
+          // Single entry Ã¢â‚¬â€ shows for the full duration
           processedForSrt.push({
             startMs: subtitleStartMs,
             endMs: subtitleEndMs,
             text: chunks[0]
           });
         } else {
-          // Multiple entries — divide the time span equally
+          // Multiple entries Ã¢â‚¬â€ divide the time span equally
           const totalDuration = subtitleEndMs - subtitleStartMs;
           const perChunkDuration = Math.floor(totalDuration / chunks.length);
           for (let c = 0; c < chunks.length; c++) {

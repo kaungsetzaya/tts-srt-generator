@@ -1,4 +1,4 @@
-import { geminiTranslateBatch } from "../geminiTranslator";
+﻿import { geminiTranslateBatch } from "../geminiTranslator";
 import * as dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -25,16 +25,16 @@ async function runBatchTest() {
     console.log("\n--- Results ---");
     result.translated.forEach((seg, i) => {
       console.log(`[${i+1}] Original: ${segments[i].text}`);
-      console.log(`    Myanmar:  ${seg.text || "❌ EMPTY OUTPUT"}`);
+      console.log(`    Myanmar:  ${seg.text || "Ã¢ÂÅ’ EMPTY OUTPUT"}`);
     });
 
     if (result.translated.every(s => s.text && s.text !== segments[result.translated.indexOf(s)].text)) {
-      console.log("\n✅ Batch Translation Working Perfectly.");
+      console.log("\nÃ¢Å“â€¦ Batch Translation Working Perfectly.");
     } else {
-      console.log("\n⚠️ Some segments returned empty or original text.");
+      console.log("\nÃ¢Å¡Â Ã¯Â¸Â Some segments returned empty or original text.");
     }
   } catch (error: any) {
-    console.error(`\n❌ Batch Error: ${error.message}`);
+    console.error(`\nÃ¢ÂÅ’ Batch Error: ${error.message}`);
   }
 }
 

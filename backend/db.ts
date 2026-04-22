@@ -1,9 +1,9 @@
-import { randomBytes } from "crypto";
+﻿import { randomBytes } from "crypto";
 import mysql from "mysql2/promise";
 import { drizzle } from "drizzle-orm/mysql2";
 import { eq } from "drizzle-orm";
-import * as schema from "../drizzle/schema";
-import * as relations from "../drizzle/relations";
+import * as schema from "../shared/drizzle/schema";
+import * as relations from "../shared/drizzle/relations";
 
 // Merge schema + relations for Drizzle's query API (db.query.*)
 const fullSchema = { ...schema, ...relations };

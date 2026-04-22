@@ -1,4 +1,4 @@
-const attempts = new Map<string, { count: number; resetAt: number }>();
+﻿const attempts = new Map<string, { count: number; resetAt: number }>();
 const CLEANUP_INTERVAL = 60 * 60 * 1000; // Cleanup every hour
 
 // Cleanup expired entries periodically

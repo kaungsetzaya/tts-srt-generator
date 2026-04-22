@@ -1,5 +1,5 @@
-/**
- * Video Router — file/link dubbing and translation with job system
+﻿/**
+ * Video Router Ã¢â‚¬â€ file/link dubbing and translation with job system
  * 
  * CRITICAL: Credits are deducted BEFORE job creation to prevent the race
  * condition where a job auto-dispatches before credits are checked.
@@ -39,7 +39,7 @@ export const videoRouter = t.router({
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.user!.userId;
 
-      // ── Gate 1: Security and Size check ──
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Gate 1: Security and Size check Ã¢â€â‚¬Ã¢â€â‚¬
       if (!validateBase64VideoPrefix(input.videoBase64)) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -54,7 +54,7 @@ export const videoRouter = t.router({
         });
       }
 
-      // ── Gate 2: Pre-flight environment check ──
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Gate 2: Pre-flight environment check Ã¢â€â‚¬Ã¢â€â‚¬
       try {
         await whisperService.checkEnvironment();
       } catch (envErr: any) {
@@ -64,10 +64,10 @@ export const videoRouter = t.router({
         });
       }
 
-      // ── Gate 3: Deduct credits BEFORE creating job ──
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Gate 3: Deduct credits BEFORE creating job Ã¢â€â‚¬Ã¢â€â‚¬
       await deductCredits(userId, 10, "video_dub", `Video Dub: ${input.voice}`);
 
-      // ── Gate 4: Create job (auto-dispatches to processor) ──
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Gate 4: Create job (auto-dispatches to processor) Ã¢â€â‚¬Ã¢â€â‚¬
       try {
         const jobId = createJob("dub_file", {
           videoBase64: input.videoBase64,
@@ -92,7 +92,7 @@ export const videoRouter = t.router({
 
         return { jobId };
       } catch (error: any) {
-        // Job creation failed — refund immediately
+        // Job creation failed Ã¢â‚¬â€ refund immediately
         await addCredits(userId, 10, "video_dub_refund", `Refund: Video dub job creation failed`);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -125,7 +125,7 @@ export const videoRouter = t.router({
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.user!.userId;
 
-      // ── Gate 1: URL validation ──
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Gate 1: URL validation Ã¢â€â‚¬Ã¢â€â‚¬
       if (!isAllowedVideoUrl(input.url)) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -133,7 +133,7 @@ export const videoRouter = t.router({
         });
       }
 
-      // ── Gate 2: Pre-flight environment check ──
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Gate 2: Pre-flight environment check Ã¢â€â‚¬Ã¢â€â‚¬
       try {
         await whisperService.checkEnvironment();
       } catch (envErr: any) {
@@ -143,10 +143,10 @@ export const videoRouter = t.router({
         });
       }
 
-      // ── Gate 3: Deduct credits BEFORE creating job ──
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Gate 3: Deduct credits BEFORE creating job Ã¢â€â‚¬Ã¢â€â‚¬
       await deductCredits(userId, 10, "video_dub", `Video Dub Link: ${input.voice}`);
 
-      // ── Gate 4: Create job ──
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Gate 4: Create job Ã¢â€â‚¬Ã¢â€â‚¬
       try {
         const jobId = createJob("dub_link", {
           url: input.url,
@@ -207,7 +207,7 @@ export const videoRouter = t.router({
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.user!.userId;
 
-      // ── Gate 1: Security and Size check ──
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Gate 1: Security and Size check Ã¢â€â‚¬Ã¢â€â‚¬
       if (!validateBase64VideoPrefix(input.videoBase64)) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -222,7 +222,7 @@ export const videoRouter = t.router({
         });
       }
 
-      // ── Gate 2: Pre-flight check ──
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Gate 2: Pre-flight check Ã¢â€â‚¬Ã¢â€â‚¬
       try {
         await whisperService.checkEnvironment();
       } catch (envErr: any) {
@@ -232,10 +232,10 @@ export const videoRouter = t.router({
         });
       }
 
-      // ── Gate 3: Deduct credits BEFORE creating job ──
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Gate 3: Deduct credits BEFORE creating job Ã¢â€â‚¬Ã¢â€â‚¬
       await deductCredits(userId, 5, "video_translate", "Video Translate");
       
-      // ── Gate 4: Create job ──
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Gate 4: Create job Ã¢â€â‚¬Ã¢â€â‚¬
       const jobId = createJob("translate_file", { 
         videoBase64: input.videoBase64, 
         filename: input.filename,
@@ -264,7 +264,7 @@ export const videoRouter = t.router({
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.user!.userId;
 
-      // ── Gate 1: URL validation ──
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Gate 1: URL validation Ã¢â€â‚¬Ã¢â€â‚¬
       if (!isAllowedVideoUrl(input.url)) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -272,7 +272,7 @@ export const videoRouter = t.router({
         });
       }
 
-      // ── Gate 2: Pre-flight check ──
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Gate 2: Pre-flight check Ã¢â€â‚¬Ã¢â€â‚¬
       try {
         await whisperService.checkEnvironment();
       } catch (envErr: any) {
@@ -282,10 +282,10 @@ export const videoRouter = t.router({
         });
       }
 
-      // ── Gate 3: Deduct credits BEFORE creating job ──
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Gate 3: Deduct credits BEFORE creating job Ã¢â€â‚¬Ã¢â€â‚¬
       await deductCredits(userId, 5, "video_translate", "Video Translate Link");
       
-      // ── Gate 4: Create job ──
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Gate 4: Create job Ã¢â€â‚¬Ã¢â€â‚¬
       const jobId = createJob("translate_link", { 
         url: input.url,
         userId 

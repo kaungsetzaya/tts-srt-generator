@@ -1,9 +1,9 @@
-/**
- * Subscription Router — user subscription status
+﻿/**
+ * Subscription Router Ã¢â‚¬â€ user subscription status
  */
 import { t } from "./trpc";
 import { getDb } from "../db";
-import { users, subscriptions } from "../../drizzle/schema";
+import { users, subscriptions } from "../../shared/drizzle/schema";
 import { eq, sql } from "drizzle-orm";
 
 export const subscriptionRouter = t.router({
@@ -30,10 +30,61 @@ export const subscriptionRouter = t.router({
             expiresAt: sub.expiresAt,
             renewsAt: null,
             credits: user?.credits ?? 0,
+            limits: {
+              dailyTtsSrt: 0,
+              dailyCharacterUse: 0,
+              dailyVideoTranslate: 0,
+              dailyAiVideo: 0,
+              maxCredits: 0,
+            },
+            usage: {
+              tts: 0,
+              characterUse: 0,
+              videoTranslate: 0,
+              aiVideo: 0,
+            },
           }
-        : { active: false, plan: null, expiresAt: null, renewsAt: null, credits: user?.credits ?? 0 };
+        : { 
+            active: false, 
+            plan: null, 
+            expiresAt: null, 
+            renewsAt: null, 
+            credits: user?.credits ?? 0, 
+            limits: {
+              dailyTtsSrt: 0,
+              dailyCharacterUse: 0,
+              dailyVideoTranslate: 0,
+              dailyAiVideo: 0,
+              maxCredits: 0,
+            },
+            usage: {
+              tts: 0,
+              characterUse: 0,
+              videoTranslate: 0,
+              aiVideo: 0,
+            },
+          };
     } catch {
-      return { active: false, plan: null, credits: 0, expiresAt: null, renewsAt: null };
+      return { 
+        active: false, 
+        plan: null, 
+        credits: 0, 
+        expiresAt: null, 
+        renewsAt: null, 
+        limits: {
+          dailyTtsSrt: 0,
+          dailyCharacterUse: 0,
+          dailyVideoTranslate: 0,
+          dailyAiVideo: 0,
+          maxCredits: 0,
+        },
+        usage: {
+          tts: 0,
+          characterUse: 0,
+          videoTranslate: 0,
+          aiVideo: 0,
+        },
+      };
     }
   }),
 });

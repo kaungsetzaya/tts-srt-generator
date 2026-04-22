@@ -16,7 +16,9 @@
     "db:push": "drizzle-kit generate:mysql && drizzle-kit push:mysql",
     "reset-db": "tsx backend/reset-db.ts"
   },
-  "dependencies": {},
+  "dependencies": {
+    "drizzle-orm": "^0.45.2"
+  },
   "devDependencies": {
     "@builder.io/vite-plugin-jsx-loc": "^0.1.1",
     "@tailwindcss/typography": "^0.5.15",

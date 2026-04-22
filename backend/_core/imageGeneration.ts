@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Image generation helper using internal ImageService
  *
  * Example usage:

@@ -1,5 +1,5 @@
-/**
- * Voice Definitions — Tier-based voice system
+﻿/**
+ * Voice Definitions Ã¢â‚¬â€ Tier-based voice system
  *
  * Tier 1: Edge-TTS Myanmar voices (Thiha, Nilar) - Free
  * Tier 2: Murf AI voices (Character voices) - Premium
@@ -8,12 +8,12 @@
 
 export type VoiceTier = "tier1" | "tier2" | "tier3";
 
-// ─── Tier 1: Edge-TTS Myanmar Voices ─────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Tier 1: Edge-TTS Myanmar Voices Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 export const TIER1_VOICES = {
   thiha: {
     id: "thiha",
     name: "Thiha",
-    nameMm: "သီဟ",
+    nameMm: "Ã¡â‚¬Å¾Ã¡â‚¬Â®Ã¡â‚¬Å¸",
     gender: "male" as const,
     edgeVoice: "my-MM-ThihaNeural",
     tier: "tier1" as VoiceTier,
@@ -22,7 +22,7 @@ export const TIER1_VOICES = {
   nilar: {
     id: "nilar",
     name: "Nilar",
-    nameMm: "နီလာ",
+    nameMm: "Ã¡â‚¬â€Ã¡â‚¬Â®Ã¡â‚¬Å“Ã¡â‚¬Â¬",
     gender: "female" as const,
     edgeVoice: "my-MM-NilarNeural",
     tier: "tier1" as VoiceTier,
@@ -30,12 +30,12 @@ export const TIER1_VOICES = {
   },
 } as const;
 
-// ─── Tier 2: Murf AI Character Voices ────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Tier 2: Murf AI Character Voices Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 export const TIER2_VOICES = {
   ryan: {
     id: "ryan",
     name: "Ryan",
-    nameMm: "ရဲရင့်",
+    nameMm: "Ã¡â‚¬â€ºÃ¡â‚¬Â²Ã¡â‚¬â€ºÃ¡â‚¬â€žÃ¡â‚¬Â·Ã¡â‚¬Âº",
     gender: "male" as const,
     murfId: "en-US-ryan",
     baseVoice: "thiha" as const,
@@ -45,7 +45,7 @@ export const TIER2_VOICES = {
   ronnie: {
     id: "ronnie",
     name: "Ronnie",
-    nameMm: "ရောင်နီ",
+    nameMm: "Ã¡â‚¬â€ºÃ¡â‚¬Â±Ã¡â‚¬Â¬Ã¡â‚¬â€žÃ¡â‚¬ÂºÃ¡â‚¬â€Ã¡â‚¬Â®",
     gender: "male" as const,
     murfId: "en-US-ronnie",
     baseVoice: "thiha" as const,
@@ -55,7 +55,7 @@ export const TIER2_VOICES = {
   lucas: {
     id: "lucas",
     name: "Lucas",
-    nameMm: "လင်းခန့်",
+    nameMm: "Ã¡â‚¬Å“Ã¡â‚¬â€žÃ¡â‚¬ÂºÃ¡â‚¬Â¸Ã¡â‚¬ÂÃ¡â‚¬â€Ã¡â‚¬Â·Ã¡â‚¬Âº",
     gender: "male" as const,
     murfId: "en-US-lucas",
     baseVoice: "thiha" as const,
@@ -65,7 +65,7 @@ export const TIER2_VOICES = {
   daniel: {
     id: "daniel",
     name: "Daniel",
-    nameMm: "ဒေဝ",
+    nameMm: "Ã¡â‚¬â€™Ã¡â‚¬Â±Ã¡â‚¬Â",
     gender: "male" as const,
     murfId: "en-US-daniel",
     baseVoice: "thiha" as const,
@@ -75,7 +75,7 @@ export const TIER2_VOICES = {
   evander: {
     id: "evander",
     name: "Evander",
-    nameMm: "အဂ္ဂ",
+    nameMm: "Ã¡â‚¬Â¡Ã¡â‚¬â€šÃ¡â‚¬Â¹Ã¡â‚¬â€š",
     gender: "male" as const,
     murfId: "en-US-evander",
     baseVoice: "thiha" as const,
@@ -85,7 +85,7 @@ export const TIER2_VOICES = {
   michelle: {
     id: "michelle",
     name: "Michelle",
-    nameMm: "မေချို",
+    nameMm: "Ã¡â‚¬â„¢Ã¡â‚¬Â±Ã¡â‚¬ÂÃ¡â‚¬Â»Ã¡â‚¬Â­Ã¡â‚¬Â¯",
     gender: "female" as const,
     murfId: "en-US-michelle",
     baseVoice: "nilar" as const,
@@ -95,7 +95,7 @@ export const TIER2_VOICES = {
   iris: {
     id: "iris",
     name: "Iris",
-    nameMm: "အိန္ဒြာ",
+    nameMm: "Ã¡â‚¬Â¡Ã¡â‚¬Â­Ã¡â‚¬â€Ã¡â‚¬Â¹Ã¡â‚¬â€™Ã¡â‚¬Â¼Ã¡â‚¬Â¬",
     gender: "female" as const,
     murfId: "en-US-iris",
     baseVoice: "nilar" as const,
@@ -105,7 +105,7 @@ export const TIER2_VOICES = {
   charlotte: {
     id: "charlotte",
     name: "Charlotte",
-    nameMm: "သီရိ",
+    nameMm: "Ã¡â‚¬Å¾Ã¡â‚¬Â®Ã¡â‚¬â€ºÃ¡â‚¬Â­",
     gender: "female" as const,
     murfId: "en-US-charlotte",
     baseVoice: "nilar" as const,
@@ -115,7 +115,7 @@ export const TIER2_VOICES = {
   amara: {
     id: "amara",
     name: "Amara",
-    nameMm: "အမရာ",
+    nameMm: "Ã¡â‚¬Â¡Ã¡â‚¬â„¢Ã¡â‚¬â€ºÃ¡â‚¬Â¬",
     gender: "female" as const,
     murfId: "en-US-amara",
     baseVoice: "nilar" as const,
@@ -124,12 +124,12 @@ export const TIER2_VOICES = {
   },
 } as const;
 
-// ─── Tier 3: Google Gemini 3.1 Flash TTS Voices ──────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Tier 3: Google Gemini 3.1 Flash TTS Voices Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 export const TIER3_VOICES = {
   gemini_puck: {
     id: "gemini_puck",
     name: "Puck",
-    nameMm: "ပတ်ခ်",
+    nameMm: "Ã¡â‚¬â€¢Ã¡â‚¬ÂÃ¡â‚¬ÂºÃ¡â‚¬ÂÃ¡â‚¬Âº",
     gender: "male" as const,
     geminiVoiceId: "Puck",
     tier: "tier3" as VoiceTier,
@@ -138,7 +138,7 @@ export const TIER3_VOICES = {
   gemini_charon: {
     id: "gemini_charon",
     name: "Charon",
-    nameMm: "ခရုန်",
+    nameMm: "Ã¡â‚¬ÂÃ¡â‚¬â€ºÃ¡â‚¬Â¯Ã¡â‚¬â€Ã¡â‚¬Âº",
     gender: "male" as const,
     geminiVoiceId: "Charon",
     tier: "tier3" as VoiceTier,
@@ -146,7 +146,7 @@ export const TIER3_VOICES = {
   },
 } as const;
 
-// ─── Combined Voices Map ───────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Combined Voices Map Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 export const ALL_VOICES = {
   ...TIER1_VOICES,
   ...TIER2_VOICES,
@@ -158,7 +158,7 @@ export type Tier1VoiceId = keyof typeof TIER1_VOICES;
 export type Tier2VoiceId = keyof typeof TIER2_VOICES;
 export type Tier3VoiceId = keyof typeof TIER3_VOICES;
 
-// ─── Credit Costs ─────────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Credit Costs Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 export const VOICE_CREDITS: Record<VoiceTier, number> = {
   tier1: 1,
   tier2: 3,
@@ -178,7 +178,7 @@ export function isVoiceInTier(voiceId: VoiceId, tier: VoiceTier): boolean {
   return getVoiceTier(voiceId) === tier;
 }
 
-// ─── Voice Selection Helpers ───────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Voice Selection Helpers Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 export function getVoicesByTier(tier: VoiceTier): Array<typeof ALL_VOICES[VoiceId]> {
   const tierVoices: Array<typeof ALL_VOICES[VoiceId]> = [];
   for (const voice of Object.values(ALL_VOICES)) {

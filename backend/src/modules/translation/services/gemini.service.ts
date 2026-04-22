@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Gemini Service - Strictly isolates all Google Gemini API logic.
  * Aligned with ARCHITECTURE.md requirements.
  */
@@ -117,10 +117,10 @@ export class GeminiService {
 
     private sanitize(text: string): string {
         if (!text || typeof text !== 'string') return "";
-        let cleaned = text.replace(/ဤသည်မှာ သင်ပေးပို့.*?(ဖြေ|ပါသည်|ပြန်ဆိုထားပါသည်။)/g, ""); 
-        cleaned = cleaned.replace(/မြန်မာဘာသာဖြင့် အောက်ပါအတိုင်း.*?ပါသည်/g, "");
+        let cleaned = text.replace(/Ã¡â‚¬Â¤Ã¡â‚¬Å¾Ã¡â‚¬Å Ã¡â‚¬ÂºÃ¡â‚¬â„¢Ã¡â‚¬Â¾Ã¡â‚¬Â¬ Ã¡â‚¬Å¾Ã¡â‚¬â€žÃ¡â‚¬ÂºÃ¡â‚¬â€¢Ã¡â‚¬Â±Ã¡â‚¬Â¸Ã¡â‚¬â€¢Ã¡â‚¬Â­Ã¡â‚¬Â¯Ã¡â‚¬Â·.*?(Ã¡â‚¬â€“Ã¡â‚¬Â¼Ã¡â‚¬Â±|Ã¡â‚¬â€¢Ã¡â‚¬Â«Ã¡â‚¬Å¾Ã¡â‚¬Å Ã¡â‚¬Âº|Ã¡â‚¬â€¢Ã¡â‚¬Â¼Ã¡â‚¬â€Ã¡â‚¬ÂºÃ¡â‚¬â€ Ã¡â‚¬Â­Ã¡â‚¬Â¯Ã¡â‚¬â€˜Ã¡â‚¬Â¬Ã¡â‚¬Â¸Ã¡â‚¬â€¢Ã¡â‚¬Â«Ã¡â‚¬Å¾Ã¡â‚¬Å Ã¡â‚¬ÂºÃ¡Ââ€¹)/g, ""); 
+        cleaned = cleaned.replace(/Ã¡â‚¬â„¢Ã¡â‚¬Â¼Ã¡â‚¬â€Ã¡â‚¬ÂºÃ¡â‚¬â„¢Ã¡â‚¬Â¬Ã¡â‚¬ËœÃ¡â‚¬Â¬Ã¡â‚¬Å¾Ã¡â‚¬Â¬Ã¡â‚¬â€“Ã¡â‚¬Â¼Ã¡â‚¬â€žÃ¡â‚¬Â·Ã¡â‚¬Âº Ã¡â‚¬Â¡Ã¡â‚¬Â±Ã¡â‚¬Â¬Ã¡â‚¬â‚¬Ã¡â‚¬ÂºÃ¡â‚¬â€¢Ã¡â‚¬Â«Ã¡â‚¬Â¡Ã¡â‚¬ÂÃ¡â‚¬Â­Ã¡â‚¬Â¯Ã¡â‚¬â€žÃ¡â‚¬ÂºÃ¡â‚¬Â¸.*?Ã¡â‚¬â€¢Ã¡â‚¬Â«Ã¡â‚¬Å¾Ã¡â‚¬Å Ã¡â‚¬Âº/g, "");
         cleaned = cleaned.replace(/Here is the.*/gi, "");
-        cleaned = cleaned.replace(/\*\*ဇာတ်ညွှန်း[^\*]*\*\*/g, ""); 
+        cleaned = cleaned.replace(/\*\*Ã¡â‚¬â€¡Ã¡â‚¬Â¬Ã¡â‚¬ÂÃ¡â‚¬ÂºÃ¡â‚¬Å Ã¡â‚¬Â½Ã¡â‚¬Â¾Ã¡â‚¬â€Ã¡â‚¬ÂºÃ¡â‚¬Â¸[^\*]*\*\*/g, ""); 
         cleaned = cleaned.replace(/\*\*.+?\*\*/g, ""); 
         cleaned = cleaned.replace(/[#_*\[\]]/g, ""); 
         cleaned = cleaned.replace(/"/g, "");
@@ -204,14 +204,14 @@ Keep exact meaning. Output must be speakable. No intro or outro.
 Return exact same number of lines as input.
 
 STRICT RULES:
-1. ONLY TRANSLATE: Output ONLY the translation. Do NOT add any explanation, note, or intro text like "ဤသည်မှာ..." or "This is..." 
+1. ONLY TRANSLATE: Output ONLY the translation. Do NOT add any explanation, note, or intro text like "Ã¡â‚¬Â¤Ã¡â‚¬Å¾Ã¡â‚¬Å Ã¡â‚¬ÂºÃ¡â‚¬â„¢Ã¡â‚¬Â¾Ã¡â‚¬Â¬..." or "This is..." 
 2. ONLY MYANMAR: Output in Myanmar ONLY.
-3. TRANSLITERATION: Use phonetic Myanmar (Car=ကား, Bus=ဘတ်စ်ကား, Zombie=ဇွန်ဘီး).
-4. DYNAMIC ENDINGS: Mix "ခဲ့တာပါ", "ပါတော့တယ်", "နေကြတာပါ", "သွားခဲ့ရတယ်", "လိုက်မိပါတယ်", "ကြတာပါ", "နေခဲ့တယ်".
-5. NO "ပါတယ်" repetition.
+3. TRANSLITERATION: Use phonetic Myanmar (Car=Ã¡â‚¬â‚¬Ã¡â‚¬Â¬Ã¡â‚¬Â¸, Bus=Ã¡â‚¬ËœÃ¡â‚¬ÂÃ¡â‚¬ÂºÃ¡â‚¬â€¦Ã¡â‚¬ÂºÃ¡â‚¬â‚¬Ã¡â‚¬Â¬Ã¡â‚¬Â¸, Zombie=Ã¡â‚¬â€¡Ã¡â‚¬Â½Ã¡â‚¬â€Ã¡â‚¬ÂºÃ¡â‚¬ËœÃ¡â‚¬Â®Ã¡â‚¬Â¸).
+4. DYNAMIC ENDINGS: Mix "Ã¡â‚¬ÂÃ¡â‚¬Â²Ã¡â‚¬Â·Ã¡â‚¬ÂÃ¡â‚¬Â¬Ã¡â‚¬â€¢Ã¡â‚¬Â«", "Ã¡â‚¬â€¢Ã¡â‚¬Â«Ã¡â‚¬ÂÃ¡â‚¬Â±Ã¡â‚¬Â¬Ã¡â‚¬Â·Ã¡â‚¬ÂÃ¡â‚¬Å¡Ã¡â‚¬Âº", "Ã¡â‚¬â€Ã¡â‚¬Â±Ã¡â‚¬â‚¬Ã¡â‚¬Â¼Ã¡â‚¬ÂÃ¡â‚¬Â¬Ã¡â‚¬â€¢Ã¡â‚¬Â«", "Ã¡â‚¬Å¾Ã¡â‚¬Â½Ã¡â‚¬Â¬Ã¡â‚¬Â¸Ã¡â‚¬ÂÃ¡â‚¬Â²Ã¡â‚¬Â·Ã¡â‚¬â€ºÃ¡â‚¬ÂÃ¡â‚¬Å¡Ã¡â‚¬Âº", "Ã¡â‚¬Å“Ã¡â‚¬Â­Ã¡â‚¬Â¯Ã¡â‚¬â‚¬Ã¡â‚¬ÂºÃ¡â‚¬â„¢Ã¡â‚¬Â­Ã¡â‚¬â€¢Ã¡â‚¬Â«Ã¡â‚¬ÂÃ¡â‚¬Å¡Ã¡â‚¬Âº", "Ã¡â‚¬â‚¬Ã¡â‚¬Â¼Ã¡â‚¬ÂÃ¡â‚¬Â¬Ã¡â‚¬â€¢Ã¡â‚¬Â«", "Ã¡â‚¬â€Ã¡â‚¬Â±Ã¡â‚¬ÂÃ¡â‚¬Â²Ã¡â‚¬Â·Ã¡â‚¬ÂÃ¡â‚¬Å¡Ã¡â‚¬Âº".
+5. NO "Ã¡â‚¬â€¢Ã¡â‚¬Â«Ã¡â‚¬ÂÃ¡â‚¬Å¡Ã¡â‚¬Âº" repetition.
 6. SPOKEN STYLE: Natural conversational Myanmar.
 7. CLEAN OUTPUT: JSON array ONLY. No intro/notes.
-8. KEEP SHORT: Each translation MUST be concise — max ~30 Myanmar characters per segment. Prefer shorter sentences. Do NOT expand or add unnecessary words.`;
+8. KEEP SHORT: Each translation MUST be concise Ã¢â‚¬â€ max ~30 Myanmar characters per segment. Prefer shorter sentences. Do NOT expand or add unnecessary words.`;
 
         const body = {
             contents: [{ parts: [{ text: `Translate to Myanmar:\n\n${text}` }] }],
@@ -236,14 +236,14 @@ Keep exact meaning. Output must be speakable. No intro or outro.
 Return exact same number of lines as input.
 
 STRICT RULES:
-1. ONLY TRANSLATE: Output ONLY the translation. Do NOT add any explanation, note, or intro text like "ဤသည်မှာ..." or "This is..." 
+1. ONLY TRANSLATE: Output ONLY the translation. Do NOT add any explanation, note, or intro text like "Ã¡â‚¬Â¤Ã¡â‚¬Å¾Ã¡â‚¬Å Ã¡â‚¬ÂºÃ¡â‚¬â„¢Ã¡â‚¬Â¾Ã¡â‚¬Â¬..." or "This is..." 
 2. ONLY MYANMAR: Output in Myanmar ONLY.
-3. TRANSLITERATION: Use phonetic Myanmar (Car=ကား, Bus=ဘတ်စ်ကား, Zombie=ဇွန်ဘီး).
-4. DYNAMIC ENDINGS: Mix "ခဲ့တာပါ", "ပါတော့တယ်", "နေကြတာပါ", "သွားခဲ့ရတယ်", "လိုက်မိပါတယ်", "ကြတာပါ", "နေခဲ့တယ်".
-5. NO "ပါတယ်" repetition.
+3. TRANSLITERATION: Use phonetic Myanmar (Car=Ã¡â‚¬â‚¬Ã¡â‚¬Â¬Ã¡â‚¬Â¸, Bus=Ã¡â‚¬ËœÃ¡â‚¬ÂÃ¡â‚¬ÂºÃ¡â‚¬â€¦Ã¡â‚¬ÂºÃ¡â‚¬â‚¬Ã¡â‚¬Â¬Ã¡â‚¬Â¸, Zombie=Ã¡â‚¬â€¡Ã¡â‚¬Â½Ã¡â‚¬â€Ã¡â‚¬ÂºÃ¡â‚¬ËœÃ¡â‚¬Â®Ã¡â‚¬Â¸).
+4. DYNAMIC ENDINGS: Mix "Ã¡â‚¬ÂÃ¡â‚¬Â²Ã¡â‚¬Â·Ã¡â‚¬ÂÃ¡â‚¬Â¬Ã¡â‚¬â€¢Ã¡â‚¬Â«", "Ã¡â‚¬â€¢Ã¡â‚¬Â«Ã¡â‚¬ÂÃ¡â‚¬Â±Ã¡â‚¬Â¬Ã¡â‚¬Â·Ã¡â‚¬ÂÃ¡â‚¬Å¡Ã¡â‚¬Âº", "Ã¡â‚¬â€Ã¡â‚¬Â±Ã¡â‚¬â‚¬Ã¡â‚¬Â¼Ã¡â‚¬ÂÃ¡â‚¬Â¬Ã¡â‚¬â€¢Ã¡â‚¬Â«", "Ã¡â‚¬Å¾Ã¡â‚¬Â½Ã¡â‚¬Â¬Ã¡â‚¬Â¸Ã¡â‚¬ÂÃ¡â‚¬Â²Ã¡â‚¬Â·Ã¡â‚¬â€ºÃ¡â‚¬ÂÃ¡â‚¬Å¡Ã¡â‚¬Âº", "Ã¡â‚¬Å“Ã¡â‚¬Â­Ã¡â‚¬Â¯Ã¡â‚¬â‚¬Ã¡â‚¬ÂºÃ¡â‚¬â„¢Ã¡â‚¬Â­Ã¡â‚¬â€¢Ã¡â‚¬Â«Ã¡â‚¬ÂÃ¡â‚¬Å¡Ã¡â‚¬Âº", "Ã¡â‚¬â‚¬Ã¡â‚¬Â¼Ã¡â‚¬ÂÃ¡â‚¬Â¬Ã¡â‚¬â€¢Ã¡â‚¬Â«", "Ã¡â‚¬â€Ã¡â‚¬Â±Ã¡â‚¬ÂÃ¡â‚¬Â²Ã¡â‚¬Â·Ã¡â‚¬ÂÃ¡â‚¬Å¡Ã¡â‚¬Âº".
+5. NO "Ã¡â‚¬â€¢Ã¡â‚¬Â«Ã¡â‚¬ÂÃ¡â‚¬Å¡Ã¡â‚¬Âº" repetition.
 6. SPOKEN STYLE: Natural conversational Myanmar.
 7. CLEAN OUTPUT: JSON array ONLY. No intro/notes.
-8. KEEP SHORT: Each translation MUST be concise — max ~30 Myanmar characters per segment. Prefer shorter sentences. Do NOT expand or add unnecessary words.`;
+8. KEEP SHORT: Each translation MUST be concise Ã¢â‚¬â€ max ~30 Myanmar characters per segment. Prefer shorter sentences. Do NOT expand or add unnecessary words.`;
 
         const body = {
             contents: [{ parts: [{ text: `TEXT TO TRANSLATE (JSON Array):\n${JSON.stringify(lines)}` }] }],

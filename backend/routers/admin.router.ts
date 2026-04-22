@@ -1,12 +1,12 @@
-/**
- * Admin Router — user management, subscriptions, analytics
+﻿/**
+ * Admin Router Ã¢â‚¬â€ user management, subscriptions, analytics
  */
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { t, adminProcedure } from "./trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
-import { users, subscriptions, ttsConversions, creditTransactions } from "../../drizzle/schema";
+import { users, subscriptions, ttsConversions, creditTransactions } from "../../shared/drizzle/schema";
 import { eq, count, sql, desc, and, gt } from "drizzle-orm";
 import { execFile } from "child_process";
 import { promisify } from "util";
@@ -271,13 +271,13 @@ export const adminRouter = t.router({
 
   getServerHealth: adminProcedure.query(async () => {
     const mem = process.memoryUsage();
-    let disk = "—";
+    let disk = "Ã¢â‚¬â€";
     try {
       const { stdout } = await execFileAsync("df", ["-h", "/"]);
       const lines = stdout.trim().split("\n");
       if (lines.length > 1) {
         const parts = lines[1].split(/\s+/);
-        disk = parts[2] || "—";
+        disk = parts[2] || "Ã¢â‚¬â€";
       }
     } catch {}
     return {

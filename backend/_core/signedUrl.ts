@@ -1,7 +1,7 @@
-/**
+﻿/**
  * Signed Download URL Generator
  * Creates HMAC-signed, time-limited download links for video files.
- * Separated from index.ts to avoid circular imports (videoDubber → index → routers → videoDubber).
+ * Separated from index.ts to avoid circular imports (videoDubber Ã¢â€ â€™ index Ã¢â€ â€™ routers Ã¢â€ â€™ videoDubber).
  */
 import { createHmac } from "crypto";
 

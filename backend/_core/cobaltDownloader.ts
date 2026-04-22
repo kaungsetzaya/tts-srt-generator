@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Cobalt.tools API integration for YouTube downloads
  * Fallback when yt-dlp fails due to bot detection
  */

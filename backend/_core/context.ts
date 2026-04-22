@@ -1,18 +1,18 @@
-import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
+﻿import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import { parse as parseCookieHeader } from "cookie";
 import { jwtVerify } from "jose";
 import { COOKIE_NAME } from "@shared/const";
 import { getDb } from "../db";
-import { users } from "../../drizzle/schema";
+import { users } from "../../shared/drizzle/schema";
 import { eq } from "drizzle-orm";
 
 export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
   res: CreateExpressContextOptions["res"];
-  user: { userId: string; telegramId: string; name: string; role: string } | null;
+  user: { userId: string; telegramId: string; name: string; role: string; email?: string } | null;
 };
 
-// 🔐 JWT Secret
+// Ã°Å¸â€Â JWT Secret
 if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
   console.error("[SECURITY] FATAL: JWT_SECRET is not set!");
   process.exit(1);
@@ -68,6 +68,7 @@ export async function createContext(
           telegramId,
           name,
           role,
+          email: payload.email as string | undefined,
         };
       }
     }

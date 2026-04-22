@@ -92,15 +92,15 @@ export default function TrialInfo() {
   const subtextColor = isDark ? "rgba(240,238,255,0.6)" : "#6b5c50";
 
   const isTrial = subStatus?.plan === "trial";
-  const trialUsage = subStatus?.trialUsage;
-  const trialLimits = subStatus?.trialLimits;
+  const usage = subStatus?.usage;
+  const limits = subStatus?.limits;
 
   const daysLeft = subStatus?.expiresAt
     ? Math.max(0, Math.ceil((new Date(subStatus.expiresAt).getTime() - Date.now()) / 86400000))
     : 0;
 
   type FeatureCard = {
-    icon: JSX.Element;
+    icon: React.ReactNode;
     title: string;
     desc: string;
     used: number;
@@ -108,45 +108,45 @@ export default function TrialInfo() {
     color: string;
   };
 
-  const features: FeatureCard[] = isTrial && trialUsage && trialLimits ? [
+  const features: FeatureCard[] = isTrial && usage && limits ? [
     {
       icon: <Mic className="w-5 h-5" />,
       title: t.features.ttsTitle,
       desc: t.features.ttsDesc,
-      used: trialUsage.tts,
-      total: trialLimits.totalTtsSrt,
+      used: usage.tts,
+      total: limits.dailyTtsSrt,
       color: "#C06F30",
     },
     {
       icon: <Sparkles className="w-5 h-5" />,
       title: t.features.charTitle,
       desc: t.features.charDesc,
-      used: trialUsage.characterUse,
-      total: trialLimits.totalCharacterUse,
+      used: usage.characterUse,
+      total: limits.dailyCharacterUse,
       color: "#F4B34F",
     },
     {
       icon: <FileVideo className="w-5 h-5" />,
       title: t.features.videoTitle,
       desc: t.features.videoDesc,
-      used: trialUsage.videoTranslate,
-      total: trialLimits.totalVideoTranslate,
+      used: usage.videoTranslate,
+      total: limits.dailyVideoTranslate,
       color: "#C06F30",
     },
     {
       icon: <Wand2 className="w-5 h-5" />,
       title: t.features.aiVideoTitle,
       desc: t.features.aiVideoDesc,
-      used: trialUsage.aiVideo,
-      total: trialLimits.totalAiVideo,
+      used: usage.aiVideo,
+      total: limits.dailyAiVideo,
       color: "#34d399",
     },
     {
       icon: <Wand2 className="w-5 h-5" />,
       title: t.features.aiVideoCharTitle,
       desc: t.features.aiVideoCharDesc,
-      used: trialUsage.aiVideoChar,
-      total: trialLimits.totalAiVideoChar,
+      used: usage.aiVideo || 0, // Fallback
+      total: limits.dailyAiVideo || 0,
       color: "#fbbf24",
     },
   ] : [];
@@ -245,19 +245,19 @@ export default function TrialInfo() {
             })}
 
             {/* Limits Info */}
-            {trialLimits && (
+            {limits && (
               <div className="p-4 rounded-2xl border backdrop-blur-xl" style={{ background: cardBg, borderColor: cardBorder }}>
                 <h3 className="text-sm font-black uppercase tracking-wider mb-3" style={{ color: accent }}>
                   {lang === "mm" ? "ကန့်သတ်ချက်များ" : "Limits"}
                 </h3>
                 <div className="space-y-2 text-xs">
                   {[
-                    { label: t.limits.charLimitStd, value: `${trialLimits.charLimitStandard.toLocaleString()} chars` },
-                    { label: t.limits.charLimitChar, value: `${trialLimits.charLimitCharacter.toLocaleString()} chars` },
-                    { label: t.limits.maxVideoSize, value: `${trialLimits.maxVideoSizeMB}MB` },
-                    { label: t.limits.maxVideoDuration, value: `${Math.floor(trialLimits.maxVideoDurationSec / 60)}:${String(trialLimits.maxVideoDurationSec % 60).padStart(2, "0")}` },
-                    { label: t.limits.aiVideoStdDuration, value: `${Math.floor(trialLimits.maxAiVideoDurationSecStd / 60)}:${String(trialLimits.maxAiVideoDurationSecStd % 60).padStart(2, "0")}` },
-                    { label: t.limits.aiVideoCharDuration, value: `${Math.floor(trialLimits.maxAiVideoDurationSecChar / 60)}:${String(trialLimits.maxAiVideoDurationSecChar % 60).padStart(2, "0")}` },
+                    { label: t.limits.charLimitStd, value: `${(limits as any).charLimitStandard?.toLocaleString() ?? 0} chars` },
+                    { label: t.limits.charLimitChar, value: `${(limits as any).charLimitCharacter?.toLocaleString() ?? 0} chars` },
+                    { label: t.limits.maxVideoSize, value: `${(limits as any).maxVideoSizeMB ?? 0}MB` },
+                    { label: t.limits.maxVideoDuration, value: `${Math.floor(((limits as any).maxVideoDurationSec ?? 0) / 60)}:${String(((limits as any).maxVideoDurationSec ?? 0) % 60).padStart(2, "0")}` },
+                    { label: t.limits.aiVideoStdDuration, value: `${Math.floor(((limits as any).maxAiVideoDurationSecStd ?? 0) / 60)}:${String(((limits as any).maxAiVideoDurationSecStd ?? 0) % 60).padStart(2, "0")}` },
+                    { label: t.limits.aiVideoCharDuration, value: `${Math.floor(((limits as any).maxAiVideoDurationSecChar ?? 0) / 60)}:${String(((limits as any).maxAiVideoDurationSecChar ?? 0) % 60).padStart(2, "0")}` },
                   ].map((item, i) => (
                     <div key={i} className="flex items-center justify-between py-1.5 border-b" style={{ borderColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }}>
                       <span style={{ color: subtextColor }}>{item.label}</span>

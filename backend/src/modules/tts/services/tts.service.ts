@@ -1,4 +1,4 @@
-import { execFile } from "child_process";
+﻿import { execFile } from "child_process";
 import { promisify } from "util";
 import path from "path";
 import fs from "fs/promises";
@@ -15,15 +15,15 @@ export const SUPPORTED_VOICES = {
 export type VoiceKey = keyof typeof SUPPORTED_VOICES;
 
 export const CHARACTER_VOICES = {
-  ryan: { name: "ရဲရင့်", gender: "male", murfId: "en-US-ryan", base: "thiha" as const },
-  ronnie: { name: "ရောင်နီ", gender: "male", murfId: "en-US-ronnie", base: "thiha" as const },
-  lucas: { name: "လင်းခန့်", gender: "male", murfId: "en-US-lucas", base: "thiha" as const },
-  daniel: { name: "ဒေဝ", gender: "male", murfId: "en-US-daniel", base: "thiha" as const },
-  evander: { name: "အဂ္ဂ", gender: "male", murfId: "en-US-evander", base: "thiha" as const },
-  michelle: { name: "မေချို", gender: "female", murfId: "en-US-michelle", base: "nilar" as const },
-  iris: { name: "အိန္ဒြာ", gender: "female", murfId: "en-US-iris", base: "nilar" as const },
-  charlotte: { name: "သီရိ", gender: "female", murfId: "en-US-charlotte", base: "nilar" as const },
-  amara: { name: "အမရာ", gender: "female", murfId: "en-US-amara", base: "nilar" as const },
+  ryan: { name: "Ã¡â‚¬â€ºÃ¡â‚¬Â²Ã¡â‚¬â€ºÃ¡â‚¬â€žÃ¡â‚¬Â·Ã¡â‚¬Âº", gender: "male", murfId: "en-US-ryan", base: "thiha" as const },
+  ronnie: { name: "Ã¡â‚¬â€ºÃ¡â‚¬Â±Ã¡â‚¬Â¬Ã¡â‚¬â€žÃ¡â‚¬ÂºÃ¡â‚¬â€Ã¡â‚¬Â®", gender: "male", murfId: "en-US-ronnie", base: "thiha" as const },
+  lucas: { name: "Ã¡â‚¬Å“Ã¡â‚¬â€žÃ¡â‚¬ÂºÃ¡â‚¬Â¸Ã¡â‚¬ÂÃ¡â‚¬â€Ã¡â‚¬Â·Ã¡â‚¬Âº", gender: "male", murfId: "en-US-lucas", base: "thiha" as const },
+  daniel: { name: "Ã¡â‚¬â€™Ã¡â‚¬Â±Ã¡â‚¬Â", gender: "male", murfId: "en-US-daniel", base: "thiha" as const },
+  evander: { name: "Ã¡â‚¬Â¡Ã¡â‚¬â€šÃ¡â‚¬Â¹Ã¡â‚¬â€š", gender: "male", murfId: "en-US-evander", base: "thiha" as const },
+  michelle: { name: "Ã¡â‚¬â„¢Ã¡â‚¬Â±Ã¡â‚¬ÂÃ¡â‚¬Â»Ã¡â‚¬Â­Ã¡â‚¬Â¯", gender: "female", murfId: "en-US-michelle", base: "nilar" as const },
+  iris: { name: "Ã¡â‚¬Â¡Ã¡â‚¬Â­Ã¡â‚¬â€Ã¡â‚¬Â¹Ã¡â‚¬â€™Ã¡â‚¬Â¼Ã¡â‚¬Â¬", gender: "female", murfId: "en-US-iris", base: "nilar" as const },
+  charlotte: { name: "Ã¡â‚¬Å¾Ã¡â‚¬Â®Ã¡â‚¬â€ºÃ¡â‚¬Â­", gender: "female", murfId: "en-US-charlotte", base: "nilar" as const },
+  amara: { name: "Ã¡â‚¬Â¡Ã¡â‚¬â„¢Ã¡â‚¬â€ºÃ¡â‚¬Â¬", gender: "female", murfId: "en-US-amara", base: "nilar" as const },
 };
 
 export type CharacterKey = keyof typeof CHARACTER_VOICES;
@@ -210,7 +210,7 @@ const segmenter = new Intl.Segmenter("my", { granularity: "grapheme" });
 function graphemeLen(s: string): number { return [...segmenter.segment(s)].length; }
 
 const BURMESE_SRT_CONFIG = { "16:9": { charsPerLine: 18 }, "9:16": { charsPerLine: 12 } } as const;
-const BURMESE_BOUNDARY_RE = /[။၊]/;
+const BURMESE_BOUNDARY_RE = /[Ã¡Ââ€¹Ã¡ÂÅ ]/;
 
 function buildSRTFromRaw(rawSrt: string, originalText: string, aspectRatio: "9:16" | "16:9"): string {
   const { charsPerLine } = BURMESE_SRT_CONFIG[aspectRatio] ?? BURMESE_SRT_CONFIG["16:9"];

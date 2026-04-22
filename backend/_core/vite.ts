@@ -1,4 +1,4 @@
-import { randomBytes } from "crypto";
+﻿import { randomBytes } from "crypto";
 import type { ViteDevServer } from "vite";
 
 export function setupVite(app: any, server: any) {

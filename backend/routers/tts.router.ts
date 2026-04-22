@@ -1,12 +1,12 @@
-/**
- * TTS Router — text-to-speech generation
+﻿/**
+ * TTS Router Ã¢â‚¬â€ text-to-speech generation
  */
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { t, protectedProcedure } from "./trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
-import { ttsConversions } from "../../drizzle/schema";
+import { ttsConversions } from "../../shared/drizzle/schema";
 import { ttsService, getVoiceCredits, type VoiceId } from "../src/modules/tts";
 import { deductCredits, addCredits } from "./credits";
 import { acquireSlot, releaseSlot } from "../jobs";
@@ -18,7 +18,7 @@ const ALL_VOICE_IDS = [
   // Tier 2
   "ryan", "ronnie", "lucas", "daniel", "evander", "michelle", "iris", "charlotte", "amara",
   // Tier 3
-  "gemini_alex", "gemini_aria", "gemini_asha", "gemini_b中年", "gemini_dustin", "gemini_emma",
+  "gemini_alex", "gemini_aria", "gemini_asha", "gemini_bÃ¤Â¸Â­Ã¥Â¹Â´", "gemini_dustin", "gemini_emma",
   "gemini_eric", "gemini_female_01", "gemini_female_02", "gemini_kokoro", "gemini_male_01",
   "gemini_male_02", "gemini_male_03", "gemini_puck", "gemini_soren", "gemini_studio_female",
   "gemini_studio_male",

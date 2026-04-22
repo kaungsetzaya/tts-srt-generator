@@ -1,4 +1,4 @@
-import "dotenv/config";
+﻿import "dotenv/config";
 import mysql from "mysql2/promise";
 
 async function run() {

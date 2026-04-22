@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+﻿import { relations } from "drizzle-orm";
 import { users, subscriptions, ttsConversions, errorLogs, settings, creditTransactions, ttsJobs } from "./schema";
 
 export const usersRelations = relations(users, ({ many }) => ({

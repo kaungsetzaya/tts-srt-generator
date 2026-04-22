@@ -1,4 +1,4 @@
-import { mysqlTable, varchar, timestamp, text, int, boolean, datetime } from "drizzle-orm/mysql-core";
+﻿import { mysqlTable, varchar, timestamp, text, int, boolean, datetime } from "drizzle-orm/mysql-core";
 import { sql } from "drizzle-orm";
 
 export const users = mysqlTable("users", {
@@ -7,12 +7,12 @@ export const users = mysqlTable("users", {
   telegramUsername: varchar("telegram_username", { length: 100 }),
   telegramFirstName: varchar("telegram_first_name", { length: 100 }),
   telegramCode: varchar("telegram_code", { length: 6 }),
-  // 🔐 Dynamic OTP — code expiry (10 minutes)
+  // Ã°Å¸â€Â Dynamic OTP Ã¢â‚¬â€ code expiry (10 minutes)
   telegramCodeExpiresAt: datetime("telegram_code_expires_at"),
   role: varchar("role", { length: 20 }).default("user"),
   bannedAt: datetime("banned_at"),
   credits: int("credits").default(0),
-  // 🔐 One-Device Session — login တိုင်း token အသစ်ထုတ်ပြီး JWT ထဲ ထည့်သည်
+  // Ã°Å¸â€Â One-Device Session Ã¢â‚¬â€ login Ã¡â‚¬ÂÃ¡â‚¬Â­Ã¡â‚¬Â¯Ã¡â‚¬â€žÃ¡â‚¬ÂºÃ¡â‚¬Â¸ token Ã¡â‚¬Â¡Ã¡â‚¬Å¾Ã¡â‚¬â€¦Ã¡â‚¬ÂºÃ¡â‚¬â€˜Ã¡â‚¬Â¯Ã¡â‚¬ÂÃ¡â‚¬ÂºÃ¡â‚¬â€¢Ã¡â‚¬Â¼Ã¡â‚¬Â®Ã¡â‚¬Â¸ JWT Ã¡â‚¬â€˜Ã¡â‚¬Â² Ã¡â‚¬â€˜Ã¡â‚¬Å Ã¡â‚¬Â·Ã¡â‚¬ÂºÃ¡â‚¬Å¾Ã¡â‚¬Å Ã¡â‚¬Âº
   sessionToken: varchar("session_token", { length: 36 }),
   lastLoginAt: datetime("last_login_at"),
   // OAuth fields

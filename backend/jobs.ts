@@ -1,4 +1,4 @@
-// Background job system for long-running tasks like video dubbing and translation
+﻿// Background job system for long-running tasks like video dubbing and translation
 // Jobs are persisted to the DB so they survive server restarts.
 import { DubOptions, DubResult } from "@shared/types";
 
@@ -20,7 +20,7 @@ export interface Job {
   updatedAt: Date;
 }
 
-// ─── In-memory cache (primary store for active/recent jobs) ─────
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ In-memory cache (primary store for active/recent jobs) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 const jobs = new Map<string, Job>();
 
 const MAX_CONCURRENT = 5;
@@ -49,12 +49,12 @@ export function getQueueStatus() {
   return { active: activeJobs, waiting: waitingQueue.length, max: MAX_CONCURRENT };
 }
 
-// ─── DB persistence helpers (fire-and-forget, never throw) ───────
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ DB persistence helpers (fire-and-forget, never throw) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 async function persistJobCreate(job: Job): Promise<void> {
   try {
     const { getDb } = await import("./db");
-    const { ttsJobs } = await import("../drizzle/schema");
+    const { ttsJobs } = await import("../shared/drizzle/schema");
     const db = await getDb();
     if (!db) return;
     await db.insert(ttsJobs).values({
@@ -74,7 +74,7 @@ async function persistJobCreate(job: Job): Promise<void> {
 async function persistJobUpdate(id: string, updates: Partial<Pick<Job, "status" | "progress" | "message" | "result" | "error">>): Promise<void> {
   try {
     const { getDb } = await import("./db");
-    const { ttsJobs } = await import("../drizzle/schema");
+    const { ttsJobs } = await import("../shared/drizzle/schema");
     const { eq } = await import("drizzle-orm");
     const db = await getDb();
     if (!db) return;
@@ -95,7 +95,7 @@ async function persistJobUpdate(id: string, updates: Partial<Pick<Job, "status" 
 async function loadJobFromDb(id: string): Promise<Job | undefined> {
   try {
     const { getDb } = await import("./db");
-    const { ttsJobs } = await import("../drizzle/schema");
+    const { ttsJobs } = await import("../shared/drizzle/schema");
     const { eq } = await import("drizzle-orm");
     const db = await getDb();
     if (!db) return undefined;
@@ -125,12 +125,12 @@ async function loadJobFromDb(id: string): Promise<Job | undefined> {
 export async function recoverInterruptedJobs(): Promise<void> {
   try {
     const { getDb } = await import("./db");
-    const { ttsJobs } = await import("../drizzle/schema");
+    const { ttsJobs } = await import("../shared/drizzle/schema");
     const { sql } = await import("drizzle-orm");
     const db = await getDb();
     if (!db) return;
     const updated = await db.update(ttsJobs)
-      .set({ status: "failed", error: "Server restarted — job was interrupted", updatedAt: new Date() })
+      .set({ status: "failed", error: "Server restarted Ã¢â‚¬â€ job was interrupted", updatedAt: new Date() })
       .where(sql`status IN ('pending', 'processing')`);
     console.log("[Jobs] Marked interrupted jobs as failed on startup");
   } catch (e) {
@@ -138,7 +138,7 @@ export async function recoverInterruptedJobs(): Promise<void> {
   }
 }
 
-// ─── Core API ────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Core API Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 export function createJob(type: JobType, input: any, userId?: string): string {
   const id = `job_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
@@ -202,7 +202,7 @@ export function getJob(id: string): Job | undefined {
   if (inMemory) return inMemory;
 
   // For completed/recent jobs not in memory: caller must await getJobAsync
-  // Return undefined synchronously — callers that need DB fallback use getJobAsync
+  // Return undefined synchronously Ã¢â‚¬â€ callers that need DB fallback use getJobAsync
   return undefined;
 }
 
@@ -230,28 +230,28 @@ export function updateJob(id: string, updates: Partial<Pick<Job, "status" | "pro
 }
 
 export async function cleanupOldJobs(): Promise<void> {
-  // ─── In-memory cleanup (1h TTL) ─────
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ In-memory cleanup (1h TTL) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
   for (const [id, job] of jobs.entries()) {
     if (job.updatedAt < oneHourAgo) {
-      // Don't clean up pending jobs — they might still be needed
+      // Don't clean up pending jobs Ã¢â‚¬â€ they might still be needed
       if (job.status !== "pending") {
         jobs.delete(id);
       }
     }
   }
 
-  // ─── DB cleanup (24h TTL for completed/failed jobs) ─────
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ DB cleanup (24h TTL for completed/failed jobs) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   try {
     const { getDb } = await import("./db");
-    const { ttsJobs } = await import("../drizzle/schema");
+    const { ttsJobs } = await import("../shared/drizzle/schema");
     const { sql } = await import("drizzle-orm");
     const db = await getDb();
     if (!db) return;
     await db.delete(ttsJobs)
       .where(sql`status IN ('completed', 'failed') AND updated_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)`);
   } catch (e) {
-    // Non-fatal — DB cleanup is best-effort
+    // Non-fatal Ã¢â‚¬â€ DB cleanup is best-effort
     console.warn("[Jobs] DB cleanup failed (non-fatal):", (e as any)?.message);
   }
 }

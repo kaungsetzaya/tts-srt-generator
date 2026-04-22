@@ -6,6 +6,8 @@
     "tsBuildInfoFile": "./node_modules/typescript/tsbuildinfo",
     "noEmit": true,
     "module": "ESNext",
+    "target": "ES2022",
+    "downlevelIteration": true,
     "strict": true,
     "lib": ["esnext", "dom", "dom.iterable"],
     "jsx": "preserve",
@@ -16,8 +18,11 @@
     "baseUrl": ".",
     "types": ["node", "vite/client"],
     "paths": {
+      "drizzle-orm": ["../backend/node_modules/drizzle-orm"],
+      "drizzle-orm/*": ["../backend/node_modules/drizzle-orm/*"],
       "@/*": ["./src/*"],
-      "@shared/*": ["../shared/*"]
+      "@shared/*": ["../shared/*"],
+      "@backend/*": ["../backend/*"]
     }
   }
 }

@@ -1,10 +1,10 @@
 /**
- * History Router — user generation and credit history
+ * History Router Ã¢â‚¬â€ user generation and credit history
  */
 import { z } from "zod";
 import { t, protectedProcedure } from "./trpc";
 import { getDb } from "../db";
-import { creditTransactions } from "../../drizzle/schema";
+import { creditTransactions } from "../../shared/drizzle/schema";
 import { eq, desc } from "drizzle-orm";
 
 export const historyRouter = t.router({
@@ -64,7 +64,7 @@ export const historyRouter = t.router({
         }));
 
         // Sort by date desc
-        return unified.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, limit);
+        return unified.sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, limit);
       } catch (e) {
         console.error("[getUnifiedHistory Error]", e);
         return [];

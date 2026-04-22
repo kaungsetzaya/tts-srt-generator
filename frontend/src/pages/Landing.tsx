@@ -43,7 +43,7 @@ function F({
   className?: string;
 }) {
   const r = useRef<HTMLDivElement>(null);
-  const v = useInView(r, { amount: "any", margin: "-60px" });
+  const v = useInView(r, { amount: "some", margin: "-60px" });
   return (
     <motion.div
       ref={r}

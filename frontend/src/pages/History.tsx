@@ -81,8 +81,8 @@ export default function History() {
     return (t as any)[feat] || feat;
   };
 
-  const dedupedHistory = history?.reduce((acc: typeof history, item) => {
-    const existing = acc.find((x) => x.id === item.id);
+  const dedupedHistory = history?.reduce((acc: typeof history, item: any) => {
+    const existing = acc.find((x: any) => x.id === item.id);
     if (!existing) acc.push(item);
     return acc;
   }, [] as typeof history) ?? [];

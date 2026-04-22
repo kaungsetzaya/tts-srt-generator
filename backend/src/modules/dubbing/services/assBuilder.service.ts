@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ASS Builder Service - Handles generation of ASS subtitle content.
  * Aligned with ARCHITECTURE.md (Dubbing Module Services).
  */
@@ -7,7 +7,7 @@ import path from 'path';
 
 export class AssBuilderService {
     /**
-     * Build ASS subtitle style — fixed blur, correct full-width, aspect-ratio-aware
+     * Build ASS subtitle style Ã¢â‚¬â€ fixed blur, correct full-width, aspect-ratio-aware
      */
     buildAssContent(
         segments: Array<{ startMs: number; endMs: number; text: string }>,
@@ -113,7 +113,7 @@ export class AssBuilderService {
         
         if (lines.length === 0) return "";
         
-        // Max 2 lines — the pipeline already handles splitting,
+        // Max 2 lines Ã¢â‚¬â€ the pipeline already handles splitting,
         // but enforce here as a safety net
         if (lines.length > 2) {
             lines = lines.slice(0, 2);
@@ -121,7 +121,7 @@ export class AssBuilderService {
         
         // Join with \N for ASS
         const formatted = lines.join("\\N");
-        return formatted.replace(/,/g, "，");
+        return formatted.replace(/,/g, "Ã¯Â¼Å’");
     }
 
     private msToAssTime(ms: number): string {

@@ -1,8 +1,8 @@
-import "dotenv/config";
+﻿import "dotenv/config";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import { sql, ne } from "drizzle-orm";
-import { users, ttsConversions, subscriptions, creditTransactions, ttsJobs, errorLogs } from "../drizzle/schema";
+import { users, ttsConversions, subscriptions, creditTransactions, ttsJobs, errorLogs } from "../shared/drizzle/schema";
 
 if (process.env.RESET_CONFIRM !== "YES_I_KNOW") {
   console.error("FATAL: RESET_CONFIRM env var must be 'YES_I_KNOW' to run reset-db.");
@@ -10,7 +10,7 @@ if (process.env.RESET_CONFIRM !== "YES_I_KNOW") {
 }
 
 async function runReset() {
-  console.log("⚠️ STARTING DATABASE RESET FOR PRODUCTION LAUNCH ⚠️");
+  console.log("Ã¢Å¡Â Ã¯Â¸Â STARTING DATABASE RESET FOR PRODUCTION LAUNCH Ã¢Å¡Â Ã¯Â¸Â");
   
   if (!process.env.DATABASE_URL) {
     console.error("No DATABASE_URL set.");
@@ -39,10 +39,10 @@ async function runReset() {
     console.log("6/6 Deleting all non-Admin Users...");
     await db.delete(users).where(ne(users.role, "admin"));
 
-    console.log("✅ DATABASE RESET COMPLETE.");
+    console.log("Ã¢Å“â€¦ DATABASE RESET COMPLETE.");
     console.log("Admin accounts were preserved. All test data wiped.");
   } catch (error) {
-    console.error("❌ Reset Error:", error);
+    console.error("Ã¢ÂÅ’ Reset Error:", error);
   } finally {
     await connection.end();
     process.exit(0);

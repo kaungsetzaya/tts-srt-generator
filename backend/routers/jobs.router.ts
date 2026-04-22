@@ -1,5 +1,5 @@
-/**
- * Jobs Router — start dub jobs, check status
+﻿/**
+ * Jobs Router Ã¢â‚¬â€ start dub jobs, check status
  */
 import { z } from "zod";
 import { t, protectedProcedure } from "./trpc";
@@ -16,7 +16,7 @@ const ALL_VOICE_IDS = [
   // Tier 2
   "ryan", "ronnie", "lucas", "daniel", "evander", "michelle", "iris", "charlotte", "amara",
   // Tier 3
-  "gemini_alex", "gemini_aria", "gemini_asha", "gemini_b中年", "gemini_dustin", "gemini_emma",
+  "gemini_alex", "gemini_aria", "gemini_asha", "gemini_bÃ¤Â¸Â­Ã¥Â¹Â´", "gemini_dustin", "gemini_emma",
   "gemini_eric", "gemini_female_01", "gemini_female_02", "gemini_kokoro", "gemini_male_01",
   "gemini_male_02", "gemini_male_03", "gemini_puck", "gemini_soren", "gemini_studio_female",
   "gemini_studio_male",

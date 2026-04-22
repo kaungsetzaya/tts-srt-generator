@@ -206,9 +206,9 @@ function UserDetailDrawer({
           hour12: true,
         });
 
-  const maxVoice = Math.max(...(data?.voices?.map(v => v.count) ?? [1]));
-  const maxHour = Math.max(...(data?.activeHours?.map(h => h.count) ?? [1]));
-  const maxDaily = Math.max(...(data?.daily?.map(d => d.count) ?? [1]));
+  const maxVoice = Math.max(...(data?.voices?.map((v: any) => v.count) ?? [1]));
+  const maxHour = Math.max(...(data?.activeHours?.map((h: any) => h.count) ?? [1]));
+  const maxDaily = Math.max(...(data?.daily?.map((d: any) => d.count) ?? [1]));
 
   return (
     <div
@@ -335,7 +335,7 @@ function UserDetailDrawer({
               <p className="font-bold uppercase tracking-wider text-xs mb-4 opacity-60">
                 Feature Usage
               </p>
-              {data.features.map(f => (
+              {data.features.map((f: any) => (
                 <MiniBar
                   key={f.feature}
                   label={FEATURE_LABELS[f.feature] ?? f.feature}
@@ -356,7 +356,7 @@ function UserDetailDrawer({
               {data.voices.length === 0 ? (
                 <p className="text-xs opacity-40">No voice data</p>
               ) : (
-                data.voices.map(v => (
+                data.voices.map((v: any) => (
                   <MiniBar
                     key={v.name}
                     label={v.name}
@@ -378,7 +378,7 @@ function UserDetailDrawer({
               </p>
               <div className="grid grid-cols-12 gap-1">
                 {Array.from({ length: 24 }, (_, h) => {
-                  const found = data.activeHours.find(a => a.hour === h);
+                  const found = data.activeHours.find((a: any) => a.hour === h);
                   const cnt = found?.count ?? 0;
                   const intensity = maxHour > 0 ? cnt / maxHour : 0;
                   return (
@@ -411,7 +411,7 @@ function UserDetailDrawer({
                 Daily Generations (30d)
               </p>
               <div className="flex items-end gap-1 h-16">
-                {data.daily.map(d => {
+                {data.daily.map((d: any) => {
                   const h =
                     maxDaily > 0 ? Math.round((d.count / maxDaily) * 64) : 4;
                   return (
@@ -439,7 +439,7 @@ function UserDetailDrawer({
                 Recent Activity Logs
               </p>
               <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                {data.recentLogs.map(log => (
+                {data.recentLogs.map((log: any) => (
                   <div
                     key={log.id}
                     className="flex items-center gap-3 text-[10px] py-1.5 border-b border-white/5 last:border-0"
@@ -548,13 +548,13 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (!settingsData) return;
     const d = settingsData;
-    setAutoTrialEnabled(d.auto_trial_enabled === 'true' || d.auto_trial_enabled === true);
+    setAutoTrialEnabled(d.auto_trial_enabled === 'true');
     setAutoTrialDays(Number(d.auto_trial_days) || 7);
     setTrialCredits(Number(d.trial_credits) || 15);
     setTrialStartDate(d.trial_start_date || "");
     setTrialEndDate(d.trial_end_date || "");
-    setTrialEnabled(d.trial_enabled === 'true' || d.trial_enabled === true);
-    setMaintenanceModeEnabled(d.maintenance_mode === 'true' || d.maintenance_mode === true);
+    setTrialEnabled(d.trial_enabled === 'true');
+    setMaintenanceModeEnabled(d.maintenance_mode === 'true');
   }, [settingsData]);
 
   const logoutMutation = trpc.auth.logout.useMutation({
@@ -1626,7 +1626,7 @@ export default function AdminDashboard() {
                         </span>
                         {!log.resolved && (
                           <button
-                            onClick={() => resolveError.mutate({ id: log.id })}
+                            onClick={() => resolveError.mutate({ errorId: log.id })}
                             className="text-xs px-2 py-0.5 border border-green-500/50 text-green-400 hover:bg-green-500/20 rounded transition-all"
                           >
                             Resolve

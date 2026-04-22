@@ -1,4 +1,4 @@
-import { registerProcessor, updateJob } from "../../../jobs";
+﻿import { registerProcessor, updateJob } from "../../../jobs";
 import { dubVideoPipeline } from "../dubbing/pipelines/dubVideo.pipeline";
 import { translateVideoPipeline } from "../translation/pipelines/translateVideo.pipeline";
 import { addCredits } from "../../../routers/credits";

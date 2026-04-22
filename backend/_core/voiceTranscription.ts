@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Voice transcription helper using internal Speech-to-Text service
  *
  * Frontend implementation guide:

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Google Maps API Integration for Manus WebDev Templates
  * 
  * Main function: makeRequest<T>(endpoint, params) - Makes authenticated requests to Google Maps APIs

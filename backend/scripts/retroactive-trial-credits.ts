@@ -1,6 +1,6 @@
-import "dotenv/config";
+﻿import "dotenv/config";
 import { getDb } from "../db";
-import { users, subscriptions, creditTransactions } from "../../drizzle/schema";
+import { users, subscriptions, creditTransactions } from "../../shared/drizzle/schema";
 import { eq, inArray } from "drizzle-orm";
 import { randomUUID } from "crypto";
 

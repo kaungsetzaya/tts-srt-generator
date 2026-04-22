@@ -1,5 +1,5 @@
-/**
- * TTS Module — Unified exports
+﻿/**
+ * TTS Module Ã¢â‚¬â€ Unified exports
  */
 export * from "./voices";
 export * from "./tts.service";

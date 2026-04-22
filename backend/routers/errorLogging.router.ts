@@ -1,5 +1,5 @@
-/**
- * Browser Error Logging — catches frontend crashes
+﻿/**
+ * Browser Error Logging Ã¢â‚¬â€ catches frontend crashes
  * Called by frontend/src/main.tsx via window.onerror and unhandledrejection
  */
 import { z } from "zod";
@@ -7,7 +7,7 @@ import { randomUUID } from "crypto";
 import { t } from "./trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
-import { errorLogs } from "../../drizzle/schema";
+import { errorLogs } from "../../shared/drizzle/schema";
 
 // Simple in-memory rate limiter for public error logging (prevent log flooding)
 const errorLogLimits = new Map<string, { count: number; resetAt: number }>();

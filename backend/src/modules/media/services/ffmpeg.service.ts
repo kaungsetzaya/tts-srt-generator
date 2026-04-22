@@ -1,4 +1,4 @@
-import ffmpeg from 'fluent-ffmpeg';
+﻿import ffmpeg from 'fluent-ffmpeg';
 import { promises as fs } from 'fs';
 import path from 'path';
 
@@ -12,12 +12,12 @@ import path from 'path';
  *   - Bitrate     : 128k
  */
 
-// ─── Standard audio spec (must match across ALL generated clips) ──────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Standard audio spec (must match across ALL generated clips) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 const AUDIO_SAMPLE_RATE = 44100;
 const AUDIO_CHANNELS    = 1;
 const AUDIO_BITRATE     = '128k';
 
-// ─── Floating-point safe speed ratio check ───────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Floating-point safe speed ratio check Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 const needsSpeedChange = (ratio: number) => Math.abs(ratio - 1.0) > 0.005;
 
 export async function getVideoDuration(filePath: string): Promise<number> {
@@ -72,7 +72,7 @@ export async function extractAudio(videoPath: string, outputPath: string): Promi
 
 /**
  * Generate a silent mp3 clip of specific duration.
- * FIXED: was 24000Hz — now matches TTS standard (44100Hz mono 128k).
+ * FIXED: was 24000Hz Ã¢â‚¬â€ now matches TTS standard (44100Hz mono 128k).
  * Mismatch caused crackling and timing gaps during concat.
  */
 export async function generateSilence(durationMs: number, outputPath: string): Promise<void> {
@@ -139,7 +139,7 @@ export async function trimAudio(
 
 /**
  * Adjust audio speed using chained atempo filters.
- * atempo only accepts 0.5–2.0 per stage — chain stages for wider range.
+ * atempo only accepts 0.5Ã¢â‚¬â€œ2.0 per stage Ã¢â‚¬â€ chain stages for wider range.
  */
 export async function speedUpAudio(
   inputPath: string,
@@ -167,7 +167,7 @@ export async function speedUpAudio(
 
 /**
  * Concatenate multiple audio files into one using ffmpeg concat demuxer.
- * FIXED: was 192k — now 128k to match all generated clips (silence, TTS, trimmed).
+ * FIXED: was 192k Ã¢â‚¬â€ now 128k to match all generated clips (silence, TTS, trimmed).
  * Bitrate mismatch was causing ffmpeg to resample and introduce timing drift.
  */
 export async function concatAudioFiles(listPath: string, outputPath: string): Promise<void> {
@@ -200,7 +200,7 @@ export async function concatAudioFiles(listPath: string, outputPath: string): Pr
 /**
  * Merge audio into video, burning in ASS subtitles.
  * FIXED: floating-point safe ratio check (was !== 1.0, now abs diff > 0.005).
- * Pipeline passes videoSpeedRatio=1.0 — no video stretch applied.
+ * Pipeline passes videoSpeedRatio=1.0 Ã¢â‚¬â€ no video stretch applied.
  */
 export async function mergeVideoAudioSubtitles(
   videoPath: string,
@@ -221,7 +221,7 @@ export async function mergeVideoAudioSubtitles(
       const p   = subtitlesPath.replace(/\\/g, '/');
       const fd  = path.dirname(options.fontPath).replace(/\\/g, '/');
       const escapedP  = p.replace(/:/g, '\\:');
-      // On Linux with system font path — skip fontsdir to avoid Noto metadata errors
+      // On Linux with system font path Ã¢â‚¬â€ skip fontsdir to avoid Noto metadata errors
       if (process.platform !== 'win32' && fd.startsWith('/usr/share/fonts')) {
         subFilter = `ass='${escapedP}'`;
       } else {
@@ -233,13 +233,13 @@ export async function mergeVideoAudioSubtitles(
       subFilter = `subtitles='${escapedP}'`;
     }
 
-    // FIXED: use abs diff check — floating point 1.0000001 !== 1.0 caused
+    // FIXED: use abs diff check Ã¢â‚¬â€ floating point 1.0000001 !== 1.0 caused
     // unnecessary re-encode even when pipeline passed videoSpeedRatio=1.0
     const speedRatio  = options.videoSpeedRatio ?? 1.0;
     const applyStretch = needsSpeedChange(speedRatio);
 
     // setpts: >1 slows video down, <1 speeds up
-    // e.g. ratio=1.2 (audio 20% longer) → setpts=1.200000*PTS (slow video to match)
+    // e.g. ratio=1.2 (audio 20% longer) Ã¢â€ â€™ setpts=1.200000*PTS (slow video to match)
     const videoFilter = applyStretch
       ? `${subFilter},setpts=${speedRatio.toFixed(6)}*PTS`
       : subFilter;
@@ -283,7 +283,7 @@ export async function mergeVideoAudioSubtitles(
 
 /**
  * Merge audio into video without subtitles.
- * FIXED: "-c:v copy" was passed as single string in outputOptions array —
+ * FIXED: "-c:v copy" was passed as single string in outputOptions array Ã¢â‚¬â€
  * fluent-ffmpeg treats it as one flag, ffmpeg rejects it. Now split correctly.
  * FIXED: floating-point safe ratio check.
  */

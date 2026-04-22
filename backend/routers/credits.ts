@@ -1,11 +1,11 @@
-/**
- * Credit management helpers — atomic deduction and addition.
+﻿/**
+ * Credit management helpers Ã¢â‚¬â€ atomic deduction and addition.
  * Used by TTS, video, dub, and admin routers.
  */
 import { TRPCError } from "@trpc/server";
 import { randomUUID } from "crypto";
 import { getDb } from "../db";
-import { users, creditTransactions } from "../../drizzle/schema";
+import { users, creditTransactions } from "../../shared/drizzle/schema";
 import { eq } from "drizzle-orm";
 
 /**

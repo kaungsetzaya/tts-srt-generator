@@ -1,13 +1,13 @@
-/**
- * Settings Router — app settings management
+﻿/**
+ * Settings Router Ã¢â‚¬â€ app settings management
  */
 import { z } from "zod";
 import { t, protectedProcedure, adminProcedure } from "./trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
-import { settings } from "../../drizzle/schema";
+import { settings } from "../../shared/drizzle/schema";
 
-// Allowed settings keys — prevents arbitrary key injection
+// Allowed settings keys Ã¢â‚¬â€ prevents arbitrary key injection
 const ALLOWED_SETTINGS_KEYS = [
   "trial_credits",
   "maintenance_mode",

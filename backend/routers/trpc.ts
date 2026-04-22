@@ -1,5 +1,5 @@
-/**
- * Shared tRPC initialization — imported by all router files.
+﻿/**
+ * Shared tRPC initialization Ã¢â‚¬â€ imported by all router files.
  * Keeps procedure definitions (protectedProcedure, adminProcedure) in one place.
  */
 import { initTRPC, TRPCError } from "@trpc/server";
@@ -10,7 +10,7 @@ export const t = initTRPC.context<TrpcContext>().create({
   transformer: superjson,
 });
 
-// ─── Typed context helpers ────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Typed context helpers Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 type AuthenticatedContext = TrpcContext & {
   user: NonNullable<TrpcContext["user"]>;
 };

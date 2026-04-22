@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Shared error types for LUMIX.
  * Used by backend route handlers and can be imported by frontend error boundaries.
  */

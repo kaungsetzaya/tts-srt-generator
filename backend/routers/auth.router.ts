@@ -1,5 +1,5 @@
-/**
- * Auth Router — login/logout/verify procedures
+﻿/**
+ * Auth Router Ã¢â‚¬â€ login/logout/verify procedures
  */
 import { z } from "zod";
 import { randomUUID } from "crypto";
@@ -7,7 +7,7 @@ import { t } from "./trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
 import { checkRateLimit, clearRateLimit } from "../_core/rateLimit";
-import { users, creditTransactions, settings } from "../../drizzle/schema";
+import { users, creditTransactions, settings } from "../../shared/drizzle/schema";
 import { eq } from "drizzle-orm";
 import { SignJWT } from "jose";
 import { COOKIE_NAME } from "@shared/const";

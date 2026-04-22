@@ -1,5 +1,5 @@
-/**
- * Admin Stats Router — error logs, voice stats, generation overview, churn analysis
+﻿/**
+ * Admin Stats Router Ã¢â‚¬â€ error logs, voice stats, generation overview, churn analysis
  */
 import { z } from "zod";
 import { t, adminProcedure } from "./trpc";
@@ -9,7 +9,7 @@ import {
   ttsConversions,
   subscriptions,
   errorLogs,
-} from "../../drizzle/schema";
+} from "../../shared/drizzle/schema";
 import { eq, desc, count, sql } from "drizzle-orm";
 
 export const adminStatsRouter = t.router({
