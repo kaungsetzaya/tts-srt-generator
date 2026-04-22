@@ -163,15 +163,6 @@ export default function VideoTranslator() {
           </button>
         )}
 
-        {/* Processing animation */}
-        {(isLoading || jobId) && (
-          <div className="border border-border bg-card p-6 sm:p-8 rounded-2xl text-center space-y-4">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto" style={{ color: C }} />
-            <p className="text-xs sm:text-sm font-bold opacity-60">Translating your video...</p>
-            {jobId && <p className="text-[10px] sm:text-xs font-mono opacity-40">Progress: {jobProgress}%</p>}
-          </div>
-        )}
-
         {/* Error display */}
         {jobError && (
           <div className="border border-red-500/30 bg-red-500/5 p-5 sm:p-6 rounded-2xl text-center">

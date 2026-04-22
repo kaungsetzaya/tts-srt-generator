@@ -2022,55 +2022,9 @@ export default function TTSGenerator() {
                             </>
                           )}
                         </button>
-                      )}
+)}
 
-                      {(translateMutation.isPending ||
-                        translateLinkMutation.isPending ||
-                        !!translateJobId) && (
-                        <div
-                          className={box}
-                          style={{
-                            background: cardBg,
-                            borderColor: cardBorder,
-                            boxShadow,
-                          }}
-                        >
-                          <div className="flex items-center justify-center gap-4 py-4">
-                            <div className="flex items-center gap-2">
-                              <div
-                                className="w-3 h-3 rounded-full animate-pulse"
-                                style={{ background: accent }}
-                              />
-                              <div
-                                className="w-3 h-3 rounded-full animate-pulse"
-                                style={{
-                                  background: accent,
-                                  animationDelay: "0.3s",
-                                }}
-                              />
-                              <div
-                                className="w-3 h-3 rounded-full animate-pulse"
-                                style={{
-                                  background: accent,
-                                  animationDelay: "0.6s",
-                                }}
-                              />
-                            </div>
-                            <span
-                              className="text-sm font-bold"
-                              style={{ color: subtextColor }}
-                            >
-                              {translateJobMessage
-                                ? `${translateJobMessage} (${translateJobProgress}%)`
-                                : `${t.translating} (${translateJobProgress}%)`}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  )}
-
-                  {videoResult && (
+                      {videoResult && (
                     <div
                       className={box}
                       style={{
