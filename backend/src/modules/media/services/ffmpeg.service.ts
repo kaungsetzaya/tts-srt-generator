@@ -1,4 +1,4 @@
-﻿import ffmpeg from 'fluent-ffmpeg';
+import ffmpeg from 'fluent-ffmpeg';
 import { promises as fs } from 'fs';
 import path from 'path';
 
@@ -245,7 +245,7 @@ export async function mergeVideoAudioSubtitles(
       : subFilter;
 
     // We use sidechaincompress to naturally return original audio to full volume during pauses!
-    const audioDuckingFilter = `[0:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,volume=0.8[a0];[1:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,volume=1.5[a1];[a0][a1]sidechaincompress=threshold=0.015:ratio=10:attack=10:release=1000[bg];[bg][a1]amix=inputs=2:duration=first:weights=1 1[aout]`;
+    const audioDuckingFilter = `[1:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,volume=1.5[a1]`;
     const complexFilterStr = `[0:v]${videoFilter}[vout];${audioDuckingFilter}`;
 
     ffmpeg(videoPath)
@@ -258,7 +258,7 @@ export async function mergeVideoAudioSubtitles(
         '-c:a',        'aac',
         '-b:a',        '128k',
         '-map',        '[vout]',
-        '-map',        '[aout]',
+        '-map',        '[a1]',
         '-t',          options.videoDurationSec.toFixed(3),
         '-map_metadata', '-1',
         '-movflags',   '+faststart',
@@ -302,8 +302,7 @@ export async function mergeVideoAudio(
     const applyStretch = needsSpeedChange(speedRatio);
     const videoFilter  = applyStretch ? `setpts=${speedRatio.toFixed(6)}*PTS` : null;
 
-    const audioDuckingFilter = `[0:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,volume=0.8[a0];[1:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,volume=1.5[a1];[a0][a1]sidechaincompress=threshold=0.015:ratio=10:attack=10:release=1000[bg];[bg][a1]amix=inputs=2:duration=first:weights=1 1[aout]`;
-
+    const audioDuckingFilter = `[1:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,volume=1.5[a1]`;
     let filterStr = audioDuckingFilter;
     if (videoFilter) {
       filterStr = `[0:v]${videoFilter}[vout];` + audioDuckingFilter;
@@ -318,7 +317,7 @@ export async function mergeVideoAudio(
         '-c:a',  'aac',
         '-b:a',  '128k',
         '-map',  videoFilter ? '[vout]' : '0:v',
-        '-map',  '[aout]',
+        '-map',  '[a1]',
         '-t',    options.videoDurationSec.toFixed(3),
         '-map_metadata', '-1',
         '-movflags', '+faststart',
