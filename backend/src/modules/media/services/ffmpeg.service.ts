@@ -213,6 +213,163 @@ export async function concatAudioFiles(audioParts: string[], outputPath: string)
   });
 }
 
+export interface VideoSegmentWarp {
+  origStartSec:    number;
+  origEndSec:      number;
+  speedRatio:      number;  // < 1 = slow down, > 1 = speed up
+  newDurationSec:  number;
+}
+
+/**
+ * Build a filter_complex string that warps each video segment independently.
+ * Each segment is trimmed from the original, its PTS scaled (setpts), then
+ * all segments are concatenated. The result perfectly matches the audio timeline.
+ *
+ * setpts formula: PTS = (PTS - STARTPTS) * speedRatio / TB  but we use the
+ * simpler form: setpts=(PTS-STARTPTS)*ratio which works because concat resets PTS.
+ */
+function buildPerSegmentVideoFilter(
+  segments: VideoSegmentWarp[],
+  videoDurationSec: number,
+  subFilter?: string
+): string {
+  const parts: string[] = [];
+  const labels: string[] = [];
+
+  segments.forEach((seg, i) => {
+    const start = seg.origStartSec.toFixed(6);
+    const end   = seg.origEndSec.toFixed(6);
+    const ratio = seg.speedRatio.toFixed(6);
+    const label = `v${i}`;
+
+    // trim → setpts to warp speed → apply subtitles on last step
+    parts.push(`[0:v]trim=start=${start}:end=${end},setpts=(PTS-STARTPTS)*${ratio}[${label}]`);
+    labels.push(`[${label}]`);
+  });
+
+  // Handle any video before the first segment (intro) at 1x speed
+  const firstSeg = segments[0];
+  if (firstSeg && firstSeg.origStartSec > 0.01) {
+    const introLabel = `vIntro`;
+    parts.unshift(`[0:v]trim=start=0:end=${firstSeg.origStartSec.toFixed(6)},setpts=PTS-STARTPTS[${introLabel}]`);
+    labels.unshift(`[${introLabel}]`);
+  }
+
+  // Handle any video after the last segment (outro) at 1x speed
+  const lastSeg = segments[segments.length - 1];
+  if (lastSeg && lastSeg.origEndSec < videoDurationSec - 0.1) {
+    const outroLabel = `vOutro`;
+    parts.push(`[0:v]trim=start=${lastSeg.origEndSec.toFixed(6)},setpts=PTS-STARTPTS[${outroLabel}]`);
+    labels.push(`[${outroLabel}]`);
+  }
+
+  const n = labels.length;
+  const concatOut = subFilter ? `vconcat` : `vout`;
+  parts.push(`${labels.join('')}concat=n=${n}:v=1:a=0[${concatOut}]`);
+
+  if (subFilter) {
+    parts.push(`[vconcat]${subFilter}[vout]`);
+  }
+
+  return parts.join(';');
+}
+
+export async function mergeVideoAudioSubtitlesPerSegment(
+  videoPath:     string,
+  audioPath:     string,
+  subtitlesPath: string,
+  outputPath:    string,
+  options: {
+    videoSegments:        VideoSegmentWarp[];
+    totalAudioDurationSec: number;
+    videoDurationSec:     number;
+    fontPath?:            string;
+    onProgress?:          (progress: number) => void;
+  }
+): Promise<void> {
+  // Build subtitle filter
+  let subFilter: string;
+  if (options.fontPath) {
+    const p  = subtitlesPath.replace(/\\/g, '/');
+    const fd = path.dirname(options.fontPath).replace(/\\/g, '/');
+    const ep = p.replace(/:/g, '\\:');
+    if (process.platform !== 'win32' && fd.startsWith('/usr/share/fonts')) {
+      subFilter = `ass='${ep}'`;
+    } else {
+      subFilter = `ass='${ep}':fontsdir='${fd.replace(/:/g, '\\:')}'`;
+    }
+  } else {
+    subFilter = `subtitles='${subtitlesPath.replace(/\\/g, '/').replace(/:/g, '\\:')}'`;
+  }
+
+  const filterComplex = buildPerSegmentVideoFilter(
+    options.videoSegments,
+    options.videoDurationSec,
+    subFilter
+  );
+
+  return new Promise((resolve, reject) => {
+    ffmpeg(videoPath)
+      .input(audioPath)
+      .outputOptions([
+        '-filter_complex', filterComplex,
+        '-map',    '[vout]',
+        '-map',    '1:a',
+        '-c:v',    'libx264',
+        '-preset', 'fast',
+        '-crf',    '23',
+        '-c:a',    'aac',
+        '-b:a',    '128k',
+        '-t',      options.totalAudioDurationSec.toFixed(3),
+        '-map_metadata', '-1',
+        '-movflags', '+faststart',
+      ])
+      .on('progress', (p: any) => options.onProgress?.(p.percent ?? 0))
+      .on('error', reject)
+      .on('end',   resolve)
+      .save(outputPath);
+  });
+}
+
+export async function mergeVideoAudioPerSegment(
+  videoPath:  string,
+  audioPath:  string,
+  outputPath: string,
+  options: {
+    videoSegments:         VideoSegmentWarp[];
+    totalAudioDurationSec: number;
+    videoDurationSec:      number;
+    onProgress?:           (progress: number) => void;
+  }
+): Promise<void> {
+  const filterComplex = buildPerSegmentVideoFilter(
+    options.videoSegments,
+    options.videoDurationSec
+  );
+
+  return new Promise((resolve, reject) => {
+    ffmpeg(videoPath)
+      .input(audioPath)
+      .outputOptions([
+        '-filter_complex', filterComplex,
+        '-map',    '[vout]',
+        '-map',    '1:a',
+        '-c:v',    'libx264',
+        '-preset', 'fast',
+        '-crf',    '23',
+        '-c:a',    'aac',
+        '-b:a',    '128k',
+        '-t',      options.totalAudioDurationSec.toFixed(3),
+        '-map_metadata', '-1',
+        '-movflags', '+faststart',
+      ])
+      .on('progress', (p: any) => options.onProgress?.(p.percent ?? 0))
+      .on('error', reject)
+      .on('end',   resolve)
+      .save(outputPath);
+  });
+}
+
 export async function mergeVideoAudioSubtitles(
   videoPath: string,
   audioPath: string,
@@ -339,6 +496,8 @@ export const ffmpegService = {
   trimAudio,
   mergeVideoAudioSubtitles,
   mergeVideoAudio,
+  mergeVideoAudioSubtitlesPerSegment,
+  mergeVideoAudioPerSegment,
   concatAudioFiles,
   convertToWav,
 };

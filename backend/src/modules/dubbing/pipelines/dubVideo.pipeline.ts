@@ -33,7 +33,7 @@ function graphemeLen(s: string): number {
 }
 
 function splitToSubtitleChunks(text: string, maxCharsPerLine: number): string[] {
-    // Clean up text Ã¢â‚¬â€ flatten newlines
+    // Clean up text — flatten newlines
     const clean = text.replace(/[\n\r]+/g, " ").trim();
     if (!clean) return [""];
 
@@ -53,7 +53,7 @@ function splitToSubtitleChunks(text: string, maxCharsPerLine: number): string[] 
         return [clean];
     }
 
-    // Text is too long for 2 lines Ã¢â‚¬â€ split into multiple entries
+    // Text is too long for 2 lines — split into multiple entries
     const graphemes = [...segmenter.segment(clean)].map(g => g.segment);
     const chunks: string[] = [];
     let pos = 0;
@@ -130,7 +130,6 @@ export class DubVideoPipeline {
 
     const tempVideoPath = path.join(tempDir, `input.mp4`);
     const tempAudioExtract = path.join(tempDir, `extracted.mp3`);
-    const tempFinalAudio = path.join(tempDir, `final_audio.mp3`);
     const tempAssPath = path.join(tempDir, `subtitles.ass`);
     const tempOutputPath = path.join(tempDir, `output.mp4`);
 
@@ -163,7 +162,6 @@ export class DubVideoPipeline {
 
       // Step 5: Generate TTS per segment (concurrent with limiter)
       const FIXED_SPEED = 1.1;
-      const TINY_PAUSE_MS = 100;
       const CONCURRENCY = 1;
 
       const activeSegments = translatedSegments.filter(seg => seg.translatedText.trim());
@@ -263,11 +261,16 @@ export class DubVideoPipeline {
       console.log(`[Dubbing Pipeline] Step 5 OK: ${ttsResults.length} TTS segments generated`);
 
       const audioParts: string[] = [];
-      const audioTimeline: Array<{ startMs: number; endMs: number; text: string }> = [];
+      const audioTimeline: Array<{
+        startMs: number;
+        endMs: number;
+        text: string;
+        origVideoStartMs: number;
+        origVideoEndMs: number;
+        videoSpeedRatio: number;
+      }> = [];
       let timelinePosMs = 0;
 
-      // Generate silence parts as WAV (matches concatAudioFiles WAV output)
-      // This avoids MP3 encoder-delay accumulation across silence inserts.
       for (let i = 0; i < activeSegments.length; i++) {
         const seg = activeSegments[i];
         const result = ttsResults[i];
@@ -276,64 +279,36 @@ export class DubVideoPipeline {
           continue;
         }
 
-        const targetStartMs = Math.round(seg.start * 1000);
-        const targetEndMs   = Math.round(seg.end * 1000);
-        const targetDurationMs = Math.max(targetEndMs - targetStartMs, 100);
+        const origStartMs = Math.round(seg.start * 1000);
+        const origEndMs   = Math.round(seg.end * 1000);
+        const origDurationMs = Math.max(origEndMs - origStartMs, 100);
 
-        // Fill gap from current position to original segment start with silence
-        const gapMs = targetStartMs - timelinePosMs;
-        if (gapMs > 10) {
-          const silencePath = path.join(tempDir, `gap_${i}.wav`);
-          await ffmpegService.generateSilenceWav(gapMs, silencePath);
-          audioParts.push(silencePath);
-          timelinePosMs += gapMs;
-        }
+        // Voice plays at natural speed — no audio speed changes at all.
+        const actualDurationMs = result.duration;
 
-        // Speed up TTS if longer than the target window
-        let finalAudioPath = result.partPath;
-        let actualDurationMs = result.duration;
-
-        if (result.duration > targetDurationMs * 1.05) {
-          const speedRatio = targetDurationMs / result.duration;
-          const spedUpPath = path.join(tempDir, `sped_${seg.index}.wav`);
-          try {
-            await ffmpegService.speedUpAudioWav(result.partPath, spedUpPath, speedRatio);
-            finalAudioPath = spedUpPath;
-            actualDurationMs = await ffmpegService.getAudioDurationMs(spedUpPath);
-            console.log(`[Dubbing Pipeline] Segment ${seg.index} sped up ${speedRatio.toFixed(3)}x → ${actualDurationMs}ms`);
-          } catch (err: any) {
-            console.warn(`[Dubbing Pipeline] Speed up failed for segment ${seg.index}, using original: ${err.message}`);
-          }
-        }
-
-        // Record where this audio sits in the timeline BEFORE advancing
+        // Record where this audio sits in the new timeline.
+        // Audio is placed sequentially: no gaps between segments,
+        // the voice flows continuously. Video will be warped per-segment to match.
         const segStartMs = timelinePosMs;
         const segEndMs   = timelinePosMs + actualDurationMs;
 
-        // Convert TTS part to WAV if it isn't already (silence removals produce MP3)
-        let wavPartPath = finalAudioPath;
-        if (!finalAudioPath.endsWith('.wav')) {
-          wavPartPath = finalAudioPath.replace(/\.[^.]+$/, '_pcm.wav');
-          await ffmpegService.convertToWav(finalAudioPath, wavPartPath);
-        }
+        // Store original video timing so we can warp the video to match voice duration.
+        // videoSpeedRatio for this segment = origDuration / actualDuration
+        // < 1.0 = slow video down (voice was longer than original)
+        // > 1.0 = speed video up (voice was shorter than original)
+        const segVideoSpeedRatio = origDurationMs / actualDurationMs;
 
-        audioParts.push(wavPartPath);
+        audioParts.push(result.partPath);
         audioTimeline.push({
-          startMs: segStartMs,
-          endMs:   segEndMs,
-          text:    result.text,
+          startMs:          segStartMs,
+          endMs:            segEndMs,
+          text:             result.text,
+          origVideoStartMs: origStartMs,
+          origVideoEndMs:   origEndMs,
+          videoSpeedRatio:  segVideoSpeedRatio,
         });
 
         timelinePosMs = segEndMs;
-      }
-
-      // Add trailing silence to match video duration (WAV for accurate concat)
-      const videoDurationMs = Math.round(videoDurationSec * 1000);
-      if (timelinePosMs < videoDurationMs) {
-        const trailingSilencePath = path.join(tempDir, `trailing_silence.wav`);
-        await ffmpegService.generateSilenceWav(videoDurationMs - timelinePosMs, trailingSilencePath);
-        audioParts.push(trailingSilencePath);
-        timelinePosMs = videoDurationMs;
       }
       
       if (audioParts.length === 0) {
@@ -379,23 +354,28 @@ export class DubVideoPipeline {
         }
       }
 
-      // Final audio duration
+      // Final audio duration — voice plays at natural speed, video warps to match.
       const totalAudioDurationSec = timelinePosMs / 1000;
       
       if (totalAudioDurationSec < 1.0) {
         throw new Error(`Generated narration too short (${totalAudioDurationSec.toFixed(2)}s). TTS may have failed.`);
       }
-      
-      // Calculate speed ratio to make video match narration
-      // Clamp to reasonable range: 0.5x (slow down) to 2.0x (speed up)
-      const rawRatio = totalAudioDurationSec / videoDurationSec;
-      const videoSpeedRatio = Math.max(0.5, Math.min(2.0, rawRatio));
 
-      console.log(`[Dubbing Pipeline] Narration duration: ${totalAudioDurationSec.toFixed(2)}s, Original video: ${videoDurationSec.toFixed(2)}s`);
-      if (videoSpeedRatio !== rawRatio) {
-        console.warn(`[Dubbing Pipeline] Speed ratio clamped from ${rawRatio.toFixed(4)} to ${videoSpeedRatio.toFixed(4)}`);
-      }
-      console.log(`[Dubbing Pipeline] Applying video speed ratio: ${videoSpeedRatio.toFixed(4)}`);
+      // Build per-segment video speed map for the merge step.
+      // Each entry: { origStartSec, origEndSec, speedRatio }
+      // speedRatio < 1 = slow video down, > 1 = speed up.
+      // Clamped to 0.25x–4.0x (ffmpeg setpts limit).
+      const videoSegments = audioTimeline.map(seg => ({
+        origStartSec: seg.origVideoStartMs / 1000,
+        origEndSec:   seg.origVideoEndMs   / 1000,
+        speedRatio:   Math.max(0.25, Math.min(4.0, seg.videoSpeedRatio)),
+        newDurationSec: (seg.endMs - seg.startMs) / 1000,
+      }));
+
+      console.log(`[Dubbing Pipeline] Per-segment video warp:`);
+      videoSegments.forEach((vs, i) => {
+        console.log(`  seg ${i}: video ${vs.origStartSec.toFixed(2)}s–${vs.origEndSec.toFixed(2)}s → speed ${vs.speedRatio.toFixed(3)}x (voice ${vs.newDurationSec.toFixed(2)}s)`);
+      });
 
       // Step 6: Concat audio parts and merge with video
       // concatAudioFiles now outputs a sample-accurate PCM WAV directly.
@@ -430,35 +410,41 @@ export class DubVideoPipeline {
       }
 
       try {
+        const videoDimensions = await ffmpegService.getVideoSize(tempVideoPath);
+
         if (options.srtEnabled !== false && processedForSrt.length > 0) {
-          console.log(`[Dubbing Pipeline] Merging video with audio and subtitles...`);
-          const videoDimensions = await ffmpegService.getVideoSize(tempVideoPath);
-          
+          console.log(`[Dubbing Pipeline] Merging video with audio and subtitles (per-segment warp)...`);
           const assContent = assBuilderService.buildAssContent(processedForSrt, fontPath, videoDimensions.width, videoDimensions.height, options as any);
           await fs.writeFile(tempAssPath, assContent);
-          await ffmpegService.mergeVideoAudioSubtitles(tempVideoPath, finalAudioPath, tempAssPath, tempOutputPath, {
-            videoDurationSec: totalAudioDurationSec, // New duration
-            videoSpeedRatio,
-            fontPath,
-            onProgress: (p: number) => {
-              if (jobId) {
-                const mergeProgress = 85 + Math.floor((p / 100) * 10);
-                updateJob(jobId, { progress: mergeProgress, message: "Merging visuals with audio..." });
-              }
+          await ffmpegService.mergeVideoAudioSubtitlesPerSegment(
+            tempVideoPath, finalAudioPath, tempAssPath, tempOutputPath,
+            {
+              videoSegments,
+              totalAudioDurationSec,
+              videoDurationSec,
+              fontPath,
+              onProgress: (p: number) => {
+                if (jobId) {
+                  updateJob(jobId, { progress: 85 + Math.floor((p / 100) * 10), message: "Merging visuals with audio..." });
+                }
+              },
             }
-          });
+          );
         } else {
-          console.log(`[Dubbing Pipeline] Merging video with audio...`);
-          await ffmpegService.mergeVideoAudio(tempVideoPath, finalAudioPath, tempOutputPath, {
-            videoDurationSec: totalAudioDurationSec, // New duration
-            videoSpeedRatio,
-            onProgress: (p: number) => {
-              if (jobId) {
-                const mergeProgress = 85 + Math.floor((p / 100) * 10);
-                updateJob(jobId, { progress: mergeProgress, message: "Merging visuals with audio..." });
-              }
+          console.log(`[Dubbing Pipeline] Merging video with audio (per-segment warp)...`);
+          await ffmpegService.mergeVideoAudioPerSegment(
+            tempVideoPath, finalAudioPath, tempOutputPath,
+            {
+              videoSegments,
+              totalAudioDurationSec,
+              videoDurationSec,
+              onProgress: (p: number) => {
+                if (jobId) {
+                  updateJob(jobId, { progress: 85 + Math.floor((p / 100) * 10), message: "Merging visuals with audio..." });
+                }
+              },
             }
-          });
+          );
         }
       } catch (err: any) {
         console.error("[Dubbing Pipeline] Merge step failed:", err.message);
