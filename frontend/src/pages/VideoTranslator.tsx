@@ -112,8 +112,6 @@ export default function VideoTranslator() {
       <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6 pb-24">
         {/* Title */}
         <div className="text-center py-4 sm:py-6">
-          <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-widest mb-2" style={{ color: C }}>Video → Myanmar</h1>
-          <p className="text-xs sm:text-sm opacity-50">Upload video and get Myanmar translation</p>
           <div className="flex items-center justify-center gap-3 sm:gap-4 mt-3 text-[10px] sm:text-xs opacity-40 uppercase font-bold tracking-tighter">
             <span>Max 25MB</span>
             <span>•</span>

@@ -2123,22 +2123,6 @@ export default function TTSGenerator() {
               {mainTab === "dubbing" && (
                 <div className="max-w-2xl mx-auto animate-in fade-in zoom-in-95 duration-300">
                   <div className="text-center mb-2 sm:mb-4">
-                    <h2
-                      className="text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-wider sm:tracking-widest mb-2 leading-normal"
-                      style={{ textShadow: "none", color: accent }}
-                    >
-                      {lang === "mm"
-                        ? "Auto Creator"
-                        : "Auto Creator"}
-                    </h2>
-                    <p
-                      className="font-bold tracking-wider text-xs sm:text-sm mt-1"
-                      style={{ color: subtextColor }}
-                    >
-                      {lang === "mm"
-                        ? "ဖြင့် Video ဖန်တီးခြင်း"
-                        : "Create dubbed videos with AI"}
-                    </p>
                     {!isAdmin && !hasPlan && me && !subLoading && (
                       <div
                         className="mt-3 mx-auto max-w-md flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold"
