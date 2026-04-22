@@ -194,21 +194,19 @@ private sanitize(text: string): string {
         return results;
     }
 
-    private async callApi(text: string, modelId: string, apiKey: string): Promise<string | null> {
+private async callApi(text: string, modelId: string, apiKey: string): Promise<string | null> {
         const url = `https://generativelanguage.googleapis.com/v1beta/${modelId}:generateContent?key=${apiKey}`;
-        const systemPrompt = `You are a TTS narrator. Translate video script EXACTLY word-for-word to Myanmar.
-Keep exact meaning. Output must be speakable. No intro or outro.
-Return exact same number of lines as input.
+        const systemPrompt = `You are a professional Movie Dubbing Script Writer.
+Translate English video script to natural Spoken Burmese (အပြောစကား).
 
 STRICT RULES:
-1. ONLY TRANSLATE: Output ONLY the translation. Do NOT add any explanation, note, or intro text like "Ã¡â‚¬Â¤Ã¡â‚¬Å¾Ã¡â‚¬Å Ã¡â‚¬ÂºÃ¡â‚¬â„¢Ã¡â‚¬Â¾Ã¡â‚¬Â¬..." or "This is..." 
-2. ONLY MYANMAR: Output in Myanmar ONLY.
-3. TRANSLITERATION: Use phonetic Myanmar (Car=Ã¡â‚¬â‚¬Ã¡â‚¬Â¬Ã¡â‚¬Â¸, Bus=Ã¡â‚¬ËœÃ¡â‚¬ÂÃ¡â‚¬ÂºÃ¡â‚¬â€¦Ã¡â‚¬ÂºÃ¡â‚¬â‚¬Ã¡â‚¬Â¬Ã¡â‚¬Â¸, Zombie=Ã¡â‚¬â€¡Ã¡â‚¬Â½Ã¡â‚¬â€Ã¡â‚¬ÂºÃ¡â‚¬ËœÃ¡â‚¬Â®Ã¡â‚¬Â¸).
-4. DYNAMIC ENDINGS: Mix "Ã¡â‚¬ÂÃ¡â‚¬Â²Ã¡â‚¬Â·Ã¡â‚¬ÂÃ¡â‚¬Â¬Ã¡â‚¬â€¢Ã¡â‚¬Â«", "Ã¡â‚¬â€¢Ã¡â‚¬Â«Ã¡â‚¬ÂÃ¡â‚¬Â±Ã¡â‚¬Â¬Ã¡â‚¬Â·Ã¡â‚¬ÂÃ¡â‚¬Å¡Ã¡â‚¬Âº", "Ã¡â‚¬â€Ã¡â‚¬Â±Ã¡â‚¬â‚¬Ã¡â‚¬Â¼Ã¡â‚¬ÂÃ¡â‚¬Â¬Ã¡â‚¬â€¢Ã¡â‚¬Â«", "Ã¡â‚¬Å¾Ã¡â‚¬Â½Ã¡â‚¬Â¬Ã¡â‚¬Â¸Ã¡â‚¬ÂÃ¡â‚¬Â²Ã¡â‚¬Â·Ã¡â‚¬â€ºÃ¡â‚¬ÂÃ¡â‚¬Å¡Ã¡â‚¬Âº", "Ã¡â‚¬Å“Ã¡â‚¬Â­Ã¡â‚¬Â¯Ã¡â‚¬â‚¬Ã¡â‚¬ÂºÃ¡â‚¬â„¢Ã¡â‚¬Â­Ã¡â‚¬â€¢Ã¡â‚¬Â«Ã¡â‚¬ÂÃ¡â‚¬Å¡Ã¡â‚¬Âº", "Ã¡â‚¬â‚¬Ã¡â‚¬Â¼Ã¡â‚¬ÂÃ¡â‚¬Â¬Ã¡â‚¬â€¢Ã¡â‚¬Â«", "Ã¡â‚¬â€Ã¡â‚¬Â±Ã¡â‚¬ÂÃ¡â‚¬Â²Ã¡â‚¬Â·Ã¡â‚¬ÂÃ¡â‚¬Å¡Ã¡â‚¬Âº".
-5. NO "Ã¡â‚¬â€¢Ã¡â‚¬Â«Ã¡â‚¬ÂÃ¡â‚¬Å¡Ã¡â‚¬Âº" repetition.
-6. SPOKEN STYLE: Natural conversational Myanmar.
-7. CLEAN OUTPUT: JSON array ONLY. No intro/notes.
-8. KEEP SHORT: Each translation MUST be concise Ã¢â‚¬â€ max ~30 Myanmar characters per segment. Prefer shorter sentences. Do NOT expand or add unnecessary words.`;
+1. NO LITERARY BURMESE: Avoid "သည်", "ပါသည်", "သနည်း" endings. Use natural endings like "တယ်", "နေတယ်", "ခဲ့တာ", "တာပေါ့".
+2. DUBBING SYNC: Keep translation length similar to English for timing.
+3. NATURAL FLOW: Break long sentences into shorter, punchy ones.
+4. EMOTIONAL PARTICLES: Add particles (ပေါ့, လေ, နော်, ကွ) to match speaker tone.
+5. KEEP SHORT: Max ~30-40 characters per segment.
+
+OUTPUT: JSON array of strings ONLY. No explanations.`;
 
         const body = {
             contents: [{ parts: [{ text: `Translate to Myanmar:\n\n${text}` }] }],
@@ -226,21 +224,19 @@ STRICT RULES:
         return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
     }
 
-    private async callBatchApi(lines: string[], modelId: string, apiKey: string): Promise<string[] | null> {
+private async callBatchApi(lines: string[], modelId: string, apiKey: string): Promise<string[] | null> {
         const url = `https://generativelanguage.googleapis.com/v1beta/${modelId}:generateContent?key=${apiKey}`;
-        const systemPrompt = `You are a TTS narrator. Translate video script EXACTLY word-for-word to Myanmar.
-Keep exact meaning. Output must be speakable. No intro or outro.
-Return exact same number of lines as input.
+        const systemPrompt = `You are a professional Movie Dubbing Script Writer.
+Translate English video script to natural Spoken Burmese (အပြောစကား).
 
 STRICT RULES:
-1. ONLY TRANSLATE: Output ONLY the translation. Do NOT add any explanation, note, or intro text like "Ã¡â‚¬Â¤Ã¡â‚¬Å¾Ã¡â‚¬Å Ã¡â‚¬ÂºÃ¡â‚¬â„¢Ã¡â‚¬Â¾Ã¡â‚¬Â¬..." or "This is..." 
-2. ONLY MYANMAR: Output in Myanmar ONLY.
-3. TRANSLITERATION: Use phonetic Myanmar (Car=Ã¡â‚¬â‚¬Ã¡â‚¬Â¬Ã¡â‚¬Â¸, Bus=Ã¡â‚¬ËœÃ¡â‚¬ÂÃ¡â‚¬ÂºÃ¡â‚¬â€¦Ã¡â‚¬ÂºÃ¡â‚¬â‚¬Ã¡â‚¬Â¬Ã¡â‚¬Â¸, Zombie=Ã¡â‚¬â€¡Ã¡â‚¬Â½Ã¡â‚¬â€Ã¡â‚¬ÂºÃ¡â‚¬ËœÃ¡â‚¬Â®Ã¡â‚¬Â¸).
-4. DYNAMIC ENDINGS: Mix "Ã¡â‚¬ÂÃ¡â‚¬Â²Ã¡â‚¬Â·Ã¡â‚¬ÂÃ¡â‚¬Â¬Ã¡â‚¬â€¢Ã¡â‚¬Â«", "Ã¡â‚¬â€¢Ã¡â‚¬Â«Ã¡â‚¬ÂÃ¡â‚¬Â±Ã¡â‚¬Â¬Ã¡â‚¬Â·Ã¡â‚¬ÂÃ¡â‚¬Å¡Ã¡â‚¬Âº", "Ã¡â‚¬â€Ã¡â‚¬Â±Ã¡â‚¬â‚¬Ã¡â‚¬Â¼Ã¡â‚¬ÂÃ¡â‚¬Â¬Ã¡â‚¬â€¢Ã¡â‚¬Â«", "Ã¡â‚¬Å¾Ã¡â‚¬Â½Ã¡â‚¬Â¬Ã¡â‚¬Â¸Ã¡â‚¬ÂÃ¡â‚¬Â²Ã¡â‚¬Â·Ã¡â‚¬â€ºÃ¡â‚¬ÂÃ¡â‚¬Å¡Ã¡â‚¬Âº", "Ã¡â‚¬Å“Ã¡â‚¬Â­Ã¡â‚¬Â¯Ã¡â‚¬â‚¬Ã¡â‚¬ÂºÃ¡â‚¬â„¢Ã¡â‚¬Â­Ã¡â‚¬â€¢Ã¡â‚¬Â«Ã¡â‚¬ÂÃ¡â‚¬Å¡Ã¡â‚¬Âº", "Ã¡â‚¬â‚¬Ã¡â‚¬Â¼Ã¡â‚¬ÂÃ¡â‚¬Â¬Ã¡â‚¬â€¢Ã¡â‚¬Â«", "Ã¡â‚¬â€Ã¡â‚¬Â±Ã¡â‚¬ÂÃ¡â‚¬Â²Ã¡â‚¬Â·Ã¡â‚¬ÂÃ¡â‚¬Å¡Ã¡â‚¬Âº".
-5. NO "Ã¡â‚¬â€¢Ã¡â‚¬Â«Ã¡â‚¬ÂÃ¡â‚¬Å¡Ã¡â‚¬Âº" repetition.
-6. SPOKEN STYLE: Natural conversational Myanmar.
-7. CLEAN OUTPUT: JSON array ONLY. No intro/notes.
-8. KEEP SHORT: Each translation MUST be concise Ã¢â‚¬â€ max ~30 Myanmar characters per segment. Prefer shorter sentences. Do NOT expand or add unnecessary words.`;
+1. NO LITERARY BURMESE: Avoid "သည်", "ပါသည်", "သနည်း" endings. Use natural endings like "တယ်", "နေတယ်", "ခဲ့တာ", "တာပေါ့".
+2. DUBBING SYNC: Keep translation length similar to English for timing.
+3. NATURAL FLOW: Break long sentences into shorter, punchy ones.
+4. EMOTIONAL PARTICLES: Add particles (ပေါ့, လေ, နော်, ကွ) to match speaker tone.
+5. KEEP SHORT: Max ~30-40 characters per segment.
+
+OUTPUT: JSON array of strings ONLY. No explanations.`;
 
         const body = {
             contents: [{ parts: [{ text: `TEXT TO TRANSLATE (JSON Array):\n${JSON.stringify(lines)}` }] }],
