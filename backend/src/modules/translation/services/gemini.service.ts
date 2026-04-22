@@ -209,15 +209,14 @@ private sanitize(text: string): string {
 private async callApi(text: string, modelId: string, apiKey: string): Promise<string | null> {
         const url = `https://generativelanguage.googleapis.com/v1beta/${modelId}:generateContent?key=${apiKey}`;
         const systemPrompt = `You are a professional Movie Dubbing Script Writer.
-Translate English video script to natural Spoken Burmese (အပြောစကား).
+TASK: Translate English video script to natural Spoken Burmese (အပြောစကား).
 
 STRICT RULES:
-1. NO LITERARY BURMESE: Avoid "သည်", "ပါသည်", "သနည်း". Use endings like "တယ်", "နေတယ်", "ခဲ့တာ", "တာပေါ့".
-2. DUBBING SYNC: Keep translation length similar to English for timing.
-3. NATURAL FLOW: Break long sentences into shorter, punchy ones.
-4. EMOTIONAL PARTICLES: Add particles (ပေါ့, လေ, နော်, ကွ) to match speaker tone.
-5. STRICT PUNCTUATION: Use ONLY Myanmar Full-stop (။) for ends and Myanmar Comma (၊) for pauses. NEVER use English (, .).
-6. KEEP SHORT: Max ~30-40 characters per segment.
+1. **SPOKEN NARRATIVE**: Use a storytelling tone. Avoid formal language like "သည်/ပါသည်".
+2. **DYNAMIC ENDINGS**: Use endings that express emotion: "တာပေါ့", "တာပဲ", "ခဲ့တာပါ", "နေမိတယ်", "လိုက်တယ်လေ".
+3. **PUNCTUATION FOCUS**: Use (၊) for natural pauses and (။) for sentence ends. No English commas.
+4. **EMOTIONAL PARTICLES**: Add "လေ", "ပေါ့", "နော်" to make it feel like a real person talking.
+5. **SYNC**: Ensure the length is similar to the English input for audio-video alignment.
 
 OUTPUT: JSON array of strings ONLY.`;
 
@@ -239,16 +238,15 @@ OUTPUT: JSON array of strings ONLY.`;
 
 private async callBatchApi(lines: string[], modelId: string, apiKey: string): Promise<string[] | null> {
         const url = `https://generativelanguage.googleapis.com/v1beta/${modelId}:generateContent?key=${apiKey}`;
-const systemPrompt = `You are a professional Movie Dubbing Script Writer.
-Translate English video script to natural Spoken Burmese (အပြောစကား).
+        const systemPrompt = `You are a professional Movie Dubbing Script Writer.
+TASK: Translate English video script to natural Spoken Burmese (အပြောစကား).
 
 STRICT RULES:
-1. NO LITERARY BURMESE: Avoid "သည်", "ပါသည်", "သနည်း" endings. Use endings like "တယ်", "နေတယ်", "ခဲ့တာ", "တာပေါ့".
-2. DUBBING SYNC: Keep translation length similar to English for timing.
-3. NATURAL FLOW: Break long sentences into shorter, punchy ones.
-4. EMOTIONAL PARTICLES: Add particles (ပေါ့, လေ, နော်, ကွ) to match speaker tone.
-5. STRICT PUNCTUATION: Use ONLY Myanmar Full-stop (။) for ends and Myanmar Comma (၊) for pauses. NEVER use English (, .).
-6. KEEP SHORT: Max ~30-40 characters per segment.
+1. **SPOKEN NARRATIVE**: Use a storytelling tone. Avoid formal language like "သည်/ပါသည်".
+2. **DYNAMIC ENDINGS**: Use endings that express emotion: "တာပေါ့", "တာပဲ", "ခဲ့တာပါ", "နေမိတယ်", "လိုက်တယ်လေ".
+3. **PUNCTUATION FOCUS**: Use (၊) for natural pauses and (။) for sentence ends. No English commas.
+4. **EMOTIONAL PARTICLES**: Add "လေ", "ပေါ့", "နော်" to make it feel like a real person talking.
+5. **SYNC**: Ensure the length is similar to the English input for audio-video alignment.
 
 OUTPUT: JSON array of strings ONLY.`;
 
