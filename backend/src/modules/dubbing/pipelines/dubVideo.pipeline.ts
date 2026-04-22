@@ -267,12 +267,12 @@ export class DubVideoPipeline {
         }
         
         // Add natural pause before segment (except the first one if it starts at 0)
-        if (i > 0) {
+        if (i > 0 && NATURAL_PAUSE_MS > 0) {
           const silencePath = path.join(tempDir, `pause_${i}.mp3`);
           await ffmpegService.generateSilence(NATURAL_PAUSE_MS, silencePath);
           audioParts.push(silencePath);
           timelinePosMs += NATURAL_PAUSE_MS;
-        } else {
+        } else if (i === 0) {
            // First segment starts at its original intended time OR 0
            const startOffset = Math.round((activeSegments[0].start || 0) * 1000);
            if (startOffset > 0) {
