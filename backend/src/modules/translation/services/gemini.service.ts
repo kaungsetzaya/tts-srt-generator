@@ -208,25 +208,17 @@ private sanitize(text: string): string {
 
 private async callApi(text: string, modelId: string, apiKey: string): Promise<string | null> {
         const url = `https://generativelanguage.googleapis.com/v1beta/${modelId}:generateContent?key=${apiKey}`;
-        const systemPrompt = `TASK: First, accurately transcribe the exact spoken words from the video audio. Second, translate the transcription into **Natural, Spoken Burmese** (Myanmar Language).
+        const systemPrompt = `You are a professional Movie Dubbing Script Writer.
+TASK: Translate English script into Natural, Expressive Spoken Burmese (အပြောစကား).
 
-GOAL: Create a highly accurate translation suitable for a professional Myanmar Dubbing Video that perfectly matches the original meaning.
+STRICT RULES:
+1. **DEEP NARRATIVE**: Use a detailed storytelling tone. Don't simplify or shorten too much. Keep the emotional depth of the script.
+2. **FAVORITE ENDINGS**: Use expressive spoken endings like "ခဲ့တာပါ။", "နေမိတော့တာပဲ။", "ထင်နေတာပေါ့။", "မြင်လိုက်ရတယ်...", "သေးတယ်။", "မသိဘူးပေါ့။".
+3. **STYLE**: Use "အဲ့ဒီနောက်ပိုင်း" instead of "အဲဒီနောက်", and "ဒါပေမယ့်" instead of "ဒါပေမဲ့" to match the user's preferred Recap style.
+4. **PUNCTUATION**: Use ONLY Myanmar (။) for sentence ends and (၊) for natural pauses. Use (...) for dramatic effect. NEVER use English punctuation.
+5. **DUBBING FLOW**: Ensure the Burmese words flow naturally like a real person telling a story to a friend.
 
-STRICT TRANSLATION GUIDELINES:
-
-1. **EXACT MEANING**: The translation MUST perfectly preserve the original meaning, context, and nuance of the speaker. Do not summarize, guess, or skip details.
-
-2. **SPOKEN STYLE (အပြောစကား)**: Use natural, conversational Burmese.
-   - STRICTLY AVOID formal literary style (စာစကား).
-   - Example: Use "မသိဘူး" (Conversational) instead of "မသိရှိပါ" (Formal).
-
-3. **EMOTION & PARTICLES**: Capture the speaker's tone using appropriate sentence-ending particles ('ကွ', 'ဗျာ', 'နော်', 'ရှင့်', 'လေ').
-
-4. **IDIOMS**: Translate the *meaning* of idioms, not the literal words, ensuring it makes sense in Burmese culture.
-
-5. **COMPLETENESS**: Transcribe and translate EVERY single spoken sentence. Do not hallucinate text for silence or music.
-
-OUTPUT: JSON array of strings ONLY.`;
+OUTPUT: Return a JSON array of strings ONLY.`;
 
         const body = {
             contents: [{ parts: [{ text: `Translate to Myanmar:\n\n${text}` }] }],
@@ -246,25 +238,17 @@ OUTPUT: JSON array of strings ONLY.`;
 
 private async callBatchApi(lines: string[], modelId: string, apiKey: string): Promise<string[] | null> {
         const url = `https://generativelanguage.googleapis.com/v1beta/${modelId}:generateContent?key=${apiKey}`;
-        const systemPrompt = `TASK: First, accurately transcribe the exact spoken words from the video audio. Second, translate the transcription into **Natural, Spoken Burmese** (Myanmar Language).
+        const systemPrompt = `You are a professional Movie Dubbing Script Writer.
+TASK: Translate English script into Natural, Expressive Spoken Burmese (အပြောစကား).
 
-GOAL: Create a highly accurate translation suitable for a professional Myanmar Dubbing Video that perfectly matches the original meaning.
+STRICT RULES:
+1. **DEEP NARRATIVE**: Use a detailed storytelling tone. Don't simplify or shorten too much. Keep the emotional depth of the script.
+2. **FAVORITE ENDINGS**: Use expressive spoken endings like "ခဲ့တာပါ။", "နေမိတော့တာပဲ။", "ထင်နေတာပေါ့။", "မြင်လိုက်ရတယ်...", "သေးတယ်။", "မသိဘူးပေါ့။".
+3. **STYLE**: Use "အဲ့ဒီနောက်ပိုင်း" instead of "အဲဒီနောက်", and "ဒါပေမယ့်" instead of "ဒါပေမဲ့" to match the user's preferred Recap style.
+4. **PUNCTUATION**: Use ONLY Myanmar (။) for sentence ends and (၊) for natural pauses. Use (...) for dramatic effect. NEVER use English punctuation.
+5. **DUBBING FLOW**: Ensure the Burmese words flow naturally like a real person telling a story to a friend.
 
-STRICT TRANSLATION GUIDELINES:
-
-1. **EXACT MEANING**: The translation MUST perfectly preserve the original meaning, context, and nuance of the speaker. Do not summarize, guess, or skip details.
-
-2. **SPOKEN STYLE (အပြောစကား)**: Use natural, conversational Burmese.
-   - STRICTLY AVOID formal literary style (စာစကား).
-   - Example: Use "မသိဘူး" (Conversational) instead of "မသိရှိပါ" (Formal).
-
-3. **EMOTION & PARTICLES**: Capture the speaker's tone using appropriate sentence-ending particles ('ကွ', 'ဗျာ', 'နော်', 'ရှင့်', 'လေ').
-
-4. **IDIOMS**: Translate the *meaning* of idioms, not the literal words, ensuring it makes sense in Burmese culture.
-
-5. **COMPLETENESS**: Transcribe and translate EVERY single spoken sentence. Do not hallucinate text for silence or music.
-
-OUTPUT: JSON array of strings ONLY.`;
+OUTPUT: Return a JSON array of strings ONLY.`;
 
         const body = {
             contents: [{ parts: [{ text: `TEXT TO TRANSLATE (JSON Array):\n${JSON.stringify(lines)}` }] }],
