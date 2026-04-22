@@ -195,37 +195,35 @@ export class DubVideoPipeline {
           throw new Error(`Voice generation failed: ${err.message}`);
         }
 
-        // Write raw MP3 from TTS engine then convert to WAV for accurate concat
+        // Write TTS MP3 and immediately convert to WAV.
+        // ALL further processing stays in WAV domain to avoid MP3 encoder-delay
+        // and decoder-padding artifacts that create micro-gaps at boundaries.
         const tempPartMp3 = path.join(tempDir, `tts_raw_${seg.index}.mp3`);
+        const rawWav      = path.join(tempDir, `tts_raw_${seg.index}.wav`);
         const partPath    = path.join(tempDir, `tts_${seg.index}.wav`);
         await fs.writeFile(tempPartMp3, audioBuffer);
+        await ffmpegService.convertToWav(tempPartMp3, rawWav);
 
-        // Trim leading/trailing silence from TTS engine output
-        const trimmedMp3  = path.join(tempDir, `tts_trim_${seg.index}.mp3`);
-        const originalDuration = await ffmpegService.getAudioDurationMs(tempPartMp3);
-        let sourceMp3 = tempPartMp3;
+        // Trim leading/trailing silence — in WAV domain, sample-accurate
+        const originalDuration = await ffmpegService.getAudioDurationMs(rawWav);
+        let sourceWav = rawWav;
         try {
-            await ffmpegService.runFilter(
-                tempPartMp3,
-                'silenceremove=start_periods=1:start_duration=0.05:start_threshold=-55dB:stop_periods=1:stop_duration=0.05:stop_threshold=-55dB',
-                trimmedMp3
-            );
-            const trimmedDuration = await ffmpegService.getAudioDurationMs(trimmedMp3);
+            await ffmpegService.trimSilenceWav(rawWav, partPath, -55, 0.05);
+            const trimmedDuration = await ffmpegService.getAudioDurationMs(partPath);
             if (trimmedDuration >= originalDuration * 0.5) {
-                sourceMp3 = trimmedMp3;
+                sourceWav = partPath;
                 console.log(`[Dubbing Pipeline] Silence trimmed segment ${seg.index}: ${originalDuration}ms → ${trimmedDuration}ms`);
             } else {
                 console.warn(`[Dubbing Pipeline] Silence trim too aggressive for segment ${seg.index}, using original`);
+                await fs.copyFile(rawWav, partPath).catch(() => {});
             }
         } catch (err: any) {
             console.warn(`[Dubbing Pipeline] Silence trim failed for segment ${seg.index}: ${err.message}`);
+            await fs.copyFile(rawWav, partPath).catch(() => {});
         }
 
-        // Convert to PCM WAV for sample-accurate concatenation
-        await ffmpegService.convertToWav(sourceMp3, partPath);
-        const duration = await ffmpegService.getAudioDurationMs(partPath);
-
-        return { partPath, duration, text: seg.translatedText, index: seg.index };
+        const duration = await ffmpegService.getAudioDurationMs(sourceWav);
+        return { partPath: sourceWav, duration, text: seg.translatedText, index: seg.index };
       }
 
       async function runWithConcurrency<T>(items: typeof activeSegments, fn: (item: typeof activeSegments[0]) => Promise<T>, limit: number): Promise<T[]> {
@@ -293,10 +291,10 @@ export class DubVideoPipeline {
         const segEndMs   = timelinePosMs + actualDurationMs;
 
         // Store original video timing so we can warp the video to match voice duration.
-        // videoSpeedRatio for this segment = origDuration / actualDuration
-        // < 1.0 = slow video down (voice was longer than original)
-        // > 1.0 = speed video up (voice was shorter than original)
-        const segVideoSpeedRatio = origDurationMs / actualDurationMs;
+        // setpts=(PTS-STARTPTS)*ratio  →  ratio > 1 slows down, ratio < 1 speeds up
+        // We want: original_video_duration * ratio = tts_audio_duration
+        // Therefore: ratio = actualDuration / origDuration
+        const segVideoSpeedRatio = actualDurationMs / origDurationMs;
 
         audioParts.push(result.partPath);
         audioTimeline.push({

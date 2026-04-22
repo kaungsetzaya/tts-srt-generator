@@ -103,6 +103,32 @@ export async function speedUpAudioWav(
   });
 }
 
+/**
+ * Trim leading/trailing silence from a WAV file, outputting WAV.
+ * Operating in WAV domain avoids MP3 encoder-delay/padding artifacts
+ * that create micro-gaps at segment boundaries.
+ */
+export async function trimSilenceWav(
+  inputPath: string,
+  outputPath: string,
+  thresholdDb = -55,
+  minSilenceSec = 0.05
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .audioFilters(
+        `silenceremove=start_periods=1:start_duration=${minSilenceSec}:start_threshold=${thresholdDb}dB:` +
+        `stop_periods=1:stop_duration=${minSilenceSec}:stop_threshold=${thresholdDb}dB`
+      )
+      .audioCodec('pcm_s16le')
+      .audioFrequency(AUDIO_SAMPLE_RATE)
+      .audioChannels(AUDIO_CHANNELS)
+      .on('end', () => resolve())
+      .on('error', reject)
+      .save(outputPath);
+  });
+}
+
 export async function generateSilence(durationMs: number, outputPath: string): Promise<void> {
   if (durationMs <= 0) return;
   const durationSec = (durationMs / 1000).toFixed(6);
@@ -183,9 +209,7 @@ export async function speedUpAudio(
 
 export async function concatAudioFiles(audioParts: string[], outputPath: string): Promise<void> {
   // Use ffmpeg concat demuxer with re-encode to guarantee sample-accurate timing.
-  // Raw MP3 buffer concatenation silently drifts because MP3 frames have
-  // encoder-delay and padding that accumulate across joins. Using the concat
-  // demuxer + pcm_s16le output eliminates that drift.
+  // All inputs must be same-format WAV (44100Hz, mono, pcm_s16le).
   if (audioParts.length === 0) throw new Error("No audio parts to concatenate");
 
   // Build a concat list file
@@ -209,7 +233,7 @@ export async function concatAudioFiles(audioParts: string[], outputPath: string)
         await fs.unlink(listPath).catch(() => {});
         reject(new Error(`Concat failed: ${err.message}`));
       })
-      .save(outputPath.replace(/\.mp3$/, '.wav'));
+      .save(outputPath);
   });
 }
 
@@ -223,10 +247,12 @@ export interface VideoSegmentWarp {
 /**
  * Build a filter_complex string that warps each video segment independently.
  * Each segment is trimmed from the original, its PTS scaled (setpts), then
- * all segments are concatenated. The result perfectly matches the audio timeline.
+ * motion-interpolated (minterpolate) for smooth slow-motion, then all
+ * segments are concatenated. The result perfectly matches the audio timeline.
  *
- * setpts formula: PTS = (PTS - STARTPTS) * speedRatio / TB  but we use the
- * simpler form: setpts=(PTS-STARTPTS)*ratio which works because concat resets PTS.
+ * For ratios > 1.5 (heavy slow-down) we use minterpolate to generate
+ * intermediate frames instead of duplicating, giving smooth motion.
+ * For lighter ratios we just use fps normalization.
  */
 function buildPerSegmentVideoFilter(
   segments: VideoSegmentWarp[],
@@ -242,8 +268,24 @@ function buildPerSegmentVideoFilter(
     const ratio = seg.speedRatio.toFixed(6);
     const label = `v${i}`;
 
-    // trim → setpts to warp speed → apply subtitles on last step
-    parts.push(`[0:v]trim=start=${start}:end=${end},setpts=(PTS-STARTPTS)*${ratio}[${label}]`);
+    // Build filter chain: trim → setpts warp → smooth interpolation → consistent fps
+    const filters: string[] = [
+      `trim=start=${start}:end=${end}`,
+      `setpts=(PTS-STARTPTS)*${ratio}`,
+    ];
+
+    // For heavy slow-down (>1.5x), add motion-compensated frame interpolation
+    // so the video doesn't look choppy from duplicated frames.
+    if (seg.speedRatio > 1.5) {
+      filters.push(
+        `minterpolate='mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1:fps=30'`
+      );
+    }
+
+    // Normalize to consistent 30fps output for clean concatenation
+    filters.push('fps=fps=30:round=near');
+
+    parts.push(`[0:v]${filters.join(',')}[${label}]`);
     labels.push(`[${label}]`);
   });
 
@@ -478,6 +520,7 @@ export const ffmpegService = {
   generateSilenceWav,
   speedUpAudio,
   speedUpAudioWav,
+  trimSilenceWav,
   runFilter,
   trimAudio,
   mergeVideoAudioSubtitles,
