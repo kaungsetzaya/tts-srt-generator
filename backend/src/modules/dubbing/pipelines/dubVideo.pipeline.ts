@@ -177,19 +177,21 @@ export class DubVideoPipeline {
         let audioBuffer: Buffer;
 
         try {
+          console.log(`[Dubbing Pipeline] Generating TTS for segment ${seg.index}: "${seg.translatedText.slice(0, 50)}..." (voice: ${options.voice})`);
           if (isCharacter) {
               const ttsResult = await ttsService.generateSpeechWithCharacter(
                   seg.translatedText,
                   options.voice as CharacterKey,
                   FIXED_SPEED,
-                  undefined,
+                  "16:9",
                   options.pitch ?? 0
               );
               audioBuffer = ttsResult.audioBuffer;
           } else {
-              const ttsResult = await ttsService.generateSpeech(seg.translatedText, options.voice as VoiceKey, FIXED_SPEED, options.pitch ?? 0);
+              const ttsResult = await ttsService.generateSpeech(seg.translatedText, options.voice as VoiceKey, FIXED_SPEED, options.pitch ?? 0, "16:9");
               audioBuffer = ttsResult.audioBuffer;
           }
+          console.log(`[Dubbing Pipeline] TTS generated for segment ${seg.index}, audio size: ${audioBuffer.length} bytes`);
         } catch (err: any) {
           console.error(`[Dubbing Pipeline] TTS generation failed for segment ${seg.index}:`, err.message);
           throw new Error(`Voice generation failed: ${err.message}`);
@@ -241,6 +243,7 @@ export class DubVideoPipeline {
       }
 
       const ttsResults = await runWithConcurrency(activeSegments, generateTtsForSegment, CONCURRENCY);
+      console.log(`[Dubbing Pipeline] Step 5 OK: ${ttsResults.length} TTS segments generated`);
 
       const audioParts: string[] = [];
       // Raw audio timeline: startMs/endMs based on audio playback position
@@ -339,7 +342,9 @@ export class DubVideoPipeline {
       
       // Step 6a: Actually concatenate audio parts using ffmpeg
       if (jobId) updateJob(jobId, { progress: 80, message: "Assembling final narration..." });
+      console.log(`[Dubbing Pipeline] Concatenating ${audioParts.length} audio parts...`);
       await ffmpegService.concatAudioFiles(listPath, tempConcatAudio);
+      console.log(`[Dubbing Pipeline] Audio concatenated to ${tempConcatAudio}`);
 
       // Step 6b: Character voice conversion (Module-to-Module call via Service)
       let finalAudioPath = tempConcatAudio;
