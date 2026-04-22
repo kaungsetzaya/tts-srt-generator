@@ -427,8 +427,8 @@ export class DubVideoPipeline {
             {
               videoSegments,
               totalAudioDurationSec: exactAudioDurationSec,
-              videoDurationSec,
               fontPath,
+              tempDir,
               onProgress: (p: number) => {
                 if (jobId) {
                   updateJob(jobId, { progress: 85 + Math.floor((p / 100) * 10), message: "Merging visuals with audio..." });
@@ -443,7 +443,7 @@ export class DubVideoPipeline {
             {
               videoSegments,
               totalAudioDurationSec: exactAudioDurationSec,
-              videoDurationSec,
+              tempDir,
               onProgress: (p: number) => {
                 if (jobId) {
                   updateJob(jobId, { progress: 85 + Math.floor((p / 100) * 10), message: "Merging visuals with audio..." });

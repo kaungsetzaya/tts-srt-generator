@@ -245,51 +245,84 @@ export interface VideoSegmentWarp {
 }
 
 /**
- * Build a filter_complex string that warps each video segment independently.
- * Each segment is trimmed from the original, its PTS scaled (setpts), then
- * all segments are concatenated. The result perfectly matches the audio timeline.
+ * Process each video segment as a separate file with setpts, then concatenate.
+ * This is MUCH more reliable than filter_complex because -t works on individual
+ * files (it truncates decoded output, not input).
  *
- * We keep the filter chain minimal (trim + setpts only) to avoid any
- * frame-level duration drift from fps rounding or interpolation.
+ * Each segment is extracted, stretched with setpts, and saved as a temp MP4.
+ * Then all temp MP4s are concatenated with the concat demuxer.
  */
-function buildPerSegmentVideoFilter(
+export async function processVideoSegments(
+  videoPath: string,
   segments: VideoSegmentWarp[],
-  exactAudioDurationSec: number,
-  subFilter?: string
-): string {
-  const parts: string[] = [];
-  const labels: string[] = [];
+  tempDir: string,
+  onProgress?: (progress: number) => void,
+): Promise<string> {
+  const segmentFiles: string[] = [];
 
-  segments.forEach((seg, i) => {
+  for (let i = 0; i < segments.length; i++) {
+    const seg = segments[i];
     const start = seg.origStartSec.toFixed(6);
-    const end   = seg.origEndSec.toFixed(6);
+    const duration = (seg.origEndSec - seg.origStartSec).toFixed(6);
     const ratio = seg.speedRatio.toFixed(6);
-    const label = `v${i}`;
+    const outPath = path.join(tempDir, `vid_seg_${i}.mp4`);
 
-    // Minimal chain: trim → setpts warp. No fps/minterpolate to avoid drift.
-    parts.push(`[0:v]trim=start=${start}:end=${end},setpts=(PTS-STARTPTS)*${ratio}[${label}]`);
-    labels.push(`[${label}]`);
-  });
+    // Use -ss + -t on input (fast seek) + setpts filter for speed change
+    // -t truncates decoded output to exactly the target duration
+    await new Promise<void>((resolve, reject) => {
+      ffmpeg(videoPath)
+        .seekInput(parseFloat(start))
+        .duration(parseFloat(duration))
+        .videoFilters(`setpts=(PTS-STARTPTS)*${ratio}`)
+        .outputOptions([
+          '-c:v',    'libx264',
+          '-preset', 'fast',
+          '-crf',    '23',
+          '-an',
+          '-t',      seg.newDurationSec.toFixed(6),  // Force exact output duration
+          '-movflags', '+faststart',
+        ])
+        .on('end', () => {
+          onProgress?.(Math.round(((i + 1) / segments.length) * 100));
+          resolve();
+        })
+        .on('error', reject)
+        .save(outPath);
+    });
 
-  // Only include speech segments — no intro/outro.
-  const n = labels.length;
-  const concatOut = subFilter ? `vconcat` : `vout`;
-  parts.push(`${labels.join('')}concat=n=${n}:v=1:a=0[${concatOut}]`);
-
-  if (subFilter) {
-    parts.push(`[vconcat]${subFilter}[vout]`);
+    segmentFiles.push(outPath);
+    console.log(`[FFmpeg VideoSegment] seg ${i}: orig=${start}s duration=${duration}s ratio=${ratio} → ${outPath}`);
   }
 
-  // Force video to exact audio duration:
-  // 1. tpad: extend video by 2s (clone last frame) so it's always longer
-  // 2. trim: cut to exact audio duration
-  // This guarantees video ends exactly when audio ends, regardless of
-  // setpts rounding or frame boundary issues.
-  const t = exactAudioDurationSec.toFixed(6);
-  parts.push(`[vout]tpad=stop_mode=clone:stop_duration=2[vpad]`);
-  parts.push(`[vpad]trim=start=0:end=${t}[vfinal]`);
+  // Concatenate all segment files
+  const concatList = path.join(tempDir, 'video_concat_list.txt');
+  const concatLines = segmentFiles.map(p => `file '${p.replace(/'/g, "'\\''")}'`).join('\n');
+  await fs.writeFile(concatList, concatLines);
 
-  return parts.join(';');
+  const outputPath = path.join(tempDir, 'warped_video.mp4');
+
+  await new Promise<void>((resolve, reject) => {
+    ffmpeg()
+      .input(concatList)
+      .inputOptions(['-f', 'concat', '-safe', '0'])
+      .outputOptions([
+        '-c:v',    'copy',
+        '-an',
+        '-movflags', '+faststart',
+      ])
+      .on('end', async () => {
+        await fs.unlink(concatList).catch(() => {});
+        console.log(`[FFmpeg VideoConcat] Done → ${outputPath}`);
+        resolve();
+      })
+      .on('error', async (err: any) => {
+        await fs.unlink(concatList).catch(() => {});
+        reject(new Error(`Video concat failed: ${err.message}`));
+      })
+      .save(outputPath);
+  });
+
+  return outputPath;
 }
 
 export async function mergeVideoAudioSubtitlesPerSegment(
@@ -302,10 +335,19 @@ export async function mergeVideoAudioSubtitlesPerSegment(
     totalAudioDurationSec: number;
     videoDurationSec:     number;
     fontPath?:            string;
+    tempDir:              string;
     onProgress?:          (progress: number) => void;
   }
 ): Promise<void> {
-  // Build subtitle filter
+  // Step 1: Process video segments into a warped video file
+  const warpedVideoPath = await processVideoSegments(
+    videoPath,
+    options.videoSegments,
+    options.tempDir,
+    options.onProgress,
+  );
+
+  // Step 2: Build subtitle filter
   let subFilter: string;
   if (options.fontPath) {
     const p  = subtitlesPath.replace(/\\/g, '/');
@@ -320,27 +362,18 @@ export async function mergeVideoAudioSubtitlesPerSegment(
     subFilter = `subtitles='${subtitlesPath.replace(/\\/g, '/').replace(/:/g, '\\:')}'`;
   }
 
-  const filterComplex = buildPerSegmentVideoFilter(
-    options.videoSegments,
-    options.totalAudioDurationSec,
-    subFilter
-  );
-
-  console.log(`[FFmpeg Merge] Video filter_complex:\n${filterComplex}`);
-  console.log(`[FFmpeg Merge] Target duration: ${options.totalAudioDurationSec.toFixed(3)}s`);
-
+  // Step 3: Merge warped video + audio + subtitles
   return new Promise((resolve, reject) => {
-    ffmpeg(videoPath)
+    ffmpeg(warpedVideoPath)
       .input(audioPath)
       .outputOptions([
-        '-filter_complex', filterComplex,
-        '-map',    '[vfinal]',
-        '-map',    '1:a',
-        '-c:v',    'libx264',
-        '-preset', 'fast',
-        '-crf',    '23',
-        '-c:a',    'aac',
-        '-b:a',    '128k',
+        '-vf',       subFilter,
+        '-c:v',      'libx264',
+        '-preset',   'fast',
+        '-crf',      '23',
+        '-c:a',      'aac',
+        '-b:a',      '128k',
+        '-t',        options.totalAudioDurationSec.toFixed(6),
         '-map_metadata', '-1',
         '-movflags', '+faststart',
       ])
@@ -359,29 +392,29 @@ export async function mergeVideoAudioPerSegment(
     videoSegments:         VideoSegmentWarp[];
     totalAudioDurationSec: number;
     videoDurationSec:      number;
+    tempDir:               string;
     onProgress?:           (progress: number) => void;
   }
 ): Promise<void> {
-  const filterComplex = buildPerSegmentVideoFilter(
+  // Step 1: Process video segments into a warped video file
+  const warpedVideoPath = await processVideoSegments(
+    videoPath,
     options.videoSegments,
-    options.totalAudioDurationSec
+    options.tempDir,
+    options.onProgress,
   );
 
-  console.log(`[FFmpeg Merge] Video filter_complex:\n${filterComplex}`);
-  console.log(`[FFmpeg Merge] Target duration: ${options.totalAudioDurationSec.toFixed(3)}s`);
-
+  // Step 2: Merge warped video + audio
   return new Promise((resolve, reject) => {
-    ffmpeg(videoPath)
+    ffmpeg(warpedVideoPath)
       .input(audioPath)
       .outputOptions([
-        '-filter_complex', filterComplex,
-        '-map',    '[vfinal]',
-        '-map',    '1:a',
-        '-c:v',    'libx264',
-        '-preset', 'fast',
-        '-crf',    '23',
-        '-c:a',    'aac',
-        '-b:a',    '128k',
+        '-c:v',      'libx264',
+        '-preset',   'fast',
+        '-crf',      '23',
+        '-c:a',      'aac',
+        '-b:a',      '128k',
+        '-t',        options.totalAudioDurationSec.toFixed(6),
         '-map_metadata', '-1',
         '-movflags', '+faststart',
       ])
@@ -521,6 +554,7 @@ export const ffmpegService = {
   mergeVideoAudio,
   mergeVideoAudioSubtitlesPerSegment,
   mergeVideoAudioPerSegment,
+  processVideoSegments,
   concatAudioFiles,
   convertToWav,
 };
