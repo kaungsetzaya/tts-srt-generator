@@ -49,19 +49,24 @@ export const historyRouter = t.router({
           .limit(limit);
 
         // Map to unified shape with proper type labels
-        const unified = credits.map((c: typeof credits[0]) => ({
-          id: c.id,
-          origin: "credit" as const,
-          type: c.type,
-          amount: c.amount,
-          status: c.amount > 0 ? "success" : "fail",
-          voice: "",
-          character: "",
-          charCount: 0,
-          durationMs: 0,
-          description: c.description || "",
-          createdAt: c.createdAt!,
-        }));
+        // REFUND types are success (positive), TTS/DUB deductions are success, only actual failures = "fail"
+        const unified = credits.map((c: typeof credits[0]) => {
+          const isRefund = c.type === "REFUND" || c.type === "tts_refund";
+          const status = isRefund ? "success" : (c.amount > 0 ? "success" : (c.type?.includes("FAIL") ? "fail" : "success"));
+          return {
+            id: c.id,
+            origin: "credit" as const,
+            type: c.type,
+            amount: c.amount,
+            status,
+            voice: "",
+            character: "",
+            charCount: 0,
+            durationMs: 0,
+            description: c.description || "",
+            createdAt: c.createdAt!,
+          };
+        });
 
         // Sort by date desc
         return unified.sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, limit);

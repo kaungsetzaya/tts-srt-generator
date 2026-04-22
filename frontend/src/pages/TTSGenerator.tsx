@@ -189,7 +189,7 @@ const T = {
     faster: "မြန်",
     preview: "နားဆင်မည်",
     videoTitle: "ဗီဒီယိုမှ မြန်မာဘာသာပြန်",
-    videoDesc: "ဗီဒီယို (သို့) Link ထည့်ပြီး မြန်မာဘာသာပြန်ရယူပါ",
+    videoDesc: "ဗီဒီယို ဖိုင်တင်ပါ",
     videoLimit: "အများဆုံး ၂၅MB (သို့) ဗီဒီယိုအရှည်၂မိနစ်၃ဝစက္ကန့်",
     dropVideo: "ဗီဒီယိုဖိုင် ဤနေရာတွင်ချပါ သို့မဟုတ် နှိပ်ပါ",
     linkInputLabel: "VIDEO LINK ထည့်ရန်",
@@ -245,7 +245,7 @@ const T = {
     faster: "Faster",
     preview: "Preview",
     videoTitle: "VIDEO TRANSLATION",
-    videoDesc: "Upload video or paste link for Myanmar translation",
+    videoDesc: "Upload video for Myanmar translation",
     videoLimit: "Max 25MB or video length 2 minutes 30 seconds",
     dropVideo: "Drop video here or click to upload",
     linkInputLabel: "VIDEO LINK",
@@ -1457,17 +1457,7 @@ export default function TTSGenerator() {
                               currentPlan !== "trial" &&
                               planUsage &&
                               planLimits && (
-                                <span
-                                  style={{
-                                    color: planUsage.tts >= planLimits.dailyTtsSrt
-                                      ? "#dc2626"
-                                      : subtextColor,
-                                  }}
-                                >
-                                  {lang === "mm" ? "ယနေ့" : "Today"}:{" "}
-                                  {`${planUsage.tts}/${planLimits.dailyTtsSrt}`}{" "}
-                                  {lang === "mm" ? "ကြိမ်" : "uses"}
-                                </span>
+                                
                               )}
                           </span>
                           <span className="text-[10px] opacity-70">
@@ -4304,14 +4294,14 @@ export default function TTSGenerator() {
                     {(lang === "mm"
                       ? [
                           '① "ဗီဒီယိုဘာသာပြန်" tab ကို နှိပ်ပါ',
-                          "② ဗီဒီယိုဖိုင် တင်ပါ (25MB အောက်) သို့ Link ထည့်ပါ",
+                          "② ဗီဒီယို ဖိုင် တင်ပါ",
                           '③ "မြန်မာဘာသာပြန်မည်" နှိပ်ပါ',
-                          "④ Wait...",
+                          "④ စောင့်ပါ",
                           "⑤ ရလဒ်ကို ကြည့်ပါ / ကော်ပီကူးပါ",
                         ]
                       : [
                           '① Click the "Translate" tab',
-                          "② Upload a video (under 25MB) or paste a link",
+                          "② Upload a video (under 25MB)",
                           '③ Click "Translate to Myanmar"',
                           "④ Wait...",
                           "⑤ View or copy the translation result",
@@ -4357,7 +4347,7 @@ export default function TTSGenerator() {
                     {(lang === "mm"
                       ? [
                           '① "Auto Creator" tab ကို နှိပ်ပါ',
-                          "② ဗီဒီယိုဖိုင် တင်ပါ (25MB အောက်) သို့ Link ထည့်ပါ",
+                          "② ဗီဒီယို ဖိုင် တင်ပါ",
                           '③ ဗီဒီယို Preview ကြည့်ပြီး "ဆက်လုပ်မည်" နှိပ်ပါ',
                           "④ အသံ ရွေးပါ — Standard သို့ Premium Voice",
                           "⑤ Speed / Pitch ချိန်ညှိပါ",
@@ -4367,7 +4357,7 @@ export default function TTSGenerator() {
                         ]
                       : [
                           '① Click the "Auto Creator" tab',
-                          "② Upload a video (under 25MB) or paste a link",
+                          "② Upload a video (under 25MB)",
                           '③ Preview and click "Continue"',
                           "④ Select a voice — Standard or Premium",
                           "⑤ Adjust Speed / Pitch",
