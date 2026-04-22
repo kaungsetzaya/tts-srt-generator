@@ -1456,9 +1456,7 @@ export default function TTSGenerator() {
                               hasPlan &&
                               currentPlan !== "trial" &&
                               planUsage &&
-                              planLimits && (
-                                
-                              )}
+                              planLimits && <></>}
                           </span>
                           <span className="text-[10px] opacity-70">
                             {lang === "mm" ? "စာလုံး" : "characters"}
