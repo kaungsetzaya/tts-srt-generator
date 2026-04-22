@@ -1,4 +1,4 @@
-﻿import { randomUUID } from "crypto";
+import { randomUUID } from "crypto";
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { tmpdir } from 'os';
@@ -27,7 +27,7 @@ export class TranslateVideoPipeline {
         try {
             await downloadVideo(url, tempVideoPath);
             const buffer = await fs.readFile(tempVideoPath);
-            return await this.execute(buffer, "video.mp4", userApiKey);
+            return await this.execute(buffer, "video.mp4", userApiKey, jobId);
         } finally {
             await fs.unlink(tempVideoPath).catch(() => {});
         }
