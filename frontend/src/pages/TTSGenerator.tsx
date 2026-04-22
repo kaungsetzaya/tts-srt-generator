@@ -1328,22 +1328,9 @@ export default function TTSGenerator() {
             <>
               {/* === TTS TAB === */}
               {mainTab === "tts" && (
-                <div className="animate-in fade-in zoom-in-95 duration-300">
-                  <div className="mb-2 sm:mb-4 relative text-center py-1">
-                    <h1
-                      className="text-2xl sm:text-3xl md:text-5xl font-black uppercase tracking-wider sm:tracking-widest mb-2"
-                      style={{ textShadow: "none", color: accent }}
-                    >
-                      TTS Generator
-                    </h1>
-                    <p
-                      className="text-xs sm:text-sm font-bold uppercase tracking-wider opacity-80 mt-1"
-                      style={{ color: subtextColor }}
-                    >
-                      Convert Text to Speech
-                    </p>
-                    {/* No Plan Banner */}
-                    {!isAdmin && !hasPlan && me && !subLoading && (
+                  <div className="animate-in fade-in zoom-in-95 duration-300">
+                    <div className="mb-2 sm:mb-4 relative text-center py-1">
+                      {!isAdmin && !hasPlan && me && !subLoading && (
                       <div
                         className="mt-3 mx-auto max-w-lg flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold"
                         style={{
