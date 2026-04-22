@@ -33,7 +33,7 @@ function graphemeLen(s: string): number {
 }
 
 function splitToSubtitleChunks(text: string, maxCharsPerLine: number): string[] {
-    // Clean up text Ã¢â‚¬â€ flatten newlines
+    // Clean up text Ã¢â‚¬â€ flatten newlines
     const clean = text.replace(/[\n\r]+/g, " ").trim();
     if (!clean) return [""];
 
@@ -53,7 +53,7 @@ function splitToSubtitleChunks(text: string, maxCharsPerLine: number): string[] 
         return [clean];
     }
 
-    // Text is too long for 2 lines Ã¢â‚¬â€ split into multiple entries
+    // Text is too long for 2 lines Ã¢â‚¬â€ split into multiple entries
     const graphemes = [...segmenter.segment(clean)].map(g => g.segment);
     const chunks: string[] = [];
     let pos = 0;
@@ -197,33 +197,35 @@ export class DubVideoPipeline {
           throw new Error(`Voice generation failed: ${err.message}`);
         }
 
-        const partPath = path.join(tempDir, `tts_${seg.index}.mp3`);
-        const tempPartPath = path.join(tempDir, `tts_raw_${seg.index}.mp3`);
-        await fs.writeFile(tempPartPath, audioBuffer);
-        
-        // Trim hidden baked-in silence padding from TTS engine
-        let finalPartPath = tempPartPath;
-        const originalDuration = await ffmpegService.getAudioDurationMs(tempPartPath);
+        // Write raw MP3 from TTS engine then convert to WAV for accurate concat
+        const tempPartMp3 = path.join(tempDir, `tts_raw_${seg.index}.mp3`);
+        const partPath    = path.join(tempDir, `tts_${seg.index}.wav`);
+        await fs.writeFile(tempPartMp3, audioBuffer);
+
+        // Trim leading/trailing silence from TTS engine output
+        const trimmedMp3  = path.join(tempDir, `tts_trim_${seg.index}.mp3`);
+        const originalDuration = await ffmpegService.getAudioDurationMs(tempPartMp3);
+        let sourceMp3 = tempPartMp3;
         try {
             await ffmpegService.runFilter(
-                tempPartPath, 
-                'silenceremove=start_periods=1:start_duration=0.05:start_threshold=-55dB:stop_periods=1:stop_duration=0.05:stop_threshold=-55dB', 
-                partPath
+                tempPartMp3,
+                'silenceremove=start_periods=1:start_duration=0.05:start_threshold=-55dB:stop_periods=1:stop_duration=0.05:stop_threshold=-55dB',
+                trimmedMp3
             );
-            const trimmedDuration = await ffmpegService.getAudioDurationMs(partPath);
-            // Fallback to original if trim removed too much audio (>50% gone)
-            if (trimmedDuration < originalDuration * 0.5) {
-                console.warn(`[Dubbing Pipeline] Silence trim too aggressive for segment ${seg.index} (${trimmedDuration}ms < ${originalDuration * 0.5}ms), using original`);
-                await fs.copyFile(tempPartPath, partPath).catch(() => {});
+            const trimmedDuration = await ffmpegService.getAudioDurationMs(trimmedMp3);
+            if (trimmedDuration >= originalDuration * 0.5) {
+                sourceMp3 = trimmedMp3;
+                console.log(`[Dubbing Pipeline] Silence trimmed segment ${seg.index}: ${originalDuration}ms → ${trimmedDuration}ms`);
             } else {
-                finalPartPath = partPath;
+                console.warn(`[Dubbing Pipeline] Silence trim too aggressive for segment ${seg.index}, using original`);
             }
         } catch (err: any) {
-            console.warn(`[Dubbing Pipeline] Silence trim failed for segment ${seg.index}, using original: ${err.message}`);
-            await fs.copyFile(tempPartPath, partPath).catch(() => {});
+            console.warn(`[Dubbing Pipeline] Silence trim failed for segment ${seg.index}: ${err.message}`);
         }
 
-        const duration = await ffmpegService.getAudioDurationMs(finalPartPath);
+        // Convert to PCM WAV for sample-accurate concatenation
+        await ffmpegService.convertToWav(sourceMp3, partPath);
+        const duration = await ffmpegService.getAudioDurationMs(partPath);
 
         return { partPath, duration, text: seg.translatedText, index: seg.index };
       }
@@ -264,6 +266,8 @@ export class DubVideoPipeline {
       const audioTimeline: Array<{ startMs: number; endMs: number; text: string }> = [];
       let timelinePosMs = 0;
 
+      // Generate silence parts as WAV (matches concatAudioFiles WAV output)
+      // This avoids MP3 encoder-delay accumulation across silence inserts.
       for (let i = 0; i < activeSegments.length; i++) {
         const seg = activeSegments[i];
         const result = ttsResults[i];
@@ -273,50 +277,61 @@ export class DubVideoPipeline {
         }
 
         const targetStartMs = Math.round(seg.start * 1000);
-        const targetEndMs = Math.round(seg.end * 1000);
+        const targetEndMs   = Math.round(seg.end * 1000);
         const targetDurationMs = Math.max(targetEndMs - targetStartMs, 100);
 
-        // Add silence to fill gap from current position to target start
+        // Fill gap from current position to original segment start with silence
         const gapMs = targetStartMs - timelinePosMs;
-        if (gapMs > 0) {
-          const silencePath = path.join(tempDir, `gap_${i}.mp3`);
-          await ffmpegService.generateSilence(gapMs, silencePath);
+        if (gapMs > 10) {
+          const silencePath = path.join(tempDir, `gap_${i}.wav`);
+          await ffmpegService.generateSilenceWav(gapMs, silencePath);
           audioParts.push(silencePath);
           timelinePosMs += gapMs;
         }
 
-        // Speed up TTS if it's longer than the target slot
+        // Speed up TTS if longer than the target window
         let finalAudioPath = result.partPath;
         let actualDurationMs = result.duration;
 
         if (result.duration > targetDurationMs * 1.05) {
           const speedRatio = targetDurationMs / result.duration;
-          const spedUpPath = path.join(tempDir, `sped_${seg.index}.mp3`);
+          const spedUpPath = path.join(tempDir, `sped_${seg.index}.wav`);
           try {
-            await ffmpegService.speedUpAudio(result.partPath, spedUpPath, speedRatio);
+            await ffmpegService.speedUpAudioWav(result.partPath, spedUpPath, speedRatio);
             finalAudioPath = spedUpPath;
-            actualDurationMs = targetDurationMs;
-            console.log(`[Dubbing Pipeline] Segment ${seg.index} sped up ${speedRatio.toFixed(3)}x to fit ${targetDurationMs}ms`);
+            actualDurationMs = await ffmpegService.getAudioDurationMs(spedUpPath);
+            console.log(`[Dubbing Pipeline] Segment ${seg.index} sped up ${speedRatio.toFixed(3)}x → ${actualDurationMs}ms`);
           } catch (err: any) {
             console.warn(`[Dubbing Pipeline] Speed up failed for segment ${seg.index}, using original: ${err.message}`);
           }
         }
 
-        audioParts.push(finalAudioPath);
-        audioTimeline.push({ 
-          startMs: timelinePosMs, 
-          endMs: timelinePosMs + actualDurationMs, 
-          text: result.text 
+        // Record where this audio sits in the timeline BEFORE advancing
+        const segStartMs = timelinePosMs;
+        const segEndMs   = timelinePosMs + actualDurationMs;
+
+        // Convert TTS part to WAV if it isn't already (silence removals produce MP3)
+        let wavPartPath = finalAudioPath;
+        if (!finalAudioPath.endsWith('.wav')) {
+          wavPartPath = finalAudioPath.replace(/\.[^.]+$/, '_pcm.wav');
+          await ffmpegService.convertToWav(finalAudioPath, wavPartPath);
+        }
+
+        audioParts.push(wavPartPath);
+        audioTimeline.push({
+          startMs: segStartMs,
+          endMs:   segEndMs,
+          text:    result.text,
         });
 
-        timelinePosMs += actualDurationMs;
+        timelinePosMs = segEndMs;
       }
 
-      // Add trailing silence to match video duration
+      // Add trailing silence to match video duration (WAV for accurate concat)
       const videoDurationMs = Math.round(videoDurationSec * 1000);
       if (timelinePosMs < videoDurationMs) {
-        const trailingSilencePath = path.join(tempDir, `trailing_silence.mp3`);
-        await ffmpegService.generateSilence(videoDurationMs - timelinePosMs, trailingSilencePath);
+        const trailingSilencePath = path.join(tempDir, `trailing_silence.wav`);
+        await ffmpegService.generateSilenceWav(videoDurationMs - timelinePosMs, trailingSilencePath);
         audioParts.push(trailingSilencePath);
         timelinePosMs = videoDurationMs;
       }
@@ -325,43 +340,40 @@ export class DubVideoPipeline {
         throw new Error("No audio parts generated - all TTS segments failed");
       }
 
-      // Build subtitle entries with proper timing:
-      // Each subtitle starts when its audio starts.
-      // Each subtitle ENDS when the NEXT audio starts (so it stays visible during pauses).
-      // The last subtitle ends when its audio ends.
-      // Also split long text into multiple max-2-line entries.
+      // Build subtitle entries — timing anchored to actual audio position.
+      // Subtitle starts exactly when its audio starts, ends when the audio ends
+      // plus a small hold (150ms) so it doesn't flash away. Never bleeds into
+      // the next segment's start so there's no overlap during silences.
       const maxCharsPerLine = Math.max(12, Math.round(40 - (options.srtFontSize ?? 24) * 0.5));
       const processedForSrt: Array<{ startMs: number; endMs: number; text: string }> = [];
 
       for (let i = 0; i < audioTimeline.length; i++) {
         const seg = audioTimeline[i];
         const subtitleStartMs = seg.startMs;
-        // Subtitle stays visible until the next segment's audio starts
-        const subtitleEndMs = (i < audioTimeline.length - 1)
+        // Hold subtitle visible until the next subtitle appears (covers silence gaps).
+        // The last subtitle stays until the end of the video.
+        const subtitleEndMs = i < audioTimeline.length - 1
           ? audioTimeline[i + 1].startMs
-          : seg.endMs;
-        
-        // Split text into max-2-line chunks
+          : timelinePosMs;
+
         const chunks = splitToSubtitleChunks(seg.text, maxCharsPerLine);
-        
+
         if (chunks.length === 1) {
-          // Single entry Ã¢â‚¬â€ shows for the full duration
           processedForSrt.push({
             startMs: subtitleStartMs,
-            endMs: subtitleEndMs,
-            text: chunks[0]
+            endMs:   subtitleEndMs,
+            text:    chunks[0],
           });
         } else {
-          // Multiple entries Ã¢â‚¬â€ divide the time span equally
           const totalDuration = subtitleEndMs - subtitleStartMs;
           const perChunkDuration = Math.floor(totalDuration / chunks.length);
           for (let c = 0; c < chunks.length; c++) {
             processedForSrt.push({
               startMs: subtitleStartMs + c * perChunkDuration,
-              endMs: c < chunks.length - 1
+              endMs:   c < chunks.length - 1
                 ? subtitleStartMs + (c + 1) * perChunkDuration
                 : subtitleEndMs,
-              text: chunks[c]
+              text: chunks[c],
             });
           }
         }
@@ -386,20 +398,19 @@ export class DubVideoPipeline {
       console.log(`[Dubbing Pipeline] Applying video speed ratio: ${videoSpeedRatio.toFixed(4)}`);
 
       // Step 6: Concat audio parts and merge with video
-      const tempConcatAudio = path.join(tempDir, `concat_raw.mp3`);
+      // concatAudioFiles now outputs a sample-accurate PCM WAV directly.
+      const tempConcatAudio = path.join(tempDir, `concat_raw.wav`);
       
-      // Step 6a: Actually concatenate audio parts using ffmpeg concat filter
+      // Step 6a: Concatenate audio parts using ffmpeg concat demuxer (sample-accurate)
       if (jobId) updateJob(jobId, { progress: 80, message: "Assembling final narration..." });
       console.log(`[Dubbing Pipeline] Concatenating ${audioParts.length} audio parts...`);
       await ffmpegService.concatAudioFiles(audioParts, tempConcatAudio);
       console.log(`[Dubbing Pipeline] Audio concatenated to ${tempConcatAudio}`);
 
-      // Step 6b: Convert concatenated MP3 to WAV to ensure ffmpeg can read it as input 1
-      const tempWavAudio = path.join(tempDir, `concat_audio.wav`);
-      await ffmpegService.convertToWav(tempConcatAudio, tempWavAudio);
-      console.log(`[Dubbing Pipeline] Audio converted to WAV: ${tempWavAudio}`);
+      // Step 6b: Audio is already PCM WAV from concatAudioFiles — no re-encode needed.
+      const tempWavAudio = tempConcatAudio;
+      console.log(`[Dubbing Pipeline] Using WAV audio: ${tempWavAudio}`);
       let finalAudioPath = tempWavAudio;
-      // ... murf logic would go here ...
       
       // Step 6c: Subtitles - cross-platform font resolution
       const fontPath = process.env.MYANMAR_FONT_PATH || 

@@ -63,6 +63,46 @@ export async function extractAudio(videoPath: string, outputPath: string): Promi
   });
 }
 
+export async function generateSilenceWav(durationMs: number, outputPath: string): Promise<void> {
+  if (durationMs <= 0) return;
+  const durationSec = (durationMs / 1000).toFixed(6);
+  return new Promise((resolve, reject) => {
+    ffmpeg()
+      .input(`anullsrc=r=${AUDIO_SAMPLE_RATE}:cl=mono`)
+      .inputFormat('lavfi')
+      .duration(parseFloat(durationSec))
+      .audioCodec('pcm_s16le')
+      .audioFrequency(AUDIO_SAMPLE_RATE)
+      .audioChannels(AUDIO_CHANNELS)
+      .on('end', () => resolve())
+      .on('error', reject)
+      .save(outputPath);
+  });
+}
+
+export async function speedUpAudioWav(
+  inputPath: string,
+  outputPath: string,
+  ratio: number
+): Promise<void> {
+  const filters: string[] = [];
+  let r = ratio;
+  while (r > 2.0) { filters.push('atempo=2.0'); r /= 2.0; }
+  while (r < 0.5) { filters.push('atempo=0.5'); r *= 2.0; }
+  filters.push(`atempo=${r.toFixed(6)}`);
+
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .audioFilters(filters.join(','))
+      .audioCodec('pcm_s16le')
+      .audioFrequency(AUDIO_SAMPLE_RATE)
+      .audioChannels(AUDIO_CHANNELS)
+      .on('end', () => resolve())
+      .on('error', reject)
+      .save(outputPath);
+  });
+}
+
 export async function generateSilence(durationMs: number, outputPath: string): Promise<void> {
   if (durationMs <= 0) return;
   const durationSec = (durationMs / 1000).toFixed(6);
@@ -142,31 +182,34 @@ export async function speedUpAudio(
 }
 
 export async function concatAudioFiles(audioParts: string[], outputPath: string): Promise<void> {
-  // Simple buffer concatenation for MP3 files with identical encoding
-  // This is more reliable than ffmpeg concat filter/demuxer for same-codec MP3s
-  const buffers = await Promise.all(
-    audioParts.map(p => fs.readFile(p).catch(() => Buffer.alloc(0)))
-  );
-  const validBuffers = buffers.filter(b => b.length > 0);
-  if (validBuffers.length === 0) {
-    throw new Error("No valid audio parts to concatenate");
-  }
-  const combined = Buffer.concat(validBuffers);
-  await fs.writeFile(outputPath, combined);
+  // Use ffmpeg concat demuxer with re-encode to guarantee sample-accurate timing.
+  // Raw MP3 buffer concatenation silently drifts because MP3 frames have
+  // encoder-delay and padding that accumulate across joins. Using the concat
+  // demuxer + pcm_s16le output eliminates that drift.
+  if (audioParts.length === 0) throw new Error("No audio parts to concatenate");
 
-  // Verify the output has audio by checking with ffprobe
+  // Build a concat list file
+  const listPath = outputPath + '.concat_list.txt';
+  const lines = audioParts.map(p => `file '${p.replace(/'/g, "'\\''")}'`).join('\n');
+  await fs.writeFile(listPath, lines);
+
   return new Promise((resolve, reject) => {
-    ffmpeg.ffprobe(outputPath, (err: any, metadata: any) => {
-      if (err) {
-        return reject(new Error(`Concatenated file is invalid: ${err.message}`));
-      }
-      const audioStream = metadata.streams?.find((s: any) => s.codec_type === 'audio');
-      if (!audioStream) {
-        return reject(new Error("Concatenated file has no audio stream"));
-      }
-      console.log(`[FFmpeg Concat] Success: ${combined.length} bytes, ${audioStream.duration || 'unknown'}s`);
-      resolve();
-    });
+    ffmpeg()
+      .input(listPath)
+      .inputOptions(['-f', 'concat', '-safe', '0'])
+      .audioCodec('pcm_s16le')
+      .audioFrequency(AUDIO_SAMPLE_RATE)
+      .audioChannels(AUDIO_CHANNELS)
+      .on('end', async () => {
+        await fs.unlink(listPath).catch(() => {});
+        console.log(`[FFmpeg Concat] Sample-accurate concat done → ${outputPath}`);
+        resolve();
+      })
+      .on('error', async (err: any) => {
+        await fs.unlink(listPath).catch(() => {});
+        reject(new Error(`Concat failed: ${err.message}`));
+      })
+      .save(outputPath.replace(/\.mp3$/, '.wav'));
   });
 }
 
@@ -267,6 +310,10 @@ export async function mergeVideoAudio(
 }
 
 export async function convertToWav(inputPath: string, outputPath: string): Promise<void> {
+  // If input is already PCM WAV (from our new concatAudioFiles), skip re-encode.
+  const ext = path.extname(inputPath).toLowerCase();
+  if (ext === '.wav' && inputPath === outputPath) return;
+
   return new Promise((resolve, reject) => {
     ffmpeg(inputPath)
       .audioCodec('pcm_s16le')
@@ -285,7 +332,9 @@ export const ffmpegService = {
   getVideoSize,
   extractAudio,
   generateSilence,
+  generateSilenceWav,
   speedUpAudio,
+  speedUpAudioWav,
   runFilter,
   trimAudio,
   mergeVideoAudioSubtitles,
