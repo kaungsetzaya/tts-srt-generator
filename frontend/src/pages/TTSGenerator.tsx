@@ -3205,8 +3205,8 @@ export default function TTSGenerator() {
                             </div>
                             <span className="relative z-10">
                               {lang === "mm"
-                                ? "AI ဖြင့် ဖန်တီးမည်"
-                                : "Generate with AI"}
+                                ? "ဖန်တီးမည်"
+                                : "Generate"}
                             </span>
                             <span 
                               className="relative z-10 px-3 py-1.5 rounded-full text-[13px] font-black"
