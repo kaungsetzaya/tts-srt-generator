@@ -231,22 +231,14 @@ export async function mergeDubbedVideoSimple(
     onProgress?: (progress: number) => void;
   }
 ): Promise<void> {
-  const filterParts: string[] = [];
-  filterParts.push('[0:v]null[vv]');
-  filterParts.push('[1:a]anull[aa]');
-
-  const filterComplex = filterParts.join(';');
-
   const outputOpts: string[] = [
-    '-filter_complex', filterComplex,
-    '-map', '[vv]',
-    '-map', '[aa]',
     '-c:v', 'libx264',
     '-preset', 'fast',
     '-crf', '23',
     '-c:a', 'aac',
     '-b:a', '128k',
     '-movflags', '+faststart',
+    '-shortest',
   ];
 
   if (options?.subtitlesPath) {
