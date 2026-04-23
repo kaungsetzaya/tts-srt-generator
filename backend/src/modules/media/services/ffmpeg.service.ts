@@ -311,7 +311,7 @@ export async function mergeDubbedVideoSimple(
     '-c:a', 'aac',
     '-b:a', '128k',
     '-movflags', '+faststart',
-    '-shortest',
+    // ← '-shortest' ဖြုတ်လိုက်တယ်
   ];
 
   if (options?.subtitlesPath) {
@@ -341,19 +341,19 @@ export async function mergeDubbedVideoSimple(
           '[2:a]volume=0.15[bg]',
           '[voice][bg]amix=inputs=2:duration=first:dropout_transition=2[a]'
         ])
-        .outputOptions(['-map', '0:v', '-map', '[a]']);
+        .outputOptions(['-map', '0:v:0', '-map', '[a]']);
     } else {
-      command = command.outputOptions(['-map', '0:v', '-map', '1:a']);
+      command = command.outputOptions(['-map', '0:v:0', '-map', '1:a:0']);
     }
 
-    command.outputOptions(outputOpts)
+    command
+      .outputOptions(outputOpts)
       .on('progress', (p: any) => options?.onProgress?.(p.percent ?? 0))
       .on('error', (err) => {
-          console.error('[FFMPEG MERGE ERROR]', err);
-          reject(err);
+        console.error('[FFMPEG MERGE ERROR]', err);
+        reject(err);
       })
       .on('end', () => resolve())
-
       .save(outputPath);
   });
 }
