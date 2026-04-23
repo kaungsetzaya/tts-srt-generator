@@ -283,6 +283,32 @@ export async function mergeDubbedVideoSimple(
   });
 }
 
+export async function adjustVideoSpeed(
+  inputPath: string,
+  outputPath: string,
+  speedRatio: number
+): Promise<void> {
+  if (Math.abs(speedRatio - 1.0) < 0.01) {
+    await fs.copyFile(inputPath, outputPath);
+    return;
+  }
+  const pts = (1.0 / speedRatio).toFixed(6);
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .videoFilters(`setpts=${pts}*PTS`)
+      .outputOptions([
+        '-c:v', 'libx264',
+        '-preset', 'fast',
+        '-crf', '23',
+        '-an',
+        '-movflags', '+faststart',
+      ])
+      .on('end', () => resolve())
+      .on('error', reject)
+      .save(outputPath);
+  });
+}
+
 export const ffmpegService = {
   getVideoDuration,
   getAudioDurationMs,
@@ -297,5 +323,6 @@ export const ffmpegService = {
   concatVideoFiles,
   adjustAudioSpeed,
   extractVideoOnly,
+  adjustVideoSpeed,
   mergeDubbedVideoSimple,
 };
