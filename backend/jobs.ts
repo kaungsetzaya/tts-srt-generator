@@ -1,4 +1,4 @@
-﻿// Background job system for long-running tasks like video dubbing and translation
+// Background job system for long-running tasks like video dubbing and translation
 // Jobs are persisted to the DB so they survive server restarts.
 import { DubOptions, DubResult } from "@shared/types";
 
@@ -20,7 +20,7 @@ export interface Job {
   updatedAt: Date;
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ In-memory cache (primary store for active/recent jobs) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ─── In-memory cache (primary store for active/recent jobs) ─────────────────────
 const jobs = new Map<string, Job>();
 
 const MAX_CONCURRENT = 5;
@@ -49,7 +49,7 @@ export function getQueueStatus() {
   return { active: activeJobs, waiting: waitingQueue.length, max: MAX_CONCURRENT };
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ DB persistence helpers (fire-and-forget, never throw) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ─── DB persistence helpers (fire-and-forget, never throw) ───────────────────────
 
 async function persistJobCreate(job: Job): Promise<void> {
   try {
@@ -86,6 +86,8 @@ async function persistJobUpdate(id: string, updates: Partial<Pick<Job, "status" 
     if (updates.message !== undefined) row.message = updates.message;
     if (updates.error !== undefined) row.error = updates.error?.slice(0, 990);
     if (updates.result !== undefined) row.resultJson = JSON.stringify(updates.result);
+    
+    // Ensure we don't overwrite a final status with an earlier one (though unlikely in current flow)
     await db.update(ttsJobs).set(row).where(eq(ttsJobs.id, id));
   } catch (e) {
     console.warn("[Jobs] DB persist update failed (non-fatal):", (e as any)?.message);
@@ -129,8 +131,8 @@ export async function recoverInterruptedJobs(): Promise<void> {
     const { sql } = await import("drizzle-orm");
     const db = await getDb();
     if (!db) return;
-    const updated = await db.update(ttsJobs)
-      .set({ status: "failed", error: "Server restarted Ã¢â‚¬â€ job was interrupted", updatedAt: new Date() })
+    await db.update(ttsJobs)
+      .set({ status: "failed", error: "Server restarted — job was interrupted", updatedAt: new Date() })
       .where(sql`status IN ('pending', 'processing')`);
     console.log("[Jobs] Marked interrupted jobs as failed on startup");
   } catch (e) {
@@ -138,7 +140,7 @@ export async function recoverInterruptedJobs(): Promise<void> {
   }
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Core API Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ─── Core API ──────────────────────────────────────────────────────────────────
 
 export function createJob(type: JobType, input: any, userId?: string): string {
   const id = `job_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
@@ -197,28 +199,31 @@ async function processJob(jobId: string) {
 }
 
 export function getJob(id: string): Job | undefined {
-  // Check in-memory first
   const inMemory = jobs.get(id);
-  if (inMemory) return inMemory;
-
-  // For completed/recent jobs not in memory: caller must await getJobAsync
-  // Return undefined synchronously Ã¢â‚¬â€ callers that need DB fallback use getJobAsync
-  return undefined;
+  return inMemory;
 }
 
-// Async version that falls back to DB for jobs not in memory (e.g. after restart)
+/**
+ * Async version that falls back to DB.
+ * CRITICAL: We always check DB for active jobs to ensure cache consistency 
+ * across multiple server instances or if the memory cache is stale.
+ */
 export async function getJobAsync(id: string): Promise<Job | undefined> {
   const inMemory = jobs.get(id);
-  if (inMemory) return inMemory;
+  
+  // If job is in memory AND it's a final state, it's safe to return.
+  if (inMemory && (inMemory.status === "completed" || inMemory.status === "failed")) {
+    return inMemory;
+  }
 
-  // Fall back to DB
+  // Otherwise, ALWAYS check DB for the latest progress/status.
   const fromDb = await loadJobFromDb(id);
   if (fromDb) {
-    // Repopulate memory cache for future calls
     jobs.set(id, fromDb);
     return fromDb;
   }
-  return undefined;
+
+  return inMemory;
 }
 
 export function updateJob(id: string, updates: Partial<Pick<Job, "status" | "progress" | "message" | "result" | "error">>): void {
@@ -230,18 +235,18 @@ export function updateJob(id: string, updates: Partial<Pick<Job, "status" | "pro
 }
 
 export async function cleanupOldJobs(): Promise<void> {
-  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ In-memory cleanup (1h TTL) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ─── In-memory cleanup (1h TTL) ─────────────────────
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
   for (const [id, job] of jobs.entries()) {
     if (job.updatedAt < oneHourAgo) {
-      // Don't clean up pending jobs Ã¢â‚¬â€ they might still be needed
+      // Don't clean up pending jobs — they might still be needed
       if (job.status !== "pending") {
         jobs.delete(id);
       }
     }
   }
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ DB cleanup (24h TTL for completed/failed jobs) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ─── DB cleanup (24h TTL for completed/failed jobs) ─────────────────────
   try {
     const { getDb } = await import("./db");
     const { ttsJobs } = await import("../shared/drizzle/schema");
@@ -251,7 +256,7 @@ export async function cleanupOldJobs(): Promise<void> {
     await db.delete(ttsJobs)
       .where(sql`status IN ('completed', 'failed') AND updated_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)`);
   } catch (e) {
-    // Non-fatal Ã¢â‚¬â€ DB cleanup is best-effort
+    // Non-fatal — DB cleanup is best-effort
     console.warn("[Jobs] DB cleanup failed (non-fatal):", (e as any)?.message);
   }
 }

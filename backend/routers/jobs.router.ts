@@ -1,5 +1,5 @@
 /**
- * Jobs Router Ã¢â‚¬â€ start dub jobs, check status
+ * Jobs Router — start dub jobs, check status
  */
 import { z } from "zod";
 import { t, protectedProcedure } from "./trpc";
@@ -16,7 +16,7 @@ const ALL_VOICE_IDS = [
   // Tier 2
   "ryan", "ronnie", "lucas", "daniel", "evander", "michelle", "iris", "charlotte", "amara",
   // Tier 3
-  "gemini_alex", "gemini_aria", "gemini_asha", "gemini_bÃ¤Â¸Â­Ã¥Â¹Â´", "gemini_dustin", "gemini_emma",
+  "gemini_alex", "gemini_aria", "gemini_asha", "gemini_bä¸­å¹´", "gemini_dustin", "gemini_emma",
   "gemini_eric", "gemini_female_01", "gemini_female_02", "gemini_kokoro", "gemini_male_01",
   "gemini_male_02", "gemini_male_03", "gemini_puck", "gemini_soren", "gemini_studio_female",
   "gemini_studio_male",
@@ -52,14 +52,20 @@ export const jobsRouter = t.router({
         });
       }
 
-      const creditsNeeded = getVoiceCredits(input.voice as VoiceId);
+      const creditsNeeded = 10; // Fixed 10 credits for Auto Creator
 
-      await deductCredits(
+      const deducted = await deductCredits(
         userId,
         creditsNeeded,
         "video_dub",
         `Video Dub: ${input.voice}`
       );
+      if (!deducted) {
+        throw new TRPCError({ 
+          code: "INTERNAL_SERVER_ERROR", 
+          message: "Failed to deduct credits. Please try again." 
+        });
+      }
 
       try {
         const jobId = createJob("dub_link", {
@@ -89,6 +95,35 @@ export const jobsRouter = t.router({
           code: "INTERNAL_SERVER_ERROR",
           message: error.message || "Failed to start dub job.",
         });
+      }
+    }),
+
+  startTranslate: protectedProcedure
+    .input(z.object({
+      url: z.string().optional(),
+      videoBase64: z.string().optional(),
+      filename: z.string().optional(),
+      userApiKey: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.user!.userId;
+      const creditsNeeded = 5;
+
+      const deducted = await deductCredits(userId, creditsNeeded, "video_translate", "Video Translate");
+      if (!deducted) {
+        throw new TRPCError({ 
+          code: "INTERNAL_SERVER_ERROR", 
+          message: "Failed to deduct credits. Please try again." 
+        });
+      }
+
+      try {
+        const type = input.url ? "translate_link" : "translate_file";
+        const jobId = createJob(type, { ...input, userId }, userId);
+        return { jobId };
+      } catch (err: any) {
+        await addCredits(userId, creditsNeeded, "video_translate_refund", "Refund: Failed to start translate job");
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: err.message });
       }
     }),
 

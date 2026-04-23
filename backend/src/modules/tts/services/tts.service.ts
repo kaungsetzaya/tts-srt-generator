@@ -217,21 +217,51 @@ function buildSRTFromRaw(rawSrt: string, originalText: string, aspectRatio: "9:1
   const rawSegments = parseRawSrt(rawSrt);
   if (rawSegments.length === 0) return "";
 
-  // The goal is to produce a clean SRT that isn't too fragmented.
-  // We will group segments until they reach a minimum duration OR a max character count.
   const finalSegments: { startMs: number; endMs: number; text: string }[] = [];
-  
-  let currentGroup: typeof rawSegments = [];
+  let currentGroup: any[] = [];
   let currentChars = 0;
-
-  const MAX_CHARS = charsPerLine * 2; // Up to 2 lines
+  const MAX_CHARS_PER_BLOCK = charsPerLine * 2;
 
   for (const seg of rawSegments) {
     const glen = graphemeLen(seg.text);
-    
-    const shouldFlush = currentChars + glen > MAX_CHARS;
 
-    if (shouldFlush && currentGroup.length > 0) {
+    // If a SINGLE raw segment is already too long, we must split it.
+    if (glen > MAX_CHARS_PER_BLOCK) {
+      // Flush current group first
+      if (currentGroup.length > 0) {
+        finalSegments.push({
+          startMs: currentGroup[0].startMs,
+          endMs: currentGroup[currentGroup.length - 1].endMs,
+          text: currentGroup.map(s => s.text).join(" ").trim()
+        });
+        currentGroup = [];
+        currentChars = 0;
+      }
+
+      // Split this long segment into smaller chunks
+      const graphemes = [...segmenter.segment(seg.text)].map(g => g.segment);
+      const totalDuration = seg.endMs - seg.startMs;
+      const numChunks = Math.ceil(glen / charsPerLine);
+      const chunkGraphemeCount = Math.ceil(graphemes.length / numChunks);
+      
+      for (let i = 0; i < numChunks; i++) {
+        const startIdx = i * chunkGraphemeCount;
+        const endIdx = Math.min(startIdx + chunkGraphemeCount, graphemes.length);
+        if (startIdx >= endIdx) break;
+
+        const chunkText = graphemes.slice(startIdx, endIdx).join("").trim();
+        const chunkDuration = (totalDuration * (endIdx - startIdx)) / graphemes.length;
+        
+        finalSegments.push({
+          startMs: Math.round(seg.startMs + (totalDuration * startIdx) / graphemes.length),
+          endMs: Math.round(seg.startMs + (totalDuration * endIdx) / graphemes.length),
+          text: chunkText
+        });
+      }
+      continue;
+    }
+
+    if (currentChars + glen > MAX_CHARS_PER_BLOCK && currentGroup.length > 0) {
       finalSegments.push({
         startMs: currentGroup[0].startMs,
         endMs: currentGroup[currentGroup.length - 1].endMs,
@@ -253,13 +283,11 @@ function buildSRTFromRaw(rawSrt: string, originalText: string, aspectRatio: "9:1
     });
   }
 
-  // Filter out tiny or overlapping segments and format as SRT
   return finalSegments
-    .filter(s => s.endMs > s.startMs)
+    .filter(s => s.endMs > s.startMs && s.text.trim())
     .map((s, idx) => {
-      // Add a tiny gap (20ms) to prevent some editors from fusing blocks
       const start = msToSrtTime(s.startMs);
-      const end = msToSrtTime(s.endMs - 20); 
+      const end = msToSrtTime(s.endMs - 10);
       return `${idx + 1}\n${start} --> ${end}\n${s.text}\n`;
     })
     .join("\n");

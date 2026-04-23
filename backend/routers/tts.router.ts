@@ -1,4 +1,4 @@
-﻿/**
+/**
  * TTS Router Ã¢â‚¬â€ text-to-speech generation
  */
 import { z } from "zod";
@@ -47,12 +47,18 @@ export const ttsRouter = t.router({
       await acquireSlot();
       let result;
       try {
-        await deductCredits(
+        const deducted = await deductCredits(
           userId,
           creditsNeeded,
           "tts",
           `TTS: ${voiceId}`
         );
+        if (!deducted) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to deduct credits. Please try again."
+          });
+        }
 
         result = await ttsService.generateSpeech(
           input.text,

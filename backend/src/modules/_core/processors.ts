@@ -1,8 +1,9 @@
-﻿import { registerProcessor, updateJob } from "../../../jobs";
+import { registerProcessor, updateJob } from "../../../jobs";
 import { dubVideoPipeline } from "../dubbing/pipelines/dubVideo.pipeline";
 import { translateVideoPipeline } from "../translation/pipelines/translateVideo.pipeline";
 import { addCredits } from "../../../routers/credits";
 import { generateSignedDownloadUrl } from "../../../_core/signedUrl";
+import { recordConversion } from "./stats";
 
 /**
  * Centrally registers all background job processors.
@@ -24,9 +25,26 @@ export function registerAllProcessors() {
 
             console.log(`[Job ${job.id}] Dub file successful: ${result.videoUrl}`);
             updateJob(job.id, { status: "completed", progress: 100, result });
+
+            // Record success
+            await recordConversion({
+                userId,
+                feature: "dub_file",
+                voice: options.voice,
+                text: result.myanmarText,
+                durationMs: result.durationMs,
+                status: "success"
+            });
         } catch (err: any) {
             console.error(`[Job ${job.id}] Failed:`, err);
             if (userId) await addCredits(userId, 10, "video_dub_refund", "Refund: Dub job failed");
+            
+            await recordConversion({
+                userId,
+                feature: "dub_file",
+                status: "fail",
+                errorMsg: err.message
+            });
             throw err;
         }
     });
@@ -44,9 +62,26 @@ export function registerAllProcessors() {
 
             console.log(`[Job ${job.id}] Dub link successful: ${result.videoUrl}`);
             updateJob(job.id, { status: "completed", progress: 100, result });
+
+            // Record success
+            await recordConversion({
+                userId,
+                feature: "dub_link",
+                voice: options.voice,
+                text: result.myanmarText,
+                durationMs: result.durationMs,
+                status: "success"
+            });
         } catch (err: any) {
             console.error(`[Job ${job.id}] Failed:`, err);
             if (userId) await addCredits(userId, 10, "video_dub_refund", "Refund: Dub link job failed");
+            
+            await recordConversion({
+                userId,
+                feature: "dub_link",
+                status: "fail",
+                errorMsg: err.message
+            });
             throw err;
         }
     });
@@ -58,8 +93,21 @@ export function registerAllProcessors() {
             const buffer = Buffer.from(videoBase64, 'base64');
             const result = await translateVideoPipeline.execute(buffer, filename, userApiKey, job.id);
             updateJob(job.id, { status: "completed", progress: 100, result });
+
+            await recordConversion({
+                userId,
+                feature: "video_upload",
+                text: result.myanmarText,
+                status: "success"
+            });
         } catch (err: any) {
             if (userId) await addCredits(userId, 5, "video_translate_refund", "Refund: Translate job failed");
+            await recordConversion({
+                userId,
+                feature: "video_upload",
+                status: "fail",
+                errorMsg: err.message
+            });
             throw err;
         }
     });
@@ -70,9 +118,22 @@ export function registerAllProcessors() {
         try {
             const result = await translateVideoPipeline.executeFromLink(url, userApiKey, job.id);
             updateJob(job.id, { status: "completed", progress: 100, result });
+
+            await recordConversion({
+                userId,
+                feature: "video_link",
+                text: result.myanmarText,
+                status: "success"
+            });
         } catch (err: any) {
             console.error(`[Job ${job.id}] Failed:`, err);
             if (userId) await addCredits(userId, 5, "video_translate_refund", "Refund: Translate link job failed");
+            await recordConversion({
+                userId,
+                feature: "video_link",
+                status: "fail",
+                errorMsg: err.message
+            });
             throw err;
         }
     });

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Admin Router Ã¢â‚¬â€ user management, subscriptions, analytics
  */
 import { z } from "zod";
@@ -145,19 +145,13 @@ export const adminRouter = t.router({
         .limit(1);
         
       if (user) {
-        const currentCredits = user.credits ?? 0;
-        await db
-          .update(users)
-          .set({ credits: currentCredits + creditsToAdd })
-          .where(eq(users.id, input.userId));
-          
-        await db.insert(creditTransactions).values({
-          id: randomUUID(),
-          userId: input.userId,
-          amount: creditsToAdd,
-          type: "subscription",
-          description: `Subscribe: ${input.plan} plan (${input.days} days added)`,
-        });
+        const { addCredits } = await import("./credits");
+        await addCredits(
+          input.userId, 
+          creditsToAdd, 
+          "subscription", 
+          `Subscribe: ${input.plan} plan (${input.days} days added)`
+        );
       }
 
       return { success: true };
@@ -178,14 +172,13 @@ export const adminRouter = t.router({
         .where(eq(users.id, input.userId))
         .limit(1);
       if (user && user.credits && user.credits > 0) {
-        await db.update(users).set({ credits: 0 }).where(eq(users.id, input.userId));
-        await db.insert(creditTransactions).values({
-          id: randomUUID(),
-          userId: input.userId,
-          amount: -user.credits,
-          type: "subscription_cancelled",
-          description: "Subscription cancelled - credits cleared",
-        });
+        const { deductCredits } = await import("./credits");
+        await deductCredits(
+          input.userId,
+          user.credits,
+          "subscription_cancelled",
+          "Subscription cancelled - credits cleared"
+        );
       }
       return { success: true };
     }),
