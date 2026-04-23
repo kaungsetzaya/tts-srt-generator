@@ -228,12 +228,13 @@ export class DubVideoPipeline {
         const origDuration = Math.max(origEnd - origStart, 0.1);
         const ttsDuration = result.duration / 1000;
 
-        const speedRatio = origDuration / ttsDuration;
+        const speedRatio = ttsDuration / origDuration;
+        const targetDuration = ttsDuration;
 
         console.log(`[Dubbing Pipeline] seg ${seg.index}: tts=${(ttsDuration*1000).toFixed(0)}ms orig=${(origDuration*1000).toFixed(0)}ms ratio=${speedRatio?.toFixed(3) || '1.000'}`);
 
         const speechFile = path.join(tempDir, `vp_speech_${seg.index}.mp4`);
-        await ffmpegService.extractVideoSegment(tempVideoPath, origStart, origEnd, speechFile, speedRatio);
+        await ffmpegService.extractVideoSegment(tempVideoPath, origStart, origEnd, speechFile, speedRatio, targetDuration);
         videoPartFiles.push(speechFile);
 
         if (i < activeSegments.length - 1) {

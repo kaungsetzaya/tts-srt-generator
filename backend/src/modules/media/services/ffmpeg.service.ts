@@ -142,10 +142,11 @@ export async function extractVideoSegment(
   startSec: number,
   endSec: number,
   outputPath: string,
-  speedRatio?: number
+  speedRatio?: number,
+  targetDuration?: number
 ): Promise<void> {
   const durationSec = endSec - startSec;
-  const targetDurationStr = (speedRatio ? durationSec / speedRatio : durationSec).toFixed(3);
+  const targetDurationStr = (targetDuration ?? (speedRatio ? durationSec / speedRatio : durationSec)).toFixed(3);
 
   return new Promise((resolve, reject) => {
     const ff = ffmpeg(videoPath)
