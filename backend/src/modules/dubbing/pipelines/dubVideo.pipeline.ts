@@ -273,17 +273,17 @@ export class DubVideoPipeline {
         const seg = activeSegments[i];
         const result = ttsResults[i];
         const speechFile = path.join(tempDir, `vp_speech_${seg.index}.mp4`);
+        const videoSegDurationMs = Math.round((seg.end - seg.start) * 1000);
         
-        // Premium Warping: Video matches TTS duration exactly
-        await ffmpegService.extractAndWarpVideoSegment(
+        // Extract video at ORIGINAL duration (no warping) - preserve original video quality
+        await ffmpegService.extractVideoSegment(
           tempVideoPath, 
           seg.start, 
           seg.end, 
-          result.duration, 
           speechFile
         );
         videoPartFiles.push(speechFile);
-        partDurationsMs.push(result.duration);
+        partDurationsMs.push(videoSegDurationMs);
 
         if (i < activeSegments.length - 1) {
           const nextSeg = activeSegments[i + 1];
@@ -367,8 +367,16 @@ export class DubVideoPipeline {
         if (!result) { partIdx++; continue; }
 
         const videoSegDurationMs = partDurationsMs[partIdx++];
-        // With warping, result.duration is EXACTLY videoSegDurationMs
-        ttsTrackParts.push(result.partPath);
+        
+        // Speed up/slow down TTS audio to match video segment duration exactly
+        const speedRatio = videoSegDurationMs / result.duration;
+        if (Math.abs(speedRatio - 1.0) > 0.01) {
+          const spedPath = path.join(tempDir, `track_sped_${seg.index}.wav`);
+          await ffmpegService.adjustAudioSpeed(result.partPath, spedPath, speedRatio);
+          ttsTrackParts.push(spedPath);
+        } else {
+          ttsTrackParts.push(result.partPath);
+        }
 
         // Gap silence
         if (i < activeSegments.length - 1) {
