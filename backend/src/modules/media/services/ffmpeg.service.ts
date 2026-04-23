@@ -224,9 +224,9 @@ export async function adjustAudioSpeed(
 export async function extractVideoOnly(videoPath: string, outputPath: string): Promise<void> {
   return new Promise((resolve, reject) => {
     ffmpeg(videoPath)
-      .noAudio()
       .outputOptions([
-        '-c:v',    'copy',
+        '-c:v', 'copy',
+        '-an',
         '-movflags', '+faststart',
       ])
       .on('end', () => resolve())
