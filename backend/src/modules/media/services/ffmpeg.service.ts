@@ -358,6 +358,24 @@ export async function mergeDubbedVideoSimple(
   });
 }
 
+export async function trimAudioToduration(
+  inputPath: string,
+  outputPath: string,
+  targetDurationMs: number
+): Promise<void> {
+  const targetSec = (targetDurationMs / 1000).toFixed(6);
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .duration(parseFloat(targetSec))
+      .audioCodec('pcm_s16le')
+      .audioFrequency(AUDIO_SAMPLE_RATE)
+      .audioChannels(AUDIO_CHANNELS)
+      .on('end', () => resolve())
+      .on('error', reject)
+      .save(outputPath);
+  });
+}
+
 export const ffmpegService = {
   getVideoDuration,
   getAudioDurationMs,
@@ -374,5 +392,6 @@ export const ffmpegService = {
   adjustAudioSpeed,
   extractVideoOnly,
   mergeDubbedVideoSimple,
+  trimAudioToduration,
 };
 

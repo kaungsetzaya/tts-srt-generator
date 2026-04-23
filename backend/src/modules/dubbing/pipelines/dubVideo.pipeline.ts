@@ -406,15 +406,55 @@ export class DubVideoPipeline {
         await fs.writeFile(tempAssPath, assContent);
       }
 
+       // ── FINAL SYNC - pad audio to match video exactly ──
+       const videoDurationMs = await ffmpegService.getAudioDurationMs(processedVideoPath);
+       const ttsDurationMs = await ffmpegService.getAudioDurationMs(ttsTrackPath);
+       let finalTtsTrackPath = ttsTrackPath;
+       const diff = videoDurationMs - ttsDurationMs;
+
+       console.log(`[Dubbing Pipeline] video=${videoDurationMs}ms tts=${ttsDurationMs}ms diff=${diff}ms`);
+
+       // ── FINAL SYNC မတိုင်ခင် ဒီ log ထည့် ──
+       console.log(`\n========= DURATION DEBUG =========`);
+       console.log(`processedVideo : ${videoDurationMs}ms`);
+       console.log(`ttsTrack       : ${ttsDurationMs}ms`);
+       console.log(`diff           : ${videoDurationMs - ttsDurationMs}ms`);
+
+       // Video parts တစ်ခုချင်း duration
+       console.log(`\n--- Video Parts ---`);
+       for (let i = 0; i < videoPartFiles.length; i++) {
+         const ms = await ffmpegService.getAudioDurationMs(videoPartFiles[i]);
+         console.log(`  [${i}] ${path.basename(videoPartFiles[i])}: ${ms}ms`);
+       }
+
+       // TTS parts တစ်ခုချင်း duration
+       console.log(`\n--- TTS Track Parts ---`);
+       for (let i = 0; i < ttsTrackParts.length; i++) {
+         const ms = await ffmpegService.getAudioDurationMs(ttsTrackParts[i]);
+         console.log(`  [${i}] ${path.basename(ttsTrackParts[i])}: ${ms}ms`);
+       }
+       console.log(`===================================\n`);
+
+      if (diff > 10) {
+        // TTS တိုနေ → video length ထိ silence pad
+        finalTtsTrackPath = path.join(tempDir, `tts_synced.wav`);
+        await ffmpegService.padAudioWithSilence(ttsTrackPath, finalTtsTrackPath, videoDurationMs);
+        console.log(`[Dubbing Pipeline] Padded TTS to ${videoDurationMs}ms`);
+      } else if (diff < -10) {
+        // TTS ရှည်နေ → TTS length ထိ silence pad video (ဒါမှ -shortest က မှန်မယ်)
+        finalTtsTrackPath = path.join(tempDir, `tts_synced.wav`);
+        await ffmpegService.trimAudioToduration(ttsTrackPath, finalTtsTrackPath, videoDurationMs);
+        console.log(`[Dubbing Pipeline] Trimmed TTS to ${videoDurationMs}ms`);
+      }
+
       console.log(`[Dubbing Pipeline] Merging video + Background Mix + subtitles...`);
       await ffmpegService.mergeDubbedVideoSimple(
         processedVideoPath,
-        ttsTrackPath,
+        finalTtsTrackPath,
         tempOutputPath,
         {
           subtitlesPath: hasSubtitles ? tempAssPath : undefined,
           fontPath: hasSubtitles ? fontPath : undefined,
-          backgroundAudioPath: tempAudioExtract, // Mix with original audio (ducked)
           onProgress: (p: number) => {
             if (jobId) updateJob(jobId, { progress: 85 + Math.floor((p / 100) * 10), message: "Merging visuals with audio..." });
           },
