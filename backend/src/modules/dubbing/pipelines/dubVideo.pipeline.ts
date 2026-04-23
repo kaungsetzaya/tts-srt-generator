@@ -254,16 +254,19 @@ export class DubVideoPipeline {
       }
 
       const ttsResults = await runWithConcurrency(activeSegments, generateTtsForSegment, CONCURRENCY);
+      
       // ── BUILD VIDEO PARTS ──
-
       const videoPartFiles: string[] = [];
+      const partDurationsMs: number[] = [];
       const firstSeg = activeSegments[0];
       const lastSeg = activeSegments[activeSegments.length - 1];
 
       if (firstSeg && firstSeg.start > 0.05) {
         const introFile = path.join(tempDir, `vp_intro.mp4`);
+        const durMs = Math.round(firstSeg.start * 1000);
         await ffmpegService.extractVideoSegment(tempVideoPath, 0, firstSeg.start, introFile);
         videoPartFiles.push(introFile);
+        partDurationsMs.push(durMs);
       }
 
       for (let i = 0; i < activeSegments.length; i++) {
@@ -272,7 +275,6 @@ export class DubVideoPipeline {
         const speechFile = path.join(tempDir, `vp_speech_${seg.index}.mp4`);
         
         // Premium Warping: Video matches TTS duration exactly
-        // This keeps audio quality at 100% (1.0x speed)
         await ffmpegService.extractAndWarpVideoSegment(
           tempVideoPath, 
           seg.start, 
@@ -281,36 +283,35 @@ export class DubVideoPipeline {
           speechFile
         );
         videoPartFiles.push(speechFile);
+        partDurationsMs.push(result.duration);
 
         if (i < activeSegments.length - 1) {
           const nextSeg = activeSegments[i + 1];
           const gapStart = seg.end;
           const gapEnd = nextSeg.start;
-          if (gapEnd - gapStart > 0.05) {
+          const gapDur = gapEnd - gapStart;
+          if (gapDur > 0.05) {
             const gapFile = path.join(tempDir, `vp_gap_${i}.mp4`);
+            const gapDurMs = Math.round(gapDur * 1000);
             await ffmpegService.extractVideoSegment(tempVideoPath, gapStart, gapEnd, gapFile);
             videoPartFiles.push(gapFile);
+            partDurationsMs.push(gapDurMs);
           }
         }
       }
 
       if (lastSeg && videoDurationSec - lastSeg.end > 0.1) {
         const outroFile = path.join(tempDir, `vp_outro.mp4`);
+        const outroDurMs = Math.round((videoDurationSec - lastSeg.end) * 1000);
         await ffmpegService.extractVideoSegment(tempVideoPath, lastSeg.end, videoDurationSec, outroFile);
         videoPartFiles.push(outroFile);
+        partDurationsMs.push(outroDurMs);
       }
 
       // ── CONCATENATE VIDEO PARTS ──
       const processedVideoPath = path.join(tempDir, `processed_video.mp4`);
       await ffmpegService.concatVideoFiles(videoPartFiles, processedVideoPath);
       console.log(`[Dubbing Pipeline] Video parts: ${videoPartFiles.length}`);
-
-      // ── MEASURE ACTUAL DURATIONS ──
-      const partDurationsMs: number[] = [];
-      for (const file of videoPartFiles) {
-        const ms = await ffmpegService.getAudioDurationMs(file);
-        partDurationsMs.push(ms);
-      }
 
       // ── BUILD SUBTITLE TIMING ──
       let currentMs = 0;

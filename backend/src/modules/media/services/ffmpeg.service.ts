@@ -163,9 +163,13 @@ export async function extractVideoSegment(
       .seekInput(parseFloat(startSec.toFixed(6)))
       .duration(parseFloat(duration.toFixed(6)))
       .outputOptions([
-        '-c:v', 'copy',
-        '-c:a', 'copy',
-        '-avoid_negative_ts', 'make_zero',
+        '-c:v', 'libx264',
+        '-preset', 'fast',
+        '-crf', '23',
+        '-r', '30',
+        '-pix_fmt', 'yuv420p',
+        '-an', // We handle audio separately in the pipeline
+        '-movflags', '+faststart',
       ])
       .on('end', () => resolve())
       .on('error', reject)
@@ -186,8 +190,9 @@ export async function concatVideoFiles(videoParts: string[], outputPath: string)
         '-c:v', 'libx264',
         '-preset', 'fast',
         '-crf', '23',
-        '-c:a', 'aac',
-        '-b:a', '128k',
+        '-r', '30',
+        '-pix_fmt', 'yuv420p',
+        '-an',
         '-movflags', '+faststart',
       ])
       .on('end', async () => { await fs.unlink(listPath).catch(() => {}); resolve(); })
@@ -225,7 +230,13 @@ export async function extractVideoOnly(
   return new Promise((resolve, reject) => {
     ffmpeg(videoPath)
       .noAudio()
-      .outputOptions(['-c:v', 'copy'])
+      .outputOptions([
+        '-c:v', 'libx264',
+        '-preset', 'fast',
+        '-crf', '23',
+        '-r', '30',
+        '-pix_fmt', 'yuv420p',
+      ])
       .on('end', () => resolve())
       .on('error', reject)
       .save(outputPath);
@@ -239,13 +250,10 @@ export async function extractAndWarpVideoSegment(
   targetDurationMs: number,
   outputPath: string
 ): Promise<void> {
-
   const originalDurationSec = endSec - startSec;
   const targetDurationSec = targetDurationMs / 1000;
-  // If the segment is extremely short or durations are near zero, skip warping logic to avoid ffmpeg errors
-  if (originalDurationSec < 0.01 || targetDurationSec < 0.01) {
-      return extractVideoSegment(videoPath, startSec, endSec, outputPath);
-  }
+  
+  // Always warp to ensure precise duration matching, even if ratio is close to 1
   const ratio = targetDurationSec / originalDurationSec;
   
   return new Promise((resolve, reject) => {
@@ -257,6 +265,8 @@ export async function extractAndWarpVideoSegment(
         '-c:v', 'libx264',
         '-preset', 'fast',
         '-crf', '23',
+        '-r', '30', // Force same frame rate as extractVideoSegment
+        '-pix_fmt', 'yuv420p',
         '-an',
         '-movflags', '+faststart',
       ])
