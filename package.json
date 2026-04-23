@@ -17,6 +17,7 @@
     "reset-db": "tsx backend/reset-db.ts"
   },
   "dependencies": {
+    "dotenv": "^17.2.2",
     "drizzle-orm": "^0.45.2"
   },
   "devDependencies": {
