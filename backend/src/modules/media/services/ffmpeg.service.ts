@@ -82,6 +82,22 @@ export async function generateSilenceWav(durationMs: number, outputPath: string)
   });
 }
 
+export async function padAudioWithSilence(
+  inputPath: string,
+  outputPath: string,
+  targetDurationMs: number
+): Promise<void> {
+  const inputDurationMs = await getAudioDurationMs(inputPath);
+  const padMs = targetDurationMs - inputDurationMs;
+  if (padMs <= 0) {
+    await fs.copyFile(inputPath, outputPath);
+    return;
+  }
+  const silencePath = outputPath + '.silence.wav';
+  await generateSilenceWav(padMs, silencePath);
+  return concatAudioFiles([inputPath, silencePath], outputPath);
+}
+
 export async function convertToWav(inputPath: string, outputPath: string): Promise<void> {
   const ext = path.extname(inputPath).toLowerCase();
   if (ext === '.wav' && inputPath === outputPath) return;
@@ -277,6 +293,7 @@ export const ffmpegService = {
   getVideoSize,
   extractAudio,
   generateSilenceWav,
+  padAudioWithSilence,
   convertToWav,
   trimSilenceWav,
   concatAudioFiles,
