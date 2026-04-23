@@ -208,9 +208,11 @@ export class DubVideoPipeline {
       const ttsResults = await runWithConcurrency(activeSegments, generateTtsForSegment, CONCURRENCY);
       console.log(`[Dubbing Pipeline] Step 5 OK: ${ttsResults.length} TTS segments generated`);
 
-      // ── USE ORIGINAL VIDEO (NO CONCATENATION) ──
-      const processedVideoPath = tempVideoPath;
-      const videoDurationMs = Math.round(videoDurationSec * 1000);
+      // ── EXTRACT VIDEO WITHOUT AUDIO ──
+      const videoOnlyPath = path.join(tempDir, `video_only.mp4`);
+      await ffmpegService.extractVideoOnly(tempVideoPath, videoOnlyPath);
+
+      // ── BUILD TTS TRACK: concatenate all TTS segments ──
 
       // ── BUILD TTS TRACK: concatenate all TTS segments ──
       const ttsTrackParts: string[] = [];
@@ -223,6 +225,7 @@ export class DubVideoPipeline {
       const ttsConcatedPath = path.join(tempDir, `tts_concated.wav`);
       await ffmpegService.concatAudioFiles(ttsTrackParts, ttsConcatedPath);
 
+      const videoDurationMs = Math.round(videoDurationSec * 1000);
       const ttsDurationMs = await ffmpegService.getAudioDurationMs(ttsConcatedPath);
       let finalTtsTrackPath = ttsConcatedPath;
       const diff = videoDurationMs - ttsDurationMs;
@@ -289,7 +292,7 @@ export class DubVideoPipeline {
 
       console.log(`[Dubbing Pipeline] Merging video + TTS track${hasSubtitles ? ' + subtitles' : ''}...`);
       await ffmpegService.mergeDubbedVideoSimple(
-        processedVideoPath,
+        videoOnlyPath,
         finalTtsTrackPath,
         tempOutputPath,
         {

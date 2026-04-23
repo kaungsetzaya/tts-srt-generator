@@ -221,6 +221,20 @@ export async function adjustAudioSpeed(
   });
 }
 
+export async function extractVideoOnly(videoPath: string, outputPath: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    ffmpeg(videoPath)
+      .noAudio()
+      .outputOptions([
+        '-c:v',    'copy',
+        '-movflags', '+faststart',
+      ])
+      .on('end', () => resolve())
+      .on('error', reject)
+      .save(outputPath);
+  });
+}
+
 export async function mergeDubbedVideoSimple(
   processedVideoPath: string,
   ttsTrackPath: string,
@@ -282,5 +296,6 @@ export const ffmpegService = {
   extractVideoSegment,
   concatVideoFiles,
   adjustAudioSpeed,
+  extractVideoOnly,
   mergeDubbedVideoSimple,
 };
