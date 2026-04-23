@@ -1811,7 +1811,7 @@ export default function TTSGenerator() {
 
               {/* === VIDEO TAB — Simple Translation === */}
               {mainTab === "video" && (
-                <div className="max-w-xl mx-auto animate-in fade-in zoom-in-95 duration-300 space-y-4">
+                <div className="w-full px-4 lg:px-6 animate-in fade-in zoom-in-95 duration-300 space-y-4">
                   <div className="text-center mb-2 sm:mb-4">
                     <p className="text-xs mt-1" style={{ color: subtextColor }}>
                       {t.videoLimit}
@@ -2109,7 +2109,7 @@ export default function TTSGenerator() {
 
               {/* === DUBBING TAB — Auto Creator === */}
               {mainTab === "dubbing" && (
-                <div className="max-w-2xl mx-auto animate-in fade-in zoom-in-95 duration-300">
+                <div className="w-full px-4 lg:px-6 animate-in fade-in zoom-in-95 duration-300">
                   <div className="text-center mb-2 sm:mb-4">
                     {!isAdmin && !hasPlan && me && !subLoading && (
                       <div
