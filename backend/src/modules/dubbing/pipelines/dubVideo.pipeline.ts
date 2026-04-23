@@ -321,14 +321,18 @@ export class DubVideoPipeline {
       const videoDurationMs = await ffmpegService.getAudioDurationMs(processedVideoPath);
       const ttsDurationMs = await ffmpegService.getAudioDurationMs(ttsTrackPath);
       let finalTtsTrackPath = ttsTrackPath;
-      if (videoDurationMs > ttsDurationMs) {
-        finalTtsTrackPath = path.join(tempDir, `tts_padded.wav`);
-        console.log(`[Dubbing Pipeline] Padding audio: video=${videoDurationMs}ms tts=${ttsDurationMs}ms`);
-        await ffmpegService.padAudioWithSilence(ttsTrackPath, finalTtsTrackPath, videoDurationMs);
-      } else if (videoDurationMs < ttsDurationMs) {
+      const diff = videoDurationMs - ttsDurationMs;
+
+      if (Math.abs(diff) > 10) {
         finalTtsTrackPath = path.join(tempDir, `tts_synced.wav`);
-        console.log(`[Dubbing Pipeline] Syncing audio: video=${videoDurationMs}ms tts=${ttsDurationMs}ms`);
-        await ffmpegService.adjustAudioSpeed(ttsTrackPath, finalTtsTrackPath, videoDurationMs / ttsDurationMs);
+        if (diff > 0) {
+          console.log(`[Dubbing Pipeline] Padding audio: video=${videoDurationMs}ms tts=${ttsDurationMs}ms diff=${diff}ms`);
+          await ffmpegService.padAudioWithSilence(ttsTrackPath, finalTtsTrackPath, videoDurationMs);
+        } else {
+          const speedRatio = videoDurationMs / ttsDurationMs;
+          console.log(`[Dubbing Pipeline] Stretching audio: video=${videoDurationMs}ms tts=${ttsDurationMs}ms ratio=${speedRatio.toFixed(4)}`);
+          await ffmpegService.adjustAudioSpeed(ttsTrackPath, finalTtsTrackPath, speedRatio);
+        }
       } else {
         console.log(`[Dubbing Pipeline] Durations match: video=${videoDurationMs}ms tts=${ttsDurationMs}ms`);
       }
