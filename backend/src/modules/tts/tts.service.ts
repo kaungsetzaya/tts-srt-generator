@@ -58,7 +58,7 @@ async function generateTier1Speech(
   const voice = TIER1_VOICES[voiceId];
   if (!voice) throw new Error(`Unknown Tier 1 voice: ${voiceId}`);
 
-  const MYANMAR_SPEED_MULTIPLIER = 1.25;
+  const MYANMAR_SPEED_MULTIPLIER = 1.0;
   const actualRate = rate * MYANMAR_SPEED_MULTIPLIER;
   const ratePercent = Math.round((actualRate - 1.0) * 100);
   const rateStr = ratePercent >= 0 ? `+${ratePercent}%` : `${ratePercent}%`;

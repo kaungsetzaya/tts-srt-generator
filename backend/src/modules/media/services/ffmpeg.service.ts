@@ -145,27 +145,27 @@ export async function extractVideoSegment(
   speedRatio?: number
 ): Promise<void> {
   const durationSec = endSec - startSec;
-  const startStr = startSec.toFixed(6);
-  const durationStr = durationSec.toFixed(6);
-  const targetDurationStr = (speedRatio ? durationSec * speedRatio : durationSec).toFixed(6);
+  const targetDurationStr = (speedRatio ? durationSec * speedRatio : durationSec).toFixed(3);
 
   return new Promise((resolve, reject) => {
     const ff = ffmpeg(videoPath)
-      .seekInput(parseFloat(startStr))
-      .duration(parseFloat(durationStr));
+      .seekInput(parseFloat(startSec.toFixed(6)))
+      .duration(parseFloat(durationSec.toFixed(6)));
 
-    const filters: string[] = [];
+    const videoFilters: string[] = [];
     if (speedRatio && needsSpeedChange(speedRatio)) {
-      filters.push(`setpts=(PTS-STARTPTS)*${speedRatio.toFixed(6)}`);
+      videoFilters.push(`setpts=(PTS-STARTPTS)*${speedRatio.toFixed(6)}`);
     }
-    if (filters.length > 0) ff.videoFilters(filters.join(','));
+    videoFilters.push('fps=30');
+
+    if (videoFilters.length > 0) ff.videoFilters(videoFilters.join(','));
 
     ff.outputOptions([
+      '-t',      targetDurationStr,
       '-c:v',    'libx264',
       '-preset', 'fast',
       '-crf',    '23',
       '-an',
-      '-t',      targetDurationStr,
       '-movflags', '+faststart',
     ])
     .on('end', () => resolve())
