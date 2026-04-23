@@ -157,39 +157,23 @@ export async function extractVideoSegment(
   videoPath: string,
   startSec: number,
   endSec: number,
-  outputPath: string,
-  speedRatio?: number,
-  targetDuration?: number
+  outputPath: string
 ): Promise<void> {
   const durationSec = endSec - startSec;
-  const targetDurationStr = (targetDuration ?? (speedRatio ? durationSec / speedRatio : durationSec)).toFixed(3);
-
   return new Promise((resolve, reject) => {
-    const ff = ffmpeg(videoPath)
+    ffmpeg(videoPath)
       .seekInput(parseFloat(startSec.toFixed(6)))
-      .duration(parseFloat(durationSec.toFixed(6)));
-
-    const videoFilters: string[] = [];
-    if (speedRatio && needsSpeedChange(speedRatio)) {
-      videoFilters.push(`setpts=PTS/${speedRatio.toFixed(6)}`);
-    }
-    videoFilters.push('fps=30');
-
-    if (videoFilters.length > 0) ff.videoFilters(videoFilters.join(','));
-
-    ff.outputOptions([
-      '-r',         '30',
-      '-vsync',     'cfr',
-      '-t',         targetDurationStr,
-      '-c:v',       'libx264',
-      '-preset',    'fast',
-      '-crf',       '23',
-      '-an',
-      '-movflags',  '+faststart',
-    ])
-    .on('end', () => resolve())
-    .on('error', reject)
-    .save(outputPath);
+      .duration(parseFloat(durationSec.toFixed(6)))
+      .outputOptions([
+        '-c:v',    'libx264',
+        '-preset', 'fast',
+        '-crf',    '23',
+        '-an',
+        '-movflags', '+faststart',
+      ])
+      .on('end', () => resolve())
+      .on('error', reject)
+      .save(outputPath);
   });
 }
 

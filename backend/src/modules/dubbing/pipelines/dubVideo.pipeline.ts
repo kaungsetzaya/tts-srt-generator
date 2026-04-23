@@ -220,25 +220,13 @@ export class DubVideoPipeline {
 
       for (let i = 0; i < activeSegments.length; i++) {
         const seg = activeSegments[i];
-        const result = ttsResults[i];
-        if (!result) continue;
-
-        const origStart = seg.start;
-        const origEnd = seg.end;
-        const origDuration = Math.max(origEnd - origStart, 0.1);
-        const ttsDuration = result.duration / 1000;
-
-        const speedRatio = ttsDuration / origDuration;
-
-        console.log(`[Dubbing Pipeline] seg ${seg.index}: tts=${(ttsDuration*1000).toFixed(0)}ms orig=${(origDuration*1000).toFixed(0)}ms ratio=${speedRatio?.toFixed(3) || '1.000'}`);
-
         const speechFile = path.join(tempDir, `vp_speech_${seg.index}.mp4`);
-        await ffmpegService.extractVideoSegment(tempVideoPath, origStart, origEnd, speechFile, speedRatio);
+        await ffmpegService.extractVideoSegment(tempVideoPath, seg.start, seg.end, speechFile);
         videoPartFiles.push(speechFile);
 
         if (i < activeSegments.length - 1) {
           const nextSeg = activeSegments[i + 1];
-          const gapStart = origEnd;
+          const gapStart = seg.end;
           const gapEnd = nextSeg.start;
           if (gapEnd - gapStart > 0.05) {
             const gapFile = path.join(tempDir, `vp_gap_${i}.mp4`);
@@ -259,12 +247,11 @@ export class DubVideoPipeline {
       await ffmpegService.concatVideoFiles(videoPartFiles, processedVideoPath);
       console.log(`[Dubbing Pipeline] Video concatenated: ${videoPartFiles.length} parts`);
 
-      // ── MEASURE ACTUAL DURATIONS OF EACH PART ──
+      // ── MEASURE ACTUAL DURATIONS ──
       const partDurationsMs: number[] = [];
       for (const file of videoPartFiles) {
         const ms = await ffmpegService.getAudioDurationMs(file);
         partDurationsMs.push(ms);
-        console.log(`[Dubbing Pipeline] Part ${path.basename(file)}: ${ms}ms`);
       }
 
       // ── BUILD SUBTITLE TIMING FROM ACTUAL DURATIONS ──
@@ -319,7 +306,7 @@ export class DubVideoPipeline {
         }
       }
 
-      // ── BUILD TTS TRACK: just TTS files, no silence generation ──
+      // ── BUILD TTS TRACK ──
       const ttsTrackParts: string[] = [];
       for (let i = 0; i < activeSegments.length; i++) {
         const result = ttsResults[i];
@@ -329,9 +316,8 @@ export class DubVideoPipeline {
 
       const ttsTrackPath = path.join(tempDir, `tts_complete_track.wav`);
       await ffmpegService.concatAudioFiles(ttsTrackParts, ttsTrackPath);
-      console.log(`[Dubbing Pipeline] TTS track: ${ttsTrackParts.length} parts`);
 
-      // ── SYNC TTS TO MATCH VIDEO EXACTLY ──
+      // ── SYNC TTS TO MATCH VIDEO ──
       const videoDurationMs = await ffmpegService.getAudioDurationMs(processedVideoPath);
       const ttsDurationMs = await ffmpegService.getAudioDurationMs(ttsTrackPath);
       let finalTtsTrackPath = ttsTrackPath;
@@ -341,8 +327,7 @@ export class DubVideoPipeline {
         await ffmpegService.padAudioWithSilence(ttsTrackPath, finalTtsTrackPath, videoDurationMs);
       } else if (videoDurationMs < ttsDurationMs) {
         finalTtsTrackPath = path.join(tempDir, `tts_synced.wav`);
-        const trimMs = ttsDurationMs - videoDurationMs;
-        console.log(`[Dubbing Pipeline] Syncing audio: video=${videoDurationMs}ms tts=${ttsDurationMs}ms trim=${trimMs}ms`);
+        console.log(`[Dubbing Pipeline] Syncing audio: video=${videoDurationMs}ms tts=${ttsDurationMs}ms`);
         await ffmpegService.adjustAudioSpeed(ttsTrackPath, finalTtsTrackPath, videoDurationMs / ttsDurationMs);
       } else {
         console.log(`[Dubbing Pipeline] Durations match: video=${videoDurationMs}ms tts=${ttsDurationMs}ms`);
