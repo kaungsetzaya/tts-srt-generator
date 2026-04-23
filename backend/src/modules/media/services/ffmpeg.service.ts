@@ -26,27 +26,19 @@ export async function getAudioDurationMs(filePath: string): Promise<number> {
   });
 }
 
-export async function getVideoMetadata(filePath: string): Promise<{ hasAudio: boolean; width: number; height: number; duration: number }> {
+export async function getVideoSize(filePath: string): Promise<{ width: number; height: number }> {
   return new Promise((resolve, reject) => {
     ffmpeg.ffprobe(filePath, (err: any, metadata: any) => {
       if (err) reject(err);
       else {
         const videoStream = metadata.streams?.find((s: any) => s.codec_type === 'video');
-        const audioStream = metadata.streams?.find((s: any) => s.codec_type === 'audio');
         resolve({
-          hasAudio: !!audioStream,
           width:  videoStream?.width  || 1920,
           height: videoStream?.height || 1080,
-          duration: metadata.format.duration || 0,
         });
       }
     });
   });
-}
-
-export async function getVideoSize(filePath: string): Promise<{ width: number; height: number }> {
-  const meta = await getVideoMetadata(filePath);
-  return { width: meta.width, height: meta.height };
 }
 
 export async function extractAudio(videoPath: string, outputPath: string): Promise<void> {
@@ -80,20 +72,11 @@ export async function generateSilenceWav(durationMs: number, outputPath: string)
   });
 }
 
-export async function speedUpAudioWav(
-  inputPath: string,
-  outputPath: string,
-  ratio: number
-): Promise<void> {
-  const filters: string[] = [];
-  let r = ratio;
-  while (r > 2.0) { filters.push('atempo=2.0'); r /= 2.0; }
-  while (r < 0.5) { filters.push('atempo=0.5'); r *= 2.0; }
-  filters.push(`atempo=${r.toFixed(6)}`);
-
+export async function convertToWav(inputPath: string, outputPath: string): Promise<void> {
+  const ext = path.extname(inputPath).toLowerCase();
+  if (ext === '.wav' && inputPath === outputPath) return;
   return new Promise((resolve, reject) => {
     ffmpeg(inputPath)
-      .audioFilters(filters.join(','))
       .audioCodec('pcm_s16le')
       .audioFrequency(AUDIO_SAMPLE_RATE)
       .audioChannels(AUDIO_CHANNELS)
@@ -103,9 +86,6 @@ export async function speedUpAudioWav(
   });
 }
 
-/**
- * Trim leading/trailing silence from a WAV file, outputting WAV.
- */
 export async function trimSilenceWav(
   inputPath: string,
   outputPath: string,
@@ -127,27 +107,11 @@ export async function trimSilenceWav(
   });
 }
 
-export async function runFilter(inputPath: string, filter: string, outputPath: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    ffmpeg(inputPath)
-      .audioFilters(filter)
-      .audioCodec('libmp3lame')
-      .audioBitrate(AUDIO_BITRATE)
-      .audioFrequency(AUDIO_SAMPLE_RATE)
-      .audioChannels(AUDIO_CHANNELS)
-      .on('end', () => resolve())
-      .on('error', reject)
-      .save(outputPath);
-  });
-}
-
 export async function concatAudioFiles(audioParts: string[], outputPath: string): Promise<void> {
   if (audioParts.length === 0) throw new Error("No audio parts to concatenate");
-
   const listPath = outputPath + '.concat_list.txt';
   const lines = audioParts.map(p => `file '${p.replace(/'/g, "'\\''")}'`).join('\n');
   await fs.writeFile(listPath, lines);
-
   return new Promise((resolve, reject) => {
     ffmpeg()
       .input(listPath)
@@ -155,142 +119,148 @@ export async function concatAudioFiles(audioParts: string[], outputPath: string)
       .audioCodec('pcm_s16le')
       .audioFrequency(AUDIO_SAMPLE_RATE)
       .audioChannels(AUDIO_CHANNELS)
-      .on('end', async () => {
-        await fs.unlink(listPath).catch(() => {});
-        resolve();
-      })
-      .on('error', async (err: any) => {
-        await fs.unlink(listPath).catch(() => {});
-        reject(new Error(`Concat failed: ${err.message}`));
-      })
+      .on('end', async () => { await fs.unlink(listPath).catch(() => {}); resolve(); })
+      .on('error', async (err: any) => { await fs.unlink(listPath).catch(() => {}); reject(new Error(`Concat failed: ${err.message}`)); })
       .save(outputPath);
   });
 }
 
-export interface VideoPart {
-  type: 'intro' | 'speech' | 'gap' | 'outro';
-  startSec: number;
-  endSec: number;
-  speedRatio: number;  // 1.0 for non-speech, >1 = slow down, <1 = speed up
-  outputDurationMs: number;
-  segmentIndex?: number;
-}
+/* ── NEW: per-file video segment extraction ── */
 
-/**
- * Build a single filter_complex that produces the full warped video.
- * Includes intro, speech segments, gaps, and outro.
- * Every part is trimmed and concatenated. Speech segments get setpts warping.
- */
-function buildFullVideoFilter(parts: VideoPart[], subFilter?: string): string {
-  const filterLines: string[] = [];
-  const labels: string[] = [];
-
-  parts.forEach((part, i) => {
-    const start = part.startSec.toFixed(6);
-    const end   = part.endSec.toFixed(6);
-    const label = `p${i}`;
-
-    if (part.type === 'speech' && needsSpeedChange(part.speedRatio)) {
-      const ratio = part.speedRatio.toFixed(6);
-      filterLines.push(`[0:v]trim=start=${start}:end=${end},setpts=(PTS-STARTPTS)*${ratio}[${label}]`);
-    } else {
-      filterLines.push(`[0:v]trim=start=${start}:end=${end},setpts=PTS-STARTPTS[${label}]`);
-    }
-    labels.push(`[${label}]`);
-  });
-
-  const concatOut = subFilter ? `vconcat` : `vout`;
-  filterLines.push(`${labels.join('')}concat=n=${labels.length}:v=1:a=0[${concatOut}]`);
-
-  if (subFilter) {
-    filterLines.push(`[vconcat]${subFilter}[vout]`);
-  }
-
-  return filterLines.join(';');
-}
-
-export async function mergeWarpedVideoWithAudioAndSubs(
+export async function extractVideoSegment(
   videoPath: string,
-  audioPath: string,
-  subtitlesPath: string | null,
+  startSec: number,
+  endSec: number,
   outputPath: string,
-  options: {
-    videoParts: VideoPart[];
-    exactAudioDurationSec: number;
-    fontPath?: string;
+  speedRatio?: number
+): Promise<void> {
+  const durationSec = endSec - startSec;
+  const startStr = startSec.toFixed(6);
+  const durationStr = durationSec.toFixed(6);
+  const targetDurationStr = (speedRatio ? durationSec * speedRatio : durationSec).toFixed(6);
+
+  return new Promise((resolve, reject) => {
+    const ff = ffmpeg(videoPath)
+      .seekInput(parseFloat(startStr))
+      .duration(parseFloat(durationStr));
+
+    const filters: string[] = [];
+    if (speedRatio && needsSpeedChange(speedRatio)) {
+      filters.push(`setpts=(PTS-STARTPTS)*${speedRatio.toFixed(6)}`);
+    }
+    if (filters.length > 0) ff.videoFilters(filters.join(','));
+
+    ff.outputOptions([
+      '-c:v',    'libx264',
+      '-preset', 'fast',
+      '-crf',    '23',
+      '-an',
+      '-t',      targetDurationStr,
+      '-movflags', '+faststart',
+    ])
+    .on('end', () => resolve())
+    .on('error', reject)
+    .save(outputPath);
+  });
+}
+
+export async function concatVideoFiles(videoParts: string[], outputPath: string): Promise<void> {
+  if (videoParts.length === 0) throw new Error("No video parts to concatenate");
+  const listPath = outputPath + '.concat_list.txt';
+  const lines = videoParts.map(p => `file '${p.replace(/'/g, "'\\''")}'`).join('\n');
+  await fs.writeFile(listPath, lines);
+  return new Promise((resolve, reject) => {
+    ffmpeg()
+      .input(listPath)
+      .inputOptions(['-f', 'concat', '-safe', '0'])
+      .outputOptions([
+        '-c:v',    'libx264',
+        '-preset', 'fast',
+        '-crf',    '23',
+        '-an',
+        '-movflags', '+faststart',
+      ])
+      .on('end', async () => { await fs.unlink(listPath).catch(() => {}); resolve(); })
+      .on('error', async (err: any) => { await fs.unlink(listPath).catch(() => {}); reject(new Error(`Video concat failed: ${err.message}`)); })
+      .save(outputPath);
+  });
+}
+
+export async function mergeDubbedVideo(
+  processedVideoPath: string,
+  originalAudioPath: string,
+  ttsFiles: Array<{ path: string; startMs: number }>,
+  outputPath: string,
+  options?: {
+    speechSegments?: Array<{ startSec: number; endSec: number }>;
     onProgress?: (progress: number) => void;
   }
 ): Promise<void> {
-  // Build subtitle filter
-  let subFilter: string | null = null;
-  if (subtitlesPath) {
-    if (options.fontPath) {
-      const p  = subtitlesPath.replace(/\\/g, '/');
-      const fd = path.dirname(options.fontPath).replace(/\\/g, '/');
-      const ep = p.replace(/:/g, '\\:');
-      if (process.platform !== 'win32' && fd.startsWith('/usr/share/fonts')) {
-        subFilter = `ass='${ep}'`;
-      } else {
-        subFilter = `ass='${ep}':fontsdir='${fd.replace(/:/g, '\\:')}'`;
-      }
-    } else {
-      subFilter = `subtitles='${subtitlesPath.replace(/\\/g, '/').replace(/:/g, '\\:')}'`;
+  const segments = options?.speechSegments || [];
+  const totalInputs = 2 + ttsFiles.length; // video, original audio, tts files
+
+  // Build audio filter: mute speech regions in original, delay TTS, mix all
+  const audioFilters: string[] = [];
+
+  // Original audio with speech segments muted
+  if (segments.length > 0) {
+    let volumeExpr = '1';
+    for (let i = segments.length - 1; i >= 0; i--) {
+      const s = segments[i];
+      volumeExpr = `if(between(t,${s.startSec.toFixed(3)},${s.endSec.toFixed(3)}),0.05,${volumeExpr})`;
     }
+    audioFilters.push(`[1:a]volume='${volumeExpr}':eval=frame[muted]`);
+  } else {
+    audioFilters.push('[1:a]copy[muted]');
   }
 
-  const filterComplex = buildFullVideoFilter(options.videoParts, subFilter || undefined);
+  // Delay each TTS
+  const ttsLabels: string[] = ['[muted]'];
+  ttsFiles.forEach((tts, i) => {
+    const delayMs = Math.max(0, tts.startMs);
+    const label = `tts${i}`;
+    audioFilters.push(`[${i + 2}:a]adelay=${delayMs}|${delayMs}[${label}]`);
+    ttsLabels.push(`[${label}]`);
+  });
+
+  // Mix all audio
+  audioFilters.push(`${ttsLabels.join('')}amix=inputs=${ttsLabels.length}:duration=longest[aout]`);
+
+  const filterComplex = audioFilters.join(';');
 
   return new Promise((resolve, reject) => {
-    const ff = ffmpeg(videoPath).input(audioPath);
+    const ff = ffmpeg(processedVideoPath).input(originalAudioPath);
+    ttsFiles.forEach(t => ff.input(t.path));
 
-    const outputOpts = [
+    ff.outputOptions([
       '-filter_complex', filterComplex,
-      '-map',    '[vout]',
-      '-map',    '1:a',
+      '-map',    '0:v',
+      '-map',    '[aout]',
       '-c:v',    'libx264',
       '-preset', 'fast',
       '-crf',    '23',
       '-c:a',    'aac',
       '-b:a',    '128k',
-      '-shortest',
       '-map_metadata', '-1',
       '-movflags', '+faststart',
-    ];
-
-    ff.outputOptions(outputOpts)
-      .on('progress', (p: any) => options.onProgress?.(p.percent ?? 0))
-      .on('error', reject)
-      .on('end',   resolve)
-      .save(outputPath);
-  });
-}
-
-export async function convertToWav(inputPath: string, outputPath: string): Promise<void> {
-  const ext = path.extname(inputPath).toLowerCase();
-  if (ext === '.wav' && inputPath === outputPath) return;
-
-  return new Promise((resolve, reject) => {
-    ffmpeg(inputPath)
-      .audioCodec('pcm_s16le')
-      .audioFrequency(AUDIO_SAMPLE_RATE)
-      .audioChannels(AUDIO_CHANNELS)
-      .on('end', () => resolve())
-      .on('error', reject)
-      .save(outputPath);
+    ])
+    .on('progress', (p: any) => options?.onProgress?.(p.percent ?? 0))
+    .on('error', reject)
+    .on('end',   resolve)
+    .save(outputPath);
   });
 }
 
 export const ffmpegService = {
   getVideoDuration,
   getAudioDurationMs,
-  getVideoMetadata,
   getVideoSize,
   extractAudio,
   generateSilenceWav,
-  speedUpAudioWav,
-  trimSilenceWav,
-  runFilter,
-  concatAudioFiles,
-  mergeWarpedVideoWithAudioAndSubs,
   convertToWav,
+  trimSilenceWav,
+  concatAudioFiles,
+  extractVideoSegment,
+  concatVideoFiles,
+  mergeDubbedVideo,
 };
