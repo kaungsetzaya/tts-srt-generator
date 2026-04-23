@@ -236,6 +236,7 @@ export async function mergeDubbedVideoSimple(
 
   const outputOpts = [
     '-map', '0:v',
+    '-map', '-0:a',
     '-map', '1:a',
     '-c:v', 'libx264',
     '-preset', 'fast',
