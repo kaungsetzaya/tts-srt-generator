@@ -1,4 +1,4 @@
-﻿import { geminiTranslate } from "../geminiTranslator";
+import { geminiService } from "../src/modules/translation/services/gemini.service";
 import * as dotenv from "dotenv";
 import path from "path";
 
@@ -10,7 +10,7 @@ async function runTest() {
   
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    console.error("Ã¢ÂÅ’ Error: GEMINI_API_KEY not found in .env");
+    console.error("Error: GEMINI_API_KEY not found in .env");
     process.exit(1);
   }
 
@@ -21,18 +21,18 @@ async function runTest() {
     console.log(`Input: "${text}"`);
     console.log("Translating...");
     
-    const result = await geminiTranslate(text);
+    const result = await geminiService.translateFullText(text);
     
-    console.log("\nÃ¢Å“â€¦ Success!");
-    console.log(`Model Used: ${result.modelUsed}`);
-    console.log(`Myanmar Output: ${result.myanmar}`);
+    console.log("\nSuccess!");
+    console.log(`Myanmar Output: ${result}`);
     
     // Verify if phonetic dictionary was applied
-    if (result.myanmar.includes("Ã¡â‚¬â€¡Ã¡â‚¬Â½Ã¡â‚¬â€Ã¡â‚¬ÂºÃ¡â‚¬ËœÃ¡â‚¬Â®Ã¡â‚¬Â¸")) {
-      console.log("Ã¢Å“Â¨ Phonetic Dictionary: Working (Zombie -> Ã¡â‚¬â€¡Ã¡â‚¬Â½Ã¡â‚¬â€Ã¡â‚¬ÂºÃ¡â‚¬ËœÃ¡â‚¬Â®Ã¡â‚¬Â¸)");
+    // Zombie -> ဇမ်ဘီး
+    if (result.includes("ဇမ်ဘီး")) {
+      console.log("Phonetic Dictionary: Working (Zombie -> ဇမ်ဘီး)");
     }
   } catch (error: any) {
-    console.error(`\nÃ¢ÂÅ’ Translation Failed: ${error.message}`);
+    console.error(`\nTranslation Failed: ${error.message}`);
   }
 }
 

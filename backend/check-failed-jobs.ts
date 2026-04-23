@@ -9,7 +9,7 @@ async function check() {
     return;
   }
   const jobs = await db.select().from(schema.ttsJobs).orderBy(desc(schema.ttsJobs.updatedAt)).limit(10);
-  console.log(jobs.map(j => ({ id: j.id, status: j.status, error: j.error, updatedAt: j.updatedAt })));
+  console.log(jobs.map((j: any) => ({ id: j.id, status: j.status, error: j.error, updatedAt: j.updatedAt })));
 }
 
 check();

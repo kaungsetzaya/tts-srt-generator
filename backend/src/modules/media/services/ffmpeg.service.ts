@@ -151,25 +151,21 @@ export async function concatAudioFiles(audioParts: string[], outputPath: string)
   });
 }
 
-/* ── NEW: per-file video segment extraction ── */
-
 export async function extractVideoSegment(
   videoPath: string,
   startSec: number,
   endSec: number,
   outputPath: string
 ): Promise<void> {
-  const durationSec = endSec - startSec;
+  const duration = endSec - startSec;
   return new Promise((resolve, reject) => {
     ffmpeg(videoPath)
       .seekInput(parseFloat(startSec.toFixed(6)))
-      .duration(parseFloat(durationSec.toFixed(6)))
+      .duration(parseFloat(duration.toFixed(6)))
       .outputOptions([
-        '-c:v',    'libx264',
-        '-preset', 'fast',
-        '-crf',    '23',
-        '-an',
-        '-movflags', '+faststart',
+        '-c:v', 'copy',
+        '-c:a', 'copy',
+        '-avoid_negative_ts', 'make_zero',
       ])
       .on('end', () => resolve())
       .on('error', reject)
@@ -178,19 +174,20 @@ export async function extractVideoSegment(
 }
 
 export async function concatVideoFiles(videoParts: string[], outputPath: string): Promise<void> {
-  if (videoParts.length === 0) throw new Error("No video parts to concatenate");
-  const listPath = outputPath + '.concat_list.txt';
-  const lines = videoParts.map(p => `file '${p.replace(/'/g, "'\\''")}'`).join('\n');
+  if (videoParts.length === 0) throw new Error('No video parts to concatenate');
+  const listPath = outputPath + '.vconcat_list.txt';
+  const lines = videoParts.map(p => `file '${p.replace(/'/g, "'\\''")}' `).join('\n');
   await fs.writeFile(listPath, lines);
   return new Promise((resolve, reject) => {
     ffmpeg()
       .input(listPath)
       .inputOptions(['-f', 'concat', '-safe', '0'])
       .outputOptions([
-        '-c:v',    'libx264',
+        '-c:v', 'libx264',
         '-preset', 'fast',
-        '-crf',    '23',
-        '-an',
+        '-crf', '23',
+        '-c:a', 'aac',
+        '-b:a', '128k',
         '-movflags', '+faststart',
       ])
       .on('end', async () => { await fs.unlink(listPath).catch(() => {}); resolve(); })
@@ -202,16 +199,16 @@ export async function concatVideoFiles(videoParts: string[], outputPath: string)
 export async function adjustAudioSpeed(
   inputPath: string,
   outputPath: string,
-  speedRatio: number
+  ratio: number
 ): Promise<void> {
-  if (!needsSpeedChange(speedRatio)) {
+  if (!needsSpeedChange(ratio)) {
     await fs.copyFile(inputPath, outputPath);
     return;
   }
-  const filter = buildAtempoChain(speedRatio);
+  const chain = buildAtempoChain(ratio);
   return new Promise((resolve, reject) => {
     ffmpeg(inputPath)
-      .audioFilters(filter)
+      .audioFilters(chain)
       .audioCodec('pcm_s16le')
       .audioFrequency(AUDIO_SAMPLE_RATE)
       .audioChannels(AUDIO_CHANNELS)
@@ -221,11 +218,45 @@ export async function adjustAudioSpeed(
   });
 }
 
-export async function extractVideoOnly(videoPath: string, outputPath: string): Promise<void> {
+export async function extractVideoOnly(
+  videoPath: string,
+  outputPath: string
+): Promise<void> {
   return new Promise((resolve, reject) => {
     ffmpeg(videoPath)
+      .noAudio()
+      .outputOptions(['-c:v', 'copy'])
+      .on('end', () => resolve())
+      .on('error', reject)
+      .save(outputPath);
+  });
+}
+
+export async function extractAndWarpVideoSegment(
+  videoPath: string,
+  startSec: number,
+  endSec: number,
+  targetDurationMs: number,
+  outputPath: string
+): Promise<void> {
+
+  const originalDurationSec = endSec - startSec;
+  const targetDurationSec = targetDurationMs / 1000;
+  // If the segment is extremely short or durations are near zero, skip warping logic to avoid ffmpeg errors
+  if (originalDurationSec < 0.01 || targetDurationSec < 0.01) {
+      return extractVideoSegment(videoPath, startSec, endSec, outputPath);
+  }
+  const ratio = targetDurationSec / originalDurationSec;
+  
+  return new Promise((resolve, reject) => {
+    ffmpeg(videoPath)
+      .seekInput(parseFloat(startSec.toFixed(6)))
+      .duration(parseFloat(originalDurationSec.toFixed(6)))
       .outputOptions([
-        '-c:v', 'copy',
+        '-vf', `setpts=${ratio.toFixed(6)}*PTS`,
+        '-c:v', 'libx264',
+        '-preset', 'fast',
+        '-crf', '23',
         '-an',
         '-movflags', '+faststart',
       ])
@@ -242,6 +273,7 @@ export async function mergeDubbedVideoSimple(
   options?: {
     subtitlesPath?: string;
     fontPath?: string;
+    backgroundAudioPath?: string;
     onProgress?: (progress: number) => void;
   }
 ): Promise<void> {
@@ -273,13 +305,29 @@ export async function mergeDubbedVideoSimple(
   }
 
   return new Promise((resolve, reject) => {
-    ffmpeg(processedVideoPath)
-    .input(ttsTrackPath)
-    .outputOptions(outputOpts)
-    .on('progress', (p: any) => options?.onProgress?.(p.percent ?? 0))
-    .on('error', reject)
-    .on('end',   resolve)
-    .save(outputPath);
+    let command = ffmpeg(processedVideoPath).input(ttsTrackPath);
+
+    if (options?.backgroundAudioPath) {
+      command = command.input(options.backgroundAudioPath)
+        .complexFilter([
+          '[1:a]volume=1.0[voice]',
+          '[2:a]volume=0.15[bg]',
+          '[voice][bg]amix=inputs=2:duration=first:dropout_transition=2[a]'
+        ])
+        .outputOptions(['-map', '0:v', '-map', '[a]']);
+    } else {
+      command = command.outputOptions(['-map', '0:v', '-map', '1:a']);
+    }
+
+    command.outputOptions(outputOpts)
+      .on('progress', (p: any) => options?.onProgress?.(p.percent ?? 0))
+      .on('error', (err) => {
+          console.error('[FFMPEG MERGE ERROR]', err);
+          reject(err);
+      })
+      .on('end', () => resolve())
+
+      .save(outputPath);
   });
 }
 
@@ -294,8 +342,10 @@ export const ffmpegService = {
   trimSilenceWav,
   concatAudioFiles,
   extractVideoSegment,
+  extractAndWarpVideoSegment,
   concatVideoFiles,
   adjustAudioSpeed,
   extractVideoOnly,
   mergeDubbedVideoSimple,
 };
+

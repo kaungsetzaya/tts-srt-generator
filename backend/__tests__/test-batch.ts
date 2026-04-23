@@ -1,4 +1,4 @@
-﻿import { geminiTranslateBatch } from "../geminiTranslator";
+import { geminiService } from "../src/modules/translation/services/gemini.service";
 import * as dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -20,21 +20,21 @@ async function runBatchTest() {
   ];
 
   try {
-    const result = await geminiTranslateBatch(segments);
+    const result = await geminiService.translateSegments(segments);
     
     console.log("\n--- Results ---");
-    result.translated.forEach((seg, i) => {
+    result.forEach((seg, i) => {
       console.log(`[${i+1}] Original: ${segments[i].text}`);
-      console.log(`    Myanmar:  ${seg.text || "Ã¢ÂÅ’ EMPTY OUTPUT"}`);
+      console.log(`    Myanmar:  ${seg.translatedText || "EMPTY OUTPUT"}`);
     });
 
-    if (result.translated.every(s => s.text && s.text !== segments[result.translated.indexOf(s)].text)) {
-      console.log("\nÃ¢Å“â€¦ Batch Translation Working Perfectly.");
+    if (result.every(s => !!s.translatedText && s.translatedText !== segments[result.indexOf(s)].text)) {
+      console.log("\nBatch Translation Working Perfectly.");
     } else {
-      console.log("\nÃ¢Å¡Â Ã¯Â¸Â Some segments returned empty or original text.");
+      console.log("\nSome segments returned empty or original text.");
     }
   } catch (error: any) {
-    console.error(`\nÃ¢ÂÅ’ Batch Error: ${error.message}`);
+    console.error(`\nBatch Error: ${error.message}`);
   }
 }
 
