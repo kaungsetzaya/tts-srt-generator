@@ -131,7 +131,6 @@ export class DubVideoPipeline {
       );
       console.log(`[Dubbing Pipeline] Step 4 OK: translated segments ready`);
 
-      const FIXED_SPEED = 1.1;
       const CONCURRENCY = 1;
       const activeSegments = translatedSegments.filter(seg => seg.translatedText.trim());
       if (activeSegments.length === 0) throw new Error("No translated segments to generate voice for.");
@@ -142,10 +141,10 @@ export class DubVideoPipeline {
         try {
           console.log(`[Dubbing Pipeline] Generating TTS for segment ${seg.index}: "${seg.translatedText.slice(0, 50)}..." (voice: ${options.voice})`);
           if (isCharacter) {
-              const ttsResult = await ttsService.generateSpeechWithCharacter(seg.translatedText, options.voice as CharacterKey, FIXED_SPEED, "16:9", options.pitch ?? 0);
+              const ttsResult = await ttsService.generateSpeechWithCharacter(seg.translatedText, options.voice as CharacterKey, 1.0, "16:9", options.pitch ?? 0);
               audioBuffer = ttsResult.audioBuffer;
           } else {
-              const ttsResult = await ttsService.generateSpeech(seg.translatedText, options.voice as VoiceKey, FIXED_SPEED, options.pitch ?? 0, "16:9");
+              const ttsResult = await ttsService.generateSpeech(seg.translatedText, options.voice as VoiceKey, 1.0, options.pitch ?? 0, "16:9");
               audioBuffer = ttsResult.audioBuffer;
           }
         } catch (err: any) {
@@ -229,8 +228,7 @@ export class DubVideoPipeline {
         const origDuration = Math.max(origEnd - origStart, 0.1);
         const ttsDuration = result.duration / 1000;
 
-        const isTtsLonger = ttsDuration > origDuration;
-        const speedRatio = !isTtsLonger ? FIXED_SPEED : undefined;
+        const speedRatio = origDuration / ttsDuration;
 
         console.log(`[Dubbing Pipeline] seg ${seg.index}: tts=${(ttsDuration*1000).toFixed(0)}ms orig=${(origDuration*1000).toFixed(0)}ms ratio=${speedRatio?.toFixed(3) || '1.000'}`);
 
