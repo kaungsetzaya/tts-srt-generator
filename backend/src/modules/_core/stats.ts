@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
-import { getDb } from "../../db";
-import { ttsConversions } from "../../../shared/drizzle/schema";
+import { getDb } from "../../../db";
+import { ttsConversions } from "../../../../shared/drizzle/schema";
 
 export interface ConversionRecord {
     userId?: string;

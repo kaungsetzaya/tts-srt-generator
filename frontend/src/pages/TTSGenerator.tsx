@@ -1064,37 +1064,18 @@ export default function TTSGenerator() {
     <div
       className="flex flex-nowrap items-center justify-between py-1 px-2 sm:px-4 w-full h-full gap-1 sm:gap-2 overflow-hidden"
     >
-      {/* Mobile Logo - shown on small screens only */}
-      <div className="flex items-center gap-2 md:hidden">
-        <div
-          className="w-8 h-8 rounded-lg flex items-center justify-center shadow-md"
-          style={{
-            background: `linear-gradient(135deg, ${accent}30, ${accentSecondary}20)`,
-            border: `1px solid ${isDark ? "rgba(192,111,48,0.5)" : "rgba(192,111,48,0.4)"}`,
-          }}
-        >
-          <span
-            className="text-sm font-black"
-            style={{
-              color: "#C06F30",
-              textShadow: `0 0 8px ${accent}60`,
-            }}
-          >
-            L
-          </span>
-        </div>
-        <span
-          className="text-sm font-black tracking-widest"
-          style={{
-            background: "linear-gradient(135deg, #C06F30, #F4B34F)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-          }}
-        >
-          LUMIX
-        </span>
-      </div>
+      {/* Lumix Logo */}
+      <span
+        className="text-xl font-black tracking-widest"
+        style={{
+          background: "linear-gradient(135deg, #C06F30, #F4B34F)",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          backgroundClip: "text",
+        }}
+      >
+        LUMIX
+      </span>
 
       <div className="flex items-center gap-1 sm:gap-2 sm:ml-auto">
         {subLoading ? (
@@ -1499,7 +1480,7 @@ export default function TTSGenerator() {
                                   key={v.id}
                                   disabled={!hasPlan}
                                   onClick={() => setSelectedVoice(v.id)}
-                                  className="py-2 px-2 border rounded-lg text-xs font-bold transition-all disabled:opacity-40"
+                                  className="py-2 px-2 border rounded-lg text-sm font-bold transition-all disabled:opacity-40"
                                   style={{
                                     borderColor: selectedVoice === v.id ? accent : cardBorder,
                                     background: selectedVoice === v.id
@@ -1525,7 +1506,7 @@ export default function TTSGenerator() {
                                   key={v.id}
                                   disabled={!hasPlan}
                                   onClick={() => setSelectedVoice(v.id)}
-                                  className="py-2 px-2 border rounded-lg text-xs font-bold transition-all disabled:opacity-40"
+                                  className="py-2 px-2 border rounded-lg text-sm font-bold transition-all disabled:opacity-40"
                                   style={{
                                     borderColor: selectedVoice === v.id ? accent : cardBorder,
                                     background: selectedVoice === v.id
@@ -1811,7 +1792,7 @@ export default function TTSGenerator() {
 
               {/* === VIDEO TAB — Simple Translation === */}
               {mainTab === "video" && (
-                <div className="max-w-xl mx-auto animate-in fade-in zoom-in-95 duration-300 space-y-4">
+                <div className="w-full px-4 lg:px-6 animate-in fade-in zoom-in-95 duration-300 space-y-4">
                   <div className="text-center mb-2 sm:mb-4">
                     <p className="text-xs mt-1" style={{ color: subtextColor }}>
                       {t.videoLimit}
@@ -2109,7 +2090,7 @@ export default function TTSGenerator() {
 
               {/* === DUBBING TAB — Auto Creator === */}
               {mainTab === "dubbing" && (
-                <div className="max-w-2xl mx-auto animate-in fade-in zoom-in-95 duration-300">
+                <div className="w-full px-4 lg:px-6 animate-in fade-in zoom-in-95 duration-300">
                   <div className="text-center mb-2 sm:mb-4">
                     {!isAdmin && !hasPlan && me && !subLoading && (
                       <div
@@ -2314,15 +2295,16 @@ export default function TTSGenerator() {
 
                   {/* ── STEP: Video Preview + Settings ── */}
                   {dubPreviewUrl && !dubResult && (
-                    <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_400px] lg:items-start gap-4 space-y-4 lg:space-y-0">
-                      {/* Left Column: Video Preview & Progress (Sticky) */}
-                      <div className="sticky top-[70px] lg:top-[80px] space-y-4 z-40 bg-background/95 backdrop-blur-sm pb-2 lg:bg-transparent lg:backdrop-blur-none transition-all">
+                    <div className="lg:relative lg:min-h-[calc(100vh-6rem)]">
+                      {/* Preview: static on mobile, fixed on desktop */}
+                      <div className="lg:fixed lg:top-20 lg:left-[270px] lg:w-[calc(50vw-150px)]" style={{ transform: 'translateZ(0)' }}>
                         <div
                           className={box}
                           style={{
                             background: cardBg,
                             borderColor: cardBorder,
                             boxShadow,
+                            height: 'calc(100vh - 6rem)',
                           }}
                         >
                         <div className="flex items-center justify-between">
@@ -2706,10 +2688,10 @@ export default function TTSGenerator() {
                         )}
                       </div>
 
-                      </div> {/* End Left Column */}
+                      </div>
 
-                      {/* Right Column: Settings */}
-                      <div className="space-y-4">
+                      {/* Settings: offset on desktop to make room for fixed preview */}
+                      <div className="lg:ml-[calc(50vw-130px)] space-y-4">
 
                       {/* ── ACCORDION: Voice Selection ── */}
                       <div
@@ -2779,7 +2761,7 @@ export default function TTSGenerator() {
                                   <button
                                     key={v.id}
                                     onClick={() => setDubSelectedVoice(v.id)}
-                                    className="py-1.5 px-1 border rounded-lg text-[10px] font-bold transition-all"
+                                    className="py-1.5 px-1 border rounded-lg text-xs font-bold transition-all"
                                     style={{
                                       borderColor: dubSelectedVoice === v.id ? accent : cardBorder,
                                       background: dubSelectedVoice === v.id
@@ -2788,7 +2770,7 @@ export default function TTSGenerator() {
                                       color: dubSelectedVoice === v.id ? accent : textColor,
                                     }}
                                   >
-                                    <div className="truncate">{lang === "mm" ? v.nameMm : v.name}</div>
+                                    <div className="truncate text-sm">{lang === "mm" ? v.nameMm : v.name}</div>
                                   </button>
                                 ))}
                               </div>
@@ -2804,7 +2786,7 @@ export default function TTSGenerator() {
                                   <button
                                     key={v.id}
                                     onClick={() => setDubSelectedVoice(v.id)}
-                                    className="py-1.5 px-1 border rounded-lg text-[10px] font-bold transition-all"
+                                    className="py-1.5 px-1 border rounded-lg text-xs font-bold transition-all"
                                     style={{
                                       borderColor: dubSelectedVoice === v.id ? accent : cardBorder,
                                       background: dubSelectedVoice === v.id
@@ -2813,7 +2795,7 @@ export default function TTSGenerator() {
                                       color: dubSelectedVoice === v.id ? accent : textColor,
                                     }}
                                   >
-                                    <div className="truncate">{lang === "mm" ? v.nameMm : v.name}</div>
+                                    <div className="truncate text-sm">{lang === "mm" ? v.nameMm : v.name}</div>
                                   </button>
                                 ))}
                               </div>

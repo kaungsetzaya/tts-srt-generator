@@ -119,24 +119,56 @@
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
+  :root, .dark {
+    transition: 
+      --background 0.02s linear,
+      --foreground 0.02s linear,
+      --card 0.02s linear,
+      --card-foreground 0.02s linear,
+      --popover 0.02s linear,
+      --popover-foreground 0.02s linear,
+      --primary 0.02s linear,
+      --primary-foreground 0.02s linear,
+      --secondary 0.02s linear,
+      --secondary-foreground 0.02s linear,
+      --muted 0.02s linear,
+      --muted-foreground 0.02s linear,
+      --accent 0.02s linear,
+      --accent-foreground 0.02s linear,
+      --destructive 0.02s linear,
+      --destructive-foreground 0.02s linear,
+      --border 0.02s linear,
+      --input 0.02s linear,
+      --ring 0.02s linear,
+      --sidebar 0.02s linear,
+      --sidebar-foreground 0.02s linear,
+      --sidebar-primary 0.02s linear,
+      --sidebar-primary-foreground 0.02s linear,
+      --sidebar-accent 0.02s linear,
+      --sidebar-accent-foreground 0.02s linear,
+      --sidebar-border 0.02s linear;
   }
+
+  *, *::before, *::after {
+    transition: background-color 0.02s linear, color 0.02s linear, border-color 0.02s linear;
+  }
+  
   body {
     @apply bg-background text-foreground font-sans;
     font-family: "Inter", "Helvetica Neue", sans-serif;
   }
-  button:not(:disabled),
-  [role="button"]:not([aria-disabled="true"]),
-  [type="button"]:not(:disabled),
-  [type="submit"]:not(:disabled),
-  [type="reset"]:not(:disabled),
-  a[href],
-  select:not(:disabled),
-  input[type="checkbox"]:not(:disabled),
-  input[type="radio"]:not(:disabled) {
-    @apply cursor-pointer;
-  }
+}
+
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+[type="button"]:not(:disabled),
+[type="submit"]:not(:disabled),
+[type="reset"]:not(:disabled),
+a[href],
+select:not(:disabled),
+input[type="checkbox"]:not(:disabled),
+input[type="radio"]:not(:disabled) {
+  @apply cursor-pointer;
 }
 
 @layer components {
