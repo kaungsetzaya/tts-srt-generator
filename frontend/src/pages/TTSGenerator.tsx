@@ -549,11 +549,25 @@ export default function TTSGenerator() {
       )
     : null;
 
-  // ─── Theme detection ───
   const isDark = theme === "dark";
   const subColor = accent;
 
+  // ─── Premium theme-aware derived values ───
+  const bgColor = isDark ? "#0f0f0f" : lightBg;
+  const textColor = isDark ? cream : lightText;
+  const subtextColor = isDark ? peach : lightSubtext;
+  const cardBg = isDark ? "rgba(255,255,255,0.04)" : lightCardBg;
+  const cardBorder = isDark ? "rgba(255,255,255,0.08)" : lightCardBorder;
+  const boxShadow = isDark
+    ? "0 4px 24px rgba(0,0,0,0.3)"
+    : "0 8px 32px rgba(192,111,48,0.06), 0 2px 8px rgba(0,0,0,0.03), inset 0 1px 0 rgba(255,255,255,0.9)";
+  const inputBg = isDark ? "rgba(255,255,255,0.06)" : "#F8F4EE";
+  const inputBorder = isDark ? "rgba(255,255,255,0.1)" : "rgba(192,111,48,0.15)";
 
+  // 3D Panel styles (for subtitle settings)
+  const panelStyle = isDark
+    ? { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 8px 32px rgba(0,0,0,0.4)" }
+    : { background: "linear-gradient(160deg, #FFFFFF 0%, #FFF9F2 100%)", border: "1px solid rgba(192,111,48,0.15)", boxShadow: "0 16px 48px rgba(192,111,48,0.08), 0 4px 16px rgba(0,0,0,0.04), inset 0 2px 0 rgba(255,255,255,0.95)" };
 
   // Auto-preview video for translate tab when URL changes
   useEffect(() => {
@@ -606,22 +620,18 @@ export default function TTSGenerator() {
   }, [generatedFiles?.audioObjectUrl]);
 
   // Light theme: Premium Warm Gradient, Dark: Keep Deep Dark
-  const labelBg = "var(--card)";
+  const bgGradient = isDark
+    ? "linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%)"
+    : "linear-gradient(180deg, #FBF8F4 0%, #F8F4EE 50%, #F5F0EA 100%)";
 
-  const box = "premium-box";
-  const labelStyle = "premium-label";
+  // (cardBg, cardBorder, textColor, subtextColor, inputBg, inputBorder, boxShadow 
+  //  are defined in the premium theme block above — do not redeclare here)
+  const labelBg = isDark ? "rgba(192,111,48,0.15)" : "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(251,248,244,0.98))";
 
-  // CSS-variable aliases used throughout the component
-  const cardBg = "var(--card)";
-  const cardBorder = "var(--border)";
-  const textColor = "var(--foreground)";
-  const subtextColor = "var(--muted-foreground)";
-  const inputBg = "var(--input)";
-  const inputBorder = "var(--border)";
-  const boxShadow = "var(--card-shadow)";
-  const accentSecondary = "rgba(192,111,48,0.3)";
-  const accent15 = "rgba(192,111,48,0.15)";
-
+  const box =
+    "relative border p-4 md:p-5 pt-8 backdrop-blur-xl transition-all duration-300 rounded-2xl mt-6";
+  const labelStyle =
+    "absolute -top-3.5 left-4 px-3 py-1 text-xs uppercase tracking-widest font-black rounded-lg z-10 border";
 
   const handleGenerate = async () => {
     if (!text.trim()) return;
@@ -1054,18 +1064,37 @@ export default function TTSGenerator() {
     <div
       className="flex flex-nowrap items-center justify-between py-1 px-2 sm:px-4 w-full h-full gap-1 sm:gap-2 overflow-hidden"
     >
-      {/* Lumix Logo */}
-      <span
-        className="text-xl font-black tracking-widest"
-        style={{
-          background: "linear-gradient(135deg, #C06F30, #F4B34F)",
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-          backgroundClip: "text",
-        }}
-      >
-        LUMIX
-      </span>
+      {/* Mobile Logo - shown on small screens only */}
+      <div className="flex items-center gap-2 md:hidden">
+        <div
+          className="w-8 h-8 rounded-lg flex items-center justify-center shadow-md"
+          style={{
+            background: `linear-gradient(135deg, ${accent}30, ${accentSecondary}20)`,
+            border: `1px solid ${isDark ? "rgba(192,111,48,0.5)" : "rgba(192,111,48,0.4)"}`,
+          }}
+        >
+          <span
+            className="text-sm font-black"
+            style={{
+              color: "#C06F30",
+              textShadow: `0 0 8px ${accent}60`,
+            }}
+          >
+            L
+          </span>
+        </div>
+        <span
+          className="text-sm font-black tracking-widest"
+          style={{
+            background: "linear-gradient(135deg, #C06F30, #F4B34F)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+          }}
+        >
+          LUMIX
+        </span>
+      </div>
 
       <div className="flex items-center gap-1 sm:gap-2 sm:ml-auto">
         {subLoading ? (
@@ -1091,50 +1120,86 @@ export default function TTSGenerator() {
           {hasActiveSub ? (
             <>
               <div className="relative z-10 flex items-center gap-1 sm:gap-2">
-                <span className="premium-badge">
+                <span 
+                  className="px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-md text-[9px] sm:text-xs font-bold uppercase tracking-wider"
+                  style={{
+                    background: "linear-gradient(135deg, #C06F30 0%, #F4B34F 100%)",
+                    color: "#fff",
+                    boxShadow: "0 2px 8px rgba(192,111,48,0.4)",
+                  }}
+                >
                   {isAdmin ? "Admin" : (subStatus?.plan === "trial" ? (lang === "mm" ? "အစမ်း" : "Trial") : subStatus?.plan)}
                 </span>
               </div>
-              <div className="premium-progress-bg">
-                <motion.div
-                  className="premium-progress-fill"
+              <div className="relative z-10 hidden sm:block flex-1 h-2 max-w-[100px] rounded-full overflow-hidden" style={{ background: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.1)" }}>
+                <motion.div 
+                  className="h-full rounded-full"
                   initial={{ width: 0 }}
                   animate={{ width: isAdmin ? "100%" : `${Math.min(100, ((subStatus?.credits ?? 0) / (planLimits?.maxCredits ?? 800)) * 100)}%` }}
                   transition={{ duration: 0.8, ease: "easeOut" }}
+                  style={{
+                    background: "linear-gradient(90deg, #C06F30, #F4B34F, #FCD34D)",
+                    boxShadow: "0 0 10px rgba(244,179,79,0.5)",
+                  }}
                 />
               </div>
-              <div className="premium-text-accent relative z-10 flex items-center gap-1 sm:gap-2">
+              <div className="relative z-10 flex items-center gap-1 sm:gap-2 font-bold" style={{ color: isDark ? "#F4B34F" : "#B45309" }}>
                 <span className="text-[11px] sm:text-sm">{isAdmin ? "Admin" : subStatus?.credits}</span>
                 {!isAdmin && <span className="hidden sm:inline text-xs opacity-70 uppercase">credits</span>}
               </div>
             </>
           ) : (
             <>
-              <span className="relative z-10 text-[10px] sm:text-sm font-medium opacity-70">
+              <span className="relative z-10 text-[10px] sm:text-sm font-medium" style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
                 {me ? (lang === "mm" ? "အခမဲ့" : "Free") : ""}
               </span>
-              <div className="premium-progress-bg">
-                <div className="h-full rounded-full bg-muted" style={{ width: "0%" }} />
+              <div className="relative z-10 hidden sm:block flex-1 h-2 max-w-[100px] rounded-full overflow-hidden" style={{ background: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)" }}>
+                <div 
+                  className="h-full rounded-full"
+                  style={{
+                    width: "0%",
+                    background: isDark ? "#4B5563" : "#9CA3AF",
+                  }}
+                />
               </div>
-              <span className="relative z-10 text-[11px] sm:text-sm opacity-50">
+              <span className="relative z-10 text-[11px] sm:text-sm" style={{ color: isDark ? "#6B7280" : "#9CA3AF" }}>
                 {subStatus?.credits ?? 0}
               </span>
             </>
           )}
-
         </div>
         )}
-        <span className="hidden sm:inline text-xs font-bold px-1.5 sm:px-2.5 py-1 rounded-full bg-primary/10 text-primary">
+        <span
+          className="hidden sm:inline text-xs font-bold px-1.5 sm:px-2.5 py-1 rounded-full"
+          style={{
+            background: isDark
+              ? "rgba(192,111,48,0.1)"
+              : "rgba(244,179,79,0.06)",
+            color: accent,
+          }}
+        >
           @{(me as any)?.username || me?.name}
         </span>
-
-        <div className="w-px h-5 mx-0.5 bg-border" />
-
+        <div
+          className="w-px h-5 mx-0.5"
+          style={{
+            background: isDark
+              ? "rgba(192,111,48,0.3)"
+              : "rgba(192,111,48,0.12)",
+          }}
+        />
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setLang(lang === "mm" ? "en" : "mm")}
-          className="premium-header-item px-2.5 py-1 text-xs font-black uppercase tracking-widest"
+          className="px-2.5 py-1 text-xs font-black rounded-lg uppercase tracking-widest transition-all"
+          style={{
+            border: `1px solid ${isDark ? "rgba(192,111,48,0.35)" : "rgba(192,111,48,0.15)"}`,
+            background: isDark
+              ? "rgba(192,111,48,0.1)"
+              : "rgba(255,255,255,0.7)",
+            color: textColor,
+          }}
         >
           {lang === "mm" ? "EN" : "MM"}
         </motion.button>
@@ -1142,7 +1207,14 @@ export default function TTSGenerator() {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={toggleTheme}
-          className="premium-header-item"
+          className="p-1.5 rounded-lg transition-all flex items-center justify-center"
+          style={{
+            border: `1px solid ${isDark ? "rgba(192,111,48,0.35)" : "rgba(192,111,48,0.15)"}`,
+            background: isDark
+              ? "rgba(192,111,48,0.1)"
+              : "rgba(255,255,255,0.7)",
+            color: textColor,
+          }}
         >
           {isDark ? (
             <Sun className="w-4 h-4" />
@@ -1150,37 +1222,43 @@ export default function TTSGenerator() {
             <Moon className="w-4 h-4" />
           )}
         </motion.button>
-
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => logoutMutation.mutate()}
-          className="flex items-center gap-1.5 text-xs px-2.5 sm:px-3 py-1.5 rounded-lg font-bold uppercase tracking-wider transition-all border border-destructive/30 bg-destructive/5 text-destructive"
+          className="flex items-center gap-1.5 text-xs px-2.5 sm:px-3 py-1.5 rounded-lg font-bold uppercase tracking-wider transition-all"
+          style={{
+            border: "1px solid rgba(239,68,68,0.3)",
+            background: isDark
+              ? "rgba(239,68,68,0.08)"
+              : "rgba(239,68,68,0.05)",
+            color: "#ef4444",
+          }}
         >
           <LogOut className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">{t.logout}</span>
         </motion.button>
-
       </div>
     </div>
   );
-
 
   return (
     <TTSGeneratorLayout
       currentSecondaryTab={secondaryTab}
       onTabChange={setSecondaryTab}
+      backgroundStyle={{ background: bgGradient }}
       mainTab={mainTab}
       setMainTab={setMainTab}
       isDark={isDark}
-
       lang={lang}
       setLang={setLang}
       headerBar={headerBar}
       showLogo={true}
     >
-      <div className="h-full relative font-sans text-foreground transition-all duration-300">
-
+      <div
+          className="h-full relative transition-colors duration-500 font-sans"
+          style={{ color: textColor }}
+        >
 
         {/* Error Toast */}
         {errorToast && (
@@ -1272,8 +1350,17 @@ export default function TTSGenerator() {
                   </div>
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 max-w-6xl mx-auto">
                     <div className="lg:col-span-2 space-y-2">
-                      <div className={box}>
-
+                      <div
+                        className={box}
+                        style={{
+                          background: cardBg,
+                          borderColor: cardBorder,
+                          boxShadow,
+                          position: "sticky",
+                          top: "20px",
+                          zIndex: 10,
+                        }}
+                      >
                         <div
                           className={labelStyle}
                           style={{
@@ -1297,21 +1384,22 @@ export default function TTSGenerator() {
                             }}
                             placeholder={t.inputPlaceholder}
                             disabled={!hasPlan}
-                            className="premium-input h-28 sm:h-32 md:h-40"
+                            className="w-full h-28 sm:h-32 md:h-40 p-3 sm:p-4 pr-24 border rounded-xl focus:outline-none focus:ring-2 resize-none disabled:opacity-50 transition-colors text-sm leading-relaxed"
                             style={{
+                              background: inputBg,
                               borderColor:
                                 !isAdmin && text.length > currentCharLimit * 0.9
                                   ? text.length >= currentCharLimit
                                     ? "#dc2626"
                                     : "#f59e0b"
-                                  : undefined,
+                                  : inputBorder,
+                              color: textColor,
                               fontFamily:
                                 lang === "mm"
                                   ? "'Pyidaungsu', sans-serif"
                                   : "inherit",
                             }}
                           />
-
                           {/* Real-time character count - always visible */}
                           <div
                             className="absolute bottom-3 right-3 px-2 py-1 rounded-lg text-xs font-bold transition-colors"
@@ -1411,7 +1499,7 @@ export default function TTSGenerator() {
                                   key={v.id}
                                   disabled={!hasPlan}
                                   onClick={() => setSelectedVoice(v.id)}
-                                  className="py-2 px-2 border rounded-lg text-sm font-bold transition-all disabled:opacity-40"
+                                  className="py-2 px-2 border rounded-lg text-xs font-bold transition-all disabled:opacity-40"
                                   style={{
                                     borderColor: selectedVoice === v.id ? accent : cardBorder,
                                     background: selectedVoice === v.id
@@ -1437,7 +1525,7 @@ export default function TTSGenerator() {
                                   key={v.id}
                                   disabled={!hasPlan}
                                   onClick={() => setSelectedVoice(v.id)}
-                                  className="py-2 px-2 border rounded-lg text-sm font-bold transition-all disabled:opacity-40"
+                                  className="py-2 px-2 border rounded-lg text-xs font-bold transition-all disabled:opacity-40"
                                   style={{
                                     borderColor: selectedVoice === v.id ? accent : cardBorder,
                                     background: selectedVoice === v.id
@@ -1723,7 +1811,7 @@ export default function TTSGenerator() {
 
               {/* === VIDEO TAB — Simple Translation === */}
               {mainTab === "video" && (
-                <div className="w-full px-4 lg:px-6 animate-in fade-in zoom-in-95 duration-300 space-y-4">
+                <div className="max-w-xl mx-auto animate-in fade-in zoom-in-95 duration-300 space-y-4">
                   <div className="text-center mb-2 sm:mb-4">
                     <p className="text-xs mt-1" style={{ color: subtextColor }}>
                       {t.videoLimit}
@@ -2021,7 +2109,7 @@ export default function TTSGenerator() {
 
               {/* === DUBBING TAB — Auto Creator === */}
               {mainTab === "dubbing" && (
-                <div className="w-full px-4 lg:px-6 animate-in fade-in zoom-in-95 duration-300">
+                <div className="max-w-2xl mx-auto animate-in fade-in zoom-in-95 duration-300">
                   <div className="text-center mb-2 sm:mb-4">
                     {!isAdmin && !hasPlan && me && !subLoading && (
                       <div
@@ -2045,7 +2133,14 @@ export default function TTSGenerator() {
                   {/* ── STEP: Video Input ── */}
                   {!dubPreviewUrl && !dubResult && (
                     <div className="space-y-4">
-                      <div className={box}>
+                      <div
+                        className={box}
+                        style={{
+                          background: cardBg,
+                          borderColor: cardBorder,
+                          boxShadow,
+                        }}
+                      >
                         <div
                           className={labelStyle}
                           style={{
@@ -2064,7 +2159,10 @@ export default function TTSGenerator() {
                           </span>
                         </div>
                         <div className="flex items-center gap-3 mt-1">
-                          <LinkIcon className="w-5 h-5 flex-shrink-0 text-primary" />
+                          <LinkIcon
+                            className="w-5 h-5 flex-shrink-0"
+                            style={{ color: subtextColor }}
+                          />
                           <input
                             type="text"
                             value={dubVideoUrl}
@@ -2077,14 +2175,13 @@ export default function TTSGenerator() {
                               }
                             }}
                             placeholder={t.linkPlaceholder}
-                            className="flex-1 bg-transparent border-b-2 py-2 focus:outline-none transition-all text-sm min-w-0"
+                            className="flex-1 bg-transparent border-b-2 py-2 focus:outline-none transition-colors text-sm min-w-0"
                             style={{
-                              borderColor: dubVideoUrl ? accent : "var(--border)",
-                              color: "var(--foreground)",
+                              borderColor: dubVideoUrl ? accent : inputBorder,
+                              color: textColor,
                             }}
                           />
                         </div>
-
                         {videoPreviewError && (
                           <div
                             className="mt-3 p-3 rounded-xl"
@@ -2103,16 +2200,31 @@ export default function TTSGenerator() {
                         )}
                       </div>
 
-                      <div className="flex items-center justify-center gap-4 my-2 text-muted-foreground">
-                        <div className="h-px w-16 sm:w-20 bg-border"></div>
+                      <div
+                        className="flex items-center justify-center gap-4 my-2"
+                        style={{ color: subtextColor }}
+                      >
+                        <div
+                          className="h-px w-16 sm:w-20"
+                          style={{ background: isDark ? textColor : "#94a3b8" }}
+                        ></div>
                         <span className="text-xs font-bold uppercase tracking-widest">
                           {t.orLine}
                         </span>
-                        <div className="h-px w-16 sm:w-20 bg-border"></div>
+                        <div
+                          className="h-px w-16 sm:w-20"
+                          style={{ background: isDark ? textColor : "#94a3b8" }}
+                        ></div>
                       </div>
 
-
-                      <div className={box}>
+                      <div
+                        className={box}
+                        style={{
+                          background: cardBg,
+                          borderColor: cardBorder,
+                          boxShadow,
+                        }}
+                      >
                         <div
                           className={labelStyle}
                           style={{
@@ -2142,10 +2254,12 @@ export default function TTSGenerator() {
                               ? accent
                               : dubVideoFile
                                 ? "#16a34a"
-                                : "var(--border)",
+                                : inputBorder,
                             background: dubDragOver
-                              ? "var(--sidebar-accent)"
-                              : "var(--input)",
+                              ? isDark
+                                ? "rgba(192,111,48,0.1)"
+                                : "rgba(244,179,79,0.05)"
+                              : inputBg,
                             opacity: dubVideoUrl ? 0.4 : 1,
                           }}
                         >
@@ -2165,40 +2279,50 @@ export default function TTSGenerator() {
                               <p className="font-bold text-green-600 text-sm">
                                 {dubVideoFile.name}
                               </p>
-                              <p className="text-xs font-semibold mt-1 text-muted-foreground">
+                              <p
+                                className="text-xs font-semibold mt-1"
+                                style={{ color: subtextColor }}
+                              >
                                 {(dubVideoFile.size / 1024 / 1024).toFixed(1)}{" "}
                                 MB
                               </p>
                             </>
                           ) : (
                             <>
-                              <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-                              <p className="font-bold text-sm text-muted-foreground">
+                              <Upload
+                                className="w-8 h-8 mx-auto mb-2"
+                                style={{ color: subtextColor }}
+                              />
+                              <p
+                                className="font-bold text-sm"
+                                style={{ color: subtextColor }}
+                              >
                                 {t.dropVideo}
                               </p>
-                              <p className="text-xs font-semibold mt-2 text-muted-foreground">
+                              <p
+                                className="text-xs font-semibold mt-2"
+                                style={{ color: subtextColor }}
+                              >
                                 MP4, MOV, AVI, MKV
                               </p>
                             </>
                           )}
                         </div>
                       </div>
-
                     </div>
                   )}
 
                   {/* ── STEP: Video Preview + Settings ── */}
                   {dubPreviewUrl && !dubResult && (
-                    <div className="lg:relative lg:min-h-[calc(100vh-6rem)]">
-                      {/* Preview: static on mobile, fixed on desktop */}
-                      <div className="lg:fixed lg:top-20 lg:left-[270px] lg:w-[calc(50vw-150px)]" style={{ transform: 'translateZ(0)' }}>
+                    <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_400px] lg:items-start gap-4 space-y-4 lg:space-y-0">
+                      {/* Left Column: Video Preview & Progress (Sticky) */}
+                      <div className="sticky top-[70px] lg:top-[80px] space-y-4 z-40 bg-background/95 backdrop-blur-sm pb-2 lg:bg-transparent lg:backdrop-blur-none transition-all">
                         <div
                           className={box}
                           style={{
                             background: cardBg,
                             borderColor: cardBorder,
                             boxShadow,
-                            height: 'calc(100vh - 6rem)',
                           }}
                         >
                         <div className="flex items-center justify-between">
@@ -2582,25 +2706,46 @@ export default function TTSGenerator() {
                         )}
                       </div>
 
-                      </div>
+                      </div> {/* End Left Column */}
 
-                      {/* Settings: offset on desktop to make room for fixed preview */}
-                      <div className="lg:ml-[calc(50vw-130px)] space-y-4">
+                      {/* Right Column: Settings */}
+                      <div className="space-y-4">
 
                       {/* ── ACCORDION: Voice Selection ── */}
-                      <div className={box}>
+                      <div
+                        className={box}
+                        style={{
+                          background: cardBg,
+                          borderColor: cardBorder,
+                          boxShadow,
+                        }}
+                      >
                         <button
-                          onClick={() => setVoiceAccordionOpen(!voiceAccordionOpen)}
-                          className="w-full flex items-center justify-between mt-[-4px]"
+                          onClick={() =>
+                            setVoiceAccordionOpen(!voiceAccordionOpen)
+                          }
+                          className="w-full flex items-center justify-between"
+                          style={{ marginTop: "-4px" }}
                         >
-                          <div className={labelStyle}>
+                          <div
+                            className={labelStyle}
+                            style={{
+                              background: labelBg,
+                              color: accent,
+                              borderColor: cardBorder,
+                            }}
+                          >
                             {t.voiceSelection}
                           </div>
-                          <ChevronDown className={`w-5 h-5 transition-transform duration-200 text-primary ${voiceAccordionOpen ? "rotate-180" : ""}`} />
+                          <ChevronDown
+                            className={`w-5 h-5 transition-transform duration-200 ${voiceAccordionOpen ? "rotate-180" : ""}`}
+                            style={{ color: accent }}
+                          />
                         </button>
-                        {voiceAccordionOpen && (
+{voiceAccordionOpen && (
                           <div className="space-y-3 mt-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                            <div className="flex gap-1 p-1 bg-black/10 dark:bg-white/5 rounded-lg transition-all">
+                            {/* Tier Tabs */}
+                            <div className="flex gap-1 p-1 bg-black/10 rounded-lg">
                               {([
                                 { id: "tier1" as VoiceTier, label: "Tier 1", subLabel: lang === "mm" ? "၁ ကရက်ဒစ်" : "1 Credit" },
                                 { id: "tier2" as VoiceTier, label: "Tier 2", subLabel: lang === "mm" ? "၃ ကရက်ဒစ်" : "3 Credits" },
@@ -2609,75 +2754,123 @@ export default function TTSGenerator() {
                                 <button
                                   key={tier.id}
                                   onClick={() => setDubSelectedTier(tier.id)}
-                                  className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-bold transition-all border ${dubSelectedTier === tier.id ? "bg-primary/20 border-primary text-primary shadow-sm" : "border-transparent text-muted-foreground hover:bg-white/5"}`}
+                                  className="flex-1 py-1.5 px-2 rounded-md text-[10px] font-bold transition-all"
+                                  style={{
+                                    background: dubSelectedTier === tier.id
+                                      ? `linear-gradient(135deg, ${accent}40, ${accentSecondary}30)`
+                                      : "transparent",
+                                    border: `1px solid ${dubSelectedTier === tier.id ? accent : "transparent"}`,
+                                    color: dubSelectedTier === tier.id ? accent : subtextColor,
+                                  }}
                                 >
                                   <div>{tier.label}</div>
                                   <div className="text-[9px] font-normal opacity-60">{tier.subLabel}</div>
                                 </button>
                               ))}
                             </div>
+
+                            {/* Males */}
                             <div>
-                              <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5 px-1 text-muted-foreground">{t.male}</p>
+                              <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5 px-1" style={{ color: subtextColor }}>
+                                {t.male}
+                              </p>
                               <div className="grid grid-cols-4 gap-1.5">
                                 {ALL_VOICES.filter(v => v.tier === dubSelectedTier && v.gender === "male").map(v => (
                                   <button
                                     key={v.id}
                                     onClick={() => setDubSelectedVoice(v.id)}
-                                    className={`py-1.5 px-1 border rounded-lg text-xs font-bold transition-all ${dubSelectedVoice === v.id ? "border-primary bg-primary/15 text-primary shadow-sm" : "border-border bg-transparent text-foreground hover:bg-primary/5"}`}
+                                    className="py-1.5 px-1 border rounded-lg text-[10px] font-bold transition-all"
+                                    style={{
+                                      borderColor: dubSelectedVoice === v.id ? accent : cardBorder,
+                                      background: dubSelectedVoice === v.id
+                                        ? isDark ? "rgba(192,111,48,0.2)" : "rgba(244,179,79,0.08)"
+                                        : "transparent",
+                                      color: dubSelectedVoice === v.id ? accent : textColor,
+                                    }}
                                   >
-                                    <div className="truncate text-sm">{lang === "mm" ? v.nameMm : v.name}</div>
+                                    <div className="truncate">{lang === "mm" ? v.nameMm : v.name}</div>
                                   </button>
                                 ))}
                               </div>
                             </div>
+
+                            {/* Females */}
                             <div>
-                              <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5 px-1 text-muted-foreground">{t.female}</p>
+                              <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5 px-1" style={{ color: subtextColor }}>
+                                {t.female}
+                              </p>
                               <div className="grid grid-cols-4 gap-1.5">
                                 {ALL_VOICES.filter(v => v.tier === dubSelectedTier && v.gender === "female").map(v => (
                                   <button
                                     key={v.id}
                                     onClick={() => setDubSelectedVoice(v.id)}
-                                    className={`py-1.5 px-1 border rounded-lg text-xs font-bold transition-all ${dubSelectedVoice === v.id ? "border-primary bg-primary/15 text-primary shadow-sm" : "border-border bg-transparent text-foreground hover:bg-primary/5"}`}
+                                    className="py-1.5 px-1 border rounded-lg text-[10px] font-bold transition-all"
+                                    style={{
+                                      borderColor: dubSelectedVoice === v.id ? accent : cardBorder,
+                                      background: dubSelectedVoice === v.id
+                                        ? isDark ? "rgba(192,111,48,0.2)" : "rgba(244,179,79,0.08)"
+                                        : "transparent",
+                                      color: dubSelectedVoice === v.id ? accent : textColor,
+                                    }}
                                   >
-                                    <div className="truncate text-sm">{lang === "mm" ? v.nameMm : v.name}</div>
+                                    <div className="truncate">{lang === "mm" ? v.nameMm : v.name}</div>
                                   </button>
                                 ))}
                               </div>
                             </div>
+
                           </div>
                         )}
-                      </div>
+                        </div>
 
-                      <div className="panel-floating p-3 sm:p-5">
-
-
+                      {/* ═══ Premium 3D Subtitle Settings Panel ═══ */}
+                      <div
+                        className="panel-floating p-3 sm:p-5"
+                        style={{
+                          ...panelStyle,
+                          borderRadius: 20,
+                        }}
+                      >
                         {/* Panel Header with Toggle */}
                         <div className="flex items-center justify-between mb-3 sm:mb-5">
                           <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-primary/10 border border-primary/20">
-                              <Subtitles className="w-4 h-4 text-primary" />
+                            <div
+                              className="w-8 h-8 rounded-xl flex items-center justify-center"
+                              style={{
+                                background: isDark ? "rgba(192,111,48,0.2)" : "linear-gradient(135deg, rgba(192,111,48,0.12), rgba(244,179,79,0.08))",
+                                border: `1px solid ${isDark ? "rgba(192,111,48,0.3)" : "rgba(192,111,48,0.15)"}`,
+                              }}
+                            >
+                              <Subtitles className="w-4 h-4" style={{ color: accent }} />
                             </div>
                             <div>
-                              <span className="text-sm font-bold block text-foreground">
+                              <span className="text-sm font-bold block" style={{ color: textColor }}>
                                 {lang === "mm" ? "စာတန်း ဆက်တင်" : "Subtitle Settings"}
                               </span>
-                              <span className="text-[10px] text-muted-foreground">
+                              <span className="text-[10px]" style={{ color: subtextColor }}>
                                 {lang === "mm" ? "စာတန်းပုံစံ ပြင်ဆင်ရန်" : "Customize appearance"}
                               </span>
                             </div>
                           </div>
-
                           <button
                             onClick={() => {
                               const next = !srtEnabled;
                               setSrtEnabled(next);
                               setSrtAccordionOpen(next);
                             }}
-                            className={`relative w-11 h-6 rounded-full transition-all duration-300 flex-shrink-0 border-2 border-transparent ${srtEnabled ? "bg-primary shadow-[0_2px_12px_rgba(192,111,48,0.3)]" : "bg-muted"}`}
+                            className={`relative w-11 h-6 rounded-full transition-all duration-300 flex-shrink-0 border-2 border-transparent`}
+                            style={{
+                              background: srtEnabled
+                                ? "linear-gradient(135deg, #C06F30, #F4B34F)"
+                                : isDark ? "rgba(255,255,255,0.1)" : "#E5E0D8",
+                              boxShadow: srtEnabled ? "0 2px 12px rgba(192,111,48,0.3)" : "inset 0 1px 3px rgba(0,0,0,0.1)",
+                            }}
                           >
-                            <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-300 shadow-sm ${srtEnabled ? "translate-x-5" : "translate-x-0"}`} />
+                            <div
+                              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-300 ${srtEnabled ? "translate-x-5" : "translate-x-0"}`}
+                              style={{ boxShadow: "0 2px 6px rgba(0,0,0,0.15)" }}
+                            />
                           </button>
-
                         </div>
 
                         {/* Settings Groups — collapsible */}
@@ -2694,46 +2887,54 @@ export default function TTSGenerator() {
                             {/* Font Size */}
                             <div className="mb-4">
                               <div className="flex items-center justify-between mb-2.5">
-                                <span className="text-xs font-semibold text-muted-foreground">
+                                <span className="text-xs font-semibold" style={{ color: subtextColor }}>
                                   {lang === "mm" ? "စာလုံးအရွယ်" : "Text Size"}
                                 </span>
                               </div>
-
-                                <div className="grid grid-cols-3 gap-2">
-                                  {[
-                                    { label: lang === "mm" ? "သေးငယ်သော" : "Small", val: 18 },
-                                    { label: lang === "mm" ? "အလတ်စား" : "Medium", val: 24 },
-                                    { label: lang === "mm" ? "ကြီးမားသော" : "Large", val: 32 }
-                                  ].map(size => (
-                                    <button
-                                      key={size.val}
-                                      onClick={() => setSrtFontSize(size.val)}
-                                      className={`py-2 rounded-xl text-xs font-bold transition-all border ${srtFontSize === size.val ? "bg-primary text-white shadow-lg border-transparent" : "bg-muted text-muted-foreground border-transparent"}`}
-                                    >
-                                      {size.label}
-                                    </button>
-                                  ))}
-                                </div>
-
+                              <div className="grid grid-cols-3 gap-2">
+                                {[
+                                  { label: lang === "mm" ? "သေးငယ်သော" : "Small", val: 18 },
+                                  { label: lang === "mm" ? "အလတ်စား" : "Medium", val: 24 },
+                                  { label: lang === "mm" ? "ကြီးမားသော" : "Large", val: 32 }
+                                ].map(size => (
+                                  <button
+                                    key={size.val}
+                                    onClick={() => setSrtFontSize(size.val)}
+                                    className="py-2 rounded-xl text-xs font-bold transition-all"
+                                    style={{
+                                      background: srtFontSize === size.val
+                                        ? "linear-gradient(135deg, #C06F30, #F4B34F)"
+                                        : isDark ? "rgba(255,255,255,0.05)" : "#F0EBE3",
+                                      color: srtFontSize === size.val ? "#fff" : subtextColor,
+                                      boxShadow: srtFontSize === size.val ? "0 2px 8px rgba(192,111,48,0.25)" : "none",
+                                      border: `1px solid ${srtFontSize === size.val ? "transparent" : isDark ? "rgba(255,255,255,0.05)" : "rgba(192,111,48,0.08)"}`
+                                    }}
+                                  >
+                                    {size.label}
+                                  </button>
+                                ))}
+                              </div>
                             </div>
 
                             {/* Text Color */}
                             <div>
-                              <span className="text-xs font-semibold block mb-2.5 text-muted-foreground">
+                              <span className="text-xs font-semibold block mb-2.5" style={{ color: subtextColor }}>
                                 {lang === "mm" ? "စာအရောင်" : "Text Color"}
                               </span>
-
                               <div className="flex gap-2.5 flex-wrap">
                                 {["#ffffff", "#000000", "#fbbf24", "#ef4444", "#3b82f6", "#22c55e", "#a855f7", "#ec4899"].map(color => (
                                   <button
                                     key={color}
                                     onClick={() => setSrtColor(color)}
-                                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex-shrink-0 transition-transform hover:scale-110 shadow-sm border-2 ${srtColor === color ? "border-primary" : "border-transparent"}`}
-                                    style={{ background: color }}
+                                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex-shrink-0 transition-transform hover:scale-110`}
+                                    style={{ 
+                                      background: color,
+                                      border: `2px solid ${srtColor === color ? accent : "transparent"}`,
+                                      boxShadow: "0 2px 5px rgba(0,0,0,0.1)"
+                                    }}
                                   />
                                 ))}
                               </div>
-
                             </div>
                           </div>
 
@@ -2744,61 +2945,71 @@ export default function TTSGenerator() {
                               <span>{lang === "mm" ? "အနေအထား" : "LAYOUT"}</span>
                             </div>
 
-                             <div className="grid grid-cols-2 gap-4">
-                               {/* Box Height */}
-                               <div>
-                                 <div className="flex justify-between items-center mb-2">
-                                   <span className="text-xs font-semibold text-muted-foreground">
-                                     {lang === "mm" ? "အမြင့်" : "Height"}
-                                   </span>
-                                   <span className="text-xs font-bold text-primary">
-                                     {srtBoxPadding}px
-                                   </span>
-                                 </div>
-                                 <input
-                                   type="range"
-                                   min="2"
-                                   max="20"
-                                   value={srtBoxPadding}
-                                   onChange={e => setSrtBoxPadding(Number(e.target.value))}
-                                   className="premium-slider w-full"
-                                 />
-                               </div>
- 
-                               {/* Position */}
-                               <div>
-                                 <div className="flex justify-between items-center mb-2">
-                                   <span className="text-xs font-semibold text-muted-foreground">
-                                     {lang === "mm" ? "အနေအထား" : "Position"}
-                                   </span>
-                                   <span className="text-[10px] font-semibold text-muted-foreground opacity-80">
-                                     {lang === "mm" ? "အောက် > အပေါ်" : "Bottom > Top"}({srtMarginV}%)
-                                   </span>
-                                 </div>
-                                 <input
-                                   type="range"
-                                   min="0"
-                                   max="100"
-                                   value={srtMarginV}
-                                   onChange={e => setSrtMarginV(Number(e.target.value))}
-                                   className="premium-slider w-full"
-                                 />
-                               </div>
-                             </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              {/* Box Height */}
+                              <div>
+                                <div className="flex justify-between items-center mb-2">
+                                  <span className="text-xs font-semibold" style={{ color: subtextColor }}>
+                                    {lang === "mm" ? "အမြင့်" : "Height"}
+                                  </span>
+                                  <span className="text-xs font-bold" style={{ color: accent }}>
+                                    {srtBoxPadding}px
+                                  </span>
+                                </div>
+                                <input
+                                  type="range"
+                                  min="2"
+                                  max="20"
+                                  value={srtBoxPadding}
+                                  onChange={e => setSrtBoxPadding(Number(e.target.value))}
+                                  className="premium-slider w-full"
+                                />
+                              </div>
 
+                              {/* Position */}
+                              <div>
+                                <div className="flex justify-between items-center mb-2">
+                                  <span className="text-xs font-semibold" style={{ color: subtextColor }}>
+                                    {lang === "mm" ? "အနေအထား" : "Position"}
+                                  </span>
+                                  <span className="text-[10px] font-semibold" style={{ color: subtextColor, opacity: 0.8 }}>
+                                    {lang === "mm" ? "အောက် > အပေါ်" : "Bottom > Top"} ({srtMarginV}%)
+                                  </span>
+                                </div>
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max="100"
+                                  value={srtMarginV}
+                                  onChange={e => setSrtMarginV(Number(e.target.value))}
+                                  className="premium-slider w-full"
+                                />
+                              </div>
+                            </div>
 
-                             <div className="flex items-center justify-between mt-3 py-2.5 px-3 rounded-xl bg-muted/30 border border-border">
-                               <span className="text-xs font-semibold text-muted-foreground">
-                                 {lang === "mm" ? "အပြည့်အစုံ" : "Full Width"}
-                               </span>
-                               <button
-                                 onClick={() => setSrtFullWidth(!srtFullWidth)}
-                                 className={`relative w-11 h-6 rounded-full transition-all duration-300 flex-shrink-0 border-2 border-transparent ${srtFullWidth ? "bg-primary shadow-md" : "bg-muted"}`}
-                               >
-                                 <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${srtFullWidth ? "translate-x-5" : "translate-x-0"}`} />
-                               </button>
-                             </div>
-
+                            {/* Full Width Toggle */}
+                            <div className="flex items-center justify-between mt-3 py-2.5 px-3 rounded-xl" style={{
+                              background: isDark ? "rgba(255,255,255,0.03)" : "rgba(192,111,48,0.03)",
+                              border: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "rgba(192,111,48,0.08)"}`,
+                            }}>
+                              <span className="text-xs font-semibold" style={{ color: subtextColor }}>
+                                {lang === "mm" ? "အပြည့်အစုံ" : "Full Width"}
+                              </span>
+                              <button
+                                onClick={() => setSrtFullWidth(!srtFullWidth)}
+                                className="relative w-11 h-6 rounded-full transition-all duration-300 flex-shrink-0 border-2 border-transparent"
+                                style={{
+                                  background: srtFullWidth
+                                    ? "linear-gradient(135deg, #C06F30, #F4B34F)"
+                                    : isDark ? "rgba(255,255,255,0.1)" : "#E5E0D8",
+                                  boxShadow: srtFullWidth ? "0 2px 8px rgba(192,111,48,0.25)" : "inset 0 1px 3px rgba(0,0,0,0.1)",
+                                }}
+                              >
+                                <div
+                                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${srtFullWidth ? "translate-x-5" : "translate-x-0"}`}
+                                />
+                              </button>
+                            </div>
                           </div>
 
                           {/* ── Group: Background ── */}
@@ -2808,33 +3019,44 @@ export default function TTSGenerator() {
                               <span>{lang === "mm" ? "နောက်ခံ" : "BACKGROUND"}</span>
                             </div>
 
-                             <div className="flex items-center justify-between py-2.5 px-3 rounded-xl mb-3 bg-muted/30 border border-border">
-                               <span className="text-xs font-semibold text-muted-foreground">
-                                 {lang === "mm" ? "နောက်ခံ Blur" : "Background Blur"}
-                               </span>
-                               <button
-                                 onClick={() => setSrtBlurBg(!srtBlurBg)}
-                                 className={`relative w-11 h-6 rounded-full transition-all duration-300 flex-shrink-0 border-2 border-transparent ${srtBlurBg ? "bg-primary shadow-md" : "bg-muted"}`}
-                               >
-                                 <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${srtBlurBg ? "translate-x-5" : "translate-x-0"}`} />
-                               </button>
-                             </div>
+                            {/* Background Blur Toggle */}
+                            <div className="flex items-center justify-between py-2.5 px-3 rounded-xl mb-3" style={{
+                              background: isDark ? "rgba(255,255,255,0.03)" : "rgba(192,111,48,0.03)",
+                              border: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "rgba(192,111,48,0.08)"}`,
+                            }}>
+                              <span className="text-xs font-semibold" style={{ color: subtextColor }}>
+                                {lang === "mm" ? "နောက်ခံ Blur" : "Background Blur"}
+                              </span>
+                              <button
+                                onClick={() => setSrtBlurBg(!srtBlurBg)}
+                                className="relative w-11 h-6 rounded-full transition-all duration-300 flex-shrink-0 border-2 border-transparent"
+                                style={{
+                                  background: srtBlurBg
+                                    ? "linear-gradient(135deg, #C06F30, #F4B34F)"
+                                    : isDark ? "rgba(255,255,255,0.1)" : "#E5E0D8",
+                                  boxShadow: srtBlurBg ? "0 2px 8px rgba(192,111,48,0.25)" : "inset 0 1px 3px rgba(0,0,0,0.1)",
+                                }}
+                              >
+                                <div
+                                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${srtBlurBg ? "translate-x-5" : "translate-x-0"}`}
+                                />
+                              </button>
+                            </div>
 
-
-                             {srtBlurBg && (
-                              <div className="space-y-3 pl-3 ml-1 border-l-2 border-primary/20">
-
+                            {srtBlurBg && (
+                              <div className="space-y-3 pl-3 ml-1" style={{
+                                borderLeft: `2px solid ${isDark ? "rgba(192,111,48,0.2)" : "rgba(192,111,48,0.12)"}`,
+                              }}>
                                 {/* Blur Opacity */}
-                                 <div>
-                                   <div className="flex justify-between items-center mb-2">
-                                     <span className="text-xs font-semibold text-muted-foreground">
-                                       {lang === "mm" ? "အလင်းပိတ်မှု" : "Opacity"}
-                                     </span>
-                                     <span className="text-xs font-bold text-primary">
-                                       {srtBlurOpacity}%
-                                     </span>
-                                   </div>
-
+                                <div>
+                                  <div className="flex justify-between items-center mb-2">
+                                    <span className="text-xs font-semibold" style={{ color: subtextColor }}>
+                                      {lang === "mm" ? "အလင်းပိတ်မှု" : "Opacity"}
+                                    </span>
+                                    <span className="text-xs font-bold" style={{ color: accent }}>
+                                      {srtBlurOpacity}%
+                                    </span>
+                                  </div>
                                   <input
                                     type="range"
                                     min="0"
@@ -2845,33 +3067,55 @@ export default function TTSGenerator() {
                                   />
                                 </div>
 
-                                 {/* Blur Color */}
-                                 <div className="flex items-center justify-between">
-                                   <span className="text-xs font-semibold text-muted-foreground">
-                                     {lang === "mm" ? "Blur အရောင်" : "Blur Color"}
-                                   </span>
-
-                                   <div className="flex gap-2">
-                                     <button
-                                       onClick={() => setSrtBlurColor("black")}
-                                       className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all border ${srtBlurColor === "black" ? "bg-black text-white border-primary shadow-md" : "bg-muted text-muted-foreground border-transparent"}`}
-                                     >
-                                       {lang === "mm" ? "မည်း" : "Dark"}
-                                     </button>
-                                     <button
-                                       onClick={() => setSrtBlurColor("white")}
-                                       className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all border ${srtBlurColor === "white" ? "bg-white text-black border-primary shadow-md" : "bg-muted text-muted-foreground border-transparent"}`}
-                                     >
-                                       {lang === "mm" ? "ဖြူ" : "Light"}
-                                     </button>
-                                     <button
-                                       onClick={() => setSrtBlurColor("transparent")}
-                                       className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all border ${srtBlurColor === "transparent" ? "bg-primary/20 text-primary border-primary shadow-md" : "bg-muted text-muted-foreground border-transparent"}`}
-                                     >
-                                       {lang === "mm" ? "ဖောက်ထွင်း" : "Glass"}
-                                     </button>
-                                   </div>
-
+                                {/* Blur Color */}
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-semibold" style={{ color: subtextColor }}>
+                                    {lang === "mm" ? "Blur အရောင်" : "Blur Color"}
+                                  </span>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => setSrtBlurColor("black")}
+                                      className="px-4 py-1.5 rounded-xl text-xs font-bold transition-all"
+                                      style={{
+                                        background: srtBlurColor === "black"
+                                          ? "linear-gradient(135deg, #1f1f1f, #333)"
+                                          : isDark ? "rgba(255,255,255,0.05)" : "#F0EBE3",
+                                        color: srtBlurColor === "black" ? "#fff" : subtextColor,
+                                        border: `1px solid ${srtBlurColor === "black" ? accent : "transparent"}`,
+                                        boxShadow: srtBlurColor === "black" ? `0 2px 8px rgba(192,111,48,0.2)` : "none",
+                                      }}
+                                    >
+                                      {lang === "mm" ? "မည်း" : "Dark"}
+                                    </button>
+                                    <button
+                                      onClick={() => setSrtBlurColor("white")}
+                                      className="px-4 py-1.5 rounded-xl text-xs font-bold transition-all"
+                                      style={{
+                                        background: srtBlurColor === "white"
+                                          ? "linear-gradient(135deg, #fff, #F5F0EA)"
+                                          : isDark ? "rgba(255,255,255,0.05)" : "#F0EBE3",
+                                        color: srtBlurColor === "white" ? "#2B1D1C" : subtextColor,
+                                        border: `1px solid ${srtBlurColor === "white" ? accent : "transparent"}`,
+                                        boxShadow: srtBlurColor === "white" ? `0 2px 8px rgba(192,111,48,0.2)` : "none",
+                                      }}
+>
+                                      {lang === "mm" ? "ဖြူ" : "Light"}
+                                    </button>
+                                    <button
+                                      onClick={() => setSrtBlurColor("transparent")}
+                                      className="px-4 py-1.5 rounded-xl text-xs font-bold transition-all"
+                                      style={{
+                                        background: srtBlurColor === "transparent"
+                                          ? "linear-gradient(135deg, rgba(200,200,200,0.3), rgba(150,150,150,0.1))"
+                                          : isDark ? "rgba(255,255,255,0.05)" : "#F0EBE3",
+                                        color: srtBlurColor === "transparent" ? "#3b82f6" : subtextColor,
+                                        border: `1px solid ${srtBlurColor === "transparent" ? accent : "transparent"}`,
+                                        boxShadow: srtBlurColor === "transparent" ? `0 2px 8px rgba(192,111,48,0.2)` : "none",
+                                      }}
+                                    >
+                                      {lang === "mm" ? "ဖောက်ထွင်း" : "Glass"}
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
                             )}
@@ -3069,26 +3313,34 @@ export default function TTSGenerator() {
                         <p className="text-xs text-green-600 font-bold mb-1">
                           ✓ {t.keyActive}
                         </p>
-                        <p className="text-xs font-mono text-muted-foreground">
+                        <p
+                          className="text-xs font-mono"
+                          style={{ color: subtextColor }}
+                        >
                           {savedKey.slice(0, 8)}
                           {"*".repeat(15)}
                         </p>
-
                       </div>
                     ) : (
-                      <div className="p-3 border border-dashed rounded-xl mb-4 text-sm font-semibold border-border text-muted-foreground">
+                      <div
+                        className="p-3 border border-dashed rounded-xl mb-4 text-sm font-semibold"
+                        style={{ borderColor: cardBorder, color: subtextColor }}
+                      >
                         {t.keyNone}
                       </div>
-
                     )}
                     <div className="flex gap-2 flex-wrap">
                       <input
                         value={geminiKey}
                         onChange={e => setGeminiKey(e.target.value)}
                         placeholder={t.geminiKeyPlaceholder}
-                        className="premium-input flex-1 min-w-0 p-3 rounded-xl border focus:outline-none focus:ring-2 font-mono text-sm transition-all"
+                        className="flex-1 min-w-0 p-3 rounded-xl border focus:outline-none focus:ring-2 font-mono text-sm transition-colors"
+                        style={{
+                          background: inputBg,
+                          borderColor: inputBorder,
+                          color: textColor,
+                        }}
                       />
-
                       <button
                         onClick={() => {
                           if (geminiKey.trim()) {
@@ -3100,11 +3352,11 @@ export default function TTSGenerator() {
                             setGeminiKey("");
                           }
                         }}
-                        className="px-4 sm:px-5 font-bold text-sm text-white rounded-xl transition-transform hover:scale-105 shadow-md bg-primary"
+                        className="px-4 sm:px-5 font-bold text-sm text-white rounded-xl transition-transform hover:scale-105 shadow-md"
+                        style={{ background: accent }}
                       >
                         {t.saveKey}
                       </button>
-
                       {savedKey && (
                         <button
                           onClick={() => {
@@ -3122,38 +3374,72 @@ export default function TTSGenerator() {
               </div>
 
               {/* Quick Links Section */}
-              <div className={box}>
+              <div
+                className={box}
+                style={{
+                  background: cardBg,
+                  borderColor: cardBorder,
+                  boxShadow,
+                }}
+              >
                 <div className="space-y-2 pt-2">
                   <button
                     onClick={() => setSecondaryTab("history")}
-                    className="w-full flex items-center gap-3 p-3 rounded-xl transition-all hover:scale-[1.02] min-h-[44px] bg-input border border-border"
+                    className="w-full flex items-center gap-3 p-3 rounded-xl transition-all hover:scale-[1.02] min-h-[44px]"
+                    style={{
+                      background: inputBg,
+                      border: `1px solid ${cardBorder}`,
+                    }}
                   >
-                    <HistoryIcon className="w-5 h-5 flex-shrink-0 text-primary" />
-                    <span className="text-sm font-bold text-foreground">
+                    <HistoryIcon
+                      className="w-5 h-5 flex-shrink-0"
+                      style={{ color: accent }}
+                    />
+                    <span
+                      className="text-sm font-bold"
+                      style={{ color: textColor }}
+                    >
                       {lang === "mm" ? "မှတ်တမ်း" : "History"}
                     </span>
                   </button>
-
                   <button
                     onClick={() => setSecondaryTab("plan")}
-                    className="w-full flex items-center gap-3 p-3 rounded-xl transition-all hover:scale-[1.02] min-h-[44px] bg-input border border-border"
+                    className="w-full flex items-center gap-3 p-3 rounded-xl transition-all hover:scale-[1.02] min-h-[44px]"
+                    style={{
+                      background: inputBg,
+                      border: `1px solid ${cardBorder}`,
+                    }}
                   >
-                    <Star className="w-5 h-5 flex-shrink-0 text-primary" />
-                    <span className="text-sm font-bold text-foreground">
+                    <Star
+                      className="w-5 h-5 flex-shrink-0"
+                      style={{ color: accent }}
+                    />
+                    <span
+                      className="text-sm font-bold"
+                      style={{ color: textColor }}
+                    >
                       Plan
                     </span>
                   </button>
-
                   <button
                     onClick={() => setSecondaryTab("guide")}
-                    className="w-full flex items-center gap-3 p-3 rounded-xl transition-all hover:scale-[1.02] min-h-[44px] bg-input border border-border"
+                    className="w-full flex items-center gap-3 p-3 rounded-xl transition-all hover:scale-[1.02] min-h-[44px]"
+                    style={{
+                      background: inputBg,
+                      border: `1px solid ${cardBorder}`,
+                    }}
                   >
-                    <BookOpen className="w-5 h-5 flex-shrink-0 text-primary" />
-                    <span className="text-sm font-bold text-foreground">
+                    <BookOpen
+                      className="w-5 h-5 flex-shrink-0"
+                      style={{ color: accent }}
+                    />
+                    <span
+                      className="text-sm font-bold"
+                      style={{ color: textColor }}
+                    >
                       {lang === "mm" ? "လမ်းညွှန်" : "Guide"}
                     </span>
                   </button>
-
                 </div>
               </div>
             </div>
@@ -3163,34 +3449,56 @@ export default function TTSGenerator() {
           {secondaryTab === "history" && (
             <div className="max-w-3xl mx-auto py-2 sm:py-4 animate-in fade-in zoom-in-95 duration-300">
               <div className="text-center mb-6">
-                <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-widest mb-2 text-primary">
+                <h2
+                  className="text-2xl sm:text-3xl font-black uppercase tracking-widest mb-2"
+                  style={{ color: accent }}
+                >
                   {lang === "mm" ? "အသုံးပြုမှတ်တမ်း" : "Usage History"}
                 </h2>
-
-                <p className="text-xs sm:text-sm text-muted-foreground">
+                <p
+                  className="text-xs sm:text-sm"
+                  style={{ color: subtextColor }}
+                >
                   {lang === "mm"
                     ? "သင်၏ ဖန်တီးမှုအားလုံးကို ဤနေရာတွင် ကြည့်နိုင်ပါသည်"
                     : "View all your past generations here"}
                 </p>
-
               </div>
               {historyLoading ? (
                 <div className="flex items-center justify-center py-20">
-                  <div className="w-8 h-8 border-2 rounded-full animate-spin border-primary border-t-transparent" />
+                  <div
+                    className="w-8 h-8 border-2 rounded-full animate-spin"
+                    style={{
+                      borderColor: accent,
+                      borderTopColor: "transparent",
+                    }}
+                  />
                 </div>
-
               ) : !unifiedHistory || unifiedHistory.length === 0 ? (
-                <div className={box}>
-
+                <div
+                  className={box}
+                  style={{
+                    background: cardBg,
+                    borderColor: cardBorder,
+                    boxShadow,
+                  }}
+                >
                   <div className="text-center py-12 sm:py-16 px-4">
-                    <div className="w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center bg-primary/10">
-                      <ClockIcon className="w-10 h-10 text-primary" />
+                    <div
+                      className="w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center"
+                      style={{ background: accent15 }}
+                    >
+                      <ClockIcon
+                        className="w-10 h-10"
+                        style={{ color: accent }}
+                      />
                     </div>
-
-                    <h3 className="text-xl sm:text-2xl font-bold mb-2 text-foreground">
+                    <h3
+                      className="text-xl sm:text-2xl font-bold mb-2"
+                      style={{ color: textColor }}
+                    >
                       {lang === "mm" ? "မှတ်တမ်း မရှိသေးပါ" : "No history yet"}
                     </h3>
-
                     <p
                       className="text-sm mb-6 max-w-md mx-auto"
                       style={{ color: subtextColor, lineHeight: "1.7" }}

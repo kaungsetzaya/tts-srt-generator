@@ -109,7 +109,7 @@ export default function VideoTranslator() {
         </div>
       }
     >
-      <div className="w-full px-4 lg:px-6 space-y-6">
+      <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6 pb-24">
         {/* Title */}
         <div className="text-center py-4 sm:py-6">
           <div className="flex items-center justify-center gap-3 sm:gap-4 mt-3 text-[10px] sm:text-xs opacity-40 uppercase font-bold tracking-tighter">
@@ -127,10 +127,10 @@ export default function VideoTranslator() {
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
           onClick={() => fileRef.current?.click()}
-          className={`border-2 border-dashed p-6 sm:p-10 text-center cursor-pointer transition-all rounded-2xl w-full ${
+          className={`border-2 border-dashed p-8 sm:p-12 text-center cursor-pointer transition-all rounded-2xl ${
             dragOver ? "border-primary bg-[rgba(192,111,48,0.1)]" :
             file ? "border-green-500/50 bg-green-500/5" :
-            "border-border hover:border-primary/50 bg-card"
+            "border-border hover:border-primary/50"
           }`}>
           <input ref={fileRef} type="file" accept="video/*" className="hidden" onChange={e => { if (e.target.files?.[0]) handleFile(e.target.files[0]); }} />
           {file ? (
@@ -185,7 +185,7 @@ export default function VideoTranslator() {
               </button>
             </div>
 
-            <div className="border border-border bg-card rounded-2xl overflow-hidden shadow-2xl w-full">
+            <div className="border border-border bg-card rounded-2xl overflow-hidden shadow-2xl">
               <textarea
                 value={editedText}
                 onChange={e => setEditedText(e.target.value)}
