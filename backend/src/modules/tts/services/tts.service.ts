@@ -61,7 +61,7 @@ export async function generateSpeech(
   const voiceConfig = SUPPORTED_VOICES[voice];
   if (!voiceConfig) throw new Error(`Unsupported voice: ${voice}`);
 
-  const MYANMAR_SPEED_MULTIPLIER = 1.0;
+  const MYANMAR_SPEED_MULTIPLIER = 1.1;
   const actualRate = rate * MYANMAR_SPEED_MULTIPLIER;
   const ratePercent = Math.round((actualRate - 1.0) * 100);
   const rateStr = ratePercent >= 0 ? `+${ratePercent}%` : `${ratePercent}%`;

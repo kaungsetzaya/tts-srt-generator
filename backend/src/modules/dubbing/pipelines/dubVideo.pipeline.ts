@@ -131,7 +131,7 @@ export class DubVideoPipeline {
       );
       console.log(`[Dubbing Pipeline] Step 4 OK: translated segments ready`);
 
-      const FIXED_SPEED = 1.0;
+      const FIXED_SPEED = 1.1;
       const CONCURRENCY = 1;
       const activeSegments = translatedSegments.filter(seg => seg.translatedText.trim());
       if (activeSegments.length === 0) throw new Error("No translated segments to generate voice for.");
@@ -230,7 +230,7 @@ export class DubVideoPipeline {
         const ttsDuration = result.duration / 1000;
 
         const isTtsLonger = ttsDuration > origDuration;
-        const speedRatio = isTtsLonger ? ttsDuration / origDuration : undefined;
+        const speedRatio = !isTtsLonger ? FIXED_SPEED : undefined;
 
         console.log(`[Dubbing Pipeline] seg ${seg.index}: tts=${(ttsDuration*1000).toFixed(0)}ms orig=${(origDuration*1000).toFixed(0)}ms ratio=${speedRatio?.toFixed(3) || '1.000'}`);
 

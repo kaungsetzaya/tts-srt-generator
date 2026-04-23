@@ -145,7 +145,7 @@ export async function extractVideoSegment(
   speedRatio?: number
 ): Promise<void> {
   const durationSec = endSec - startSec;
-  const targetDurationStr = (speedRatio ? durationSec * speedRatio : durationSec).toFixed(3);
+  const targetDurationStr = (speedRatio ? durationSec / speedRatio : durationSec).toFixed(3);
 
   return new Promise((resolve, reject) => {
     const ff = ffmpeg(videoPath)
@@ -154,19 +154,21 @@ export async function extractVideoSegment(
 
     const videoFilters: string[] = [];
     if (speedRatio && needsSpeedChange(speedRatio)) {
-      videoFilters.push(`setpts=(PTS-STARTPTS)*${speedRatio.toFixed(6)}`);
+      videoFilters.push(`setpts=PTS/${speedRatio.toFixed(6)}`);
     }
     videoFilters.push('fps=30');
 
     if (videoFilters.length > 0) ff.videoFilters(videoFilters.join(','));
 
     ff.outputOptions([
-      '-t',      targetDurationStr,
-      '-c:v',    'libx264',
-      '-preset', 'fast',
-      '-crf',    '23',
+      '-r',         '30',
+      '-vsync',     'cfr',
+      '-t',         targetDurationStr,
+      '-c:v',       'libx264',
+      '-preset',    'fast',
+      '-crf',       '23',
       '-an',
-      '-movflags', '+faststart',
+      '-movflags',  '+faststart',
     ])
     .on('end', () => resolve())
     .on('error', reject)
