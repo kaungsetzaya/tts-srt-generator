@@ -231,20 +231,7 @@ export async function mergeDubbedVideoSimple(
     onProgress?: (progress: number) => void;
   }
 ): Promise<void> {
-  const ff = ffmpeg(processedVideoPath)
-    .input(ttsTrackPath);
-
-  const outputOpts = [
-    '-map', '0:v',
-    '-map', '-0:a',
-    '-map', '1:a',
-    '-c:v', 'libx264',
-    '-preset', 'fast',
-    '-crf', '23',
-    '-c:a', 'aac',
-    '-b:a', '128k',
-    '-movflags', '+faststart',
-  ];
+  const outputOpts: string[] = [];
 
   if (options?.subtitlesPath) {
     let subFilter: string;
@@ -264,7 +251,19 @@ export async function mergeDubbedVideoSimple(
   }
 
   return new Promise((resolve, reject) => {
-    ff.outputOptions(outputOpts)
+    ffmpeg(processedVideoPath)
+    .input(ttsTrackPath)
+    .outputOptions([
+      '-map', '0:v:0',
+      '-map', '1:a:0',
+      '-c:v', 'libx264',
+      '-preset', 'fast',
+      '-crf', '23',
+      '-c:a', 'aac',
+      '-b:a', '128k',
+      '-movflags', '+faststart',
+      ...outputOpts,
+    ])
     .on('progress', (p: any) => options?.onProgress?.(p.percent ?? 0))
     .on('error', reject)
     .on('end',   resolve)
