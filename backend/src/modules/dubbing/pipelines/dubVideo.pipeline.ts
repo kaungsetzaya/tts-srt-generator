@@ -141,10 +141,10 @@ export class DubVideoPipeline {
         try {
           console.log(`[Dubbing Pipeline] Generating TTS for segment ${seg.index}: "${seg.translatedText.slice(0, 50)}..." (voice: ${options.voice})`);
           if (isCharacter) {
-              const ttsResult = await ttsService.generateSpeechWithCharacter(seg.translatedText, options.voice as CharacterKey, 1.0, "16:9", options.pitch ?? 0);
+              const ttsResult = await ttsService.generateSpeechWithCharacter(seg.translatedText, options.voice as CharacterKey, 1.1, "16:9", options.pitch ?? 0);
               audioBuffer = ttsResult.audioBuffer;
           } else {
-              const ttsResult = await ttsService.generateSpeech(seg.translatedText, options.voice as VoiceKey, 1.0, options.pitch ?? 0, "16:9");
+              const ttsResult = await ttsService.generateSpeech(seg.translatedText, options.voice as VoiceKey, 1.1, options.pitch ?? 0, "16:9");
               audioBuffer = ttsResult.audioBuffer;
           }
         } catch (err: any) {
