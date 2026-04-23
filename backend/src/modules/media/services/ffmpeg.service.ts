@@ -8,6 +8,16 @@ const AUDIO_BITRATE     = '128k';
 
 const needsSpeedChange = (ratio: number) => Math.abs(ratio - 1.0) > 0.005;
 
+function buildAtempoChain(ratio: number): string {
+  if (ratio <= 0) return '';
+  const filters: string[] = [];
+  let remaining = ratio;
+  while (remaining > 2.0) { filters.push('atempo=2.0'); remaining /= 2.0; }
+  while (remaining < 0.5) { filters.push('atempo=0.5'); remaining /= 0.5; }
+  if (remaining !== 1.0) filters.push(`atempo=${remaining.toFixed(6)}`);
+  return filters.join(',');
+}
+
 export async function getVideoDuration(filePath: string): Promise<number> {
   return new Promise((resolve, reject) => {
     ffmpeg.ffprobe(filePath, (err: any, metadata: any) => {
@@ -186,64 +196,71 @@ export async function concatVideoFiles(videoParts: string[], outputPath: string)
   });
 }
 
-export async function mergeDubbedVideo(
+export async function adjustAudioSpeed(
+  inputPath: string,
+  outputPath: string,
+  speedRatio: number
+): Promise<void> {
+  if (!needsSpeedChange(speedRatio)) {
+    await fs.copyFile(inputPath, outputPath);
+    return;
+  }
+  const filter = buildAtempoChain(speedRatio);
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .audioFilters(filter)
+      .audioCodec('pcm_s16le')
+      .audioFrequency(AUDIO_SAMPLE_RATE)
+      .audioChannels(AUDIO_CHANNELS)
+      .on('end', () => resolve())
+      .on('error', reject)
+      .save(outputPath);
+  });
+}
+
+export async function mergeDubbedVideoSimple(
   processedVideoPath: string,
-  originalAudioPath: string,
-  ttsFiles: Array<{ path: string; startMs: number }>,
+  ttsTrackPath: string,
   outputPath: string,
   options?: {
-    speechSegments?: Array<{ startSec: number; endSec: number }>;
+    subtitlesPath?: string;
+    fontPath?: string;
     onProgress?: (progress: number) => void;
   }
 ): Promise<void> {
-  const segments = options?.speechSegments || [];
-  const totalInputs = 2 + ttsFiles.length; // video, original audio, tts files
+  const ff = ffmpeg(processedVideoPath)
+    .input(ttsTrackPath);
 
-  // Build audio filter: mute speech regions in original, delay TTS, mix all
-  const audioFilters: string[] = [];
+  const outputOpts = [
+    '-map', '0:v',
+    '-map', '1:a',
+    '-c:v', 'libx264',
+    '-preset', 'fast',
+    '-crf', '23',
+    '-c:a', 'aac',
+    '-b:a', '128k',
+    '-movflags', '+faststart',
+  ];
 
-  // Original audio with speech segments muted
-  if (segments.length > 0) {
-    let volumeExpr = '1';
-    for (let i = segments.length - 1; i >= 0; i--) {
-      const s = segments[i];
-      volumeExpr = `if(between(t,${s.startSec.toFixed(3)},${s.endSec.toFixed(3)}),0.05,${volumeExpr})`;
+  if (options?.subtitlesPath) {
+    let subFilter: string;
+    if (options.fontPath) {
+      const p  = options.subtitlesPath.replace(/\\/g, '/');
+      const fd = path.dirname(options.fontPath).replace(/\\/g, '/');
+      const ep = p.replace(/:/g, '\\:');
+      if (process.platform !== 'win32' && fd.startsWith('/usr/share/fonts')) {
+        subFilter = `ass='${ep}'`;
+      } else {
+        subFilter = `ass='${ep}':fontsdir='${fd.replace(/:/g, '\\:')}'`;
+      }
+    } else {
+      subFilter = `subtitles='${options.subtitlesPath.replace(/\\/g, '/').replace(/:/g, '\\:')}'`;
     }
-    audioFilters.push(`[1:a]volume='${volumeExpr}':eval=frame[muted]`);
-  } else {
-    audioFilters.push('[1:a]copy[muted]');
+    outputOpts.push('-vf', subFilter);
   }
 
-  // Delay each TTS
-  const ttsLabels: string[] = ['[muted]'];
-  ttsFiles.forEach((tts, i) => {
-    const delayMs = Math.max(0, tts.startMs);
-    const label = `tts${i}`;
-    audioFilters.push(`[${i + 2}:a]adelay=${delayMs}|${delayMs}[${label}]`);
-    ttsLabels.push(`[${label}]`);
-  });
-
-  // Mix all audio
-  audioFilters.push(`${ttsLabels.join('')}amix=inputs=${ttsLabels.length}:duration=longest[aout]`);
-
-  const filterComplex = audioFilters.join(';');
-
   return new Promise((resolve, reject) => {
-    const ff = ffmpeg(processedVideoPath).input(originalAudioPath);
-    ttsFiles.forEach(t => ff.input(t.path));
-
-    ff.outputOptions([
-      '-filter_complex', filterComplex,
-      '-map',    '0:v',
-      '-map',    '[aout]',
-      '-c:v',    'libx264',
-      '-preset', 'fast',
-      '-crf',    '23',
-      '-c:a',    'aac',
-      '-b:a',    '128k',
-      '-map_metadata', '-1',
-      '-movflags', '+faststart',
-    ])
+    ff.outputOptions(outputOpts)
     .on('progress', (p: any) => options?.onProgress?.(p.percent ?? 0))
     .on('error', reject)
     .on('end',   resolve)
@@ -262,5 +279,6 @@ export const ffmpegService = {
   concatAudioFiles,
   extractVideoSegment,
   concatVideoFiles,
-  mergeDubbedVideo,
+  adjustAudioSpeed,
+  mergeDubbedVideoSimple,
 };

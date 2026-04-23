@@ -212,8 +212,6 @@ export class DubVideoPipeline {
       /* ── BUILD VIDEO PARTS ── */
       const videoPartFiles: string[] = [];
       const speechSegmentsForAudioMute: Array<{ startSec: number; endSec: number }> = [];
-      const ttsFilesForMix: Array<{ path: string; startMs: number }> = [];
-      const subtitleEntries: Array<{ startMs: number; endMs: number; text: string }> = [];
 
       // Intro
       const firstSeg = activeSegments[0];
@@ -234,7 +232,6 @@ export class DubVideoPipeline {
         const ttsDuration = result.duration / 1000;
 
         speechSegmentsForAudioMute.push({ startSec: origStart, endSec: origEnd });
-        ttsFilesForMix.push({ path: result.partPath, startMs: Math.round(origStart * 1000) });
 
         // Video: slow down if TTS longer, else keep 1x
         const isTtsLonger = ttsDuration > origDuration;
@@ -377,42 +374,78 @@ export class DubVideoPipeline {
         }
       }
 
+      // Build complete TTS track: [silence_intro] [tts1] [silence_gap1] [tts2] ...
+      const ttsTrackParts: string[] = [];
+
+      // Intro silence
+      if (firstSeg && firstSeg.start > 0.05) {
+        const introSilence = path.join(tempDir, `track_intro.wav`);
+        await ffmpegService.generateSilenceWav(Math.round(firstSeg.start * 1000), introSilence);
+        ttsTrackParts.push(introSilence);
+      }
+
+      for (let i = 0; i < activeSegments.length; i++) {
+        const seg = activeSegments[i];
+        const result = ttsResults[i];
+        if (!result) continue;
+
+        ttsTrackParts.push(result.partPath);
+
+        // Gap silence to next segment (or outro)
+        const origEndMs = Math.round(seg.end * 1000);
+        let nextStartMs: number;
+        if (i < activeSegments.length - 1) {
+          nextStartMs = Math.round(activeSegments[i + 1].start * 1000);
+        } else {
+          nextStartMs = Math.round(videoDurationSec * 1000);
+        }
+        const gapMs = nextStartMs - origEndMs;
+        if (gapMs > 50) {
+          const gapSilence = path.join(tempDir, `track_gap_${i}.wav`);
+          await ffmpegService.generateSilenceWav(gapMs, gapSilence);
+          ttsTrackParts.push(gapSilence);
+        }
+      }
+
+      const ttsTrackPath = path.join(tempDir, `tts_complete_track.wav`);
+      await ffmpegService.concatAudioFiles(ttsTrackParts, ttsTrackPath);
+      console.log(`[Dubbing Pipeline] Complete TTS track: ${ttsTrackParts.length} parts`);
+
+      // ── MEASURE & SYNC ──
+      const videoDurationMs = await ffmpegService.getAudioDurationMs(processedVideoPath);
+      const ttsDurationMs = await ffmpegService.getAudioDurationMs(ttsTrackPath);
+      const syncRatio = videoDurationMs / ttsDurationMs;
+      let finalTtsTrackPath = ttsTrackPath;
+      if (Math.abs(syncRatio - 1.0) > 0.005) {
+        finalTtsTrackPath = path.join(tempDir, `tts_synced.wav`);
+        console.log(`[Dubbing Pipeline] Syncing audio: video=${videoDurationMs}ms tts=${ttsDurationMs}ms ratio=${syncRatio.toFixed(4)}`);
+        await ffmpegService.adjustAudioSpeed(ttsTrackPath, finalTtsTrackPath, syncRatio);
+      }
+
       // Merge
       const fontPath = process.env.MYANMAR_FONT_PATH || (process.platform === "win32" ? "C:/Windows/Fonts/mmrtext.ttf" : "/usr/share/fonts/truetype/noto/NotoSansMyanmar-Regular.ttf");
 
-      if (options.srtEnabled !== false && processedForSrt.length > 0) {
-        console.log(`[Dubbing Pipeline] Merging with subtitles...`);
+      const hasSubtitles = options.srtEnabled !== false && processedForSrt.length > 0;
+      if (hasSubtitles) {
+        console.log(`[Dubbing Pipeline] Building subtitles...`);
         const videoDimensions = await ffmpegService.getVideoSize(tempVideoPath);
         const assContent = assBuilderService.buildAssContent(processedForSrt, fontPath, videoDimensions.width, videoDimensions.height, options as any);
         await fs.writeFile(tempAssPath, assContent);
-
-        await ffmpegService.mergeDubbedVideo(
-          processedVideoPath,
-          tempOriginalAudio,
-          ttsFilesForMix,
-          tempOutputPath,
-          {
-            speechSegments: speechSegmentsForAudioMute,
-            onProgress: (p: number) => {
-              if (jobId) updateJob(jobId, { progress: 85 + Math.floor((p / 100) * 10), message: "Merging visuals with audio..." });
-            },
-          }
-        );
-      } else {
-        console.log(`[Dubbing Pipeline] Merging without subtitles...`);
-        await ffmpegService.mergeDubbedVideo(
-          processedVideoPath,
-          tempOriginalAudio,
-          ttsFilesForMix,
-          tempOutputPath,
-          {
-            speechSegments: speechSegmentsForAudioMute,
-            onProgress: (p: number) => {
-              if (jobId) updateJob(jobId, { progress: 85 + Math.floor((p / 100) * 10), message: "Merging visuals with audio..." });
-            },
-          }
-        );
       }
+
+      console.log(`[Dubbing Pipeline] Merging video + TTS track${hasSubtitles ? ' + subtitles' : ''}...`);
+      await ffmpegService.mergeDubbedVideoSimple(
+        processedVideoPath,
+        finalTtsTrackPath,
+        tempOutputPath,
+        {
+          subtitlesPath: hasSubtitles ? tempAssPath : undefined,
+          fontPath: hasSubtitles ? fontPath : undefined,
+          onProgress: (p: number) => {
+            if (jobId) updateJob(jobId, { progress: 85 + Math.floor((p / 100) * 10), message: "Merging visuals with audio..." });
+          },
+        }
+      );
 
       // Move to final
       const finalFilename = `dub_${id}.mp4`;
