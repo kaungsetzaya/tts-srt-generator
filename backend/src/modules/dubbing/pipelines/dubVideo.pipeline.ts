@@ -255,12 +255,13 @@ export class DubVideoPipeline {
 
       const ttsResults = await runWithConcurrency(activeSegments, generateTtsForSegment, CONCURRENCY);
       
-      // ── BUILD VIDEO PARTS ──
+      // ── BUILD VIDEO PARTS (TTS duration နဲ့ ညှိမယ်) ──
       const videoPartFiles: string[] = [];
-      const partDurationsMs: number[] = [];
+      const partDurationsMs: number[] = []; // ← ပြန်ထည့်လိုက်ပြီ
       const firstSeg = activeSegments[0];
       const lastSeg = activeSegments[activeSegments.length - 1];
 
+      // Intro
       if (firstSeg && firstSeg.start > 0.05) {
         const introFile = path.join(tempDir, `vp_intro.mp4`);
         const durMs = Math.round(firstSeg.start * 1000);
@@ -272,27 +273,28 @@ export class DubVideoPipeline {
       for (let i = 0; i < activeSegments.length; i++) {
         const seg = activeSegments[i];
         const result = ttsResults[i];
+        const ttsDurationMs = result?.duration ?? (seg.end - seg.start) * 1000;
         const speechFile = path.join(tempDir, `vp_speech_${seg.index}.mp4`);
-        const videoSegDurationMs = Math.round((seg.end - seg.start) * 1000);
         
-        // Extract video at ORIGINAL duration (no warping) - preserve original video quality
+        // ← Video ကို TTS duration နဲ့ ညှိမယ်
         await ffmpegService.extractVideoSegment(
-          tempVideoPath, 
-          seg.start, 
-          seg.end, 
-          speechFile
+          tempVideoPath,
+          seg.start,
+          seg.end,
+          speechFile,
+          ttsDurationMs 
         );
         videoPartFiles.push(speechFile);
-        partDurationsMs.push(videoSegDurationMs);
+        partDurationsMs.push(ttsDurationMs); // ← Duration ကို သိမ်းထား
 
+        // Gap
         if (i < activeSegments.length - 1) {
           const nextSeg = activeSegments[i + 1];
           const gapStart = seg.end;
           const gapEnd = nextSeg.start;
-          const gapDur = gapEnd - gapStart;
-          if (gapDur > 0.05) {
+          if (gapEnd - gapStart > 0.05) {
             const gapFile = path.join(tempDir, `vp_gap_${i}.mp4`);
-            const gapDurMs = Math.round(gapDur * 1000);
+            const gapDurMs = Math.round((gapEnd - gapStart) * 1000);
             await ffmpegService.extractVideoSegment(tempVideoPath, gapStart, gapEnd, gapFile);
             videoPartFiles.push(gapFile);
             partDurationsMs.push(gapDurMs);
@@ -300,6 +302,7 @@ export class DubVideoPipeline {
         }
       }
 
+      // Outro
       if (lastSeg && videoDurationSec - lastSeg.end > 0.1) {
         const outroFile = path.join(tempDir, `vp_outro.mp4`);
         const outroDurMs = Math.round((videoDurationSec - lastSeg.end) * 1000);
@@ -350,7 +353,7 @@ export class DubVideoPipeline {
         }
       }
 
-      // ── BUILD TTS TRACK (mirrors video part structure) ──
+      // ── BUILD TTS TRACK (warp မလုပ်တော့ဘူး) ──
       const ttsTrackParts: string[] = [];
       partIdx = 0;
 
@@ -366,19 +369,10 @@ export class DubVideoPipeline {
         const result = ttsResults[i];
         if (!result) { partIdx++; continue; }
 
-        const videoSegDurationMs = partDurationsMs[partIdx++];
-        
-        // Speed up/slow down TTS audio to match video segment duration exactly
-        const speedRatio = videoSegDurationMs / result.duration;
-        if (Math.abs(speedRatio - 1.0) > 0.01) {
-          const spedPath = path.join(tempDir, `track_sped_${seg.index}.wav`);
-          await ffmpegService.adjustAudioSpeed(result.partPath, spedPath, speedRatio);
-          ttsTrackParts.push(spedPath);
-        } else {
-          ttsTrackParts.push(result.partPath);
-        }
+        // TTS ကို တိုက်ရိုက်ထည့် - warp မလုပ်
+        ttsTrackParts.push(result.partPath);
+        partIdx++; // video part skip
 
-        // Gap silence
         if (i < activeSegments.length - 1) {
           const gapDur = activeSegments[i + 1].start - seg.end;
           if (gapDur > 0.05) {

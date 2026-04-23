@@ -155,20 +155,37 @@ export async function extractVideoSegment(
   videoPath: string,
   startSec: number,
   endSec: number,
-  outputPath: string
+  outputPath: string,
+  targetDurationMs?: number  // ← TTS duration ပေးမယ်
 ): Promise<void> {
-  const duration = endSec - startSec;
+  const srcDuration = endSec - startSec;
+  const targetDuration = targetDurationMs ? targetDurationMs / 1000 : srcDuration;
+  const speedRatio = srcDuration / targetDuration; // <1 = slowdown, >1 = speedup
+
+  const MAX_VIDEO_SPEED = 2.0;
+  const MIN_VIDEO_SPEED = 0.5;
+  const clampedRatio = Math.max(MIN_VIDEO_SPEED, Math.min(MAX_VIDEO_SPEED, speedRatio));
+
   return new Promise((resolve, reject) => {
-    ffmpeg(videoPath)
+    const ff = ffmpeg(videoPath)
       .seekInput(parseFloat(startSec.toFixed(6)))
-      .duration(parseFloat(duration.toFixed(6)))
+      .duration(parseFloat(srcDuration.toFixed(6)));
+
+    const videoFilters: string[] = [];
+    if (Math.abs(clampedRatio - 1.0) > 0.01) {
+      videoFilters.push(`setpts=${(1 / clampedRatio).toFixed(6)}*PTS`);
+    }
+    videoFilters.push('fps=30');
+
+    ff.videoFilters(videoFilters.join(','))
       .outputOptions([
+        '-r', '30',
+        '-vsync', 'cfr',
+        '-t', targetDuration.toFixed(6),
         '-c:v', 'libx264',
         '-preset', 'fast',
         '-crf', '23',
-        '-r', '30',
-        '-pix_fmt', 'yuv420p',
-        '-an', // We handle audio separately in the pipeline
+        '-an',
         '-movflags', '+faststart',
       ])
       .on('end', () => resolve())
