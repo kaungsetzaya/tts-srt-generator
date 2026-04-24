@@ -2314,8 +2314,8 @@ export default function TTSGenerator() {
 
 {/* ── STEP: Video Preview + Settings ── */}
                   {dubPreviewUrl && !dubResult && (
-                    <div className="w-full">
-                      {/* Video Preview - Desktop */}
+                    <div className="flex flex-col lg:flex-row w-full">
+                      {/* Video Preview - Desktop (Fixed) */}
                       <div className="hidden lg:block" style={{ position: 'fixed', left: '16rem', top: '3.5rem', width: '50%', height: 'calc(100vh - 3.5rem)', padding: '0.5rem', paddingRight: '0.25rem', zIndex: 10 }}>
                         <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow, height: '100%', display: 'flex', flexDirection: 'column' }}>
                           <div className="flex items-center justify-between px-2 pt-2">
@@ -2359,8 +2359,8 @@ export default function TTSGenerator() {
                         </div>
                       </div>
 
-                      {/* Settings - Simple layout, scrolls normally */}
-                      <div className="space-y-4 p-2 w-full pb-24">
+                      {/* Settings - With offset on desktop */}
+                      <div className="w-full pt-2 lg:pt-0 lg:pl-[calc(50%+0.5rem)] lg:w-[calc(50%-16rem-0.5rem)] space-y-4 p-2 pb-24">
 
                       {/* ── ACCORDION: Voice Selection ── */}
                       <div
@@ -2781,8 +2781,7 @@ export default function TTSGenerator() {
                         disabled={
                           startDubMutation.isPending ||
                           dubFileMutation.isPending ||
-                          activeJobId !== null ||
-                          dubPreviewUrl === "loading"
+                          activeJobId !== null
                         }
                         whileHover={{ scale: startDubMutation.isPending || dubFileMutation.isPending || activeJobId !== null ? 1 : 1.02 }}
                         whileTap={{ scale: startDubMutation.isPending || dubFileMutation.isPending || activeJobId !== null ? 1 : 0.98 }}
