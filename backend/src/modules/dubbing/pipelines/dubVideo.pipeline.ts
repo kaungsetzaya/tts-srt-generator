@@ -11,6 +11,7 @@ import { ttsService, CHARACTER_VOICES, CharacterKey, VoiceKey } from '../../tts/
 import { assBuilderService } from '../services/assBuilder.service';
 import { isAllowedVideoUrl } from '../../../../_core/security';
 import { updateJob } from '../../../../jobs';
+import { generateSignedDownloadUrl } from '../../../../_core/signedUrl';
 
 function formatTimestamp(ms: number): string {
     const totalSec = Math.floor(ms / 1000);
@@ -500,7 +501,7 @@ export class DubVideoPipeline {
       }).join('\n');
 
       return {
-        videoUrl:    `/downloads/${finalFilename}`,
+        videoUrl:    generateSignedDownloadUrl(finalFilename),
         filename:    finalFilename,
         id,
         myanmarText: allTranslatedText,
