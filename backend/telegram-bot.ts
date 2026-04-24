@@ -15,6 +15,7 @@ async function sendMessage(chatId: number, text: string) {
       body: JSON.stringify({
         chat_id: chatId,
         text,
+        parse_mode: "Markdown",
       }),
     });
     const data = await res.json();
