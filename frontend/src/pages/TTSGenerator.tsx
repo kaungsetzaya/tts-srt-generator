@@ -2336,15 +2336,15 @@ export default function TTSGenerator() {
                             </div>
                             <button onClick={() => { setDubVideoUrl(""); setDubPreviewUrl(""); setDubVideoFile(null); }} className="text-xs px-2 py-1 rounded hover:bg-red-500/20 text-red-400">✕</button>
                           </div>
-                          <div className="flex justify-center p-2 relative" style={{ height: 'calc(100vh - 12rem)' }}>
+                          <div className="flex justify-center items-center p-1 relative" style={{ height: 'calc(100vh - 16rem)', minHeight: '300px' }}>
                             {dubPreviewUrl === "loading" || dubPreviewMutation.isPending ? (
-                              <div className="w-full rounded-xl flex flex-col items-center justify-center gap-3" style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}` }}>
+                              <div className="w-full h-full rounded-xl flex flex-col items-center justify-center gap-3" style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}` }}>
                                 <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
                                 <span className="text-xs font-semibold" style={{ color: subtextColor }}>Preparing preview...</span>
                               </div>
                             ) : (
                               <>
-                                <video ref={dubPreviewRef} src={dubPreviewUrl} controls className="w-full h-full rounded-lg" style={{ objectFit: 'contain', maxHeight: '400px', margin: '0 auto', display: 'block' }} />
+                                <video ref={dubPreviewRef} src={dubPreviewUrl} controls className="w-full h-full rounded-lg" style={{ objectFit: 'contain' }} />
                                 {/* Dubbing Loader Overlay */}
                                 {activeJobId !== null && (
                                   <div className="dubbing-loader-wrapper">
