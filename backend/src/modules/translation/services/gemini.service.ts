@@ -119,6 +119,11 @@ export class GeminiService {
         if (!text || typeof text !== 'string') return "";
         let cleaned = text.trim();
 
+        // \n တွေကို အရင် placeholder နဲ့ ကာကွယ်
+        const NEWLINE_PLACEHOLDER = '§§NEWLINE§§';
+        cleaned = cleaned.replace(/\\n/g, NEWLINE_PLACEHOLDER);
+        cleaned = cleaned.replace(/\n/g, NEWLINE_PLACEHOLDER);
+
         cleaned = cleaned.replace(/,/g, "၊");
         cleaned = cleaned.replace(/\./g, "။");
         cleaned = cleaned.replace(/၊$/, "။");
@@ -128,10 +133,13 @@ export class GeminiService {
         }
 
         cleaned = cleaned.replace(/Here is the.*/gi, "");
-        cleaned = cleaned.replace(/\*\*.+?\*\*/g, ""); 
-        cleaned = cleaned.replace(/[#_*\[\]]/g, ""); 
+        cleaned = cleaned.replace(/\*\*.+?\*\*/g, "");
+        cleaned = cleaned.replace(/[#_*\[\]]/g, "");
         cleaned = cleaned.replace(/"/g, "");
         cleaned = cleaned.replace(/'/g, "");
+
+        // \n ပြန်ထည့်
+        cleaned = cleaned.replace(new RegExp(NEWLINE_PLACEHOLDER, 'g'), '\n');
 
         return cleaned.trim();
     }

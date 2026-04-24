@@ -200,20 +200,27 @@ export class DubVideoPipeline {
 
       // ── Step 5: Generate TTS ──
       async function generateTts(seg: ActiveSegment): Promise<{ path: string; durationMs: number; text: string; index: number }> {
-        console.log(`[TTS] seg ${seg.index}: "${seg.translatedText.slice(0, 40)}..."`);
+        // TTS အတွက် \n ဖြုတ် (subtitle အတွက် original text ကို text field မှာ သိမ်းမယ်)
+        const ttsText = seg.translatedText
+          .replace(/\\n/g, ' ')
+          .replace(/\n/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+
+        console.log(`[TTS] seg ${seg.index}: "${ttsText.slice(0, 40)}..."`);
         const isChar = options.voice in CHARACTER_VOICES;
         let audioBuffer: Buffer;
         if (isChar) {
           const r = await ttsService.generateSpeechWithCharacter(
-            seg.translatedText, options.voice as CharacterKey, 
-            1.15,  // ← 1.0 မဟုတ်တော့ဘူး
+            ttsText, options.voice as CharacterKey,
+            1.15,
             "16:9", options.pitch ?? 0
           );
           audioBuffer = r.audioBuffer;
         } else {
           const r = await ttsService.generateSpeech(
-            seg.translatedText, options.voice as VoiceKey,
-            1.15,  // ← 1.0 မဟုတ်တော့ဘူး
+            ttsText, options.voice as VoiceKey,
+            1.15,
             options.pitch ?? 0, "16:9"
           );
           audioBuffer = r.audioBuffer;
@@ -251,17 +258,24 @@ export class DubVideoPipeline {
             const wavShort = path.join(tempDir, `tts_short_${seg.index}.wav`);
             let shortBuffer: Buffer;
 
+            // Retry TTS မှာလည်း \n ဖြုတ်
+            const retryTtsText = shorterText
+              .replace(/\\n/g, ' ')
+              .replace(/\n/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+
             if (isChar) {
               const r = await ttsService.generateSpeechWithCharacter(
-                shorterText, options.voice as CharacterKey,
-                1.15,  // ← 1.0 မဟုတ်တော့ဘူး၊ original speed နဲ့ တူရမယ်
+                retryTtsText, options.voice as CharacterKey,
+                1.15,
                 "16:9", options.pitch ?? 0
               );
               shortBuffer = r.audioBuffer;
             } else {
               const r = await ttsService.generateSpeech(
-                shorterText, options.voice as VoiceKey,
-                1.15,  // ← 1.0 မဟုတ်တော့ဘူး
+                retryTtsText, options.voice as VoiceKey,
+                1.15,
                 options.pitch ?? 0, "16:9"
               );
               shortBuffer = r.audioBuffer;
