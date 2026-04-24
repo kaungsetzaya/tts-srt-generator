@@ -2314,42 +2314,40 @@ export default function TTSGenerator() {
 
 {/* ── STEP: Video Preview + Settings ── */}
                   {dubPreviewUrl && !dubResult && (
-                    <div className="relative w-full">
-                      {/* Video Preview - on left side, below header */}
-                      <div className="lg:sticky lg:top-16 lg:left-0 lg:w-[40%] lg:float-left lg:mr-4 mb-4 z-30">
-                        <div className="p-2">
-                          <div
-                            className={box}
-                            style={{
-                              background: cardBg,
-                              borderColor: cardBorder,
-                              boxShadow,
-                            }}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>
-                                {lang === "mm" ? "ဗီဒီယိုကြိုကြည့်" : "Video Preview"}
+                    <div className="flex flex-col lg:flex-row gap-4 w-full">
+                      {/* Video Preview - Left Side */}
+                      <div className="lg:w-[45%] lg:sticky lg:top-16 lg:h-[calc(100vh-8rem)]">
+                        <div
+                          className={box}
+                          style={{
+                            background: cardBg,
+                            borderColor: cardBorder,
+                            boxShadow,
+                          }}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>
+                              {lang === "mm" ? "ဗီဒီယိုကြိုကြည့်" : "Video Preview"}
+                            </div>
+                            <button onClick={() => { setDubVideoUrl(""); setDubPreviewUrl(""); setDubVideoFile(null); }} className="text-xs px-2 py-1 rounded hover:bg-red-500/20 text-red-400">
+                              ✕
+                            </button>
+                          </div>
+                          <div className="flex justify-center items-center h-[calc(100%-40px)]">
+                            {dubPreviewUrl === "loading" || dubPreviewMutation.isPending ? (
+                              <div className="w-full rounded-xl flex flex-col items-center justify-center gap-3" style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}`, minHeight: "200px" }}>
+                                <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                                <span className="text-xs font-semibold" style={{ color: subtextColor }}>{lang === "mm" ? "ဗီဒီယို ပြင်ဆင်နေသည်..." : "Preparing preview..."}</span>
                               </div>
-                              <button onClick={() => { setDubVideoUrl(""); setDubPreviewUrl(""); setDubVideoFile(null); }} className="text-xs px-2 py-1 rounded hover:bg-red-500/20 text-red-400">
-                                ✕
-                              </button>
-                            </div>
-                            <div className="flex justify-center mt-2">
-                              {dubPreviewUrl === "loading" || dubPreviewMutation.isPending ? (
-                                <div className="w-full rounded-xl flex flex-col items-center justify-center gap-3 py-10" style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}`, minHeight: "180px" }}>
-                                  <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
-                                  <span className="text-xs font-semibold" style={{ color: subtextColor }}>{lang === "mm" ? "ဗီဒီယို ပြင်ဆင်နေသည်..." : "Preparing preview..."}</span>
-                                </div>
-                              ) : (
-                                <video ref={dubPreviewRef} src={dubPreviewUrl} controls className="w-full rounded-lg" style={{ maxHeight: "300px" }} />
-                              )}
-                            </div>
+                            ) : (
+                              <video ref={dubPreviewRef} src={dubPreviewUrl} controls className="w-full h-full object-contain rounded-lg" />
+                            )}
                           </div>
                         </div>
                       </div>
 
-                      {/* Settings - scrolls on right */}
-                      <div className="w-full space-y-4">
+                      {/* Settings - Right Side */}
+                      <div className="lg:w-[55%] space-y-4">
 
                       {/* ── ACCORDION: Voice Selection ── */}
                       <div
