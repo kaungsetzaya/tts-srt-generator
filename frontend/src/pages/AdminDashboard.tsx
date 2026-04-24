@@ -174,10 +174,12 @@ function UserDetailDrawer({
   userId,
   userName,
   onClose,
+  tz,
 }: {
   userId: string;
   userName: string;
   onClose: () => void;
+  tz: string;
 }) {
   const { data, isLoading } = trpc.adminStats.getUserDetail.useQuery(
     { userId },
@@ -193,13 +195,11 @@ function UserDetailDrawer({
     const m = Math.floor(s / 60);
     return m > 0 ? `${m}m ${s % 60}s` : `${s}s`;
   };
-  // Use user's real timezone (auto-detected)
-  const userTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const fmtTime = (d: any) =>
     !d
       ? "—"
       : new Date(d).toLocaleString("en-US", {
-          timeZone: userTZ,
+          timeZone: tz,
           day: "2-digit",
           month: "short",
           hour: "numeric",
@@ -509,6 +509,7 @@ export default function AdminDashboard() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   });
+  const [tz, setTz] = useState<string>("UTC");
   const [paymentSlipBase64, setPaymentSlipBase64] = useState("");
   const [paymentSlipPreview, setPaymentSlipPreview] = useState("");
 
@@ -629,13 +630,11 @@ export default function AdminDashboard() {
       </div>
     );
 
-  // Use user's real timezone (auto-detected by browser)
-  const userTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const fmt = (d: any) =>
     !d
       ? "—"
       : new Date(d).toLocaleDateString("en-US", {
-          timeZone: userTZ,
+          timeZone: tz,
           day: "2-digit",
           month: "short",
           year: "numeric",
@@ -644,7 +643,7 @@ export default function AdminDashboard() {
     !d
       ? "Never"
       : new Date(d).toLocaleString("en-US", {
-          timeZone: userTZ,
+          timeZone: tz,
           day: "2-digit",
           month: "short",
           hour: "numeric",
@@ -715,6 +714,7 @@ export default function AdminDashboard() {
           userId={userDrawer.id}
           userName={userDrawer.name}
           onClose={() => setUserDrawer(null)}
+          tz={tz}
         />
       )}
 
@@ -736,6 +736,24 @@ export default function AdminDashboard() {
           <div className="flex items-center gap-2 px-3 py-1 rounded-full" style={{ background: `${C}15`, border: `1px solid ${border}` }}>
             <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
             <span className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: C_GOLD }}>Live</span>
+          </div>
+          {/* Timezone Selector */}
+          <div className="flex items-center gap-1 px-2 py-1 rounded-xl" style={{ background: `${C}10`, border: `1px solid ${border}` }}>
+            <Clock className="w-3 h-3" style={{ color: C_GOLD }} />
+            {(["UTC", "Asia/Yangon", "Asia/Bangkok"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTz(t)}
+                className="text-[10px] px-2 py-1 rounded-md font-bold uppercase tracking-wider transition-all"
+                style={{
+                  background: tz === t ? `linear-gradient(135deg, ${C}40, ${C_GOLD}30)` : "transparent",
+                  color: tz === t ? C_GOLD : "rgba(236,206,182,0.4)",
+                  border: `1px solid ${tz === t ? C : "transparent"}`,
+                }}
+              >
+                {t === "UTC" ? "UTC" : t === "Asia/Yangon" ? "MM" : "TH"}
+              </button>
+            ))}
           </div>
           <a
             href="/lumix"
