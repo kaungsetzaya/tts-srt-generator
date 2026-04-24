@@ -95,7 +95,8 @@ export async function generateSpeech(
     ], {
       timeout: 120000,
       env: {
-        ...process.env,
+        PATH: process.env.PATH,
+        HOME: process.env.HOME,
         HTTPS_PROXY: getProxyUrl(),
         HTTP_PROXY: getProxyUrl(),
       },

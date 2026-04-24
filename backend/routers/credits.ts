@@ -68,17 +68,9 @@ export async function addCredits(
 
   try {
     await db.transaction(async (tx: any) => {
-      const [user] = await tx
-        .select()
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
-      if (!user) throw new Error("User not found");
-
-      const currentCredits = user.credits ?? 0;
       await tx
         .update(users)
-        .set({ credits: currentCredits + amount })
+        .set({ credits: sql`credits + ${amount}` })
         .where(eq(users.id, userId));
 
       await tx.insert(creditTransactions).values({

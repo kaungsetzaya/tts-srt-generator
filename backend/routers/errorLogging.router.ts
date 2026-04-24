@@ -9,6 +9,16 @@ import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
 import { errorLogs } from "../../shared/drizzle/schema";
 
+// Simple HTML escape to prevent stored XSS in admin dashboards
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 // Simple in-memory rate limiter for public error logging (prevent log flooding)
 const errorLogLimits = new Map<string, { count: number; resetAt: number }>();
 const ERROR_LOG_MAX_PER_MIN = 10;
@@ -53,8 +63,8 @@ export const errorLoggingRouter = t.procedure
         userId: ctx.user?.userId ?? null,
         feature: "browser",
         errorCode: input.source,
-        errorMessage: input.errorMessage,
-        stackTrace: input.stackTrace ?? null,
+        errorMessage: escapeHtml(input.errorMessage),
+        stackTrace: input.stackTrace ? escapeHtml(input.stackTrace) : null,
         severity: "error",
         resolved: false,
       });

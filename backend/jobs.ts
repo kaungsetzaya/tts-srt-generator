@@ -1,5 +1,6 @@
 // Background job system for long-running tasks like video dubbing and translation
 // Jobs are persisted to the DB so they survive server restarts.
+import { randomUUID } from "crypto";
 import { DubOptions, DubResult } from "@shared/types";
 
 export type JobStatus = "pending" | "processing" | "completed" | "failed";
@@ -179,7 +180,7 @@ export async function recoverInterruptedJobs(): Promise<void> {
 // ─── Core API ──────────────────────────────────────────────────────────────────
 
 export function createJob(type: JobType, input: any, userId?: string): string {
-  const id = `job_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  const id = `job_${Date.now()}_${randomUUID().replace(/-/g, "").slice(0, 12)}`;
   const now = new Date();
   const job: Job = {
     id,

@@ -94,7 +94,29 @@ async function startServer() {
   // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   // Telegram Webhook (Telegram IP range only check optional)
   // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // Telegram IP ranges: https://core.telegram.org/resources/cidr.txt
+  const TELEGRAM_IP_RANGES = [
+    "149.154.160.0/20",
+    "91.108.4.0/22",
+  ];
+  function ipInCidr(ip: string, cidr: string): boolean {
+    const [range, bits] = cidr.split("/");
+    const mask = parseInt(bits, 10);
+    const ipNum = ip.split(".").reduce((a, b) => (a << 8) + parseInt(b, 10), 0) >>> 0;
+    const rangeNum = range.split(".").reduce((a, b) => (a << 8) + parseInt(b, 10), 0) >>> 0;
+    const maskNum = ~((1 << (32 - mask)) - 1) >>> 0;
+    return (ipNum & maskNum) === (rangeNum & maskNum);
+  }
+  function isTelegramIp(ip: string): boolean {
+    return TELEGRAM_IP_RANGES.some((cidr) => ipInCidr(ip, cidr));
+  }
+
   app.post("/webhook/telegram", async (req, res) => {
+    const clientIp = req.ip || "";
+    if (!isTelegramIp(clientIp)) {
+      res.status(403).json({ ok: false });
+      return;
+    }
     const incoming = req.headers["x-telegram-bot-api-secret-token"];
     const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
     if (!secret || !incoming || incoming !== secret) {
@@ -156,7 +178,7 @@ async function startServer() {
     // Serve the file with Range request support (required for <video> elements)
     const filePath = path.join(downloadsDir, filename);
     const resolved = path.resolve(filePath);
-    if (!resolved.startsWith(path.resolve(downloadsDir))) {
+    if (!resolved.startsWith(path.resolve(downloadsDir) + path.sep)) {
       res.status(400).json({ error: "Invalid filename" });
       return;
     }

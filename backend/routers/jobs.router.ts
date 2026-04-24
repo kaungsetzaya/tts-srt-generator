@@ -4,7 +4,7 @@
 import { z } from "zod";
 import { t, protectedProcedure } from "./trpc";
 import { TRPCError } from "@trpc/server";
-import { isAllowedVideoUrl } from "../_core/security";
+import { isAllowedVideoUrl, validateBase64VideoPrefix } from "../_core/security";
 import { createJob, getJobAsync } from "../jobs";
 import { deductCredits, addCredits } from "./credits";
 import { getVoiceCredits, type VoiceId } from "../src/modules/tts";
@@ -123,6 +123,17 @@ export const jobsRouter = t.router({
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.user!.userId;
       const creditsNeeded = 5;
+
+      // Validate file upload if provided
+      if (!input.url && input.videoBase64) {
+        if (!validateBase64VideoPrefix(input.videoBase64)) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid video file format." });
+        }
+        const videoSize = input.videoBase64.length * 0.75;
+        if (videoSize > 25 * 1024 * 1024) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "File too large. Max 25MB." });
+        }
+      }
 
       // Duration pre-check for URL-based translation
       if (input.url) {

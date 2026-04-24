@@ -69,15 +69,15 @@ export const ttsRouter = t.router({
         );
       } catch (error: any) {
         console.error("[TTS Error]", error?.message || error);
-        if (error.code === "BAD_REQUEST" || error.code === "NOT_FOUND") {
-          releaseSlot();
-          throw error;
+        if (error.code !== "BAD_REQUEST" && error.code !== "NOT_FOUND") {
+          await addCredits(userId, creditsNeeded, "tts_refund", `Refund: ${voiceId} TTS failed`);
         }
-        await addCredits(userId, creditsNeeded, "tts_refund", `Refund: ${voiceId} TTS failed`);
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message || "Failed to generate audio.",
-        });
+        throw error.code === "BAD_REQUEST" || error.code === "NOT_FOUND"
+          ? error
+          : new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: error.message || "Failed to generate audio.",
+            });
       } finally {
         releaseSlot();
       }

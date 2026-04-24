@@ -2,6 +2,7 @@
 import { execFile } from "child_process";
 import { promisify } from "util";
 import * as path from "path";
+import { isAllowedVideoUrl } from "../../../../_core/security";
 
 const execFileAsync = promisify(execFile);
 
@@ -87,7 +88,7 @@ function isYouTube(url: string): boolean {
 }
 
 export async function getVideoInfo(url: string): Promise<{ duration: number; filesize: number; title?: string } | null> {
-  if (!isSupported(url)) {
+  if (!isAllowedVideoUrl(url)) {
     console.warn("[Downloader] Unsupported platform:", url);
     return null;
   }
@@ -149,7 +150,7 @@ export async function getVideoInfo(url: string): Promise<{ duration: number; fil
 }
 
 export async function downloadVideo(url: string, outputPath: string, options: { timeout?: number } = {}) {
-  if (!isSupported(url)) {
+  if (!isAllowedVideoUrl(url)) {
     return { success: false, error: "Unsupported platform. Use YouTube, TikTok, or Facebook." };
   }
 

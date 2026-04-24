@@ -261,9 +261,12 @@ export const videoRouter = t.router({
   
   getTranslateJob: protectedProcedure
     .input(z.object({ jobId: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const job = await getJobAsync(input.jobId);
       if (!job) return { status: "failed" as const, error: "Job not found", progress: 0, message: "" };
+      if (job.userId !== ctx.user!.userId && ctx.user!.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
+      }
       return {
         status: job.status,
         progress: job.progress,
@@ -324,9 +327,12 @@ export const videoRouter = t.router({
     
   getTranslateLinkJob: protectedProcedure
     .input(z.object({ jobId: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const job = await getJobAsync(input.jobId);
       if (!job) return { status: "failed" as const, error: "Job not found", progress: 0, message: "" };
+      if (job.userId !== ctx.user!.userId && ctx.user!.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
+      }
       return {
         status: job.status,
         progress: job.progress,

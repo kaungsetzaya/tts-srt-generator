@@ -101,17 +101,11 @@ export function adminIpWhitelist(req: Request, res: Response, next: NextFunction
     return;
   }
 
-  // Get client IP from various headers
-  const forwardedFor = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim();
-  const realIp = req.headers["x-real-ip"] as string;
-  const clientIp = forwardedFor || realIp || req.ip || "";
+  // Get client IP — trust Express 'trust proxy' setting instead of raw headers
+  const clientIp = req.ip || "";
 
   // Check if IP is allowed
-  const normalizedIp = clientIp.split(':')[0]; // Handle IPv6 with port
-  
-  let isAllowed = ADMIN_IPS.has(clientIp) || 
-                  ADMIN_IPS.has(normalizedIp) ||
-                  ADMIN_IPS.has(clientIp.replace(/\./g, ':'));
+  let isAllowed = ADMIN_IPS.has(clientIp);
 
   if (!isAllowed) {
     console.warn(`[SECURITY] Admin access blocked: ${clientIp} at ${new Date().toISOString()}`);
@@ -165,10 +159,19 @@ export function xssProtectionMiddleware(req: Request, res: Response, next: NextF
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 const apiRequestMap = new Map<string, { count: number; resetAt: number }>();
 
+// Periodic cleanup of stale rate-limit entries (every 10 minutes)
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, record] of apiRequestMap.entries()) {
+    if (now > record.resetAt) {
+      apiRequestMap.delete(ip);
+    }
+  }
+}, 10 * 60 * 1000);
+
 export function apiRateLimiter(maxPerMin = 60) {
   return (req: Request, res: Response, next: NextFunction) => {
-    const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim()
-      || req.ip || "unknown";
+    const ip = req.ip || "unknown";
     const now = Date.now();
     const record = apiRequestMap.get(ip);
 

@@ -46,19 +46,18 @@ export async function createContext(
         const role = (payload.role as string) ?? "user";
         const sid = payload.sid as string | undefined;
 
-        // One-Device Session Check (only for Telegram auth with sid)
-        if (sid) {
-          const db = await getDb();
-          if (db) {
-            const row = await db.select({ sessionToken: users.sessionToken, bannedAt: users.bannedAt })
-              .from(users).where(eq(users.id, userId)).limit(1);
-            if (row.length > 0) {
-              if (row[0].sessionToken && row[0].sessionToken !== sid) {
-                return { req: opts.req, res: opts.res, user: null };
-              }
-              if (row[0].bannedAt) {
-                return { req: opts.req, res: opts.res, user: null };
-              }
+        // Session & Ban Check — applies to ALL auth types
+        const db = await getDb();
+        if (db) {
+          const row = await db.select({ sessionToken: users.sessionToken, bannedAt: users.bannedAt })
+            .from(users).where(eq(users.id, userId)).limit(1);
+          if (row.length > 0) {
+            if (row[0].bannedAt) {
+              return { req: opts.req, res: opts.res, user: null };
+            }
+            // One-Device Session Check (only for Telegram auth with sid)
+            if (sid && row[0].sessionToken && row[0].sessionToken !== sid) {
+              return { req: opts.req, res: opts.res, user: null };
             }
           }
         }
