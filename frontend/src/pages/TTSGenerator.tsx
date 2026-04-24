@@ -2351,7 +2351,7 @@ export default function TTSGenerator() {
                       </div>
 
                       {/* Settings - Right Side */}
-                      <div style={{ marginLeft: 'calc(16rem + 45%)', width: '55%' }} className="space-y-4 p-2">
+                      <div style={{ marginLeft: 'calc(16rem + 45%)', width: 'calc(55% - 16rem)' }} className="space-y-4 p-2">
 
                       {/* ── ACCORDION: Voice Selection ── */}
                       <div
