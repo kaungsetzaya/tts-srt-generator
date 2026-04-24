@@ -7,8 +7,6 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarHeader,
-  SidebarInset,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -21,7 +19,6 @@ import {
   History,
   BookOpen,
   Settings,
-  PanelLeft,
   Mic,
   FileVideo,
   Wand2,
@@ -36,7 +33,6 @@ interface TTSGeneratorLayoutProps {
   setMainTab: (tab: "tts" | "video" | "dubbing") => void;
   logoUrl?: string;
   isDark?: boolean;
-  miniLogoUrl?: string;
   showLogo?: boolean;
   lang?: "mm" | "en";
   setLang?: (lang: "mm" | "en") => void;
@@ -51,52 +47,94 @@ export function TTSGeneratorLayout({
   mainTab,
   setMainTab,
   logoUrl,
-  miniLogoUrl,
   isDark,
   lang,
   setLang,
   headerBar,
   showLogo = true,
 }: TTSGeneratorLayoutProps) {
+  const accent = "#C06F30";
+  const accentSecondary = "#F4B34F";
+
   return (
     <>
       <SidebarProvider defaultOpen>
-        <div className="flex min-h-screen w-full">
-          <div className="sticky top-0 h-screen shrink-0">
-            <TTSGeneratorSidebar
-              currentTab={currentSecondaryTab}
-              onTabChange={onTabChange}
-              mainTab={mainTab}
-              setMainTab={setMainTab}
-              logoUrl={logoUrl}
-              miniLogoUrl={miniLogoUrl}
-              isDark={isDark}
-              lang={lang}
-              setLang={setLang}
-              showLogo={showLogo}
-            />
-          </div>
-          <SidebarRail className="hidden md:block" />
-          <SidebarInset className="flex-1 flex flex-col min-h-screen relative z-10">
-            {headerBar && (
-              <header className="sticky top-0 z-40 w-full border-b border-white/5 bg-background/80 backdrop-blur-xl">
-                <div className="flex items-center h-14 px-2">
-                  <SidebarTrigger className="hidden md:flex shrink-0 scale-110 active:scale-95 transition-transform" />
-                  <div className="flex-1 overflow-hidden">{headerBar}</div>
-                </div>
-              </header>
+        <div className="flex flex-col min-h-screen w-full">
+          {/* ── Full Header Bar ── */}
+          <header
+            className="fixed top-0 left-0 right-0 z-[100] h-14 w-full border-b border-white/5 bg-background/80 backdrop-blur-xl flex items-center px-3 gap-3"
+            style={{
+              backgroundColor: isDark
+                ? "rgba(15, 15, 15, 0.95)"
+                : "rgba(255, 255, 255, 0.95)",
+              borderColor: isDark
+                ? "rgba(255,255,255,0.08)"
+                : "rgba(0,0,0,0.08)",
+            }}
+          >
+            {/* Sidebar Trigger */}
+            <SidebarTrigger className="hidden md:flex shrink-0 scale-110 active:scale-95 transition-transform" />
+
+            {/* Logo */}
+            {showLogo && (
+              <div className="flex items-center shrink-0">
+                {logoUrl ? (
+                  <img
+                    src={logoUrl}
+                    alt="LUMIX"
+                    className="h-7 w-auto object-contain"
+                  />
+                ) : (
+                  <span
+                    className="text-xl font-black tracking-widest"
+                    style={{
+                      background: "linear-gradient(135deg, #C06F30, #F4B34F)",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      backgroundClip: "text",
+                      letterSpacing: "0.15em",
+                      filter: `drop-shadow(0 0 8px ${accent}40)`,
+                    }}
+                  >
+                    LUMIX
+                  </span>
+                )}
+              </div>
             )}
-                        <main className="flex-1 min-h-[calc(100vh-3.5rem)] overflow-visible pb-0 relative">
-              {children}
-            </main>
-            <MobileBottomNavigation
-              mainTab={mainTab}
-              setMainTab={setMainTab}
-              currentSecondaryTab={currentSecondaryTab}
-              onTabChange={onTabChange}
-              isDark={isDark}
-            />
-          </SidebarInset>
+
+            {/* Header Bar Content */}
+            {headerBar && (
+              <div className="flex-1 overflow-hidden">{headerBar}</div>
+            )}
+          </header>
+
+          <div className="flex flex-1 pt-14 w-full">
+            {/* Sidebar — now under header */}
+            <div className="sticky top-14 h-[calc(100vh-3.5rem)] shrink-0">
+              <TTSGeneratorSidebar
+                currentTab={currentSecondaryTab}
+                onTabChange={onTabChange}
+                mainTab={mainTab}
+                setMainTab={setMainTab}
+                isDark={isDark}
+                lang={lang}
+                setLang={setLang}
+              />
+            </div>
+            <SidebarRail className="hidden md:block" />
+            <SidebarInset className="flex-1 flex flex-col min-h-[calc(100vh-3.5rem)] relative z-10">
+              <main className="flex-1 overflow-visible pb-0 relative">
+                {children}
+              </main>
+              <MobileBottomNavigation
+                mainTab={mainTab}
+                setMainTab={setMainTab}
+                currentSecondaryTab={currentSecondaryTab}
+                onTabChange={onTabChange}
+                isDark={isDark}
+              />
+            </SidebarInset>
+          </div>
         </div>
       </SidebarProvider>
     </>
@@ -108,12 +146,9 @@ interface TTSGeneratorSidebarProps {
   onTabChange: (tab: "history" | "plan" | "guide" | "settings" | null) => void;
   mainTab: "tts" | "video" | "dubbing";
   setMainTab: (tab: "tts" | "video" | "dubbing") => void;
-  logoUrl?: string;
-  miniLogoUrl?: string;
   isDark?: boolean;
   lang?: "mm" | "en";
   setLang?: (lang: "mm" | "en") => void;
-  showLogo?: boolean;
 }
 
 function TTSGeneratorSidebar({
@@ -121,12 +156,9 @@ function TTSGeneratorSidebar({
   onTabChange,
   mainTab,
   setMainTab,
-  logoUrl,
-  miniLogoUrl,
   isDark = true,
   lang = "mm",
   setLang,
-  showLogo = true,
 }: TTSGeneratorSidebarProps) {
   const sidebar = useSidebar();
   const isCollapsed = !sidebar.open;
@@ -179,13 +211,10 @@ function TTSGeneratorSidebar({
     },
   ];
 
-  // Fix: only one item can be active at a time
-  // If a secondary tab is open, no main tab is highlighted, and vice versa
   const getIsActive = (item: (typeof allMenuItems)[0]) => {
     if (item.type === "secondary") {
       return currentTab === item.id;
     }
-    // main tab is only active when NO secondary tab is open
     return currentTab === null && mainTab === item.id;
   };
 
@@ -205,79 +234,8 @@ function TTSGeneratorSidebar({
         } as React.CSSProperties
       }
     >
-      <SidebarHeader
-        className="border-b py-3 px-2"
-        style={{
-          borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)",
-        }}
-      >
-        <div className="flex items-center justify-between gap-2 w-full px-1">
-          {showLogo && isCollapsed ? (
-            <motion.div
-              key="mini-logo"
-              initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
-              animate={{ opacity: 1, scale: 1, rotate: 0 }}
-              transition={{ duration: 0.3, ease: [0.34, 1.56, 0.64, 1] }}
-              className="flex items-center justify-center w-10 h-10 rounded-xl flex-shrink-0 shadow-lg"
-              style={{
-                background: `linear-gradient(135deg, ${accent}25, ${accentSecondary}15)`,
-                border: `1px solid ${isDark ? "rgba(192,111,48,0.5)" : "rgba(192,111,48,0.4)"}`,
-              }}
-            >
-              {miniLogoUrl ? (
-                <img
-                  src={miniLogoUrl}
-                  alt="Logo"
-                  className="w-6 h-6 object-contain"
-                />
-              ) : (
-                <span
-                  className="text-sm font-black"
-                  style={{
-                    color: "#C06F30",
-                    textShadow: `0 0 12px ${accent}60`,
-                  }}
-                >
-                  L
-                </span>
-              )}
-            </motion.div>
-          ) : showLogo ? (
-            <motion.div
-              key="full-logo"
-              initial={{ opacity: 0, x: -12 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.3, ease: [0.34, 1.56, 0.64, 1] }}
-              className="flex-1 min-w-0"
-            >
-              {logoUrl ? (
-                <img
-                  src={logoUrl}
-                  alt="LUMIX"
-                  className="h-7 w-auto object-contain"
-                />
-              ) : (
-                <span
-                  className="text-xl font-black tracking-widest"
-                  style={{
-                    background: "linear-gradient(135deg, #C06F30, #F4B34F)",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    backgroundClip: "text",
-                    letterSpacing: "0.15em",
-                    filter: `drop-shadow(0 0 8px ${accent}40)`,
-                  }}
-                >
-                  LUMIX
-                </span>
-              )}
-            </motion.div>
-          ) : null}
-
-        </div>
-      </SidebarHeader>
-
-      <SidebarContent className="bg-transparent px-2 py-3 overflow-hidden">
+      {/* No SidebarHeader — logo moved to top header bar */}
+      <SidebarContent className="bg-transparent px-2 py-4 overflow-hidden">
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1.5">
@@ -374,7 +332,6 @@ function TTSGeneratorSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-
     </Sidebar>
   );
 }
@@ -437,7 +394,7 @@ function MobileBottomNavigation({
                 <motion.div
                   layoutId="mobileMainTab"
                   className="absolute inset-0 rounded-xl"
-                  style={{ 
+                  style={{
                     background: "linear-gradient(135deg, rgba(192,111,48,0.15), rgba(244,179,79,0.1))",
                     boxShadow: "0 0 15px #C06F3020"
                   }}
