@@ -2316,7 +2316,7 @@ export default function TTSGenerator() {
                   {dubPreviewUrl && !dubResult && (
                     <div className="w-full">
                       {/* Video Preview - Fixed Position */}
-                      <div className="hidden lg:block fixed left-64 top-14 w-[45%] h-[calc(100vh-3.5rem)] p-2 z-10">
+                      <div className="hidden lg:block fixed left-64 top-14 w-[calc(45%-4rem)] h-[calc(100vh-3.5rem)] p-2 z-10">
                         <div
                           className={box}
                           style={{
@@ -2351,7 +2351,7 @@ export default function TTSGenerator() {
                       </div>
 
                       {/* Settings - Right Side */}
-                      <div className="lg:ml-[45%] lg:w-[55%] space-y-4 p-2">
+                      <div className="lg:ml-[calc(45%+16rem)] lg:w-[calc(55%-16rem)] space-y-4 p-2">
 
                       {/* ── ACCORDION: Voice Selection ── */}
                       <div
