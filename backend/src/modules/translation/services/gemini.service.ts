@@ -115,13 +115,12 @@ export class GeminiService {
         return result;
     }
 
-private sanitize(text: string): string {
+    private sanitize(text: string): string {
         if (!text || typeof text !== 'string') return "";
         let cleaned = text.trim();
 
         cleaned = cleaned.replace(/,/g, "၊");
         cleaned = cleaned.replace(/\./g, "။");
-
         cleaned = cleaned.replace(/၊$/, "။");
 
         if (cleaned.length > 0 && !cleaned.endsWith("။") && !cleaned.endsWith("၊")) {
@@ -176,7 +175,6 @@ private sanitize(text: string): string {
         for (const chunk of chunks) {
             let chunkTranslated: string[] | null = null;
 
-            // ── Duration info ပါတဲ့ lines တည်ဆောက် ──
             const linesWithDuration = chunk.map(s => ({
                 text: s.text,
                 duration_seconds: parseFloat((s.end - s.start).toFixed(1))
@@ -230,130 +228,7 @@ private sanitize(text: string): string {
         return results;
     }
 
-private async callBatchApi(
-    lines: Array<{ text: string; duration_seconds: number }>,
-    modelId: string,
-    apiKey: string
-): Promise<string[] | null> {
-    const url = `https://generativelanguage.googleapis.com/v1beta/${modelId}:generateContent?key=${apiKey}`;
-
-    const systemPrompt = `You are a Professional Video Dubbing Translator for Myanmar (Burmese).
-
-CRITICAL TIMING RULE:
-- Each segment has a "duration_seconds" field — this is how long the audio slot is
-- Your translation MUST fit within that time when spoken aloud
-- Roughly: 1 second = 3-4 Myanmar syllables when spoken naturally
-- duration=2s → max ~8 syllables | duration=5s → max ~20 syllables | duration=8s → max ~32 syllables
-- NEVER write more than the slot allows. SHORT is always better than LONG.
-
-STYLE RULES:
-1. Spoken casual Burmese — like telling a story to a friend
-2. Use: "တာပေါ့"၊ "တာပဲ"၊ "လိုက်တာ"၊ "လေ"၊ "သေးတယ်"၊ "ဒါပေမယ့်"၊ "အဲ့ဒီ"
-3. Punctuation: (၊) for pauses၊ (။) for sentence ends — NO English (,) or (.)
-4. BANNED words: "သည်"၊ "ပါသည်"၊ "သနည်း"
-5. MUST translate to Myanmar — NEVER return English unchanged
-
-OUTPUT: JSON array of translated strings only, same order as input.`;
-
-    const body = {
-        contents: [{ parts: [{ text: `TRANSLATE THESE SEGMENTS:\n${JSON.stringify(lines, null, 2)}` }] }],
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        generationConfig: {
-            responseMimeType: "application/json",
-            responseSchema: { type: "ARRAY", items: { type: "STRING" } }
-        }
-    };
-
-    const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
-    });
-
-    if (!res.ok) {
-        console.error(`[Gemini API Error] HTTP ${res.status} for ${modelId}`);
-        return null;
-    }
-
-    const data = await res.json();
-    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-
-    if (!rawText) {
-        console.warn(`[Gemini API] Empty response from ${modelId}`);
-        return null;
-    }
-
-    try {
-        return JSON.parse(rawText);
-    } catch {
-        const jsonMatch = rawText.match(/\[[\s\S]*\]/);
-        if (jsonMatch) {
-            try { return JSON.parse(jsonMatch[0]); } catch {}
-        }
-        console.error(`[Gemini API] Parse failed:`, rawText.slice(0, 200));
-        return null;
-    }
-}
-
-        const results: TranslatedSegment[] = [];
-        for (const chunk of chunks) {
-            let chunkTranslated: string[] | null = null;
-            
-            for (const model of MODELS) {
-                if (getDailyCount(model.id) >= model.rpd) continue;
-                for (const apiKey of allKeys) {
-                    chunkTranslated = await this.callBatchApi(chunk.map(s => s.text), model.id, apiKey);
-                    if (chunkTranslated && chunkTranslated.length === chunk.length) {
-                        incrementQuota(model.id);
-                        break;
-                    }
-                }
-                if (chunkTranslated) break;
-            }
-
-            if (!chunkTranslated) {
-                // Fallback: တစ်ခုချင်း retry လုပ်
-                console.warn(`[Gemini] Batch failed, retrying individually...`);
-                for (const s of chunk) {
-                    try {
-                        let singleResult: string[] | null = null;
-                        for (const model of MODELS) {
-                            if (getDailyCount(model.id) >= model.rpd) continue;
-                            for (const apiKey of allKeys) {
-                                singleResult = await this.callBatchApi([s.text], model.id, apiKey);
-                                if (singleResult?.[0]) {
-                                    incrementQuota(model.id);
-                                    break;
-                                }
-                            }
-                            if (singleResult?.[0]) break;
-                        }
-                        results.push({
-                            ...s,
-                            translatedText: singleResult?.[0]
-                                ? this.applyPhonetics(this.sanitize(singleResult[0]))
-                                : s.text
-                        });
-                    } catch {
-                        results.push({ ...s, translatedText: s.text });
-                    }
-                }
-            } else {
-                results.push(...chunk.map((s, idx) => {
-                    const translatedVal = chunkTranslated![idx];
-                    return {
-                        ...s,
-                        translatedText: translatedVal 
-                            ? this.applyPhonetics(this.sanitize(translatedVal)) 
-                            : s.text // Fallback to original if this specific segment is null/undefined
-                    };
-                }));
-            }
-        }
-        return results;
-    }
-
-private async callApi(text: string, modelId: string, apiKey: string): Promise<string | null> {
+    private async callApi(text: string, modelId: string, apiKey: string): Promise<string | null> {
         const url = `https://generativelanguage.googleapis.com/v1beta/${modelId}:generateContent?key=${apiKey}`;
         const systemPrompt = `You are a Professional Movie Recap Narrator. 
 TASK: Translate the script into "High-Impact Spoken Burmese" for social media video recaps (TikTok/FB/YouTube).
@@ -392,31 +267,33 @@ NEVER return the original English text unchanged.`;
         return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
     }
 
-private async callBatchApi(lines: string[], modelId: string, apiKey: string): Promise<string[] | null> {
+    private async callBatchApi(
+        lines: Array<{ text: string; duration_seconds: number }>,
+        modelId: string,
+        apiKey: string
+    ): Promise<string[] | null> {
         const url = `https://generativelanguage.googleapis.com/v1beta/${modelId}:generateContent?key=${apiKey}`;
-        const systemPrompt = `You are a Professional Movie Recap Narrator. 
-TASK: Translate the script into "High-Impact Spoken Burmese" for social media video recaps (TikTok/FB/YouTube).
 
-STRICT STYLE RULES:
-1. **NARRATIVE VOICE**: Tell it like a story to a friend. Use descriptive, immersive language.
-2. **FAVORITE ENDINGS**: 
-   - Frequently use: "တာပေါ့", "တာပဲ", "နေမိတာ", "သွားခဲ့ရတယ်", "လိုက်တာ", "လေ", "သေးတယ်", "နေတာပါ", "ခဲ့တာပါ။"
-3. **SPECIFIC VOCABULARY**:
-   - Use "ဒါပေမယ့်" (instead of ဒါပေမဲ့)
-   - Use "အဲ့ဒီ" (instead of အဲဒီ)
-   - Use "အခုမှ စတာပါ" (for transitions)
-4. **DRAMATIC PAUSES**: Use "..." for tension (e.g., "...သူ့ရည်းစားနဲ့လေ").
-5. **STRICT PUNCTUATION**: Use (၊) for pauses and (။) for sentence ends. NEVER use English (, .).
-6. **NO LITERARY BURMESE**: Strictly ban "သည်", "ပါသည်", "သနည်း".
+        const systemPrompt = `You are a Professional Video Dubbing Translator for Myanmar (Burmese).
 
-GOAL: The output must sound exactly like a high-quality Myanmar movie recap script.
+CRITICAL TIMING RULE:
+- Each segment has a "duration_seconds" field — this is how long the audio slot is
+- Your translation MUST fit within that time when spoken aloud
+- Roughly: 1 second = 3-4 Myanmar syllables when spoken naturally
+- duration=2s → max ~8 syllables | duration=5s → max ~20 syllables | duration=8s → max ~32 syllables
+- NEVER write more than the slot allows. SHORT is always better than LONG.
 
-CRITICAL: You MUST translate ALL text to Myanmar/Burmese language.
-Even if the input is already in English, translate it to Myanmar.
-NEVER return the original English text unchanged.`;
+STYLE RULES:
+1. Spoken casual Burmese — like telling a story to a friend
+2. Use: "တာပေါ့"၊ "တာပဲ"၊ "လိုက်တာ"၊ "လေ"၊ "သေးတယ်"၊ "ဒါပေမယ့်"၊ "အဲ့ဒီ"
+3. Punctuation: (၊) for pauses၊ (။) for sentence ends — NO English (,) or (.)
+4. BANNED words: "သည်"၊ "ပါသည်"၊ "သနည်း"
+5. MUST translate to Myanmar — NEVER return English unchanged
+
+OUTPUT: JSON array of translated strings only, same order as input.`;
 
         const body = {
-            contents: [{ parts: [{ text: `TEXT TO TRANSLATE (JSON Array):\n${JSON.stringify(lines)}` }] }],
+            contents: [{ parts: [{ text: `TRANSLATE THESE SEGMENTS:\n${JSON.stringify(lines, null, 2)}` }] }],
             systemInstruction: { parts: [{ text: systemPrompt }] },
             generationConfig: {
                 responseMimeType: "application/json",
@@ -444,20 +321,13 @@ NEVER return the original English text unchanged.`;
         }
 
         try {
-            // Attempt direct parse first
             return JSON.parse(rawText);
         } catch {
-            // Fallback: extract JSON array from markdown or text
             const jsonMatch = rawText.match(/\[[\s\S]*\]/);
             if (jsonMatch) {
-                try {
-                    return JSON.parse(jsonMatch[0]);
-                } catch {
-                    console.error(`[Gemini API] Failed to parse extracted JSON from ${modelId}:`, rawText.slice(0, 200));
-                    return null;
-                }
+                try { return JSON.parse(jsonMatch[0]); } catch {}
             }
-            console.error(`[Gemini API] No valid JSON array found in response from ${modelId}:`, rawText.slice(0, 200));
+            console.error(`[Gemini API] Parse failed:`, rawText.slice(0, 200));
             return null;
         }
     }
