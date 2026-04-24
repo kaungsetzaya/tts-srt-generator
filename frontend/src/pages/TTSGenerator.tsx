@@ -2314,9 +2314,9 @@ export default function TTSGenerator() {
 
 {/* ── STEP: Video Preview + Settings ── */}
                   {dubPreviewUrl && !dubResult && (
-                    <div className="flex flex-row w-full min-h-[calc(100vh-3.5rem)]">
-                      {/* Video Preview - Fixed Position */}
-                      <div className="hidden lg:block lg:fixed lg:left-16 lg:top-14 lg:w-[45%] lg:h-[calc(100vh-3.5rem)] p-2">
+                    <div className="flex flex-row w-full h-[calc(100vh-3.5rem)] overflow-hidden">
+                      {/* Video Preview - Left Side (Sticky, no scroll) */}
+                      <div className="hidden lg:flex w-[45%] h-full p-2 flex-col shrink-0">
                         <div
                           className={box}
                           style={{
@@ -2350,8 +2350,8 @@ export default function TTSGenerator() {
                         </div>
                       </div>
 
-                      {/* Settings - Right Side (Page scrolls, but preview is fixed) */}
-                      <div className="w-full lg:ml-[45%] lg:w-[55%] space-y-4 p-2">
+                      {/* Settings - Right Side (Only this scrolls internally) */}
+                      <div className="w-full lg:w-[55%] h-full overflow-y-auto space-y-4 p-2">
 
                       {/* ── ACCORDION: Voice Selection ── */}
                       <div
