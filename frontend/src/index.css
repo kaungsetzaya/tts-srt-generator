@@ -52,36 +52,14 @@
   }
 }
 
-.dubbing-loader-text {
+.dubbing-loader-percent {
   font-family: "Inter", sans-serif;
-  font-size: 1em;
-  font-weight: 600;
+  font-size: 1.5em;
+  font-weight: 700;
   color: white;
-  margin-top: 12px;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-}
-
-.dubbing-loader-letter {
-  display: inline-block;
-  opacity: 0.4;
-  animation: dubbing-letter-anim 2s infinite;
-}
-
-.dubbing-loader-letter:nth-child(1) { animation-delay: 0s; }
-.dubbing-loader-letter:nth-child(2) { animation-delay: 0.1s; }
-.dubbing-loader-letter:nth-child(3) { animation-delay: 0.2s; }
-.dubbing-loader-letter:nth-child(4) { animation-delay: 0.3s; }
-.dubbing-loader-letter:nth-child(5) { animation-delay: 0.4s; }
-.dubbing-loader-letter:nth-child(6) { animation-delay: 0.5s; }
-.dubbing-loader-letter:nth-child(7) { animation-delay: 0.6s; }
-.dubbing-loader-letter:nth-child(8) { animation-delay: 0.7s; }
-.dubbing-loader-letter:nth-child(9) { animation-delay: 0.8s; }
-.dubbing-loader-letter:nth-child(10) { animation-delay: 0.9s; }
-
-@keyframes dubbing-letter-anim {
-  0%, 100% { opacity: 0.4; transform: translateY(0); }
-  20% { opacity: 1; transform: scale(1.15); }
-  40% { opacity: 0.7; transform: translateY(0); }
+  margin-top: 16px;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  letter-spacing: 2px;
 }
 
 @import "tailwindcss";

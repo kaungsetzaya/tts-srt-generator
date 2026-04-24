@@ -2349,18 +2349,7 @@ export default function TTSGenerator() {
                                 {activeJobId !== null && (
                                   <div className="dubbing-loader-wrapper">
                                     <div className="dubbing-loader"></div>
-                                    <div className="dubbing-loader-text">
-                                      <span className="dubbing-loader-letter">G</span>
-                                      <span className="dubbing-loader-letter">e</span>
-                                      <span className="dubbing-loader-letter">n</span>
-                                      <span className="dubbing-loader-letter">e</span>
-                                      <span className="dubbing-loader-letter">r</span>
-                                      <span className="dubbing-loader-letter">a</span>
-                                      <span className="dubbing-loader-letter">t</span>
-                                      <span className="dubbing-loader-letter">e</span>
-                                      <span className="dubbing-loader-letter"> </span>
-                                      <span className="dubbing-loader-letter">{dubProgress}%</span>
-                                    </div>
+                                    <div className="dubbing-loader-percent">{dubProgress}%</div>
                                   </div>
                                 )}
                               </>
