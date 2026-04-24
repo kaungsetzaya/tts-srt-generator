@@ -2344,50 +2344,64 @@ export default function TTSGenerator() {
                               </div>
                             ) : (
                               <>
-                                <video ref={dubPreviewRef} src={dubPreviewUrl} controls className="w-full h-full rounded-lg" style={{ objectFit: 'contain' }} />
-                                {/* Real-time Subtitle Preview */}
-                                {srtEnabled && activeJobId === null && (
-                                  <div 
-                                    className="absolute left-0 right-0 flex justify-center pointer-events-none"
-                                    style={{
-                                      zIndex: 5,
-                                      top: `${Math.max(2, Math.min(98, 100 - srtMarginV))}%`,
-                                      transform: 'translateY(-50%)',
-                                      padding: '0 16px'
+                                <div className="relative w-full h-full flex justify-center items-center">
+                                  <video
+                                    ref={dubPreviewRef}
+                                    src={dubPreviewUrl}
+                                    className="max-w-full max-h-full rounded-lg cursor-pointer"
+                                    style={{ objectFit: 'contain' }}
+                                    onClick={() => {
+                                      const v = dubPreviewRef.current;
+                                      if (!v) return;
+                                      v.paused ? v.play() : v.pause();
                                     }}
-                                  >
+                                  />
+                                  {/* Real-time Subtitle Preview */}
+                                  {srtEnabled && activeJobId === null && (
                                     <div
-                                      className="text-center"
+                                      className="absolute left-1/2 -translate-x-1/2 flex justify-center pointer-events-none"
                                       style={{
-                                        fontSize: `${Math.max(12, Math.min(32, srtFontSize * 0.5))}px`,
-                                        color: srtColor,
-                                        fontWeight: 'bold',
-                                        textShadow: '0 2px 4px rgba(0,0,0,0.8), 0 -1px 2px rgba(0,0,0,0.5)',
-                                        background: srtBlurBg 
-                                          ? srtBlurColor === 'black' 
-                                            ? `rgba(0,0,0,${srtBlurOpacity / 100})`
-                                            : srtBlurColor === 'white'
-                                              ? `rgba(255,255,255,${srtBlurOpacity / 100})`
-                                              : `rgba(128,128,128,${srtBlurOpacity / 100})`
-                                          : 'transparent',
-                                        backdropFilter: srtBlurBg ? `blur(${Math.max(2, srtBlurOpacity / 15)}px)` : 'none',
-                                        borderRadius: srtBorderRadius === 'rounded' ? '8px' : '0px',
-                                        padding: `${Math.max(2, srtBoxPadding)}px ${Math.max(8, srtBoxPadding * 2)}px`,
-                                        width: srtFullWidth ? 'calc(100% - 32px)' : 'auto',
-                                        maxWidth: '100%',
-                                        wordWrap: 'break-word',
-                                        lineHeight: 1.3,
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        display: '-webkit-box',
-                                        WebkitLineClamp: 2,
-                                        WebkitBoxOrient: 'vertical',
+                                        zIndex: 5,
+                                        bottom: `${Math.max(2, Math.min(40, srtMarginV * 0.4))}%`,
+                                        width: '90%',
+                                        maxWidth: '90%'
                                       }}
                                     >
-                                      {lang === "mm" ? "ဤနေရာတွင် စာတန်းထိုးကို မြင်ရပါမည်" : "Subtitle preview"}
+                                      <div
+                                        className="text-center"
+                                        style={{
+                                          fontSize: `${Math.max(10, Math.min(26, srtFontSize * 0.4))}px`,
+                                          color: srtColor,
+                                          fontWeight: 'bold',
+                                          textShadow: '0 2px 4px rgba(0,0,0,0.9), 0 -1px 2px rgba(0,0,0,0.6)',
+                                          background: srtBlurBg
+                                            ? srtBlurColor === 'black'
+                                              ? `rgba(0,0,0,${srtBlurOpacity / 100})`
+                                              : srtBlurColor === 'white'
+                                                ? `rgba(255,255,255,${srtBlurOpacity / 100})`
+                                                : `rgba(128,128,128,${srtBlurOpacity / 100})`
+                                            : 'transparent',
+                                          backdropFilter: srtBlurBg ? `blur(${Math.max(2, srtBlurOpacity / 15)}px)` : 'none',
+                                          borderRadius: srtBorderRadius === 'rounded' ? '6px' : '0px',
+                                          padding: `${Math.max(2, srtBoxPadding)}px ${Math.max(6, srtBoxPadding * 1.5)}px`,
+                                          width: srtFullWidth ? '100%' : 'auto',
+                                          maxWidth: '100%',
+                                          wordWrap: 'break-word',
+                                          wordBreak: 'break-word',
+                                          overflowWrap: 'break-word',
+                                          lineHeight: 1.25,
+                                          overflow: 'hidden',
+                                          textOverflow: 'ellipsis',
+                                          display: '-webkit-box',
+                                          WebkitLineClamp: 2,
+                                          WebkitBoxOrient: 'vertical',
+                                        }}
+                                      >
+                                        {lang === "mm" ? "ဤနေရာတွင် စာတန်းထိုးကို မြင်ရပါမည်" : "Subtitle preview"}
+                                      </div>
                                     </div>
-                                  </div>
-                                )}
+                                  )}
+                                </div>
                                 {/* Dubbing Loader Overlay */}
                                 {activeJobId !== null && (
                                   <div className="dubbing-loader-wrapper">
@@ -2451,7 +2465,7 @@ export default function TTSGenerator() {
                                 <button
                                   key={tier.id}
                                   onClick={() => setDubSelectedTier(tier.id)}
-                                  className="flex-1 py-1.5 px-2 rounded-md text-[10px] font-bold transition-all"
+                                  className="flex-1 py-2 px-2 rounded-md text-xs font-bold transition-all"
                                   style={{
                                     background: dubSelectedTier === tier.id
                                       ? `linear-gradient(135deg, ${accent}40, ${accentSecondary}30)`
@@ -2461,14 +2475,14 @@ export default function TTSGenerator() {
                                   }}
                                 >
                                   <div>{tier.label}</div>
-                                  <div className="text-[9px] font-normal opacity-60">{tier.subLabel}</div>
+                                  <div className="text-[10px] font-normal opacity-60">{tier.subLabel}</div>
                                 </button>
                               ))}
                             </div>
 
                             {/* Males */}
                             <div>
-                              <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5 px-1" style={{ color: subtextColor }}>
+                              <p className="text-xs font-bold uppercase tracking-wider mb-1.5 px-1" style={{ color: subtextColor }}>
                                 {t.male}
                               </p>
                               <div className="grid grid-cols-4 gap-1.5">
@@ -2476,7 +2490,7 @@ export default function TTSGenerator() {
                                   <button
                                     key={v.id}
                                     onClick={() => setDubSelectedVoice(v.id)}
-                                    className="py-1.5 px-1 border rounded-lg text-[10px] font-bold transition-all"
+                                    className="py-2 px-1 border rounded-lg text-xs font-bold transition-all"
                                     style={{
                                       borderColor: dubSelectedVoice === v.id ? accent : cardBorder,
                                       background: dubSelectedVoice === v.id
@@ -2493,7 +2507,7 @@ export default function TTSGenerator() {
 
                             {/* Females */}
                             <div>
-                              <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5 px-1" style={{ color: subtextColor }}>
+                              <p className="text-xs font-bold uppercase tracking-wider mb-1.5 px-1" style={{ color: subtextColor }}>
                                 {t.female}
                               </p>
                               <div className="grid grid-cols-4 gap-1.5">
@@ -2501,7 +2515,7 @@ export default function TTSGenerator() {
                                   <button
                                     key={v.id}
                                     onClick={() => setDubSelectedVoice(v.id)}
-                                    className="py-1.5 px-1 border rounded-lg text-[10px] font-bold transition-all"
+                                    className="py-2 px-1 border rounded-lg text-xs font-bold transition-all"
                                     style={{
                                       borderColor: dubSelectedVoice === v.id ? accent : cardBorder,
                                       background: dubSelectedVoice === v.id
@@ -2636,7 +2650,12 @@ export default function TTSGenerator() {
                           </div>
 
                           {/* ── Group: Layout ── */}
-                          <div>
+                          <div className="p-3 rounded-2xl" style={{
+                            background: isDark ? "rgba(255,255,255,0.03)" : "rgba(192,111,48,0.03)",
+                            backdropFilter: "blur(12px)",
+                            WebkitBackdropFilter: "blur(12px)",
+                            border: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "rgba(192,111,48,0.08)"}`,
+                          }}>
                             <div className="section-header">
                               <span>◈</span>
                               <span>{lang === "mm" ? "အနေအထား" : "LAYOUT"}</span>
@@ -2710,7 +2729,12 @@ export default function TTSGenerator() {
                           </div>
 
                           {/* ── Group: Background ── */}
-                          <div>
+                          <div className="p-3 rounded-2xl" style={{
+                            background: isDark ? "rgba(255,255,255,0.03)" : "rgba(192,111,48,0.03)",
+                            backdropFilter: "blur(12px)",
+                            WebkitBackdropFilter: "blur(12px)",
+                            border: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "rgba(192,111,48,0.08)"}`,
+                          }}>
                             <div className="section-header">
                               <span>❖</span>
                               <span>{lang === "mm" ? "နောက်ခံ" : "BACKGROUND"}</span>
