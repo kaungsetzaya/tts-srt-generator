@@ -2971,6 +2971,7 @@ export default function TTSGenerator() {
                             <video
                               ref={dubResultVideoRef}
                               controls
+                              crossOrigin="anonymous"
                               className="w-full h-full"
                               style={{
                                 display: "block",

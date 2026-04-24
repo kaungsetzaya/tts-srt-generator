@@ -182,6 +182,8 @@ async function startServer() {
         'Content-Length': end - start + 1,
         'Content-Type': 'video/mp4',
         'Content-Disposition': `inline; filename="${filename}"`,
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Range',
       });
       createReadStream(resolved, { start, end }).pipe(res);
     } else {
@@ -191,6 +193,7 @@ async function startServer() {
         'Content-Type': 'video/mp4',
         'Accept-Ranges': 'bytes',
         'Content-Disposition': `inline; filename="${filename}"`,
+        'Access-Control-Allow-Origin': '*',
       });
       createReadStream(resolved).pipe(res);
     }
