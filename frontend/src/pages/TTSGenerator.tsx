@@ -2318,7 +2318,7 @@ export default function TTSGenerator() {
                       {/* Video Preview - Fixed Left Side (never moves) */}
                       <div className="hidden lg:block" style={{
                         position: 'fixed',
-                        left: '4rem',
+                        left: '16rem',
                         top: '3.5rem',
                         width: '45%',
                         height: 'calc(100vh - 3.5rem)',
