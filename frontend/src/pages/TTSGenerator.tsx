@@ -2314,9 +2314,9 @@ export default function TTSGenerator() {
 
 {/* ── STEP: Video Preview + Settings ── */}
                   {dubPreviewUrl && !dubResult && (
-                    <div className="flex flex-row w-full h-[calc(100vh-3.5rem)] overflow-hidden">
-                      {/* Video Preview - Left Side (Fixed, no scroll) */}
-                      <div className="hidden lg:flex w-[45%] h-full p-2 flex-col shrink-0">
+                    <div className="flex flex-row w-full min-h-[calc(100vh-3.5rem)]">
+                      {/* Video Preview - Fixed Position */}
+                      <div className="hidden lg:block lg:fixed lg:left-16 lg:top-14 lg:w-[45%] lg:h-[calc(100vh-3.5rem)] p-2">
                         <div
                           className={box}
                           style={{
@@ -2341,7 +2341,7 @@ export default function TTSGenerator() {
                             {dubPreviewUrl === "loading" || dubPreviewMutation.isPending ? (
                               <div className="w-full h-full rounded-xl flex flex-col items-center justify-center gap-3" style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}` }}>
                                 <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
-                                <span className="text-xs font-semibold" style={{ color: subtextColor }}>{lang === "mm" ? "ဗီဒီယို ပြင်ဆင်နေသည်..." : "Preparing preview..."}</span>
+                                <span className="text-xs font-semibold" style={{ color: subtextColor }}>{lang === "mm" ? "ဗီဒီယိုပြင်ဆင်နေသည်..." : "Preparing preview..."}</span>
                               </div>
                             ) : (
                               <video ref={dubPreviewRef} src={dubPreviewUrl} controls className="w-full h-full rounded-lg" style={{ objectFit: 'contain' }} />
@@ -2350,8 +2350,8 @@ export default function TTSGenerator() {
                         </div>
                       </div>
 
-                      {/* Settings - Right Side (Only this scrolls) */}
-                      <div className="w-full lg:w-[55%] h-full overflow-y-auto space-y-4 p-2">
+                      {/* Settings - Right Side (Page scrolls, but preview is fixed) */}
+                      <div className="w-full lg:ml-[45%] lg:w-[55%] space-y-4 p-2">
 
                       {/* ── ACCORDION: Voice Selection ── */}
                       <div
