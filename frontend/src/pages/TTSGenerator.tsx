@@ -2316,7 +2316,7 @@ export default function TTSGenerator() {
                   {dubPreviewUrl && !dubResult && (
                     <div className="flex flex-col lg:flex-row gap-3 w-full">
                       {/* Video Preview - Left Side (sticky) */}
-                      <div className="lg:w-[45%] lg:sticky lg:top-16 lg:h-[calc(100vh-8rem)] shrink-0">
+                      <div className="lg:w-[45%] lg:sticky lg:top-16 lg:h-fit lg:z-10 shrink-0">
                         <div
                           className={box}
                           style={{
@@ -2348,7 +2348,7 @@ export default function TTSGenerator() {
                       </div>
 
                       {/* Settings - Right Side (scrollable) */}
-                      <div className="lg:w-[55%] flex-1 min-w-0 space-y-4">
+                      <div className="lg:w-[55%] flex-1 min-w-0 space-y-4 overflow-y-auto max-h-[calc(100vh-8rem)]">
 
                       {/* ── ACCORDION: Voice Selection ── */}
                       <div
