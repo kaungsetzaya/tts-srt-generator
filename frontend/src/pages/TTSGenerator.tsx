@@ -393,14 +393,11 @@ export default function TTSGenerator() {
   const [dubVideoUrl, setDubVideoUrl] = useState<string>("");
   const [dubDragOver, setDubDragOver] = useState(false);
   const [dubResult, setDubResult] = useState<{
-    videoUrl?: string;
-    videoBase64?: string;
-    myanmarText: string;
-    srtContent: string;
-    durationMs: number;
+    videoUrl: string;
+    srtUrl?: string;
+    videoId?: string;
   } | null>(null);
-
-  const dubFileRef = useRef<HTMLInputElement>(null);
+  const [dubProgress, setDubProgress] = useState<number>(0);
   const dubResultVideoRef = useRef<HTMLVideoElement>(null);
 
   // Dubbing wizard state
@@ -862,11 +859,13 @@ export default function TTSGenerator() {
     amara: { base: "nilar" },
   };
   const handleDubGenerate = async () => {
+    console.log("[GENERATE] Starting dubbing...");
     const dubVoiceToUse = dubSelectedVoice;
 
     // Use job-based API for dubbing (handles long processing time)
     if (dubVideoUrl.trim()) {
       try {
+        console.log("[GENERATE] Using URL:", dubVideoUrl.trim());
         const res = await startDubMutation.mutateAsync({
            url: dubVideoUrl.trim(),
            voice: dubVoiceToUse as any,
@@ -882,6 +881,7 @@ export default function TTSGenerator() {
            srtDropShadow,
            srtBorderRadius,
          });
+        console.log("[GENERATE] Job started:", res.jobId);
         setActiveJobId(res.jobId);
         // Poll for job status
         pollJobStatus(res.jobId);
@@ -892,7 +892,12 @@ export default function TTSGenerator() {
       return;
     }
 
-    if (!dubVideoFile) return;
+    if (!dubVideoFile) {
+      console.log("[GENERATE] No video file or URL");
+      return;
+    }
+    
+    console.log("[GENERATE] Using file:", dubVideoFile.name);
     const reader = new FileReader();
     reader.onload = async () => {
       const base64 = (reader.result as string).split(",")[1];
@@ -913,6 +918,7 @@ export default function TTSGenerator() {
           srtDropShadow,
           srtBorderRadius,
         });
+        console.log("[GENERATE] File job started:", res.jobId);
         setActiveJobId(res.jobId);
         utils.subscription.myStatus.invalidate();
       } catch (e: any) {
@@ -930,6 +936,7 @@ export default function TTSGenerator() {
       const errMsg = (jobStatusQuery.error as any)?.message || "Dubbing status check failed. Please try again.";
       showError(errMsg);
       setActiveJobId(null);
+      setDubProgress(0);
       return;
     }
     if (!jobStatusQuery.data) return;
@@ -937,10 +944,14 @@ export default function TTSGenerator() {
     if (status.status === "completed" && status.result) {
       setDubResult(status.result as any);
       setActiveJobId(null);
+      setDubProgress(100);
       utils.subscription.myStatus.invalidate();
     } else if (status.status === "failed") {
       showError(status.error || "Dubbing failed. Please try again.");
       setActiveJobId(null);
+      setDubProgress(0);
+    } else if (status.status === "processing") {
+      setDubProgress(status.progress ?? 0);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeJobId, jobStatusQuery.data, jobStatusQuery.error]);
@@ -2752,6 +2763,29 @@ export default function TTSGenerator() {
                           </div>
                         )}
                       </div>
+
+                      {/* Progress Bar */}
+                      {activeJobId !== null && (
+                        <div className="w-full mb-4">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-xs font-semibold" style={{ color: subtextColor }}>
+                              {lang === "mm" ? "ဖန်တီးနေသည်..." : "Generating..."}
+                            </span>
+                            <span className="text-xs font-bold" style={{ color: accent }}>
+                              {dubProgress}%
+                            </span>
+                          </div>
+                          <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: isDark ? "rgba(255,255,255,0.1)" : "rgba(192,111,48,0.1)" }}>
+                            <motion.div 
+                              className="h-full rounded-full"
+                              style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})` }}
+                              initial={{ width: 0 }}
+                              animate={{ width: `${dubProgress}%` }}
+                              transition={{ duration: 0.5 }}
+                            />
+                          </div>
+                        </div>
+                      )}
 
                       {/* Generate Dubbing Button */}
                       <motion.button
