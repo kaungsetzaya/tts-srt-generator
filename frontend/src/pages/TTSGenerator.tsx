@@ -2316,7 +2316,7 @@ export default function TTSGenerator() {
                   {dubPreviewUrl && !dubResult && (
                     <div className="flex flex-col lg:flex-row gap-4 w-full">
                       {/* Video Preview - Left Side */}
-                      <div className="lg:w-[45%] lg:sticky lg:top-16 lg:h-[calc(100vh-8rem)]">
+                      <div className="lg:w-[45%] lg:sticky lg:top-16 lg:h-[calc(100vh-7rem)] overflow-hidden">
                         <div
                           className={box}
                           style={{
@@ -2333,7 +2333,7 @@ export default function TTSGenerator() {
                               ✕
                             </button>
                           </div>
-                          <div className="flex justify-center items-center h-[calc(100%-40px)]">
+                          <div className="flex justify-center items-center h-[calc(100%-40px)] p-2">
                             {dubPreviewUrl === "loading" || dubPreviewMutation.isPending ? (
                               <div className="w-full rounded-xl flex flex-col items-center justify-center gap-3" style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}`, minHeight: "200px" }}>
                                 <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
