@@ -144,6 +144,20 @@ export const videoRouter = t.router({
       }
 
       // Ã¢â€â‚¬Ã¢â€â‚¬ Gate 3: Deduct credits BEFORE creating job Ã¢â€â‚¬Ã¢â€â‚¬
+      // Duration pre-check (prevent credit deduction on too-long videos)
+      try {
+        const info = await downloaderService.getVideoInfo(input.url);
+        if (info && info.duration > 150) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Video too long. Max 2 minutes 30 seconds.",
+          });
+        }
+      } catch (err: any) {
+        if (err.code === "BAD_REQUEST") throw err;
+        console.warn("[video.router] Could not fetch video duration:", err.message);
+      }
+
       await deductCredits(userId, 10, "video_dub", `Video Dub Link: ${input.voice}`);
 
       // Ã¢â€â‚¬Ã¢â€â‚¬ Gate 4: Create job Ã¢â€â‚¬Ã¢â€â‚¬
@@ -283,6 +297,20 @@ export const videoRouter = t.router({
       }
 
       // Ã¢â€â‚¬Ã¢â€â‚¬ Gate 3: Deduct credits BEFORE creating job Ã¢â€â‚¬Ã¢â€â‚¬
+      // Duration pre-check (prevent credit deduction on too-long videos)
+      try {
+        const info = await downloaderService.getVideoInfo(input.url);
+        if (info && info.duration > 150) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Video too long. Max 2 minutes 30 seconds.",
+          });
+        }
+      } catch (err: any) {
+        if (err.code === "BAD_REQUEST") throw err;
+        console.warn("[video.router] Could not fetch video duration:", err.message);
+      }
+
       await deductCredits(userId, 5, "video_translate", "Video Translate Link");
       
       // Ã¢â€â‚¬Ã¢â€â‚¬ Gate 4: Create job Ã¢â€â‚¬Ã¢â€â‚¬

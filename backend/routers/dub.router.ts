@@ -7,6 +7,7 @@ import { TRPCError } from "@trpc/server";
 import { isAllowedVideoUrl } from "../_core/security";
 import { deductCredits, addCredits } from "./credits";
 import { createJob } from "../jobs";
+import { getVideoInfo } from "../src/modules/media/services/downloader.service";
 
 export const dubRouter = t.router({
   fromLink: protectedProcedure
@@ -29,6 +30,20 @@ export const dubRouter = t.router({
           message: "Invalid or disallowed URL. YouTube, TikTok, Facebook only.",
         });
       }
+      // Duration pre-check (prevent credit deduction on too-long videos)
+      try {
+        const info = await getVideoInfo(input.url);
+        if (info && info.duration > 150) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Video too long. Max 2 minutes 30 seconds.",
+          });
+        }
+      } catch (err: any) {
+        if (err.code === "BAD_REQUEST") throw err;
+        console.warn("[dub.router] Could not fetch video duration:", err.message);
+      }
+
 
       const deducted = await deductCredits(userId, 10, "video_dub", `Legacy Video Dub Link: ${input.voice}`);
       if (!deducted) {

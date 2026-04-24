@@ -24,8 +24,47 @@ export interface Job {
 const jobs = new Map<string, Job>();
 
 const MAX_CONCURRENT = 5;
-let activeJobs = 0;
-const waitingQueue: Array<() => void> = [];
+
+/** AsyncSemaphore — proper queue-based slot management.
+ *  In Node.js the event loop is single-threaded, so the counter
+ *  check-and-decrement is effectively atomic. We wrap it in a
+ *  small class to make the intent explicit. */
+class AsyncSemaphore {
+  private permits: number;
+  private queue: Array<() => void> = [];
+
+  constructor(permits: number) {
+    this.permits = permits;
+  }
+
+  async acquire(): Promise<void> {
+    if (this.permits > 0) {
+      this.permits--;
+      return;
+    }
+    await new Promise<void>((resolve) => this.queue.push(resolve));
+    this.permits--;
+  }
+
+  release(): void {
+    this.permits++;
+    const next = this.queue.shift();
+    if (next) {
+      this.permits--;
+      next();
+    }
+  }
+
+  status() {
+    return {
+      active: MAX_CONCURRENT - this.permits,
+      waiting: this.queue.length,
+      max: MAX_CONCURRENT,
+    };
+  }
+}
+
+const jobSemaphore = new AsyncSemaphore(MAX_CONCURRENT);
 
 // Job processors map
 const processors: Partial<Record<JobType, (job: Job) => Promise<void>>> = {};
@@ -35,18 +74,15 @@ export function registerProcessor(type: JobType, processor: (job: Job) => Promis
 }
 
 export async function acquireSlot(): Promise<void> {
-  if (activeJobs < MAX_CONCURRENT) { activeJobs++; return; }
-  await new Promise<void>((resolve) => waitingQueue.push(resolve));
-  activeJobs++;
+  return jobSemaphore.acquire();
 }
 
 export function releaseSlot(): void {
-  activeJobs--;
-  if (waitingQueue.length > 0) { const next = waitingQueue.shift(); next?.(); }
+  jobSemaphore.release();
 }
 
 export function getQueueStatus() {
-  return { active: activeJobs, waiting: waitingQueue.length, max: MAX_CONCURRENT };
+  return jobSemaphore.status();
 }
 
 // ─── DB persistence helpers (fire-and-forget, never throw) ───────────────────────

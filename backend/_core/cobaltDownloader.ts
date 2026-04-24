@@ -5,8 +5,8 @@
 
 import { promises as fs } from 'fs';
 
-const COBALT_API_URL = process.env.COBALT_API_URL || "https://api.cobalt.tools/api/json";
-const COBALT_API_KEY = process.env.COBALT_API_KEY || ""; // Optional for public instance
+const COBALT_API_URL = process.env.COBALT_API_URL;
+const COBALT_API_KEY = process.env.COBALT_API_KEY || "";
 
 interface CobaltRequest {
   url: string;
@@ -33,6 +33,10 @@ export async function getCobaltDownloadUrl(
   youtubeUrl: string,
   options: { audioOnly?: boolean; quality?: string } = {}
 ): Promise<string | null> {
+  if (!COBALT_API_URL) {
+    console.error("[Cobalt] COBALT_API_URL is not configured. Private Cobalt instance required.");
+    return null;
+  }
   try {
     console.log(`[Cobalt] Requesting download for: ${youtubeUrl}`);
 

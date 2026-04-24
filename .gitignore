@@ -133,3 +133,4 @@ tmp_video/
 ecosystem.cjs
 # Static downloads generated at runtime
 static/downloads/
+scratch.py

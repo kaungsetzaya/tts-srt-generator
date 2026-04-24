@@ -8,6 +8,7 @@ import { isAllowedVideoUrl } from "../_core/security";
 import { createJob, getJobAsync } from "../jobs";
 import { deductCredits, addCredits } from "./credits";
 import { getVoiceCredits, type VoiceId } from "../src/modules/tts";
+import { getVideoInfo } from "../src/modules/media/services/downloader.service";
 
 // All valid voice IDs for validation
 const ALL_VOICE_IDS = [
@@ -51,6 +52,20 @@ export const jobsRouter = t.router({
           message: "Invalid or disallowed URL",
         });
       }
+      // Duration pre-check (prevent credit deduction on too-long videos)
+      try {
+        const info = await getVideoInfo(input.url);
+        if (info && info.duration > 150) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Video too long. Max 2 minutes 30 seconds.",
+          });
+        }
+      } catch (err: any) {
+        if (err.code === "BAD_REQUEST") throw err;
+        console.warn("[jobs.router] Could not fetch video duration:", err.message);
+      }
+
 
       const creditsNeeded = 10; // Fixed 10 credits for Auto Creator
 
@@ -108,6 +123,22 @@ export const jobsRouter = t.router({
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.user!.userId;
       const creditsNeeded = 5;
+
+      // Duration pre-check for URL-based translation
+      if (input.url) {
+        try {
+          const info = await getVideoInfo(input.url);
+          if (info && info.duration > 150) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Video too long. Max 2 minutes 30 seconds.",
+            });
+          }
+        } catch (err: any) {
+          if (err.code === "BAD_REQUEST") throw err;
+          console.warn("[jobs.router] Could not fetch video duration:", err.message);
+        }
+      }
 
       const deducted = await deductCredits(userId, creditsNeeded, "video_translate", "Video Translate");
       if (!deducted) {
