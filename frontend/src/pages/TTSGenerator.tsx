@@ -2315,30 +2315,8 @@ export default function TTSGenerator() {
 {/* ── STEP: Video Preview + Settings ── */}
                   {dubPreviewUrl && !dubResult && (
                     <div className="flex flex-col lg:flex-row w-full">
-                      {/* Desktop: Fixed Preview */}
-                      <div className="hidden lg:block lg:w-1/2 lg:h-screen lg:fixed lg:left-16 lg:top-14 p-2">
-                        <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow, height: 'calc(100vh - 3.5rem)' }}>
-                          <div className="flex items-center justify-between px-2 pt-2">
-                            <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>
-                              {lang === "mm" ? "ဗီဒီယိုကြိုကြည့်" : "Video Preview"}
-                            </div>
-                            <button onClick={() => { setDubVideoUrl(""); setDubPreviewUrl(""); setDubVideoFile(null); }} className="text-xs px-2 py-1 rounded hover:bg-red-500/20 text-red-400">✕</button>
-                          </div>
-                          <div className="flex justify-center p-2 h-[calc(100%-40px)]">
-                            {dubPreviewUrl === "loading" || dubPreviewMutation.isPending ? (
-                              <div className="w-full rounded-xl flex flex-col items-center justify-center gap-3" style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}` }}>
-                                <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
-                                <span className="text-xs font-semibold" style={{ color: subtextColor }}>Preparing preview...</span>
-                              </div>
-                            ) : (
-                              <video ref={dubPreviewRef} src={dubPreviewUrl} controls className="w-full h-full rounded-lg max-h-[400px]" style={{ objectFit: 'contain' }} />
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Mobile: Preview on top */}
-                      <div className="lg:hidden w-full mb-4">
+                      {/* Preview - Left on desktop, top on mobile */}
+                      <div className="w-full lg:w-1/2 p-2">
                         <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
                           <div className="flex items-center justify-between px-2 pt-2">
                             <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>
@@ -2346,21 +2324,21 @@ export default function TTSGenerator() {
                             </div>
                             <button onClick={() => { setDubVideoUrl(""); setDubPreviewUrl(""); setDubVideoFile(null); }} className="text-xs px-2 py-1 rounded hover:bg-red-500/20 text-red-400">✕</button>
                           </div>
-                          <div className="flex justify-center p-2">
+                          <div className="flex justify-center p-2" style={{ height: 'calc(100vh - 12rem)' }}>
                             {dubPreviewUrl === "loading" || dubPreviewMutation.isPending ? (
-                              <div className="w-full rounded-xl flex flex-col items-center justify-center gap-3 py-8" style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}` }}>
+                              <div className="w-full rounded-xl flex flex-col items-center justify-center gap-3" style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}` }}>
                                 <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
                                 <span className="text-xs font-semibold" style={{ color: subtextColor }}>Preparing preview...</span>
                               </div>
                             ) : (
-                              <video ref={dubPreviewRef} src={dubPreviewUrl} controls className="w-full rounded-lg max-h-[200px]" style={{ objectFit: 'contain' }} />
+                              <video ref={dubPreviewRef} src={dubPreviewUrl} controls className="w-full h-full rounded-lg" style={{ objectFit: 'contain', maxHeight: '400px' }} />
                             )}
                           </div>
                         </div>
                       </div>
 
-                      {/* Settings */}
-                      <div className="w-full lg:w-1/2 lg:ml-1/2 space-y-4 p-2 pb-24">
+                      {/* Settings - Right on desktop, bottom on mobile */}
+                      <div className="w-full lg:w-1/2 space-y-4 p-2 pb-24">
 
                       {/* ── ACCORDION: Voice Selection ── */}
                       <div
