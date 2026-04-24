@@ -2316,7 +2316,7 @@ export default function TTSGenerator() {
                   {dubPreviewUrl && !dubResult && (
                     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_400px] lg:items-start gap-4 space-y-4 lg:space-y-0">
                       {/* Left Column: Video Preview & Progress (Sticky) */}
-                      <div className="sticky top-[70px] lg:top-[80px] space-y-4 z-40 bg-background/95 backdrop-blur-sm pb-2 lg:bg-transparent lg:backdrop-blur-none transition-all">
+                      <div className="sticky top-[60px] lg:top-[70px] z-30 space-y-4" style={{ alignSelf: 'flex-start' }}>
                         <div
                           className={box}
                           style={{
