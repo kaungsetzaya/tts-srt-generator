@@ -20,7 +20,7 @@ export function registerAllProcessors() {
             
             // Sign the download URL before completing
             if (result.filename) {
-                result.videoUrl = generateSignedDownloadUrl(result.filename);
+                result.videoUrl = await generateSignedDownloadUrl(result.filename);
             }
 
             console.log(`[Job ${job.id}] Dub file successful: ${result.videoUrl}`);
@@ -57,7 +57,7 @@ export function registerAllProcessors() {
 
             // Sign the download URL before completing
             if (result.filename) {
-                result.videoUrl = generateSignedDownloadUrl(result.filename);
+                result.videoUrl = await generateSignedDownloadUrl(result.filename);
             }
 
             console.log(`[Job ${job.id}] Dub link successful: ${result.videoUrl}`);

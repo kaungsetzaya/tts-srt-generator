@@ -17,6 +17,8 @@
     "reset-db": "tsx backend/reset-db.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1037.0",
+    "@aws-sdk/s3-request-presigner": "^3.1037.0",
     "@sentry/cli": "^3.4.0",
     "@sentry/node": "^10.50.0",
     "@sentry/profiling-node": "^10.50.0",

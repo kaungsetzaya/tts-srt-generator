@@ -523,7 +523,7 @@ export class DubVideoPipeline {
       }).join('\n');
 
       return {
-        videoUrl:    generateSignedDownloadUrl(finalFilename),
+        videoUrl:    await generateSignedDownloadUrl(finalFilename),
         filename:    finalFilename,
         id,
         myanmarText: allTranslatedText,
