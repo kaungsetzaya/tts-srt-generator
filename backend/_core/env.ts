@@ -36,6 +36,7 @@ const ENV_REQUIREMENTS: EnvRequirement[] = [
   { key: "TELEGRAM_BOT_TOKEN", required: false, description: "Telegram bot token for auth codes" },
   { key: "ADMIN_BYPASS_CODE", required: false, description: "Admin bypass code for direct login" },
   { key: "ALLOWED_ORIGINS", required: false, description: "Comma-separated list of allowed CORS origins" },
+  { key: "DOWNLOAD_SECRET", required: true, description: "Separate secret for HMAC download URL signing (min 32 chars)" },
   { key: "BASE_URL", required: false, description: "Public base URL (e.g. https://choco.de5.net)" },
 ];
 

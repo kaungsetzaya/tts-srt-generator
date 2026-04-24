@@ -96,7 +96,7 @@ export const adminRouter = t.router({
         days: z.number(),
         note: z.string().optional(),
         paymentMethod: z.string().optional(),
-        paymentSlip: z.string().optional(),
+        paymentSlip: z.string().max(500000).optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -184,7 +184,7 @@ export const adminRouter = t.router({
     }),
 
   setRole: adminProcedure
-    .input(z.object({ userId: z.string(), role: z.string() }))
+    .input(z.object({ userId: z.string(), role: z.enum(["user", "admin"]) }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });

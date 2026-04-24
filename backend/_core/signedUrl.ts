@@ -10,9 +10,9 @@ import { createHmac } from "crypto";
  * The link expires after 1 hour.
  */
 export function generateSignedDownloadUrl(filename: string): string {
-  const secret = process.env.JWT_SECRET;
+  const secret = process.env.DOWNLOAD_SECRET;
   if (!secret) {
-    throw new Error("JWT_SECRET is required for download URL signing");
+    throw new Error("DOWNLOAD_SECRET is required for download URL signing");
   }
   const baseUrl = process.env.BASE_URL || "https://choco.de5.net";
   // Links expire after 1 hour

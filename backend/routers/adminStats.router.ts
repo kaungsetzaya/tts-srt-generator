@@ -16,7 +16,7 @@ export const adminStatsRouter = t.router({
   getErrorLogs: adminProcedure
     .input(
       z.object({
-        limit: z.number().optional(),
+        limit: z.number().min(1).max(1000).optional(),
         onlyUnresolved: z.boolean().optional(),
       })
     )

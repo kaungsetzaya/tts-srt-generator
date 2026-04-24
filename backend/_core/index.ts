@@ -115,9 +115,9 @@ async function startServer() {
   // Previously public: any user could guess another's video URL.
   // Now: /downloads/:token/:filename validates an HMAC signature.
   // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-  const DOWNLOAD_SECRET = process.env.JWT_SECRET;
+  const DOWNLOAD_SECRET = process.env.DOWNLOAD_SECRET;
   if (!DOWNLOAD_SECRET) {
-    throw new Error("JWT_SECRET is required for download URL signing");
+    throw new Error("DOWNLOAD_SECRET is required for download URL signing");
   }
   const downloadsDir = path.join(process.cwd(), 'static', 'downloads');
 
