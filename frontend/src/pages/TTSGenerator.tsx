@@ -2969,6 +2969,7 @@ export default function TTSGenerator() {
                             }}
                           >
                             <video
+                              key={dubResult.videoUrl}
                               ref={dubResultVideoRef}
                               controls
                               crossOrigin="anonymous"
