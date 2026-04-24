@@ -2314,15 +2314,16 @@ export default function TTSGenerator() {
 
 {/* ── STEP: Video Preview + Settings ── */}
                   {dubPreviewUrl && !dubResult && (
-                    <div className="flex flex-col lg:flex-row gap-4 w-full">
-                      {/* Video Preview - Left Side */}
-                      <div className="lg:w-[45%] lg:sticky lg:top-16 lg:h-[calc(100vh-7rem)] overflow-hidden">
+                    <div className="relative w-full">
+                      {/* Video Preview - Fixed on left */}
+                      <div className="hidden lg:block lg:fixed lg:left-0 lg:top-16 lg:w-[45%] lg:h-[calc(100vh-4rem)] p-3 z-20">
                         <div
                           className={box}
                           style={{
                             background: cardBg,
                             borderColor: cardBorder,
                             boxShadow,
+                            height: '100%',
                           }}
                         >
                           <div className="flex items-center justify-between">
@@ -2346,8 +2347,8 @@ export default function TTSGenerator() {
                         </div>
                       </div>
 
-                      {/* Settings - Right Side */}
-                      <div className="lg:w-[55%] space-y-4">
+                      {/* Settings - Scrollable on right */}
+                      <div className="lg:ml-[45%] w-full p-3 space-y-4">
 
                       {/* ── ACCORDION: Voice Selection ── */}
                       <div

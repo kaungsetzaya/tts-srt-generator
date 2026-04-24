@@ -86,8 +86,8 @@ export function TTSGeneratorLayout({
                 </div>
               </header>
             )}
-            <main className="flex-1 overflow-visible pb-24 md:pb-0 relative">
-              <div className="h-full overflow-y-auto">{children}</div>
+            <main className="flex-1 overflow-y-auto pb-24 md:pb-0 relative">
+              {children}
             </main>
             <MobileBottomNavigation
               mainTab={mainTab}
