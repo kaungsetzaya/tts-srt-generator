@@ -348,6 +348,7 @@ export default function TTSGenerator() {
   const [editedVideoText, setEditedVideoText] = useState("");
   const [videoCopied, setVideoCopied] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const dubFileRef = useRef<HTMLInputElement>(null);
 
   // Translation job polling state
   const [translateJobId, setTranslateJobId] = useState<string | null>(null);
