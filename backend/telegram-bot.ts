@@ -67,17 +67,17 @@ export async function handleTelegramUpdate(update: any) {
         let isTrialActive = false;
         let trialCredits = 0;
         let trialDays = 7;
-        
+
         try {
           const settingsRows = await db.select().from(settings);
           const settingsObj: Record<string, string> = {};
           for (const r of settingsRows) settingsObj[r.keyName] = r.value;
-          
+
           const autoTrialEnabled = settingsObj.autoTrialEnabled === 'true';
           const enforceDate = settingsObj.trialEnabled === 'true';
-          const isDateValid = !enforceDate || !settingsObj.trialStartDate || !settingsObj.trialEndDate || 
+          const isDateValid = !enforceDate || !settingsObj.trialStartDate || !settingsObj.trialEndDate ||
                               (new Date() >= new Date(settingsObj.trialStartDate) && new Date() <= new Date(settingsObj.trialEndDate));
-                              
+
           if (autoTrialEnabled && isDateValid) {
             isTrialActive = true;
             trialCredits = parseInt(settingsObj.trialCredits) || 15;
@@ -119,7 +119,18 @@ export async function handleTelegramUpdate(update: any) {
         }
       }
 
-      const formattedMessage = "\u{1F44B} \u1019\u1004\u103A\u1039\u1002\u101C\u102C\u1015\u102B " + firstName + "!\nLUMIX Studio \u1019\u103E \u1000\u103C\u102D\u102F\u1005\u102D\u102F\u1015\u102B \u1000\u1031\u102C\u1004\u1037\u103A\u101D\u1004\u103A \u101E\u103D\u1010\u103A\u1038\u1015\u1031\u1038\u1015\u102B \u1021\u1000\u1031\u102C\u1004\u1037\u103A \u1000\u102D\u102F \u1021\u101E\u1030\u1038\u1015\u1031\u1038\u1015\u102B \u1021\u1031\u102C\u1000\u103A\u1015\u102B \u1000\u102D\u102F \u1021\u1010\u103D\u1000\u103A\u1015\u102B\u2014\n\n\u{1F522} Code: " + loginCode + "\n\n\u23F3 \u1019\u1001\u102D\u1014\u103A: \u1041\u1040 \u1019\u102D\u1014\u1005\u103A\n\n\u{1F310} Link: " + APP_URL + "\n\n\u1000\u1030\u1012\u103A\u1019\u1006\u1004\u103A \u101E\u102D\u102F\u1037 \u1000\u1030\u1012\u103A\u101B\u103E \u101E\u1000\u103A\u1010\u1019\u103A\u1038 \u1011\u102D\u102F\u1000\u103A /code \u101F\u102F \u101B\u102D\u102F\u1000\u103A\u1014\u103A\u1037\u1015\u102B";
+      const formattedMessage = `👋 မင်္ဂလာပါ ${firstName}!
+
+LUMIX Studio မှ ကြိုဆိုပါတယ်။
+အကောင့်ထဲသို့ဝင်ရန် အောက်ပါ Login Code ကို အသုံးပြုပေးပါ —
+
+🔢 Code: ${loginCode}
+
+⏳ သက်တမ်း: ၁၀ မိနစ်
+
+🌐 Link: ${APP_URL}
+
+ကုတ်အသစ် ထပ်ယူလိုပါက /code ဟု ရိုက်နှိပ်ပါ။`;
       await sendMessage(chatId, formattedMessage);
 
     } catch (error) {
