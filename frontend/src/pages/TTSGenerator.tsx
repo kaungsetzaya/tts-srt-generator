@@ -2350,11 +2350,20 @@ export default function TTSGenerator() {
                               </div>
                             ) : (
                               <>
-                                <div className="relative flex justify-center items-center" style={{ maxWidth: '100%', maxHeight: '100%' }}>
+                                <div
+                                  className="relative flex justify-center items-center mx-auto"
+                                  style={{
+                                    aspectRatio: dubDetectedRatio === '9:16' ? '9/16' : '16/9',
+                                    maxWidth: '100%',
+                                    maxHeight: '100%',
+                                    height: dubDetectedRatio === '9:16' ? '100%' : 'auto',
+                                    width: dubDetectedRatio === '9:16' ? 'auto' : '100%',
+                                  }}
+                                >
                                   <video
                                     ref={dubPreviewRef}
                                     src={dubPreviewUrl}
-                                    className="max-w-full max-h-full rounded-lg cursor-pointer"
+                                    className="w-full h-full rounded-lg cursor-pointer"
                                     style={{ objectFit: 'contain', display: 'block' }}
                                     onClick={() => {
                                       const v = dubPreviewRef.current;
