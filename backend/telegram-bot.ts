@@ -11,10 +11,10 @@ async function sendMessage(chatId: number, text: string) {
   try {
     const res = await fetch(`${TELEGRAM_API}/sendMessage`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json; charset=utf-8" },
       body: JSON.stringify({
         chat_id: chatId,
-        text,
+        text: text.normalize("NFC"),
       }),
     });
     const data = await res.json();
