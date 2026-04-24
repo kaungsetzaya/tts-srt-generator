@@ -2359,8 +2359,8 @@ export default function TTSGenerator() {
                         </div>
                       </div>
 
-                      {/* Settings - Always visible, scrollable */}
-                      <div className="space-y-4 p-2 w-full h-[calc(100vh-4rem)] overflow-y-auto lg:w-[calc(50%-16rem-0.5rem)] lg:ml-[calc(50%+16rem+0.5rem)]">
+                      {/* Settings - Simple layout, scrolls normally */}
+                      <div className="space-y-4 p-2 w-full pb-24">
 
                       {/* ── ACCORDION: Voice Selection ── */}
                       <div
