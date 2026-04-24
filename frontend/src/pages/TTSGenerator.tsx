@@ -2312,404 +2312,44 @@ export default function TTSGenerator() {
                     </div>
                   )}
 
-                  {/* ── STEP: Video Preview + Settings ── */}
+{/* ── STEP: Video Preview + Settings ── */}
                   {dubPreviewUrl && !dubResult && (
-                    <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_400px] lg:items-start gap-4 space-y-4 lg:space-y-0">
-                      {/* Left Column: Video Preview & Progress (Sticky) */}
-                      <div className="sticky top-[60px] lg:top-[70px] z-30 space-y-4" style={{ alignSelf: 'flex-start' }}>
-                        <div
-                          className={box}
-                          style={{
-                            background: cardBg,
-                            borderColor: cardBorder,
-                            boxShadow,
-                          }}
-                        >
-                        <div className="flex items-center justify-between">
+                    <div className="relative w-full">
+                      {/* Video Preview - FIXED on left side */}
+                      <div className="fixed left-[280px] top-20 w-[400px] z-30 hidden lg:block">
+                        <div className="space-y-4 pr-4">
                           <div
-                            className={labelStyle}
+                            className={box}
                             style={{
-                              background: labelBg,
-                              color: accent,
+                              background: cardBg,
                               borderColor: cardBorder,
+                              boxShadow,
                             }}
                           >
-                            {lang === "mm" ? "ဗီဒီယိုကြိုကြည့်" : "Video Preview"}
-                          </div>
-                          <button
-                            onClick={() => { setDubVideoUrl(""); setDubPreviewUrl(""); setDubVideoFile(null); }}
-                            className="text-xs px-2 py-1 rounded hover:bg-red-500/20 text-red-400"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                        <div className="flex justify-center mt-2">
-                          {/* Preview: spinner → blob video → info card → HTML5 video */}
-                          {dubPreviewUrl === "loading" ||
-                          dubPreviewMutation.isPending ? (
-                            <div
-                              className="w-full rounded-xl flex flex-col items-center justify-center gap-3 py-14"
-                              style={{
-                                background: "rgba(0,0,0,0.2)",
-                                border: `1px dashed ${cardBorder}`,
-                                minHeight: "180px",
-                              }}
-                            >
-                              <CircularLoader 
-                                text={lang === "mm" ? "ဗီဒီယို ပြင်ဆင်နေသည်..." : "Preparing preview..."}
-                                color={accent}
-                              />
+                            <div className="flex items-center justify-between">
+                              <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>
+                                {lang === "mm" ? "ဗီဒီယိုကြိုကြည့်" : "Video Preview"}
+                              </div>
+                              <button onClick={() => { setDubVideoUrl(""); setDubPreviewUrl(""); setDubVideoFile(null); }} className="text-xs px-2 py-1 rounded hover:bg-red-500/20 text-red-400">
+                                ✕
+                              </button>
                             </div>
-                          ) : dubPreviewUrl.startsWith("blob:") ? (
-                            <div
-                              className={dubDetectedRatio === "9:16" ? "w-[160px] sm:w-[220px] lg:w-[260px] mx-auto" : "w-full max-w-[640px] mx-auto"}
-                              style={{
-                                aspectRatio: dubDetectedRatio === "9:16" ? "9/16" : "16/9",
-                                borderRadius: "12px",
-                                overflow: "hidden",
-                                position: "relative",
-                                margin: dubDetectedRatio === "9:16" ? "0 auto" : "0",
-                              }}
-                            >
-                              <video
-                                ref={dubPreviewRef}
-                                src={dubPreviewUrl}
-                                controls
-                                className="w-full h-full"
-                                style={{
-                                  display: "block",
-                                }}
-                                onLoadedMetadata={e => {
-                                  const v = e.currentTarget;
-                                  setDubVideoWidth(v.videoWidth);
-                                  setDubVideoHeight(v.videoHeight);
-                                  if (v.videoHeight > v.videoWidth)
-                                    setDubDetectedRatio("9:16");
-                                  else setDubDetectedRatio("16:9");
-                                  setVideoLoading(false);
-                                }}
-                                onError={() => {
-                                  setVideoLoading(false);
-                                }}
-                              />
-                              {srtEnabled && (
-                                <div
-                                  className="absolute left-0 right-0 flex justify-center pointer-events-none"
-                                  style={{
-                                    zIndex: 10,
-                                    top: `${100 - srtMarginV}%`,
-                                    transform: "translateY(-50%)",
-                                    transition: "top 0.2s ease-out",
-                                  }}
-                                >
-                                  <div
-                                    style={{
-                                      padding: `${srtBoxPadding * 2}px ${srtBoxPadding * 4}px`,
-                                      borderRadius: srtFullWidth
-                                        ? "0"
-                                        : srtBorderRadius === "rounded"
-                                          ? "12px"
-                                          : "4px",
-                                      fontSize: `${Math.round(srtFontSize * 0.8)}px`,
-                                      color: srtColor,
-                                      textShadow: srtDropShadow ? "2px 2px 4px rgba(0,0,0,0.8)" : "none",
-                                      background: srtBlurBg 
-                                        ? srtBlurColor === "black" 
-                                          ? `rgba(0,0,0,${Math.min(1, srtBlurOpacity / 100)})` 
-                                          : srtBlurColor === "white"
-                                            ? `rgba(255,255,255,${Math.min(1, srtBlurOpacity / 100)})`
-                                            : "transparent"
-                                        : "transparent",
-                                      textAlign: "center",
-                                      width: srtFullWidth ? "100%" : "auto",
-                                      maxWidth: srtFullWidth ? "100%" : "90%",
-                                      fontFamily:
-                                        "'Noto Sans Myanmar', 'Pyidaungsu', sans-serif",
-                                      transition: "all 0.2s ease-out",
-                                    }}
-                                  >
-                                    {lang === "mm"
-                                      ? "မြန်မာ စာတန်း နမူနာ"
-                                      : "Subtitle Preview"}
-                                  </div>
-                                 </div>
-                               )}
-                               {(startDubMutation.isPending || activeJobId !== null) && (
-                                 <div 
-                                   className="absolute inset-0 z-50 flex items-center justify-center bg-black/40"
-                                   style={{ 
-                                     backdropFilter: "blur(12px)", 
-                                     WebkitBackdropFilter: "blur(12px)" 
-                                   }}
-                                 >
-                                   <CircularLoader 
-                                     text={jobStatusQuery?.data?.progress ? `${jobStatusQuery.data.progress}%` : lang === "mm" ? "ဖန်တီးနေသည်..." : "Generating..."}
-                                     color="#fff"
-                                   />
-                                 </div>
-                               )}
-                             </div>
-                           ) : dubPreviewUrl.startsWith("fallback:") ||
-                            isExternalVideoUrl(dubPreviewUrl) ? (
-                            <div
-                              className="rounded-xl overflow-hidden mx-auto"
-                              style={{
-                                position: "relative",
-                                width:
-                                  aspectRatio === "9:16" ? "min(160px, 45vw)" : "100%",
-                                aspectRatio:
-                                  aspectRatio === "9:16" ? "9/16" : "16/9",
-                                margin: aspectRatio === "9:16" ? "0 auto" : "0",
-                                background: "var(--background)",
-                                borderRadius: "12px",
-                                overflow: "hidden",
-                              }}
-                            >
-                              {(() => {
-                                const ytMatch = dubPreviewUrl.match(
-                                  /(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([\w-]{11})/
-                                );
-                                const videoId = ytMatch ? ytMatch[1] : null;
-                                return videoId ? (
-                                  <img
-                                    src={`https://img.youtube.com/vi/${videoId}/0.jpg`}
-                                    alt="thumbnail"
-                                    onError={e => {
-                                      (e.target as HTMLImageElement).src =
-                                        `https://wsrv.nl/?url=https://img.youtube.com/vi/${videoId}/0.jpg`;
-                                    }}
-                                    style={{
-                                      width: "100%",
-                                      height: "100%",
-                                      objectFit: "cover",
-                                      borderRadius: "12px",
-                                      display: "block",
-                                      position: "absolute",
-                                      top: 0,
-                                      left: 0,
-                                    }}
-                                  />
-                                ) : (
-                                  <div
-                                    className="w-full h-full flex flex-col items-center justify-center gap-2"
-                                    style={{ minHeight: "180px" }}
-                                  >
-                                    <ExternalLink
-                                      className="w-8 h-8"
-                                      style={{ color: accent }}
-                                    />
-                                    <p
-                                      className="text-xs font-bold"
-                                      style={{ color: subtextColor }}
-                                    >
-                                      {lang === "mm"
-                                        ? "ဗီဒီယို Link အဆင်သင့်"
-                                        : "Video Link Ready"}
-                                    </p>
-                                  </div>
-                                );
-                               })()}
-                               {(startDubMutation.isPending || activeJobId !== null) && (
-                                 <div 
-                                   className="absolute inset-0 z-50 flex items-center justify-center bg-black/40"
-                                   style={{ 
-                                     backdropFilter: "blur(12px)", 
-                                     WebkitBackdropFilter: "blur(12px)" 
-                                   }}
-                                 >
-                                   <CircularLoader 
-                                     text={jobStatusQuery?.data?.progress ? `${jobStatusQuery.data.progress}%` : lang === "mm" ? "ဖန်တီးနေသည်..." : "Generating..."}
-                                     color="#fff"
-                                   />
-                                 </div>
-                               )}
-                               {srtEnabled && (
-                                <div
-                                  className="absolute left-0 right-0 flex justify-center pointer-events-none"
-                                  style={{
-                                    zIndex: 10,
-                                    top: `${100 - srtMarginV}%`,
-                                    transform: "translateY(-50%)",
-                                    transition: "top 0.2s ease-out",
-                                  }}
-                                >
-                                  <div
-                                    style={{
-                                      padding: computeSrtPreviewStyle.padding,
-                                      borderRadius: srtFullWidth
-                                        ? "0"
-                                        : srtBorderRadius === "rounded"
-                                          ? "12px"
-                                          : "4px",
-                                      fontSize: computeSrtPreviewStyle.fontSize,
-                                      color: srtColor,
-                                      textShadow: computeSrtPreviewStyle.textShadow,
-                                      background: computeSrtPreviewStyle.background,
-                                      backdropFilter: computeSrtPreviewStyle.backdropFilter,
-                                      textAlign: "center",
-                                      width: srtFullWidth ? "100%" : "auto",
-                                      maxWidth: srtFullWidth ? "100%" : "90%",
-                                      fontFamily: "Noto Sans Myanmar",
-                                      transition: "all 0.2s ease-out",
-                                    }}
-                                  >
-                                    {lang === "mm"
-                                      ? "မြန်မာ စာတန်း နမူနာ"
-                                      : "Subtitle Preview"}
-                                  </div>
+                            <div className="flex justify-center mt-2">
+                              {dubPreviewUrl === "loading" || dubPreviewMutation.isPending ? (
+                                <div className="w-full rounded-xl flex flex-col items-center justify-center gap-3 py-14" style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}`, minHeight: "180px" }}>
+                                  <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                                  <span className="text-xs font-semibold" style={{ color: subtextColor }}>{lang === "mm" ? "ဗီဒီယို ပြင်ဆင်နေသည်..." : "Preparing preview..."}</span>
                                 </div>
-                              )}
-                            </div>
-                          ) : (
-                            <div
-                              className={dubDetectedRatio === "9:16" ? "w-[240px] sm:w-[280px]" : "w-full max-w-[640px]"}
-                              style={{
-                                aspectRatio: dubDetectedRatio === "9:16" ? "9/16" : "16/9",
-                                position: "relative",
-                                overflow: "hidden",
-                                borderRadius: "12px",
-                                margin: dubDetectedRatio === "9:16" ? "0 auto" : "0",
-                              }}
-                            >
-                              {getYouTubeEmbedUrl(dubVideoUrl) ? (
-                                // YouTube embed iframe
-                                <iframe
-                                  src={getYouTubeEmbedUrl(dubVideoUrl)!}
-                                  title="YouTube video preview"
-                                  className="w-full h-full"
-                                  style={{
-                                    border: "none",
-                                    borderRadius: "12px",
-                                  }}
-                                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                  allowFullScreen
-                                  onLoad={() => {
-                                    setVideoLoading(false);
-                                    setVideoPreviewError("");
-                                  }}
-                                  onError={() => {
-                                    setVideoPreviewError(
-                                      "Failed to load video. Check if the link is valid or try uploading the file."
-                                    );
-                                    setVideoLoading(false);
-                                  }}
-                                />
                               ) : (
-                                // HTML5 video tag for uploaded files
-                                <video
-                                  ref={dubPreviewRef}
-                                  src={dubPreviewUrl}
-                                  controls
-                                  className="w-full h-full"
-                                  style={{
-                                    objectFit: "cover",
-                                    borderRadius: "12px",
-                                  }}
-                                  onLoadedMetadata={e => {
-                                    const v = e.currentTarget;
-                                    setDubVideoWidth(v.videoWidth);
-                                    setDubVideoHeight(v.videoHeight);
-                                    if (v.videoHeight > v.videoWidth) setDubDetectedRatio("9:16");
-                                    else setDubDetectedRatio("16:9");
-                                    setVideoLoading(false);
-                                    setVideoPreviewError("");
-                                  }}
-                                  onError={() => {
-                                    setVideoPreviewError(
-                                      "Failed to load video. Check if the link is valid or try uploading the file."
-                                    );
-                                    setVideoLoading(false);
-                                  }}
-                                />
-                              )}
-                              {videoLoading && (
-                                <div
-                                  className="absolute inset-0 flex flex-col items-center justify-center rounded-xl"
-                                  style={{ 
-                                    zIndex: 20,
-                                    background: 'rgba(0,0,0,0.6)',
-                                    backdropFilter: 'blur(8px)'
-                                  }}
-                                >
-                                  <Loader2 className="w-8 h-8 animate-spin text-white" />
-                                  <p className="mt-4 text-sm font-semibold text-white/80">
-                                    {lang === "mm" ? "ဖန်တီးနေသည်..." : "Loading..."}
-                                  </p>
-                                </div>
-                              )}
-                              {videoPreviewError && (
-                                <div
-                                  className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-xl p-4"
-                                  style={{ zIndex: 20 }}
-                                >
-                                  <div className="text-center">
-                                    <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-2" />
-                                    <p className="text-white text-sm font-semibold">
-                                      {videoPreviewError}
-                                    </p>
-                                  </div>
-                                </div>
-                              )}
-                              {srtEnabled && (
-                                <div
-                                  className="absolute left-0 right-0 flex justify-center pointer-events-none"
-                                  style={{
-                                    zIndex: 10,
-                                    top: `${100 - srtMarginV}%`,
-                                    transform: "translateY(-50%)",
-                                    transition: "top 0.2s ease-out",
-                                  }}
-                                >
-                                  <div
-                                    style={{
-                                      padding: computeSrtPreviewStyle.padding,
-                                      borderRadius: srtFullWidth
-                                        ? "0"
-                                        : srtBorderRadius === "rounded"
-                                          ? "12px"
-                                          : "4px",
-                                      fontSize: computeSrtPreviewStyle.fontSize,
-                                      color: srtColor,
-                                      textShadow: computeSrtPreviewStyle.textShadow,
-                                      background: computeSrtPreviewStyle.background,
-                                      backdropFilter: computeSrtPreviewStyle.backdropFilter,
-                                      textAlign: "center",
-                                      width: srtFullWidth ? "100%" : "auto",
-                                      maxWidth: srtFullWidth ? "100%" : "90%",
-                                      transition: "all 0.2s ease-out",
-                                    }}
-                                  >
-                                    {lang === "mm"
-                                      ? "မြန်မာ စာတန်း နမူနာ"
-                                      : "Subtitle Preview"}
-                                  </div>
-                                </div>
+                                <video ref={dubPreviewRef} src={dubPreviewUrl} controls className="w-full rounded-lg" style={{ maxHeight: "280px" }} />
                               )}
                             </div>
-                          )}
-                        </div>
-                        {!isExternalVideoUrl(dubPreviewUrl) && (
-                          <div
-                            className="flex items-center justify-center gap-2 mt-3 text-xs"
-                            style={{ color: subtextColor }}
-                          >
-                            <span
-                              className="px-2 py-1 rounded-lg border font-bold"
-                              style={{ borderColor: cardBorder }}
-                            >
-                              {dubDetectedRatio}
-                            </span>
-                            <span>
-                              {lang === "mm" ? "အချိုး" : "Aspect Ratio"}
-                            </span>
                           </div>
-                        )}
+                        </div>
                       </div>
 
-                      </div> {/* End Left Column */}
-
-                      {/* Right Column: Settings */}
-                      <div className="space-y-4">
+                      {/* Settings - scrolls on right */}
+                      <div className="lg:ml-[400px] space-y-4">
 
                       {/* ── ACCORDION: Voice Selection ── */}
                       <div
@@ -3189,7 +2829,7 @@ export default function TTSGenerator() {
                       >
                         ← {lang === "mm" ? "ဗီဒီယိုပြောင်းမည်" : "Change Video"}
                       </button>
-                      </div> {/* End Right Column */}
+                      </div>
                     </div>
                   )}
 
