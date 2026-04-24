@@ -205,7 +205,8 @@ const T = {
     geminiKeyPlaceholder: "API key...",
     saveKey: "သိမ်းမည်",
     removeKey: "ဖျက်မည်",
-    keyActive: "API Key သုံးနေသည်",
+    keyWarning: "သတိ: API key သည် browser ထဲတွင် သိမ်းထားခြင်းဖြစ်သည်။ shared device တွင် မသိမ်းပါနှင့်။",
+    // ...
     keyNone: "API Key မရှိ",
     copyText: "ကော်ပီကူးမည်",
     copied: "ကော်ပီကူးပြီး",
@@ -261,7 +262,8 @@ const T = {
     geminiKeyPlaceholder: "API key...",
     saveKey: "Save",
     removeKey: "Remove",
-    keyActive: "Using your API Key",
+    keyWarning: "Warning: API key is stored in your browser. Do not use on shared devices.",
+    // ...
     keyNone: "No API Key",
     copyText: "Copy Text",
     copied: "Copied!",
@@ -487,6 +489,7 @@ export default function TTSGenerator() {
     trpc.subscription.myStatus.useQuery();
   const logoutMutation = trpc.auth.logout.useMutation({
     onSuccess: () => {
+      localStorage.removeItem("gemini_key");
       window.location.href = "/login";
     },
   });
@@ -3082,6 +3085,9 @@ export default function TTSGenerator() {
                         {t.keyNone}
                       </div>
                     )}
+                    <p className="text-xs mb-2" style={{ color: "#ef4444" }}>
+                      {t.keyWarning}
+                    </p>
                     <div className="flex gap-2 flex-wrap">
                       <input
                         value={geminiKey}

@@ -1,15 +1,17 @@
 #!/bin/bash
 
 # TTS to SRT Generator - Automated VPS Deployment
+# Usage: VPS_IP=your.ip.here VPS_USER=root ./scripts/auto_deploy_vps.sh
 
 set -e
 
-VPS_IP="217.76.48.32"
-VPS_USER="root"
+VPS_IP="${VPS_IP:-217.76.48.32}"
+VPS_USER="${VPS_USER:-root}"
 
 echo "=========================================="
 echo "TTS to SRT Generator - VPS Deployment"
 echo "=========================================="
+echo "Target: ${VPS_USER}@${VPS_IP}"
 echo ""
 
 # Step 1: System Update
@@ -60,9 +62,9 @@ DATABASE_URL=mysql://tts_user:CHANGE_ME_PASSWORD@localhost:3306/tts_generator
 NODE_ENV=production
 PORT=3000
 JWT_SECRET=CHANGE_ME_JWT_SECRET
-VPS_TTS_API_URL=http://217.76.48.32:5000/generate
-VPS_TTS_AUDIO_BASE_URL=http://217.76.48.32:5000/audio/
-VPS_TTS_HEALTH_CHECK_URL=http://217.76.48.32:5000/health
+VPS_TTS_API_URL=http://${VPS_IP}:5000/generate
+VPS_TTS_AUDIO_BASE_URL=http://${VPS_IP}:5000/audio/
+VPS_TTS_HEALTH_CHECK_URL=http://${VPS_IP}:5000/health
 ENVFILE" &
 wait
 
@@ -110,10 +112,10 @@ echo "✅ Deployment Complete!"
 echo "=========================================="
 echo ""
 echo "Your application is running at:"
-echo "http://217.76.48.32"
+echo "http://${VPS_IP}"
 echo ""
 echo "Useful Commands:"
-echo "  ssh root@217.76.48.32"
+echo "  ssh ${VPS_USER}@${VPS_IP}"
 echo "  pm2 status"
 echo "  pm2 logs tts-generator -f"
 echo "  pm2 restart tts-generator"
