@@ -377,10 +377,10 @@ export const adminStatsRouter = t.router({
         const features = featureRows.map((r: any) => ({ feature: r.feature, count: r.count }));
 
         const voiceRows = await db
-          .select({ name: sql`COALESCE(character, voice, 'unknown')`, count: count() })
+          .select({ name: sql`COALESCE(\`character\`, voice, 'unknown')`, count: count() })
           .from(ttsConversions)
           .where(sql`user_id = ${input.userId} AND created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)`)
-          .groupBy(sql`COALESCE(character, voice, 'unknown')`);
+          .groupBy(sql`COALESCE(\`character\`, voice, 'unknown')`);
         const voices = voiceRows.map((r: any) => ({ name: String(r.name), count: r.count }));
 
         const hourRows = await db

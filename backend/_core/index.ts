@@ -1,5 +1,18 @@
-﻿import "../instrument";
-import "dotenv/config";
+﻿import "dotenv/config";
+// Sentry must init BEFORE importing express — move init here to guarantee first execution
+import * as Sentry from "@sentry/node";
+import { nodeProfilingIntegration } from "@sentry/profiling-node";
+Sentry.init({
+  dsn: "https://b09108995b3c483075e2d94726a83c20@o4511277328760832.ingest.de.sentry.io/4511277348880464",
+  integrations: [nodeProfilingIntegration()],
+  environment: process.env.NODE_ENV || "development",
+  enableLogs: true,
+  tracesSampleRate: 1.0,
+  profileSessionSampleRate: 1.0,
+  profileLifecycle: "trace",
+  sendDefaultPii: true,
+});
+
 import express from "express";
 import helmet from "helmet";
 import { createServer } from "http";
@@ -21,7 +34,6 @@ import { validateEnv } from "./env";
 import { recoverInterruptedJobs } from "../jobs";
 import { createHmac, timingSafeEqual } from "crypto";
 import { promises as fs, createReadStream, statSync } from "fs";
-import * as Sentry from "@sentry/node";
 
 async function startServer() {
   // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
