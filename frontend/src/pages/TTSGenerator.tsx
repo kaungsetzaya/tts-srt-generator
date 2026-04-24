@@ -2315,28 +2315,15 @@ export default function TTSGenerator() {
 {/* ── STEP: Video Preview + Settings ── */}
                   {dubPreviewUrl && !dubResult && (
                     <div className="w-full">
-                      {/* Video Preview - Desktop (Fixed Position) */}
+                      {/* Video Preview - Desktop */}
                       <div className="hidden lg:block" style={{ position: 'fixed', left: '16rem', top: '3.5rem', width: '50%', height: 'calc(100vh - 3.5rem)', padding: '0.5rem', paddingRight: '0.25rem', zIndex: 10 }}>
-                        <div
-                          className={box}
-                          style={{
-                            background: cardBg,
-                            borderColor: cardBorder,
-                            boxShadow,
-                            height: '100%',
-                            display: 'flex',
-                            flexDirection: 'column',
-                          }}
-                        >
+                        <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow, height: '100%', display: 'flex', flexDirection: 'column' }}>
                           <div className="flex items-center justify-between px-2 pt-2">
                             <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>
                               {lang === "mm" ? "ဗီဒီယိုကြိုကြည့်" : "Video Preview"}
                             </div>
-                            <button onClick={() => { setDubVideoUrl(""); setDubPreviewUrl(""); setDubVideoFile(null); }} className="text-xs px-2 py-1 rounded hover:bg-red-500/20 text-red-400">
-                              ✕
-                            </button>
+                            <button onClick={() => { setDubVideoUrl(""); setDubPreviewUrl(""); setDubVideoFile(null); }} className="text-xs px-2 py-1 rounded hover:bg-red-500/20 text-red-400">✕</button>
                           </div>
-                          
                           <div className="flex-1 overflow-hidden flex items-center justify-center p-2">
                             {dubPreviewUrl === "loading" || dubPreviewMutation.isPending ? (
                               <div className="w-full h-full rounded-xl flex flex-col items-center justify-center gap-3" style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}` }}>
@@ -2350,25 +2337,15 @@ export default function TTSGenerator() {
                         </div>
                       </div>
 
-                      {/* Video Preview - Mobile (Top of settings) */}
+                      {/* Video Preview - Mobile */}
                       <div className="lg:hidden mb-4">
-                        <div
-                          className={box}
-                          style={{
-                            background: cardBg,
-                            borderColor: cardBorder,
-                            boxShadow,
-                          }}
-                        >
+                        <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
                           <div className="flex items-center justify-between px-2 pt-2">
                             <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>
                               {lang === "mm" ? "ဗီဒီယိုကြိုကြည့်" : "Video Preview"}
                             </div>
-                            <button onClick={() => { setDubVideoUrl(""); setDubPreviewUrl(""); setDubVideoFile(null); }} className="text-xs px-2 py-1 rounded hover:bg-red-500/20 text-red-400">
-                              ✕
-                            </button>
+                            <button onClick={() => { setDubVideoUrl(""); setDubPreviewUrl(""); setDubVideoFile(null); }} className="text-xs px-2 py-1 rounded hover:bg-red-500/20 text-red-400">✕</button>
                           </div>
-                          
                           <div className="flex justify-center p-2">
                             {dubPreviewUrl === "loading" || dubPreviewMutation.isPending ? (
                               <div className="w-full rounded-xl flex flex-col items-center justify-center gap-3 py-8" style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}` }}>
@@ -2382,8 +2359,8 @@ export default function TTSGenerator() {
                         </div>
                       </div>
 
-                      {/* Settings - Right Side */}
-                      <div className="space-y-4 p-2 w-full lg:w-[calc(50%-16rem-0.5rem)] lg:ml-[calc(50%+16rem+0.5rem)]">
+                      {/* Settings - Always visible */}
+                      <div className="space-y-4 p-2 w-full lg:w-[calc(50%-16rem-0.5rem)] lg:ml-[calc(50%+16rem+0.5rem)] lg:absolute lg:right-0">
 
                       {/* ── ACCORDION: Voice Selection ── */}
                       <div
