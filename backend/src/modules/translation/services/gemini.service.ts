@@ -317,17 +317,12 @@ NEVER return the original English text unchanged.`;
         lines: Array<{ text: string; duration_seconds: number }>,
         modelId: string,
         apiKey: string,
-        fullContext?: string  // ← ဒါ ထည့်
+        fullContext?: string
     ): Promise<string[] | null> {
         const url = `https://generativelanguage.googleapis.com/v1beta/${modelId}:generateContent?key=${apiKey}`;
 
-        // Context summary ဆောက်
         const contextSection = fullContext
-            ? `VIDEO CONTEXT (ဒီ video တစ်ခုလုံးရဲ့ အကြောင်းအရာ):
-"${fullContext.slice(0, 500)}..."
-
-ဒီ context ကို နားလည်ပြီးမှ segment တစ်ခုချင်း translate လုပ်ပါ။
-`
+            ? `VIDEO CONTEXT:\n"${fullContext.slice(0, 600)}..."\n\nဒီ context နဲ့ ကိုက်ညီအောင် translate လုပ်ပါ။\n`
             : '';
 
         const systemPrompt = `You are a top Myanmar movie recap narrator on TikTok and Facebook.
@@ -335,17 +330,15 @@ NEVER return the original English text unchanged.`;
 ${contextSection}
 YOUR JOB: Translate English video segments into punchy, emotional Myanmar narration.
 - ဇာတ်လမ်းကို နားလည်ပြီး meaningful translation ဖြစ်ရမယ်
-- ဇာတ်ကောင်တွေ၊ အဖြစ်အပျက်တွေကို context နဲ့ ညှိပြီး translate လုပ်
-- Random translation မဟုတ်ဘဲ ဇာတ်လမ်းနဲ့ ကိုက်ညီရမယ်
-
-NARRATION STYLE:
-- ရုပ်ရှင် recap narrator လို dramatic ဖြစ်ရမယ်
-- သူငယ်ချင်းကို ဇာတ်လမ်းပြောပြသလို
+- ရုပ်ရှင် recap narrator လို dramatic ဖြစ်ရမယ်၊ သူငယ်ချင်းကို ဇာတ်လမ်းပြောပြသလို
 - "တာပေါ့"၊ "တာပဲ"၊ "လိုက်တာ"၊ "လေ"၊ "ဒါပေမယ့်"၊ "အဲ့ဒီ"
 - BANNED: "သည်"၊ "ပါသည်"၊ "ဖြစ်သည်"
 - NEVER return English
 
-TIMING: Each segment has duration_seconds — keep translation concise enough to fit.
+CRITICAL FOR SUBTITLES:
+1. Translate the full meaning naturally - do NOT cut meaning short
+2. Insert \\n at a natural pause point (comma or phrase break) so subtitle shows as 2 lines
+   Example: "သူ တံတားပေါ်ကနေ\\nခုန်ချလိုက်တာပဲ။"
 
 Output: JSON array of strings only.`;
 
@@ -371,7 +364,7 @@ Output: JSON array of strings only.`;
 
         const data = await res.json();
         const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-        
+
         if (!rawText) {
             console.warn(`[Gemini API] Empty response from ${modelId}`);
             return null;

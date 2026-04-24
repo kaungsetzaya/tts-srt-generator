@@ -27,38 +27,43 @@ function graphemeLen(s: string): number {
 }
 
 function splitToSubtitleChunks(text: string, maxCharsPerLine: number): string[] {
-    const clean = text.replace(/[\n\r]+/g, " ").trim();
+    const clean = text.replace(/[\r]+/g, "").trim();
     if (!clean) return [""];
-    const maxCharsPerEntry = maxCharsPerLine * 2;
-    const glen = graphemeLen(clean);
-    if (glen <= maxCharsPerEntry) {
-        if (glen > maxCharsPerLine) {
-            const mid = Math.ceil(glen / 2);
-            const graphemes = [...segmenter.segment(clean)].map(g => g.segment);
-            const line1 = graphemes.slice(0, mid).join("").trim();
-            const line2 = graphemes.slice(mid).join("").trim();
-            return [line1 + "\n" + line2];
-        }
+
+    // AI က \n ထည့်ပေးပြီးသားဆိုရင် အဲ့ဒီအတိုင်း သုံး - time ထပ်မခွဲ
+    if (clean.includes('\n')) {
+        const parts = clean.split('\n').map(p => p.trim()).filter(p => p);
+        return [parts.slice(0, 2).join('\n')];
+    }
+
+    const graphemes = [...segmenter.segment(clean)].map(g => g.segment);
+
+    // တိုနေရင် ၁ ကြောင်းတည်း
+    if (graphemes.length <= maxCharsPerLine) {
         return [clean];
     }
-    const graphemes = [...segmenter.segment(clean)].map(g => g.segment);
-    const chunks: string[] = [];
-    let pos = 0;
-    while (pos < graphemes.length) {
-        const remaining = graphemes.length - pos;
-        const chunkSize = Math.min(maxCharsPerEntry, remaining);
-        const chunkText = graphemes.slice(pos, pos + chunkSize).join("");
-        if (graphemeLen(chunkText) > maxCharsPerLine) {
-            const halfLen = Math.ceil(chunkSize / 2);
-            const line1 = graphemes.slice(pos, pos + halfLen).join("").trim();
-            const line2 = graphemes.slice(pos + halfLen, pos + chunkSize).join("").trim();
-            chunks.push(line1 + "\n" + line2);
-        } else {
-            chunks.push(chunkText.trim());
+
+    // ရှည်နေရင် အလယ်နားက သင့်တော်တဲ့နေရာမှ ၂ ကြောင်းခွဲ
+    const mid = Math.floor(graphemes.length / 2);
+    let splitIndex = mid;
+
+    for (let i = 0; i < 15; i++) {
+        if (mid + i < graphemes.length &&
+            (graphemes[mid + i] === ' ' || graphemes[mid + i] === '၊' || graphemes[mid + i] === '။')) {
+            splitIndex = mid + i + 1;
+            break;
         }
-        pos += chunkSize;
+        if (mid - i > 0 &&
+            (graphemes[mid - i] === ' ' || graphemes[mid - i] === '၊' || graphemes[mid - i] === '။')) {
+            splitIndex = mid - i + 1;
+            break;
+        }
     }
-    return chunks.filter(c => c.trim());
+
+    const line1 = graphemes.slice(0, splitIndex).join("").trim();
+    const line2 = graphemes.slice(splitIndex).join("").trim();
+
+    return [line1 + "\n" + line2];
 }
 
 export interface DubOptions {
