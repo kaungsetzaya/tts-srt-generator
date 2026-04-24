@@ -2316,7 +2316,7 @@ export default function TTSGenerator() {
                   {dubPreviewUrl && !dubResult && (
                     <div className="w-full">
                       {/* Video Preview - Fixed Position */}
-                      <div className="hidden lg:block fixed left-16 top-14 w-[45%] h-[calc(100vh-3.5rem)] p-2 z-10">
+                      <div className="hidden lg:block fixed left-64 top-14 w-[45%] h-[calc(100vh-3.5rem)] p-2 z-10">
                         <div
                           className={box}
                           style={{
