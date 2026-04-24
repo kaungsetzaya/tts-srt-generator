@@ -2336,7 +2336,7 @@ export default function TTSGenerator() {
                             </div>
                             <button onClick={() => { setDubVideoUrl(""); setDubPreviewUrl(""); setDubVideoFile(null); }} className="text-xs px-2 py-1 rounded hover:bg-red-500/20 text-red-400">✕</button>
                           </div>
-                          <div className="flex justify-center items-center p-1 relative" style={{ height: 'calc(100vh - 16rem)', minHeight: '300px' }}>
+                          <div className="flex justify-center items-center p-1 relative overflow-hidden" style={{ height: 'calc(100vh - 16rem)', minHeight: '300px' }}>
                             {dubPreviewUrl === "loading" || dubPreviewMutation.isPending ? (
                               <div className="w-full h-full rounded-xl flex flex-col items-center justify-center gap-3" style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}` }}>
                                 <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
@@ -2349,9 +2349,10 @@ export default function TTSGenerator() {
                                 {srtEnabled && activeJobId === null && (
                                   <div 
                                     className="absolute left-0 right-0 flex justify-center pointer-events-none"
-                                    style={{ 
-                                      zIndex: 5, 
-                                      bottom: `${Math.max(8, Math.min(80, srtMarginV * 0.6))}px`,
+                                    style={{
+                                      zIndex: 5,
+                                      top: `${Math.max(2, Math.min(98, 100 - srtMarginV))}%`,
+                                      transform: 'translateY(-50%)',
                                       padding: '0 16px'
                                     }}
                                   >
