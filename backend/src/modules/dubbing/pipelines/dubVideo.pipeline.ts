@@ -236,22 +236,45 @@ export class DubVideoPipeline {
         let finalDurationMs = durationMs;
 
         // ratio 1.5x ကျော်ရင် တိုတိုပြန်ပြောင်း retry
-        if (durationMs / slotMs > 1.3) {
+        if (durationMs / slotMs > 1.5) {
           console.warn(`[TTS] seg ${seg.index} ratio=${(durationMs/slotMs).toFixed(2)}x too high, retrying with shorter text...`);
+          
           const shorterText = await geminiService.makeShorter(seg.translatedText, slotMs, options.userApiKey);
           if (shorterText) {
-            const mp3Short  = path.join(tempDir, `tts_short_${seg.index}.mp3`);
-            const wavShort  = path.join(tempDir, `tts_short_${seg.index}.wav`);
+            const mp3Short = path.join(tempDir, `tts_short_${seg.index}.mp3`);
+            const wavShort = path.join(tempDir, `tts_short_${seg.index}.wav`);
             let shortBuffer: Buffer;
+
             if (isChar) {
-              const r = await ttsService.generateSpeechWithCharacter(shorterText, options.voice as CharacterKey, 1.0, "16:9", options.pitch ?? 0);
+              const r = await ttsService.generateSpeechWithCharacter(
+                shorterText, options.voice as CharacterKey,
+                1.15,  // ← 1.0 မဟုတ်တော့ဘူး၊ original speed နဲ့ တူရမယ်
+                "16:9", options.pitch ?? 0
+              );
               shortBuffer = r.audioBuffer;
             } else {
-              const r = await ttsService.generateSpeech(shorterText, options.voice as VoiceKey, 1.0, options.pitch ?? 0, "16:9");
+              const r = await ttsService.generateSpeech(
+                shorterText, options.voice as VoiceKey,
+                1.15,  // ← 1.0 မဟုတ်တော့ဘူး
+                options.pitch ?? 0, "16:9"
+              );
               shortBuffer = r.audioBuffer;
             }
+
             await fs.writeFile(mp3Short, shortBuffer);
             await ffmpegService.convertToWav(mp3Short, wavShort);
+
+            // Silence trim လည်း retry မှာ လုပ်ရမယ်
+            const trimShort = path.join(tempDir, `tts_short_trim_${seg.index}.wav`);
+            try {
+              await ffmpegService.trimSilenceWav(wavShort, trimShort, -50, 0.05);
+              const trimDur = await ffmpegService.getAudioDurationMs(trimShort);
+              const rawDur  = await ffmpegService.getAudioDurationMs(wavShort);
+              if (trimDur >= rawDur * 0.5) {
+                await fs.copyFile(trimShort, wavShort);
+              }
+            } catch {}
+
             const shortDurMs = await ffmpegService.getAudioDurationMs(wavShort);
             const newRatio = shortDurMs / slotMs;
             console.log(`[TTS] seg ${seg.index} retry: ${shortDurMs}ms ratio=${newRatio.toFixed(2)}x`);
