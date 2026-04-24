@@ -1,14 +1,6 @@
-﻿/**
- * ASS Builder Service - Handles generation of ASS subtitle content.
- * Aligned with ARCHITECTURE.md (Dubbing Module Services).
- */
-
-import path from 'path';
+﻿import path from 'path';
 
 export class AssBuilderService {
-    /**
-     * Build ASS subtitle style Ã¢â‚¬â€ fixed blur, correct full-width, aspect-ratio-aware
-     */
     buildAssContent(
         segments: Array<{ startMs: number; endMs: number; text: string }>,
         fontPath: string,
@@ -33,27 +25,21 @@ export class AssBuilderService {
         const fontSize = Math.round((opts?.srtFontSize ?? 24) * fontScaleFactor * 1.5);
         const fontColor = opts?.srtColor ?? "#ffffff";
 
-        // Safe margin - keep text away from edges
-        const safeMargin = Math.round(playResX * 0.03);
-        
-        // Vertical Position with safe margin
         const posPercent = opts?.srtMarginV ?? 10;
         const marginV = Math.round((posPercent / 100) * (videoHeight * 0.9));
 
         const blurBg = opts?.srtBlurBg ?? true;
         const blurOpacity = opts?.srtBlurOpacity ?? 80;
-        const blurSize = opts?.srtBlurSize ?? 8;
         const blurColor = opts?.srtBlurColor ?? "black";
-        const boxPadding = opts?.srtBoxPadding ?? 4;
         const fullWidth = opts?.srtFullWidth ?? false;
         const dropShadow = opts?.srtDropShadow ?? true;
 
-        const blurColorMap: Record<string, string> = {
-            black: "000000",
-            white: "FFFFFF",
-            transparent: "000000"
-        };
-        const bgHex = blurColorMap[blurColor] || "000000";
+        let fontName = "Noto Sans Myanmar";
+        const fontBase = fontPath ? path.basename(fontPath).toLowerCase() : "";
+        if (fontBase === "mmrtext.ttf") fontName = "Myanmar Text";
+        else if (fontBase === "myanmar3.ttf") fontName = "Myanmar3";
+        else if (fontBase.includes("notosansmyanmar")) fontName = "Noto Sans Myanmar";
+        else if (fontPath) fontName = path.basename(fontPath, path.extname(fontPath));
 
         const hex = (fontColor.replace("#", "") + "000000").substring(0, 6);
         const r = parseInt(hex.substring(0, 2), 16) || 255;
@@ -61,67 +47,64 @@ export class AssBuilderService {
         const b = parseInt(hex.substring(4, 6), 16) || 255;
         const assColor = `&H00${this.pad2(b)}${this.pad2(g)}${this.pad2(r)}`;
 
-        const fontBase = fontPath ? path.basename(fontPath).toLowerCase() : "";
-        let fontName = "Noto Sans Myanmar";
-        if (fontBase === "mmrtext.ttf") fontName = "Myanmar Text";
-        else if (fontBase === "myanmar3.ttf") fontName = "Myanmar3";
-        else if (fontBase.includes("notosansmyanmar")) fontName = "Noto Sans Myanmar";
-        else if (fontPath) fontName = path.basename(fontPath, path.extname(fontPath));
+        const borderStyle = 1;
+        const outline = 1.5;
+        const shadow = dropShadow ? 1.5 : 0;
+        const shadowColor = "&H80000000";
 
-        let backColor = "&HFF000000";
-        let borderStyle = 1;
-        let outline = 1;
-        let shadow = dropShadow ? 1 : 0;
+        const padY = Math.round(playResY * ((opts?.srtBoxPadding ?? 4) / 100));
+        const boxBottom = playResY - marginV + padY;
+        const boxTop = boxBottom - Math.round(fontSize * 2.8) - (padY * 2);
 
-        if (blurBg) {
-            if (blurColor === "transparent") {
-                // Completely transparent background box, but keeps the border/outline if needed.
-                // &HFF000000 means 100% transparent.
-                backColor = `&HFF000000`;
-                borderStyle = 3;
-                outline = Math.max(4, blurSize * 2);
-                shadow = 0;
-            } else {
-                const alphaInt = Math.round((1 - (blurOpacity / 100)) * 255);
-                const alphaHex = alphaInt.toString(16).padStart(2, "0").toUpperCase();
-                backColor = `&H${alphaHex}${bgHex}`;
-                borderStyle = 3;
-                outline = Math.max(4, blurSize * 2);
-                shadow = 0;
-            }
-        } else if (!dropShadow) {
-            shadow = 0;
+        let boxLeft = 0;
+        let boxRight = playResX;
+
+        if (!fullWidth) {
+            boxLeft = Math.round(playResX * 0.08);
+            boxRight = Math.round(playResX * 0.92);
         }
 
-        const marginL = fullWidth ? safeMargin : Math.round(playResX * 0.04);
-        const marginR = fullWidth ? safeMargin : Math.round(playResX * 0.04);
-        const wrapStyle = 1;
+        const alphaInt = Math.round((1 - (blurOpacity / 100)) * 255);
+        const alphaHex = alphaInt.toString(16).padStart(2, "0").toUpperCase();
 
-        const header = `[Script Info]\nScriptType: v4.00+\nWrapStyle: ${wrapStyle}\nPlayResX: ${playResX}\nPlayResY: ${playResY}\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,${fontName},${fontSize},${assColor},&H000000FF,&H00000000,${backColor},-1,0,0,0,100,100,0,0,${borderStyle},${outline},${shadow},2,${marginL},${marginR},${marginV},1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
+        const boxColorMap: Record<string, string> = {
+            black: "000000",
+            white: "FFFFFF",
+            transparent: "000000"
+        };
+        const bgrHex = boxColorMap[blurColor] || "000000";
+
+        // Draw background box vector
+        const drawCommand = `{\\pos(0,0)\\1c&H${bgrHex}&\\1a&H${alphaHex}&\\p1\\bord0\\shad0}m ${boxLeft} ${boxTop} l ${boxRight} ${boxTop} l ${boxRight} ${boxBottom} l ${boxLeft} ${boxBottom}{\\p0}`;
+
+        const marginL = Math.round(playResX * 0.10);
+        const marginR = Math.round(playResX * 0.10);
+
+        const header = `[Script Info]\nScriptType: v4.00+\nWrapStyle: 1\nPlayResX: ${playResX}\nPlayResY: ${playResY}\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,${fontName},${fontSize},${assColor},&H000000FF,&H00000000,${shadowColor},-1,0,0,0,100,100,0,0,${borderStyle},${outline},${shadow},2,${marginL},${marginR},${marginV},1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
 
         const events = segments.map(seg => {
             const cleanText = this.formatTextForAss(seg.text);
-            return `Dialogue: 0,${this.msToAssTime(seg.startMs)},${this.msToAssTime(seg.endMs)},Default,,0,0,0,,${cleanText}`;
+            const start = this.msToAssTime(seg.startMs);
+            const end = this.msToAssTime(seg.endMs);
+
+            let eventStr = "";
+            if (blurBg && blurColor !== "transparent") {
+                eventStr += `Dialogue: 0,${start},${end},Default,,0,0,0,,${drawCommand}\n`;
+            }
+            eventStr += `Dialogue: 1,${start},${end},Default,,0,0,0,,${cleanText}`;
+
+            return eventStr;
         }).join("\n");
 
         return header + events + "\n";
     }
 
     private formatTextForAss(text: string): string {
-        // Split by newlines first
         let lines = text.split(/[\n\r]+/).filter(l => l.trim());
-        
         if (lines.length === 0) return "";
-        
-        // Max 2 lines Ã¢â‚¬â€ the pipeline already handles splitting,
-        // but enforce here as a safety net
-        if (lines.length > 2) {
-            lines = lines.slice(0, 2);
-        }
-        
-        // Join with \N for ASS
+        if (lines.length > 2) lines = lines.slice(0, 2);
         const formatted = lines.join("\\N");
-        return formatted.replace(/,/g, "Ã¯Â¼Å’");
+        return formatted.replace(/,/g, "၊");
     }
 
     private msToAssTime(ms: number): string {
