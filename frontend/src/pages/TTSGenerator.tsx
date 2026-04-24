@@ -2350,12 +2350,12 @@ export default function TTSGenerator() {
                               </div>
                             ) : (
                               <>
-                                <div className="relative w-full h-full flex justify-center items-center">
+                                <div className="relative flex justify-center items-center" style={{ maxWidth: '100%', maxHeight: '100%' }}>
                                   <video
                                     ref={dubPreviewRef}
                                     src={dubPreviewUrl}
                                     className="max-w-full max-h-full rounded-lg cursor-pointer"
-                                    style={{ objectFit: 'contain' }}
+                                    style={{ objectFit: 'contain', display: 'block' }}
                                     onClick={() => {
                                       const v = dubPreviewRef.current;
                                       if (!v) return;
@@ -2365,16 +2365,16 @@ export default function TTSGenerator() {
                                   {/* Real-time Subtitle Preview */}
                                   {srtEnabled && activeJobId === null && (
                                     <div
-                                      className="absolute left-0 right-0 flex justify-center pointer-events-none px-4"
+                                      className="absolute left-0 right-0 flex justify-center pointer-events-none px-3"
                                       style={{
                                         zIndex: 5,
                                         bottom: `${Math.max(2, Math.min(40, srtMarginV * 0.4))}%`,
                                       }}
                                     >
                                       <div
-                                        className="text-center w-full"
+                                        className="text-center"
                                         style={{
-                                          fontSize: `${Math.max(10, Math.min(24, srtFontSize * 0.5))}px`,
+                                          fontSize: `${Math.max(10, Math.min(22, srtFontSize * 0.45))}px`,
                                           color: srtColor,
                                           fontWeight: 'bold',
                                           textShadow: '0 2px 4px rgba(0,0,0,0.9), 0 -1px 2px rgba(0,0,0,0.6)',
@@ -2388,13 +2388,13 @@ export default function TTSGenerator() {
                                           backdropFilter: srtBlurBg ? `blur(${Math.max(2, srtBlurOpacity / 15)}px)` : 'none',
                                           borderRadius: srtBorderRadius === 'rounded' ? '6px' : '0px',
                                           padding: `${Math.max(2, srtBoxPadding)}px ${Math.max(6, srtBoxPadding * 1.5)}px`,
-                                          width: srtFullWidth ? '100%' : 'fit-content',
-                                          maxWidth: '100%',
-                                          boxSizing: 'border-box',
+                                          width: srtFullWidth ? 'calc(100% - 24px)' : 'auto',
+                                          maxWidth: 'calc(100% - 24px)',
+                                          minWidth: 0,
                                           wordWrap: 'break-word',
-                                          wordBreak: 'keep-all',
-                                          overflowWrap: 'break-word',
-                                          lineHeight: 1.25,
+                                          wordBreak: 'normal',
+                                          overflowWrap: 'anywhere',
+                                          lineHeight: 1.3,
                                           overflow: 'hidden',
                                           textOverflow: 'ellipsis',
                                           display: '-webkit-box',
