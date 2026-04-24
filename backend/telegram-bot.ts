@@ -15,7 +15,7 @@ async function sendMessage(chatId: number, text: string) {
       body: JSON.stringify({
         chat_id: chatId,
         text,
-        parse_mode: "Markdown",
+        parse_mode: "HTML",
       }),
     });
     const data = await res.json();
@@ -125,7 +125,7 @@ export async function handleTelegramUpdate(update: any) {
 LUMIX Studio မှ ကြိုဆိုပါတယ်။
 အကောင့်ထဲသို့ဝင်ရန် အောက်ပါ Login Code ကို အသုံးပြုပေးပါ —
 
-🔢 Code: \`${loginCode}\`
+🔢 Code: <code>${loginCode}</code>
 
 ⏳ သက်တမ်း: ၁၀ မိနစ်
 
