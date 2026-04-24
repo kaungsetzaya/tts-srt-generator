@@ -122,27 +122,15 @@ export async function handleTelegramUpdate(update: any) {
 
       const formattedMessage = `👋 မင်္ဂလာပါ ${firstName} !
 
-
-
 LUMIX Studio မှ ကြိုဆိုပါတယ်။
-
-
 
 အကောင့်ထဲသို့ဝင်ရန် အောက်ပါ Login Code ကို အသုံးပြုပေးပါ။
 
-
-
-🔢 Code: <code>${loginCode}</code> 
-
-
+🔢 Code: <code>${loginCode}</code>
 
 ⏳ သက်တမ်း: ၁၀ မိနစ်
 
-
-
 🌐 Link: ${APP_URL}
-
-
 
 ကုတ်အသစ် ထပ်ယူလိုပါက /code ကို နှိပ်ပါ။`;
       await sendMessage(chatId, formattedMessage);
