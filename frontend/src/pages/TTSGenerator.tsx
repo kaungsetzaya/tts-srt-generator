@@ -2404,11 +2404,10 @@ export default function TTSGenerator() {
                                 {/* Dubbing Loader Overlay */}
                                 {activeJobId !== null && (
                                   <div className="dubbing-loader-wrapper">
-                                    <div className="dubbing-loader">
-                                      <div className="dubbing-loader-text">
-                                        <div className="dubbing-loader-label">Generating</div>
-                                        <div className="dubbing-loader-percent">{dubProgress}%</div>
-                                      </div>
+                                    <div className="dubbing-loader" />
+                                    <div className="dubbing-loader-text">
+                                      <div className="dubbing-loader-label">Generating</div>
+                                      <div className="dubbing-loader-percent">{dubProgress}%</div>
                                     </div>
                                   </div>
                                 )}
