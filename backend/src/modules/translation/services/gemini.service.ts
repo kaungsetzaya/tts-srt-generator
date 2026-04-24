@@ -347,6 +347,7 @@ CRITICAL FOR SUBTITLES:
 1. Translate the full meaning naturally - do NOT cut meaning short
 2. Insert \\n at a natural pause point (comma or phrase break) so subtitle shows as 2 lines
    Example: "သူ တံတားပေါ်ကနေ\\nခုန်ချလိုက်တာပဲ။"
+3. Do NOT use "..." (ellipsis) — it causes TTS to pause unnaturally. Use (၊) or (။) instead.
 
 Output: JSON array of strings only.`;
 

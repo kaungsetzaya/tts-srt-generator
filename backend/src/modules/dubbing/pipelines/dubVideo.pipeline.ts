@@ -204,6 +204,10 @@ export class DubVideoPipeline {
         const ttsText = seg.translatedText
           .replace(/\\n/g, ' ')
           .replace(/\n/g, ' ')
+          .replace(/\.\.\./g, '။')     // ... → ။ (ellipsis ဖြုတ်)
+          .replace(/…/g, '။')          // unicode ellipsis
+          .replace(/။\s+/g, '။')       // ။ နောက် extra space ဖြုတ်
+          .replace(/၊\s+/g, '၊')       // ၊ နောက် extra space ဖြုတ်
           .replace(/\s+/g, ' ')
           .trim();
 
@@ -262,6 +266,10 @@ export class DubVideoPipeline {
             const retryTtsText = shorterText
               .replace(/\\n/g, ' ')
               .replace(/\n/g, ' ')
+              .replace(/\.\.\./g, '။')     // ... → ။ (ellipsis ဖြုတ်)
+              .replace(/…/g, '။')          // unicode ellipsis
+              .replace(/။\s+/g, '။')       // ။ နောက် extra space ဖြုတ်
+              .replace(/၊\s+/g, '၊')       // ၊ နောက် extra space ဖြုတ်
               .replace(/\s+/g, ' ')
               .trim();
 
