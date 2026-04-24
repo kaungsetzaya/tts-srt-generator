@@ -2348,16 +2348,20 @@ export default function TTSGenerator() {
                                 {/* Real-time Subtitle Preview */}
                                 {srtEnabled && activeJobId === null && (
                                   <div 
-                                    className="absolute bottom-8 left-0 right-0 flex justify-center pointer-events-none"
-                                    style={{ zIndex: 5 }}
+                                    className="absolute left-0 right-0 flex justify-center pointer-events-none"
+                                    style={{ 
+                                      zIndex: 5, 
+                                      bottom: `${Math.max(8, Math.min(80, srtMarginV * 0.6))}px`,
+                                      padding: '0 16px'
+                                    }}
                                   >
                                     <div
-                                      className="text-center px-4 py-2"
+                                      className="text-center"
                                       style={{
-                                        fontSize: `${Math.max(14, srtFontSize * 0.6)}px`,
+                                        fontSize: `${Math.max(12, Math.min(32, srtFontSize * 0.5))}px`,
                                         color: srtColor,
                                         fontWeight: 'bold',
-                                        textShadow: '0 2px 4px rgba(0,0,0,0.8)',
+                                        textShadow: '0 2px 4px rgba(0,0,0,0.8), 0 -1px 2px rgba(0,0,0,0.5)',
                                         background: srtBlurBg 
                                           ? srtBlurColor === 'black' 
                                             ? `rgba(0,0,0,${srtBlurOpacity / 100})`
@@ -2365,16 +2369,21 @@ export default function TTSGenerator() {
                                               ? `rgba(255,255,255,${srtBlurOpacity / 100})`
                                               : `rgba(128,128,128,${srtBlurOpacity / 100})`
                                           : 'transparent',
-                                        backdropFilter: srtBlurBg ? `blur(${Math.max(4, srtBlurOpacity / 10)}px)` : 'none',
-                                        borderRadius: srtBorderRadius === 'rounded' ? '12px' : '0px',
-                                        padding: `${Math.max(4, srtBoxPadding)}px ${Math.max(12, srtBoxPadding * 3)}px`,
-                                        width: srtFullWidth ? '90%' : 'auto',
-                                        margin: `0 ${srtMarginV / 3}%`,
+                                        backdropFilter: srtBlurBg ? `blur(${Math.max(2, srtBlurOpacity / 15)}px)` : 'none',
+                                        borderRadius: srtBorderRadius === 'rounded' ? '8px' : '0px',
+                                        padding: `${Math.max(2, srtBoxPadding)}px ${Math.max(8, srtBoxPadding * 2)}px`,
+                                        width: srtFullWidth ? 'calc(100% - 32px)' : 'auto',
+                                        maxWidth: '100%',
                                         wordWrap: 'break-word',
-                                        lineHeight: 1.4,
+                                        lineHeight: 1.3,
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        display: '-webkit-box',
+                                        WebkitLineClamp: 2,
+                                        WebkitBoxOrient: 'vertical',
                                       }}
                                     >
-                                      {lang === "mm" ? "ဤနေရာတွင် စာတန်းထိုးကို မြင်ရပါမည်" : "Subtitle preview text will appear here"}
+                                      {lang === "mm" ? "ဤနေရာတွင် စာတန်းထိုးကို မြင်ရပါမည်" : "Subtitle preview"}
                                     </div>
                                   </div>
                                 )}
