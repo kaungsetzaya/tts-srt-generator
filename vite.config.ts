@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { defineConfig, type Plugin, type ViteDevServer } from "vite";
 import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 
 // =============================================================================
 // Manus Debug Collector - Vite Plugin
@@ -150,7 +151,21 @@ function vitePluginManusDebugCollector(): Plugin {
   };
 }
 
-const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()];
+const plugins: Plugin[] = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()];
+
+// Sentry source map upload (production only, requires SENTRY_AUTH_TOKEN)
+if (process.env.SENTRY_AUTH_TOKEN) {
+  plugins.push(
+    sentryVitePlugin({
+      org: "lumix-studio",
+      project: "node-express",
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      sourcemaps: {
+        filesToDeleteAfterUpload: "**/*.map",
+      },
+    })
+  );
+}
 
 export default defineConfig({
   plugins,

@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "NODE_ENV=development tsx watch backend/_core/index.ts",
-    "build": "vite build && cp -r frontend/dist/* dist/public/ && esbuild backend/_core/index.ts --platform=node --bundle --format=cjs --outfile=dist/index.cjs --sourcemap --external:dotenv --external:fs --external:path --external:os --external:crypto --external:fs/promises --external:@sentry/profiling-node --external:@sentry-internal/node-cpu-profiler --alias:@shared/const=./dist/shared/const.ts --alias:@shared/types=./dist/shared/types.ts --alias:@shared/_core/errors=./dist/shared/_core/errors.ts && cp -r shared dist/",
+    "build": "vite build && cp -r frontend/dist/* dist/public/ && esbuild backend/_core/index.ts --platform=node --bundle --format=cjs --outfile=dist/index.cjs --sourcemap --external:dotenv --external:fs --external:path --external:os --external:crypto --external:fs/promises --external:@sentry/profiling-node --external:@sentry-internal/node-cpu-profiler --alias:@shared/const=./dist/shared/const.ts --alias:@shared/types=./dist/shared/types.ts --alias:@shared/_core/errors=./dist/shared/_core/errors.ts && cp -r shared dist/ && node scripts/upload-sentry-sourcemaps.js",
     "start": "NODE_ENV=production node dist/index.cjs",
     "check": "tsc --noEmit",
     "format": "prettier --write .",
@@ -17,8 +17,10 @@
     "reset-db": "tsx backend/reset-db.ts"
   },
   "dependencies": {
+    "@sentry/cli": "^3.4.0",
     "@sentry/node": "^10.50.0",
     "@sentry/profiling-node": "^10.50.0",
+    "@sentry/vite-plugin": "^5.2.0",
     "dotenv": "^17.2.2",
     "drizzle-orm": "^0.45.2"
   },

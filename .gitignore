@@ -134,3 +134,8 @@ ecosystem.cjs
 # Static downloads generated at runtime
 static/downloads/
 scratch.py
+
+# Sentry
+.sentryclirc
+.env.sentry
+
