@@ -970,6 +970,13 @@ export default function TTSGenerator() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeJobId]);
 
+  // Load video when result arrives
+  useEffect(() => {
+    if (dubResult?.videoUrl && dubResultVideoRef.current) {
+      dubResultVideoRef.current.load();
+    }
+  }, [dubResult?.videoUrl]);
+
   // Poll job status — just set activeJobId and let tRPC query handle polling
   const pollJobStatus = (jobId: string) => {
     setActiveJobId(jobId);
@@ -2972,7 +2979,7 @@ export default function TTSGenerator() {
                               key={dubResult.videoUrl}
                               ref={dubResultVideoRef}
                               controls
-                              crossOrigin="anonymous"
+                              preload="metadata"
                               className="w-full h-full"
                               style={{
                                 display: "block",
