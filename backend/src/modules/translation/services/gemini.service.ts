@@ -195,6 +195,9 @@ export class GeminiService {
         const allKeys = this.getAllKeys(userApiKey);
         if (allKeys.length === 0) throw new Error("No API key available.");
 
+        // ── Step 1: Full context ရဖို့ အရင် summary ယူ ──
+        const fullText = segments.map(s => s.text).join(' ');
+        
         const BATCH_SIZE = 15;
         const chunks: Segment[][] = [];
         for (let i = 0; i < segments.length; i += BATCH_SIZE) {
@@ -213,7 +216,13 @@ export class GeminiService {
             for (const model of MODELS) {
                 if (getDailyCount(model.id) >= model.rpd) continue;
                 for (const apiKey of allKeys) {
-                    chunkTranslated = await this.callBatchApi(linesWithDuration, model.id, apiKey);
+                    // ── Full context ပါတဲ့ batch call ──
+                    chunkTranslated = await this.callBatchApi(
+                        linesWithDuration,
+                        model.id,
+                        apiKey,
+                        fullText  // ← context pass လုပ်မယ်
+                    );
                     if (chunkTranslated && chunkTranslated.length === chunk.length) {
                         incrementQuota(model.id);
                         break;
@@ -231,15 +240,17 @@ export class GeminiService {
                         for (const model of MODELS) {
                             if (getDailyCount(model.id) >= model.rpd) continue;
                             for (const apiKey of allKeys) {
-                                singleResult = await this.callBatchApi(single, model.id, apiKey);
+                                singleResult = await this.callBatchApi(single, model.id, apiKey, fullText);
                                 if (singleResult?.[0]) { incrementQuota(model.id); break; }
                             }
                             if (singleResult?.[0]) break;
                         }
+                        const translated = singleResult?.[0];
+                        const hasBurmese = translated && /[\u1000-\u109F]/.test(translated);
                         results.push({
                             ...s,
-                            translatedText: singleResult?.[0]
-                                ? this.applyPhonetics(this.sanitize(singleResult[0]))
+                            translatedText: (translated && hasBurmese)
+                                ? this.applyPhonetics(this.sanitize(translated))
                                 : s.text
                         });
                     } catch {
@@ -247,12 +258,17 @@ export class GeminiService {
                     }
                 }
             } else {
-                results.push(...chunk.map((s, idx) => ({
-                    ...s,
-                    translatedText: chunkTranslated![idx]
-                        ? this.applyPhonetics(this.sanitize(chunkTranslated![idx]))
-                        : s.text
-                })));
+                results.push(...chunk.map((s, idx) => {
+                    const translatedVal = chunkTranslated![idx];
+                    const hasBurmese = translatedVal && /[\u1000-\u109F]/.test(translatedVal);
+                    if (!hasBurmese) console.warn(`[Gemini] Seg ${s.index} no Burmese text`);
+                    return {
+                        ...s,
+                        translatedText: (translatedVal && hasBurmese)
+                            ? this.applyPhonetics(this.sanitize(translatedVal))
+                            : s.text
+                    };
+                }));
             }
         }
         return results;
@@ -300,38 +316,38 @@ NEVER return the original English text unchanged.`;
     private async callBatchApi(
         lines: Array<{ text: string; duration_seconds: number }>,
         modelId: string,
-        apiKey: string
+        apiKey: string,
+        fullContext?: string  // ← ဒါ ထည့်
     ): Promise<string[] | null> {
         const url = `https://generativelanguage.googleapis.com/v1beta/${modelId}:generateContent?key=${apiKey}`;
 
+        // Context summary ဆောက်
+        const contextSection = fullContext
+            ? `VIDEO CONTEXT (ဒီ video တစ်ခုလုံးရဲ့ အကြောင်းအရာ):
+"${fullContext.slice(0, 500)}..."
+
+ဒီ context ကို နားလည်ပြီးမှ segment တစ်ခုချင်း translate လုပ်ပါ။
+`
+            : '';
+
         const systemPrompt = `You are a top Myanmar movie recap narrator on TikTok and Facebook.
 
+${contextSection}
 YOUR JOB: Translate English video segments into punchy, emotional Myanmar narration.
+- ဇာတ်လမ်းကို နားလည်ပြီး meaningful translation ဖြစ်ရမယ်
+- ဇာတ်ကောင်တွေ၊ အဖြစ်အပျက်တွေကို context နဲ့ ညှိပြီး translate လုပ်
+- Random translation မဟုတ်ဘဲ ဇာတ်လမ်းနဲ့ ကိုက်ညီရမယ်
 
-NARRATION RULES (အရေးကြီးဆုံး):
-- ရုပ်ရှင် recap channel လို dramatic ဖြစ်ရမယ် — သူငယ်ချင်းကို ဇာတ်လမ်းပြောပြသလို
-- ဇာတ်လမ်းရဲ့ feeling ကို ဆောင်ပေးရမယ် — suspense၊ emotion၊ action ပါရမယ်
-- တိုတိုနဲ့ impact ရှိရမယ် — မလိုအပ်တဲ့ စကားများများ မထည့်ပါနဲ့
+NARRATION STYLE:
+- ရုပ်ရှင် recap narrator လို dramatic ဖြစ်ရမယ်
+- သူငယ်ချင်းကို ဇာတ်လမ်းပြောပြသလို
+- "တာပေါ့"၊ "တာပဲ"၊ "လိုက်တာ"၊ "လေ"၊ "ဒါပေမယ့်"၊ "အဲ့ဒီ"
+- BANNED: "သည်"၊ "ပါသည်"၊ "ဖြစ်သည်"
+- NEVER return English
 
-VOCABULARY TO USE:
-- "တာပေါ့"၊ "တာပဲ"၊ "လိုက်တာ"၊ "လေ"၊ "သေးတယ်"၊ "နေမိတာ"
-- "ဒါပေမယ့်"၊ "အဲ့ဒီ"၊ "ချက်ချင်းပဲ"၊ "ဒါနဲ့..."၊ "အဲ့တော့..."
-- "ရုတ်တရက်"၊ "တစ်ချက်တည်း"၊ "မထင်မှတ်ဘဲ"
+TIMING: Each segment has duration_seconds — keep translation concise enough to fit.
 
-TIMING GUIDE (soft guideline မှ):
-- 2s → ~1 short sentence
-- 4s → ~2 short sentences  
-- 6s → ~3 short sentences
-- Keep each sentence 5-8 Myanmar words max
-
-BANNED:
-- "သည်"၊ "ပါသည်"၊ "ဖြစ်သည်"၊ "သနည်း"
-- Google Translate style flat sentences
-- Extra explanation not in original
-
-MUST: Always translate to Myanmar. Never return English.
-
-Output: JSON array of strings, same order as input.`;
+Output: JSON array of strings only.`;
 
         const body = {
             contents: [{ parts: [{ text: `TRANSLATE THESE SEGMENTS:\n${JSON.stringify(lines, null, 2)}` }] }],
