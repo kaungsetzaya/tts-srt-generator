@@ -2344,12 +2344,16 @@ export default function TTSGenerator() {
                               </div>
                             ) : (
                               <>
-                                <video ref={dubPreviewRef} src={dubPreviewUrl} controls className="w-full h-full rounded-lg" style={{ objectFit: 'contain', maxHeight: '400px' }} />
+                                <video ref={dubPreviewRef} src={dubPreviewUrl} controls className="w-full h-full rounded-lg" style={{ objectFit: 'contain', maxHeight: '400px', margin: '0 auto', display: 'block' }} />
                                 {/* Dubbing Loader Overlay */}
                                 {activeJobId !== null && (
                                   <div className="dubbing-loader-wrapper">
-                                    <div className="dubbing-loader"></div>
-                                    <div className="dubbing-loader-percent">{dubProgress}%</div>
+                                    <div className="dubbing-loader">
+                                      <div className="dubbing-loader-text">
+                                        <div className="dubbing-loader-label">Generating</div>
+                                        <div className="dubbing-loader-percent">{dubProgress}%</div>
+                                      </div>
+                                    </div>
                                   </div>
                                 )}
                               </>

@@ -12,7 +12,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-direction: column;
   z-index: 50;
   backdrop-filter: blur(8px);
   background: rgba(0,0,0,0.4);
@@ -26,6 +25,9 @@
   border-radius: 50%;
   background-color: transparent;
   animation: dubbing-loader-rotate 2s linear infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 @keyframes dubbing-loader-rotate {
@@ -52,14 +54,27 @@
   }
 }
 
+.dubbing-loader-text {
+  position: absolute;
+  z-index: 10;
+  text-align: center;
+  color: white;
+}
+
+.dubbing-loader-label {
+  font-family: "Inter", sans-serif;
+  font-size: 0.75em;
+  font-weight: 500;
+  opacity: 0.8;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+}
+
 .dubbing-loader-percent {
   font-family: "Inter", sans-serif;
-  font-size: 1.5em;
+  font-size: 1.8em;
   font-weight: 700;
-  color: white;
-  margin-top: 16px;
   text-shadow: 0 2px 8px rgba(0,0,0,0.5);
-  letter-spacing: 2px;
+  letter-spacing: 1px;
 }
 
 @import "tailwindcss";
