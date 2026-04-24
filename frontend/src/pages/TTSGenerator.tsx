@@ -2376,7 +2376,7 @@ export default function TTSGenerator() {
                                       <div
                                         className="text-center"
                                         style={{
-                                          fontSize: `${Math.max(10, Math.min(26, srtFontSize * 0.4))}px`,
+                                          fontSize: `${Math.max(12, Math.min(32, srtFontSize * 0.65))}px`,
                                           color: srtColor,
                                           fontWeight: 'bold',
                                           textShadow: '0 2px 4px rgba(0,0,0,0.9), 0 -1px 2px rgba(0,0,0,0.6)',
