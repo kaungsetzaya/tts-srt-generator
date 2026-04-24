@@ -44,34 +44,13 @@ video::-webkit-media-controls-mute-button {
   height: 140px;
   border-radius: 50%;
   background-color: transparent;
-  animation: dubbing-loader-rotate 2s linear infinite;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-@keyframes dubbing-loader-rotate {
-  0% {
-    transform: rotate(90deg);
-    box-shadow:
-      0 6px 12px 0 #fff inset,
-      0 12px 20px 0 #ad5fff inset,
-      0 40px 40px 0 #471eec inset;
-  }
-  50% {
-    transform: rotate(270deg);
-    box-shadow:
-      0 6px 12px 0 #fff inset,
-      0 12px 6px 0 #d60a47 inset,
-      0 30px 40px 0 #311e80 inset;
-  }
-  100% {
-    transform: rotate(450deg);
-    box-shadow:
-      0 6px 12px 0 #fff inset,
-      0 12px 20px 0 #ad5fff inset,
-      0 40px 40px 0 #471eec inset;
-  }
+  box-shadow:
+    0 6px 12px 0 #fff inset,
+    0 12px 20px 0 #ad5fff inset,
+    0 40px 40px 0 #471eec inset;
 }
 
 .dubbing-loader-text {
