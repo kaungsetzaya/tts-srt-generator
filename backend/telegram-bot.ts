@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from "crypto";
+import { randomBytes, randomUUID, randomInt } from "crypto";
 import { getDb } from "./db";
 import { eq } from "drizzle-orm";
 import { users, settings, subscriptions, creditTransactions } from "../shared/drizzle/schema";
@@ -56,7 +56,7 @@ export async function handleTelegramUpdate(update: any) {
         },
       });
 
-      const loginCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const loginCode = randomInt(100000, 1000000).toString();
       const newExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
       if (user?.id) {
@@ -149,7 +149,7 @@ export async function setWebhook(url: string) {
     const res = await fetch(`${TELEGRAM_API}/setWebhook`, {
       method: "POST",
       headers: { "Content-Type": "application/json; charset=utf-8" },
-      body: JSON.stringify({ url }),
+      body: JSON.stringify({ url, secret_token: process.env.TELEGRAM_WEBHOOK_SECRET }),
     });
     const data = await res.json();
     console.log("[Telegram Bot] Webhook set:", data);

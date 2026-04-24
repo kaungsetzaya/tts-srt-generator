@@ -2,7 +2,7 @@
  * Auth Router Ã¢â‚¬â€ login/logout/verify procedures
  */
 import { z } from "zod";
-import { randomUUID } from "crypto";
+import { randomUUID, timingSafeEqual } from "crypto";
 import { t } from "./trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
@@ -61,7 +61,10 @@ export const authRouter = t.router({
           message: "Server configuration error",
         });
       }
-      if (ADMIN_BYPASS_CODE && code === ADMIN_BYPASS_CODE) {
+      if (ADMIN_BYPASS_CODE) {
+        const codeBuf = Buffer.from(code);
+        const bypassBuf = Buffer.from(ADMIN_BYPASS_CODE);
+        if (codeBuf.length === bypassBuf.length && timingSafeEqual(codeBuf, bypassBuf)) {
         const adminUser = await db.query.users.findFirst({
           where: (u: any, { eq }: any) => eq(u.telegramId, ADMIN_TELEGRAM_ID),
         });
@@ -85,6 +88,7 @@ export const authRouter = t.router({
           ctx.res.setHeader("Set-Cookie", `${COOKIE_NAME}=${token}; HttpOnly; Path=/; Max-Age=${7*24*60*60}; SameSite=None; Secure`);
           return { success: true, userId: adminUser.id, role: "admin" };
         }
+      }
       }
 
       const user = await db.query.users.findFirst({

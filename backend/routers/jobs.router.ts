@@ -129,10 +129,13 @@ export const jobsRouter = t.router({
 
   getStatus: protectedProcedure
     .input(z.object({ jobId: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const job = await getJobAsync(input.jobId);
       if (!job) {
         return { status: "not_found" as const, progress: 0, message: "" };
+      }
+      if (job.userId !== ctx.user!.userId && ctx.user!.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
       }
       return {
         status: job.status,

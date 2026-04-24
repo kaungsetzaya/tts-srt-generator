@@ -18,7 +18,7 @@ import {
 } from "./security";
 import { validateEnv } from "./env";
 import { recoverInterruptedJobs } from "../jobs";
-import { createHmac } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 import { promises as fs, createReadStream, statSync } from "fs";
 
 async function startServer() {
@@ -95,6 +95,12 @@ async function startServer() {
   // Telegram Webhook (Telegram IP range only check optional)
   // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   app.post("/webhook/telegram", async (req, res) => {
+    const incoming = req.headers["x-telegram-bot-api-secret-token"];
+    const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
+    if (!secret || !incoming || incoming !== secret) {
+      res.status(403).json({ ok: false });
+      return;
+    }
     try {
       await handleTelegramUpdate(req.body);
       res.json({ ok: true });
@@ -140,7 +146,9 @@ async function startServer() {
       .digest('hex')
       .slice(0, 32);
 
-    if (signature !== expected) {
+    const sigBuf = Buffer.from(signature, "hex");
+    const expBuf = Buffer.from(expected, "hex");
+    if (sigBuf.length !== expBuf.length || !timingSafeEqual(sigBuf, expBuf)) {
       res.status(403).json({ error: "Invalid download signature" });
       return;
     }
