@@ -15,7 +15,6 @@ async function sendMessage(chatId: number, text: string) {
       body: JSON.stringify({
         chat_id: chatId,
         text,
-        parse_mode: "Markdown",
       }),
     });
     const data = await res.json();
@@ -120,7 +119,7 @@ export async function handleTelegramUpdate(update: any) {
         }
       }
 
-      const formattedMessage = `👋 မင်္ဂလာပါ ${firstName}!\n\nLUMIX Studio မှ ကြိုဆိုပါတယ်။ အကောင့်ဝင်ရန်အတွက် အောက်ပါ Verification Code ကို အသုံးပြုပေးပါ-\n\n🔢 Code: *${loginCode}*\n\n⏳ အချိန်ကန့်သတ်ချက်: ၁၀ မိနစ်အတွင်း အသုံးပြုရန်။\n\nကုဒ်အဆင်မပြေပါက သို့မဟုတ် သက်တမ်းကုန်သွားပါက /code ဟု ရိုက်နှိပ်ပြီး ကုဒ်အသစ် ထပ်မံရယူနိုင်ပါတယ်။`;
+      const formattedMessage = `👋 မင်္ဂလာပါ ${firstName}!\n\nLUMIX Studio မှ ကြိုဆိုပါတယ်။ အကောင့်ဝင်ရန်အတွက် အောက်ပါ Verification Code ကို အသုံးပြုပေးပါ-\n\n🔢 Code: ${loginCode}\n\n⏳ အချိန်ကန့်သတ်ချက်: ၁၀ မိနစ်အတွင်း အသုံးပြုရန်။\n\nကုဒ်အဆင်မပြေပါက သို့မဟုတ် သက်တမ်းကုန်သွားပါက /code ဟု ရိုက်နှိပ်ပြီး ကုဒ်အသစ် ထပ်မံရယူနိုင်ပါတယ်။`;
       await sendMessage(chatId, formattedMessage);
 
     } catch (error) {
