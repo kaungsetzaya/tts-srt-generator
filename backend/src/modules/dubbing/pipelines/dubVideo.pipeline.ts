@@ -139,10 +139,26 @@ export class DubVideoPipeline {
         options.userApiKey
       );
 
+      // ── English က ကျန်နေတဲ့ segments တွေ retry ──
+      const isEnglish = (t: string) => /^[a-zA-Z0-9\s.,!?'"()\-:;]+$/.test(t.trim());
+      const badSegs = translatedSegments.filter(s => s.translatedText.trim() && isEnglish(s.translatedText));
+
+      if (badSegs.length > 0) {
+        console.warn(`[Dub] ${badSegs.length} segments still English, retrying...`);
+        const retried = await geminiService.translateSegments(
+          badSegs.map(s => ({ index: s.index, start: s.start, end: s.end, text: s.text })),
+          options.userApiKey
+        );
+        for (const r of retried) {
+          const idx = translatedSegments.findIndex(s => s.index === r.index);
+          if (idx !== -1) translatedSegments[idx].translatedText = r.translatedText;
+        }
+      }
+
       // ── Step 4b: Merge short segments ──
       function mergeShortSegments(segs: typeof translatedSegments): ActiveSegment[] {
         const MIN_SLOT_MS = 1500;
-        const MAX_SLOT_MS = 5000;
+        const MAX_SLOT_MS = 3500; // ← 5000 မဟုတ်တော့ဘူး၊ 3.5s သာ
         if (segs.length === 0) return [];
         const filtered = segs.filter(s => s.translatedText.trim());
         const merged: ActiveSegment[] = [];

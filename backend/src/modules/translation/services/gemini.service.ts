@@ -189,8 +189,32 @@ private sanitize(text: string): string {
             }
 
             if (!chunkTranslated) {
-                // Fallback to original text if batch fails
-                results.push(...chunk.map(s => ({ ...s, translatedText: s.text })));
+                // Fallback: တစ်ခုချင်း retry လုပ်
+                console.warn(`[Gemini] Batch failed, retrying individually...`);
+                for (const s of chunk) {
+                    try {
+                        let singleResult: string[] | null = null;
+                        for (const model of MODELS) {
+                            if (getDailyCount(model.id) >= model.rpd) continue;
+                            for (const apiKey of allKeys) {
+                                singleResult = await this.callBatchApi([s.text], model.id, apiKey);
+                                if (singleResult?.[0]) {
+                                    incrementQuota(model.id);
+                                    break;
+                                }
+                            }
+                            if (singleResult?.[0]) break;
+                        }
+                        results.push({
+                            ...s,
+                            translatedText: singleResult?.[0]
+                                ? this.applyPhonetics(this.sanitize(singleResult[0]))
+                                : s.text
+                        });
+                    } catch {
+                        results.push({ ...s, translatedText: s.text });
+                    }
+                }
             } else {
                 results.push(...chunk.map((s, idx) => {
                     const translatedVal = chunkTranslated![idx];
@@ -223,7 +247,11 @@ STRICT STYLE RULES:
 5. **STRICT PUNCTUATION**: Use (၊) for pauses and (။) for sentence ends. NEVER use English (, .).
 6. **NO LITERARY BURMESE**: Strictly ban "သည်", "ပါသည်", "သနည်း".
 
-GOAL: The output must sound exactly like a high-quality Myanmar movie recap script.`;
+GOAL: The output must sound exactly like a high-quality Myanmar movie recap script.
+
+CRITICAL: You MUST translate ALL text to Myanmar/Burmese language.
+Even if the input is already in English, translate it to Myanmar.
+NEVER return the original English text unchanged.`;
 
         const body = {
             contents: [{ parts: [{ text: `Translate to Myanmar:\n\n${text}` }] }],
@@ -258,7 +286,11 @@ STRICT STYLE RULES:
 5. **STRICT PUNCTUATION**: Use (၊) for pauses and (။) for sentence ends. NEVER use English (, .).
 6. **NO LITERARY BURMESE**: Strictly ban "သည်", "ပါသည်", "သနည်း".
 
-GOAL: The output must sound exactly like a high-quality Myanmar movie recap script.`;
+GOAL: The output must sound exactly like a high-quality Myanmar movie recap script.
+
+CRITICAL: You MUST translate ALL text to Myanmar/Burmese language.
+Even if the input is already in English, translate it to Myanmar.
+NEVER return the original English text unchanged.`;
 
         const body = {
             contents: [{ parts: [{ text: `TEXT TO TRANSLATE (JSON Array):\n${JSON.stringify(lines)}` }] }],
