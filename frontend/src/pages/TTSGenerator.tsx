@@ -2326,10 +2326,10 @@ export default function TTSGenerator() {
 
 {/* ── STEP: Video Preview + Settings ── */}
                   {dubPreviewUrl && !dubResult && (
-                    <div className="flex flex-col lg:flex-row w-full">
+                    <div className="flex flex-col lg:flex-row lg:items-start w-full">
                       {/* Preview - Left on desktop, top on mobile */}
-                      <div className="w-full lg:w-1/2 p-2 lg:sticky lg:top-4 lg:self-start">
-                        <div className={box} style={{ background: cardBg, borderColor: cardBorder, boxShadow, position: 'relative' }}>
+                      <div className="w-full lg:w-1/2 p-2">
+                        <div className={`${box} lg:sticky lg:top-4`} style={{ background: cardBg, borderColor: cardBorder, boxShadow, position: 'relative' }}>
                           <div className="flex items-center justify-between px-2 pt-2">
                             <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>
                               {lang === "mm" ? "ဗီဒီယိုကြိုကြည့်" : "Video Preview"}
