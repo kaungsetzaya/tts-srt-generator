@@ -224,8 +224,39 @@ export class DubVideoPipeline {
 
         const durationMs = await ffmpegService.getAudioDurationMs(finalWav);
         const slotMs = (seg.end - seg.start) * 1000;
-        console.log(`[TTS] seg ${seg.index}: tts=${durationMs}ms slot=${slotMs.toFixed(0)}ms ratio=${(durationMs/slotMs).toFixed(2)}x`);
-        return { path: finalWav, durationMs, text: seg.translatedText, index: seg.index };
+        let finalText = seg.translatedText;
+        let finalDurationMs = durationMs;
+
+        // ratio 1.5x ကျော်ရင် တိုတိုပြန်ပြောင်း retry
+        if (durationMs / slotMs > 1.5) {
+          console.warn(`[TTS] seg ${seg.index} ratio=${(durationMs/slotMs).toFixed(2)}x too high, retrying with shorter text...`);
+          const shorterText = await geminiService.makeShorter(seg.translatedText, slotMs, options.userApiKey);
+          if (shorterText) {
+            const mp3Short  = path.join(tempDir, `tts_short_${seg.index}.mp3`);
+            const wavShort  = path.join(tempDir, `tts_short_${seg.index}.wav`);
+            let shortBuffer: Buffer;
+            if (isChar) {
+              const r = await ttsService.generateSpeechWithCharacter(shorterText, options.voice as CharacterKey, 1.0, "16:9", options.pitch ?? 0);
+              shortBuffer = r.audioBuffer;
+            } else {
+              const r = await ttsService.generateSpeech(shorterText, options.voice as VoiceKey, 1.0, options.pitch ?? 0, "16:9");
+              shortBuffer = r.audioBuffer;
+            }
+            await fs.writeFile(mp3Short, shortBuffer);
+            await ffmpegService.convertToWav(mp3Short, wavShort);
+            const shortDurMs = await ffmpegService.getAudioDurationMs(wavShort);
+            const newRatio = shortDurMs / slotMs;
+            console.log(`[TTS] seg ${seg.index} retry: ${shortDurMs}ms ratio=${newRatio.toFixed(2)}x`);
+            if (newRatio <= 1.5) {
+              finalWav = wavShort;
+              finalDurationMs = shortDurMs;
+              finalText = shorterText;
+            }
+          }
+        }
+
+        console.log(`[TTS] seg ${seg.index}: tts=${finalDurationMs}ms slot=${slotMs.toFixed(0)}ms ratio=${(finalDurationMs/slotMs).toFixed(2)}x`);
+        return { path: finalWav, durationMs: finalDurationMs, text: finalText, index: seg.index };
       }
 
       if (jobId) updateJob(jobId, { progress: 55, message: "Generating Myanmar voice..." });

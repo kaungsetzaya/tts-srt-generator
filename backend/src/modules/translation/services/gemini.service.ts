@@ -137,6 +137,36 @@ export class GeminiService {
     }
 
     /**
+     * Make text shorter to fit time slot
+     */
+    async makeShorter(text: string, slotMs: number, userApiKey?: string): Promise<string | null> {
+        const allKeys = this.getAllKeys(userApiKey);
+        const targetSyllables = Math.floor((slotMs / 1000) * 3);
+        
+        for (const model of MODELS) {
+            if (getDailyCount(model.id) >= model.rpd) continue;
+            for (const apiKey of allKeys) {
+                try {
+                    const url = `https://generativelanguage.googleapis.com/v1beta/${model.id}:generateContent?key=${apiKey}`;
+                    const body = {
+                        contents: [{ parts: [{ text: `Shorten this Myanmar text to fit ${targetSyllables} syllables max (${(slotMs/1000).toFixed(1)}s slot). Keep the key meaning. Return only the shortened Myanmar text, nothing else:\n\n${text}` }] }],
+                        systemInstruction: { parts: [{ text: `You are a Myanmar text editor. Shorten Myanmar dubbing text to fit exact time slots. Keep dramatic style. Return ONLY the shortened text.` }] }
+                    };
+                    const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+                    if (!res.ok) continue;
+                    const data = await res.json();
+                    const result = data.candidates?.[0]?.content?.parts?.[0]?.text || null;
+                    if (result) {
+                        incrementQuota(model.id);
+                        return this.applyPhonetics(this.sanitize(result));
+                    }
+                } catch {}
+            }
+        }
+        return null;
+    }
+
+    /**
      * Translates a full block of text (for Translation Pipeline).
      */
     async translateFullText(text: string, userApiKey?: string): Promise<string> {
@@ -274,27 +304,31 @@ NEVER return the original English text unchanged.`;
     ): Promise<string[] | null> {
         const url = `https://generativelanguage.googleapis.com/v1beta/${modelId}:generateContent?key=${apiKey}`;
 
-        const systemPrompt = `You are a Professional Myanmar Movie Recap Narrator for TikTok/Facebook/YouTube Shorts.
+        const systemPrompt = `You are a Myanmar Movie Recap Narrator for short video dubbing.
 
-TASK: Translate each segment to high-impact spoken Burmese dubbing.
+TIMING IS CRITICAL:
+- "duration_seconds" = the EXACT time slot your voice must fit in
+- Count your syllables before finalizing: ~3 syllables per second in Myanmar
+- Examples:
+  - 2s slot → max 6 syllables (e.g. "သေသွားပြီပေါ့" = 5 syllables ✓)
+  - 3s slot → max 9 syllables  
+  - 5s slot → max 15 syllables
+  - 7s slot → max 21 syllables
+- SHORT sentences with impact > long sentences that overflow
 
-TIMING CONSTRAINT:
-- Each segment has "duration_seconds" — speak naturally within that time
-- Do NOT over-expand. Do NOT cut too short. Match the feeling of the original pace.
+NARRATION STYLE:
+- စကားပြောဆိုသလို၊ dramatic ဖြစ်ရမယ်
+- "တာပေါ့"၊ "တာပဲ"၊ "လိုက်တာ"၊ "လေ"၊ "ဒါနဲ့..."၊ "အဲ့တော့..."
+- "ဒါပေမယ့်"၊ "အဲ့ဒီ"၊ tension အတွက် "..."
+- BANNED: "သည်"၊ "ပါသည်"၊ "ဖြစ်သည်"
+- NEVER return English
 
-NARRATION STYLE (အရေးကြီးဆုံး):
-- စကားပြောဆိုသလို၊ သူငယ်ချင်းကို ဇာတ်လမ်းပြောပြသလို ရေးပါ
-- ရုပ်ရှင် recap narrator လို dramatic ဖြစ်ရမယ်
-- Use: "တာပေါ့"၊ "တာပဲ"၊ "လိုက်တာ"၊ "လေ"၊ "သေးတယ်"၊ "နေမိတာ"၊ "သွားတာပဲ"
-- Use: "ဒါပေမယ့်"၊ "အဲ့ဒီ"၊ "ချက်ချင်းပဲ"၊ "ဒါနဲ့..."၊ "အဲ့တော့..."
-- Tension တွေအတွက် "..." သုံးပါ
-- မြန်မာရုပ်ရှင် recap channel တွေလို စကားပြောပုံစံ
+PRIORITY ORDER:
+1. FIT THE TIME SLOT (အရေးအကြီးဆုံး)
+2. Sound natural and dramatic
+3. Convey the meaning
 
-STRICT RULES:
-- Punctuation: (၊) for pauses၊ (။) for sentence ends
-- BANNED: "သည်"၊ "ပါသည်"၊ "သနည်း"၊ "ဖြစ်သည်"
-- NEVER return English — always translate to Myanmar
-- Output JSON array of strings only`;
+Output: JSON array of strings only.`;
 
         const body = {
             contents: [{ parts: [{ text: `TRANSLATE THESE SEGMENTS:\n${JSON.stringify(lines, null, 2)}` }] }],
