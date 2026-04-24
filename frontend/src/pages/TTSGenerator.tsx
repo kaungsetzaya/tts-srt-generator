@@ -2365,18 +2365,16 @@ export default function TTSGenerator() {
                                   {/* Real-time Subtitle Preview */}
                                   {srtEnabled && activeJobId === null && (
                                     <div
-                                      className="absolute left-1/2 -translate-x-1/2 flex justify-center pointer-events-none"
+                                      className="absolute left-0 right-0 flex justify-center pointer-events-none px-4"
                                       style={{
                                         zIndex: 5,
                                         bottom: `${Math.max(2, Math.min(40, srtMarginV * 0.4))}%`,
-                                        width: '90%',
-                                        maxWidth: '90%'
                                       }}
                                     >
                                       <div
-                                        className="text-center"
+                                        className="text-center w-full"
                                         style={{
-                                          fontSize: `${Math.max(12, Math.min(32, srtFontSize * 0.65))}px`,
+                                          fontSize: `${Math.max(10, Math.min(24, srtFontSize * 0.5))}px`,
                                           color: srtColor,
                                           fontWeight: 'bold',
                                           textShadow: '0 2px 4px rgba(0,0,0,0.9), 0 -1px 2px rgba(0,0,0,0.6)',
@@ -2390,10 +2388,11 @@ export default function TTSGenerator() {
                                           backdropFilter: srtBlurBg ? `blur(${Math.max(2, srtBlurOpacity / 15)}px)` : 'none',
                                           borderRadius: srtBorderRadius === 'rounded' ? '6px' : '0px',
                                           padding: `${Math.max(2, srtBoxPadding)}px ${Math.max(6, srtBoxPadding * 1.5)}px`,
-                                          width: srtFullWidth ? '100%' : 'auto',
+                                          width: srtFullWidth ? '100%' : 'fit-content',
                                           maxWidth: '100%',
+                                          boxSizing: 'border-box',
                                           wordWrap: 'break-word',
-                                          wordBreak: 'break-word',
+                                          wordBreak: 'keep-all',
                                           overflowWrap: 'break-word',
                                           lineHeight: 1.25,
                                           overflow: 'hidden',
