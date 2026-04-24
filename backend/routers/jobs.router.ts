@@ -30,7 +30,7 @@ export const jobsRouter = t.router({
         voice: z.enum(ALL_VOICE_IDS),
         srtEnabled: z.boolean().optional().default(true),
         srtFontSize: z.number().optional().default(24),
-        srtColor: z.string().optional().default("#ffffff"),
+        srtColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional().default("#ffffff"),
         srtMarginV: z.number().optional().default(30),
         srtBlurBg: z.boolean().optional().default(true),
         srtBlurSize: z.number().optional().default(8),
@@ -103,7 +103,7 @@ export const jobsRouter = t.router({
       url: z.string().optional(),
       videoBase64: z.string().optional(),
       filename: z.string().optional(),
-      userApiKey: z.string().optional(),
+      userApiKey: z.string().regex(/^[A-Za-z0-9_\-]{20,100}$/).optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.user!.userId;

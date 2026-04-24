@@ -6,11 +6,12 @@ import { TRPCError } from "@trpc/server";
 import { randomUUID } from "crypto";
 import { getDb } from "../db";
 import { users, creditTransactions } from "../../shared/drizzle/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql, and, gte } from "drizzle-orm";
 
 /**
- * Atomically check balance and deduct credits within a single DB transaction.
- * Prevents double-spend under concurrent requests.
+ * Atomically check balance and deduct credits within a single DB statement.
+ * Uses `credits - amount` with a WHERE clause to prevent double-spend
+ * under concurrent requests (no read-then-write race).
  */
 export async function deductCredits(
   userId: string,
@@ -23,27 +24,17 @@ export async function deductCredits(
 
   try {
     await db.transaction(async (tx: any) => {
-      const [user] = await tx
-        .select()
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
-      if (!user) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
-      }
+      const result = await tx
+        .update(users)
+        .set({ credits: sql`credits - ${amount}` })
+        .where(and(eq(users.id, userId), gte(users.credits, amount)));
 
-      const currentCredits = user.credits ?? 0;
-      if (currentCredits < amount) {
+      if (result.rowsAffected === 0) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: `Insufficient credits. Need ${amount}, have ${currentCredits}`,
+          message: `Insufficient credits. Need ${amount}.`,
         });
       }
-
-      await tx
-        .update(users)
-        .set({ credits: currentCredits - amount })
-        .where(eq(users.id, userId));
 
       await tx.insert(creditTransactions).values({
         id: randomUUID(),

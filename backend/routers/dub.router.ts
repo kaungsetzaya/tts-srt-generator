@@ -17,7 +17,7 @@ export const dubRouter = t.router({
         speed: z.number().optional(),
         pitch: z.number().optional(),
         srtEnabled: z.boolean().optional(),
-        userApiKey: z.string().optional(),
+        userApiKey: z.string().regex(/^[A-Za-z0-9_\-]{20,100}$/).optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {

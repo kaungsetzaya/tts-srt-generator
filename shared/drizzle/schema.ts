@@ -1,4 +1,4 @@
-﻿import { mysqlTable, varchar, timestamp, text, int, boolean, datetime } from "drizzle-orm/mysql-core";
+﻿import { mysqlTable, varchar, timestamp, text, int, boolean, datetime, check } from "drizzle-orm/mysql-core";
 import { sql } from "drizzle-orm";
 
 export const users = mysqlTable("users", {
@@ -7,12 +7,12 @@ export const users = mysqlTable("users", {
   telegramUsername: varchar("telegram_username", { length: 100 }),
   telegramFirstName: varchar("telegram_first_name", { length: 100 }),
   telegramCode: varchar("telegram_code", { length: 6 }),
-  // Ã°Å¸â€Â Dynamic OTP Ã¢â‚¬â€ code expiry (10 minutes)
+  // 🔐 Dynamic OTP — code expiry (10 minutes)
   telegramCodeExpiresAt: datetime("telegram_code_expires_at"),
   role: varchar("role", { length: 20 }).default("user"),
   bannedAt: datetime("banned_at"),
   credits: int("credits").default(0),
-  // Ã°Å¸â€Â One-Device Session Ã¢â‚¬â€ login Ã¡â‚¬ÂÃ¡â‚¬Â­Ã¡â‚¬Â¯Ã¡â‚¬â€žÃ¡â‚¬ÂºÃ¡â‚¬Â¸ token Ã¡â‚¬Â¡Ã¡â‚¬Å¾Ã¡â‚¬â€¦Ã¡â‚¬ÂºÃ¡â‚¬â€˜Ã¡â‚¬Â¯Ã¡â‚¬ÂÃ¡â‚¬ÂºÃ¡â‚¬â€¢Ã¡â‚¬Â¼Ã¡â‚¬Â®Ã¡â‚¬Â¸ JWT Ã¡â‚¬â€˜Ã¡â‚¬Â² Ã¡â‚¬â€˜Ã¡â‚¬Å Ã¡â‚¬Â·Ã¡â‚¬ÂºÃ¡â‚¬Å¾Ã¡â‚¬Å Ã¡â‚¬Âº
+  // 🔐 One-Device Session — login token ကွဲ JWT ထဲ ထည့်ထား
   sessionToken: varchar("session_token", { length: 36 }),
   lastLoginAt: datetime("last_login_at"),
   // OAuth fields
@@ -21,9 +21,13 @@ export const users = mysqlTable("users", {
   email: varchar("email", { length: 255 }),
   loginMethod: varchar("login_method", { length: 50 }),
   lastSignedIn: datetime("last_signed_in"),
+  // 🔐 Trial grant gate — prevents double-grant across bot + auth paths
+  trialGrantedAt: datetime("trial_granted_at"),
   createdAt: datetime("created_at").default(sql`(CURRENT_TIMESTAMP)`),
   updatedAt: datetime("updated_at").default(sql`(CURRENT_TIMESTAMP)`),
-});
+}, (table) => ({
+  creditsNonNegative: check("credits_non_negative", sql`${table.credits} >= 0`),
+}));
 
 // Type exports
 export type User = typeof users.$inferSelect;

@@ -8,7 +8,7 @@ import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
 import { checkRateLimit, clearRateLimit } from "../_core/rateLimit";
 import { users, creditTransactions, settings } from "../../shared/drizzle/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 import { SignJWT } from "jose";
 import { COOKIE_NAME } from "@shared/const";
 
@@ -106,6 +106,15 @@ export const authRouter = t.router({
         });
       }
 
+      // Per-user rate limit (SEC-13): max 10 attempts per user / 15 min
+      const userRateLimitKey = `verify_user_${user.id}`;
+      if (!checkRateLimit(userRateLimitKey, 10, 15 * 60 * 1000)) {
+        throw new TRPCError({
+          code: "TOO_MANY_REQUESTS",
+          message: "Too many attempts for this account. Please request a new code.",
+        });
+      }
+
       clearRateLimit(rateLimitKey);
 
       const sessionToken = randomUUID();
@@ -126,17 +135,18 @@ export const authRouter = t.router({
         })
         .where(eq(users.id, user.id));
 
-      // Grant trial credits on first login
+      // Grant trial credits on first login (atomic gate via trialGrantedAt)
       try {
-        const existingTx = await db
-          .select()
-          .from(creditTransactions)
-          .where(eq(creditTransactions.userId, user.id))
-          .limit(1);
-        if (existingTx.length === 0) {
+        if (!user.trialGrantedAt) {
           const [settRow] = await db.select().from(settings).where(eq(settings.keyName, "trial_credits")).limit(1);
           const trialCredits = parseInt((settRow?.value as string) ?? "15");
-          await db.update(users).set({ credits: (user.credits ?? 0) + trialCredits }).where(eq(users.id, user.id));
+          await db
+            .update(users)
+            .set({
+              credits: sql`credits + ${trialCredits}`,
+              trialGrantedAt: new Date(),
+            })
+            .where(and(eq(users.id, user.id), sql`trial_granted_at IS NULL`));
           await db.insert(creditTransactions).values({
             id: randomUUID(),
             userId: user.id,

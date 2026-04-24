@@ -97,6 +97,7 @@ export async function handleTelegramUpdate(update: any) {
           telegramCode: loginCode,
           telegramCodeExpiresAt: newExpiresAt,
           credits: trialCredits,
+          trialGrantedAt: isTrialActive && trialCredits > 0 ? new Date() : undefined,
         });
 
         if (isTrialActive && trialCredits > 0) {
