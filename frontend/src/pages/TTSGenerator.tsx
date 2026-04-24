@@ -2315,15 +2315,16 @@ export default function TTSGenerator() {
 {/* ── STEP: Video Preview + Settings ── */}
                   {dubPreviewUrl && !dubResult && (
                     <div className="relative w-full">
-                      {/* Video Preview - FIXED on left side */}
-                      <div className="fixed left-[280px] top-20 w-[400px] z-30 hidden lg:block">
-                        <div className="space-y-4 pr-4">
+                      {/* Video Preview - nearly full screen on left */}
+                      <div className="fixed left-0 top-16 bottom-0 w-[55%] z-25 hidden lg:block">
+                        <div className="h-full p-4">
                           <div
                             className={box}
                             style={{
                               background: cardBg,
                               borderColor: cardBorder,
                               boxShadow,
+                              height: '100%',
                             }}
                           >
                             <div className="flex items-center justify-between">
@@ -2334,14 +2335,14 @@ export default function TTSGenerator() {
                                 ✕
                               </button>
                             </div>
-                            <div className="flex justify-center mt-2">
+                            <div className="flex justify-center items-center h-[calc(100%-40px)]">
                               {dubPreviewUrl === "loading" || dubPreviewMutation.isPending ? (
-                                <div className="w-full rounded-xl flex flex-col items-center justify-center gap-3 py-14" style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}`, minHeight: "180px" }}>
+                                <div className="w-full rounded-xl flex flex-col items-center justify-center gap-3" style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}`, minHeight: "200px" }}>
                                   <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
                                   <span className="text-xs font-semibold" style={{ color: subtextColor }}>{lang === "mm" ? "ဗီဒီယို ပြင်ဆင်နေသည်..." : "Preparing preview..."}</span>
                                 </div>
                               ) : (
-                                <video ref={dubPreviewRef} src={dubPreviewUrl} controls className="w-full rounded-lg" style={{ maxHeight: "280px" }} />
+                                <video ref={dubPreviewRef} src={dubPreviewUrl} controls className="w-full h-full object-contain rounded-lg" />
                               )}
                             </div>
                           </div>
@@ -2349,7 +2350,7 @@ export default function TTSGenerator() {
                       </div>
 
                       {/* Settings - scrolls on right */}
-                      <div className="lg:ml-[400px] space-y-4">
+                      <div className="lg:ml-[55%] w-full space-y-4 pl-4">
 
                       {/* ── ACCORDION: Voice Selection ── */}
                       <div
