@@ -157,8 +157,9 @@ export class DubVideoPipeline {
 
       // ── Step 4b: Merge short segments ──
       function mergeShortSegments(segs: typeof translatedSegments): ActiveSegment[] {
-        const MIN_SLOT_MS = 1500;
-        const MAX_SLOT_MS = 3500; // ← 5000 မဟုတ်တော့ဘူး၊ 3.5s သာ
+        const MIN_SLOT_MS = 2000;   // ← 1500 → 2000
+        const MAX_SLOT_MS = 6000;   // ← 3500 → 6000
+        const MAX_GAP_SEC = 1.5;    // ← 0.5 → 1.5  ← ဒါပဲ အဓိက
         if (segs.length === 0) return [];
         const filtered = segs.filter(s => s.translatedText.trim());
         const merged: ActiveSegment[] = [];
@@ -167,7 +168,11 @@ export class DubVideoPipeline {
           const currentSlotMs = (current.end - current.start) * 1000;
           const gap = filtered[i].start - current.end;
           const mergedSlotMs = (filtered[i].end - current.start) * 1000;
-          if (currentSlotMs < MIN_SLOT_MS && gap < 0.5 && mergedSlotMs <= MAX_SLOT_MS) {
+          const shouldMerge =
+            currentSlotMs < MIN_SLOT_MS &&
+            gap < MAX_GAP_SEC &&        // ← 1.5s ထိ gap ရှိရင် merge လုပ်
+            mergedSlotMs <= MAX_SLOT_MS;
+          if (shouldMerge) {
             current = {
               ...current,
               end: filtered[i].end,
