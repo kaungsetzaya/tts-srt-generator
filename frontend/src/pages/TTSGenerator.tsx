@@ -2316,7 +2316,7 @@ export default function TTSGenerator() {
                   {dubPreviewUrl && !dubResult && (
                     <div className="relative w-full">
                       {/* Video Preview - on left side, below header */}
-                      <div className="lg:sticky lg:top-16 lg:left-0 lg:w-[40%] lg:float-left lg:mr-4 mb-4">
+                      <div className="lg:sticky lg:top-16 lg:left-0 lg:w-[40%] lg:float-left lg:mr-4 mb-4 z-30">
                         <div className="p-2">
                           <div
                             className={box}
