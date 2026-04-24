@@ -1,4 +1,4 @@
-﻿import { randomBytes, randomUUID } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
 import { getDb } from "./db";
 import { eq } from "drizzle-orm";
 import { users, settings, subscriptions, creditTransactions } from "../shared/drizzle/schema";
@@ -40,7 +40,7 @@ export async function handleTelegramUpdate(update: any) {
     try {
       const db = await getDb();
       if (!db) {
-        await sendMessage(chatId, "Ã¢Å¡Â Ã¯Â¸Â Database unavailable.");
+        await sendMessage(chatId, "⚠️ Database unavailable.");
         return;
       }
 
@@ -56,7 +56,6 @@ export async function handleTelegramUpdate(update: any) {
         },
       });
 
-      // ALWAYS generate a new code for every request to ensure it works
       const loginCode = Math.floor(100000 + Math.random() * 900000).toString();
       const newExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
@@ -66,7 +65,6 @@ export async function handleTelegramUpdate(update: any) {
           telegramCodeExpiresAt: newExpiresAt,
         }).where(eq(users.id, user.id));
       } else {
-        // Check trial settings - give trial credits to new users if enabled
         let isTrialActive = false;
         let trialCredits = 0;
         let trialDays = 7;
@@ -84,10 +82,9 @@ export async function handleTelegramUpdate(update: any) {
           if (autoTrialEnabled && isDateValid) {
             isTrialActive = true;
             trialCredits = parseInt(settingsObj.trialCredits) || 15;
-            trialDays = 3650; // Lifetime (10 years) for credit-based system
+            trialDays = 3650;
           }
         } catch {
-          // default to no trial
         }
 
         const newUserId = randomBytes(16).toString("hex");
@@ -103,7 +100,6 @@ export async function handleTelegramUpdate(update: any) {
         });
 
         if (isTrialActive && trialCredits > 0) {
-          // 1) Add Subscription
           await db.insert(subscriptions).values({
             id: randomUUID(),
             userId: newUserId,
@@ -114,7 +110,6 @@ export async function handleTelegramUpdate(update: any) {
             paymentMethod: "free",
           });
 
-          // 2) Log Credit Transaction
           await db.insert(creditTransactions).values({
             id: randomUUID(),
             userId: newUserId,
@@ -125,15 +120,15 @@ export async function handleTelegramUpdate(update: any) {
         }
       }
 
-      const formattedMessage = `Ã°Å¸â€˜â€¹ Ã¡â‚¬â„¢Ã¡â‚¬â€žÃ¡â‚¬ÂºÃ¡â‚¬Â¹Ã¡â‚¬â€šÃ¡â‚¬Å“Ã¡â‚¬Â¬Ã¡â‚¬â€¢Ã¡â‚¬Â«, ${firstName}!\n\nÃ°Å¸â€â€˜ *Ã¡â‚¬Å¾Ã¡â‚¬â€žÃ¡â‚¬Â·Ã¡â‚¬Âº login code:*\n\n\`${loginCode}\`\n\nÃ¢ÂÂ° Code Ã¡â‚¬Å¾Ã¡â‚¬â‚¬Ã¡â‚¬ÂºÃ¡â‚¬ÂÃ¡â‚¬â„¢Ã¡â‚¬ÂºÃ¡â‚¬Â¸: *Ã¡ÂÂÃ¡Ââ‚¬ Ã¡â‚¬â„¢Ã¡â‚¬Â­Ã¡â‚¬â€Ã¡â‚¬â€¦Ã¡â‚¬Âº*\nÃ¡â‚¬â€™Ã¡â‚¬Â® code Ã¡â‚¬â‚¬Ã¡â‚¬Â­Ã¡â‚¬Â¯ ${APP_URL} Ã¡â‚¬â„¢Ã¡â‚¬Â¾Ã¡â‚¬Â¬ login Ã¡â‚¬ÂÃ¡â‚¬â€žÃ¡â‚¬ÂºÃ¡â‚¬â€“Ã¡â‚¬Â­Ã¡â‚¬Â¯Ã¡â‚¬Â· Ã¡â‚¬Å¾Ã¡â‚¬Â¯Ã¡â‚¬Â¶Ã¡â‚¬Â¸Ã¡â‚¬â€¢Ã¡â‚¬Â«Ã¡Ââ€¹\n\nÃ¢Å¡Â Ã¯Â¸Â Code Ã¡â‚¬Å¾Ã¡â‚¬â‚¬Ã¡â‚¬ÂºÃ¡â‚¬ÂÃ¡â‚¬â„¢Ã¡â‚¬ÂºÃ¡â‚¬Â¸Ã¡â‚¬â‚¬Ã¡â‚¬Â¯Ã¡â‚¬â€Ã¡â‚¬ÂºÃ¡â‚¬â€ºÃ¡â‚¬â€žÃ¡â‚¬Âº /code Ã¡â‚¬â‚¬Ã¡â‚¬Â­Ã¡â‚¬Â¯ Ã¡â‚¬â€˜Ã¡â‚¬â€¢Ã¡â‚¬ÂºÃ¡â‚¬â€Ã¡â‚¬Â¾Ã¡â‚¬Â­Ã¡â‚¬â€¢Ã¡â‚¬ÂºÃ¡â‚¬â€¢Ã¡â‚¬Â«!`;
+      const formattedMessage = `👋 မင်္ဂလာပါ ${firstName}!\n\nLUMIX Studio မှ ကြိုဆိုပါတယ်။ အကောင့်ဝင်ရန်အတွက် အောက်ပါ Verification Code ကို အသုံးပြုပေးပါ-\n\n🔢 Code: *${loginCode}*\n\n⏳ အချိန်ကန့်သတ်ချက်: ၁၀ မိနစ်အတွင်း အသုံးပြုရန်။\n\nကုဒ်အဆင်မပြေပါက သို့မဟုတ် သက်တမ်းကုန်သွားပါက /code ဟု ရိုက်နှိပ်ပြီး ကုဒ်အသစ် ထပ်မံရယူနိုင်ပါတယ်။`;
       await sendMessage(chatId, formattedMessage);
 
     } catch (error) {
       console.error("[Telegram Login Code Error]", error);
-      await sendMessage(chatId, "Ã¢ÂÅ’ Ã¡â‚¬Â¡Ã¡â‚¬â„¢Ã¡â‚¬Â¾Ã¡â‚¬Â¬Ã¡â‚¬Â¸Ã¡â‚¬ÂÃ¡â‚¬â€¦Ã¡â‚¬ÂºÃ¡â‚¬ÂÃ¡â‚¬Â¯Ã¡â‚¬ÂÃ¡â‚¬Â¯Ã¡â‚¬â€“Ã¡â‚¬Â¼Ã¡â‚¬â€¦Ã¡â‚¬ÂºÃ¡â‚¬Å¾Ã¡â‚¬Â½Ã¡â‚¬Â¬Ã¡â‚¬Â¸Ã¡â‚¬â€¢Ã¡â‚¬Â«Ã¡â‚¬ÂÃ¡â‚¬Å¡Ã¡â‚¬ÂºÃ¡Ââ€¹ Ã¡â‚¬ÂÃ¡â‚¬ÂÃ¡â‚¬â€Ã¡â‚¬Â±Ã¡â‚¬â„¢Ã¡â‚¬Â¾ Ã¡â‚¬â€˜Ã¡â‚¬â€¢Ã¡â‚¬ÂºÃ¡â‚¬â‚¬Ã¡â‚¬Â¼Ã¡â‚¬Â­Ã¡â‚¬Â¯Ã¡â‚¬Â¸Ã¡â‚¬â€¦Ã¡â‚¬Â¬Ã¡â‚¬Â¸Ã¡â‚¬â‚¬Ã¡â‚¬Â¼Ã¡â‚¬Å Ã¡â‚¬Â·Ã¡â‚¬ÂºÃ¡â‚¬â€¢Ã¡â‚¬Â±Ã¡â‚¬Â¸Ã¡â‚¬â€¢Ã¡â‚¬Â«Ã¡Ââ€¹");
+      await sendMessage(chatId, "⚠️ စနစ်တွင် အမှားအယွင်းရှိနေပါသည်။ ကျေးဇူးပြု၍ ခဏလောက်စောင့်ပြီးမှ ထပ်မံကြိုးစားကြည့်ပေးပါ။");
     }
   } else {
-    await sendMessage(chatId, "login code Ã¡â‚¬â€ºÃ¡â‚¬Å¡Ã¡â‚¬Â°Ã¡â‚¬â€“Ã¡â‚¬Â­Ã¡â‚¬Â¯Ã¡â‚¬Â· /code Ã¡â‚¬â‚¬Ã¡â‚¬Â­Ã¡â‚¬Â¯ Ã¡â‚¬â€ºÃ¡â‚¬Â­Ã¡â‚¬Â¯Ã¡â‚¬â‚¬Ã¡â‚¬ÂºÃ¡â‚¬â€¢Ã¡â‚¬Â±Ã¡â‚¬Â¸Ã¡â‚¬â€¢Ã¡â‚¬Â«Ã¡Ââ€¹");
+    await sendMessage(chatId, "Login code ရယူလိုပါက /code ဟု ရိုက်နှိပ်ပေးပါ။");
   }
 }
 
