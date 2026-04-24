@@ -2347,8 +2347,8 @@ export default function TTSGenerator() {
                         </div>
                       </div>
 
-                      {/* Settings - Right Side (scrollable) */}
-                      <div className="lg:w-[55%] flex-1 min-w-0 space-y-4 overflow-y-auto max-h-[calc(100vh-8rem)]">
+                      {/* Settings - Right Side (scrollable inside flex) */}
+                      <div className="lg:w-[55%] flex-1 min-w-0 space-y-4 lg:overflow-y-auto lg:h-[calc(100vh-8rem)]">
 
                       {/* ── ACCORDION: Voice Selection ── */}
                       <div
