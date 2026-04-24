@@ -2314,9 +2314,9 @@ export default function TTSGenerator() {
 
 {/* ── STEP: Video Preview + Settings ── */}
                   {dubPreviewUrl && !dubResult && (
-                    <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-80px)]">
-                      {/* Video Preview - Left Side (sticky, constrained height) */}
-                      <div className="lg:w-[45%] lg:sticky lg:top-0 h-full flex flex-col shrink-0">
+                    <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-100px)] overflow-hidden">
+                      {/* Video Preview - Left Side (Fixed) */}
+                      <div className="hidden lg:flex lg:w-[45%] lg:flex-col shrink-0">
                         <div
                           className={box}
                           style={{
@@ -2337,7 +2337,6 @@ export default function TTSGenerator() {
                             </button>
                           </div>
                           
-                          {/* Video Container - Strictly contained */}
                           <div className="flex-1 overflow-hidden flex items-center justify-center p-2">
                             {dubPreviewUrl === "loading" || dubPreviewMutation.isPending ? (
                               <div className="w-full h-full rounded-xl flex flex-col items-center justify-center gap-3" style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}` }}>
@@ -2351,8 +2350,8 @@ export default function TTSGenerator() {
                         </div>
                       </div>
 
-                      {/* Settings - Right Side (scrollable) */}
-                      <div className="lg:w-[55%] h-full overflow-y-auto space-y-4 pr-1">
+                      {/* Settings - Right Side (Scrollable) */}
+                      <div className="w-full lg:w-[55%] h-full overflow-y-auto space-y-4 pr-1">
 
                       {/* ── ACCORDION: Voice Selection ── */}
                       <div
