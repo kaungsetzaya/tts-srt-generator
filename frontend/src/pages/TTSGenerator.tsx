@@ -2654,86 +2654,7 @@ export default function TTSGenerator() {
                             </div>
                           </div>
 
-                          {/* ── Group: Layout ── */}
-                          <div className="p-3 rounded-2xl" style={{
-                            background: isDark ? "rgba(255,255,255,0.03)" : "rgba(192,111,48,0.03)",
-                            backdropFilter: "blur(12px)",
-                            WebkitBackdropFilter: "blur(12px)",
-                            border: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "rgba(192,111,48,0.08)"}`,
-                          }}>
-                            <div className="section-header">
-                              <span>◈</span>
-                              <span>{lang === "mm" ? "အနေအထား" : "LAYOUT"}</span>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                              {/* Box Height */}
-                              <div>
-                                <div className="flex justify-between items-center mb-2">
-                                  <span className="text-xs font-semibold" style={{ color: subtextColor }}>
-                                    {lang === "mm" ? "အမြင့်" : "Height"}
-                                  </span>
-                                  <span className="text-xs font-bold" style={{ color: accent }}>
-                                    {srtBoxPadding}px
-                                  </span>
-                                </div>
-                                <input
-                                  type="range"
-                                  min="2"
-                                  max="20"
-                                  value={srtBoxPadding}
-                                  onChange={e => setSrtBoxPadding(Number(e.target.value))}
-                                  className="premium-slider w-full"
-                                />
-                              </div>
-
-                              {/* Position */}
-                              <div>
-                                <div className="flex justify-between items-center mb-2">
-                                  <span className="text-xs font-semibold" style={{ color: subtextColor }}>
-                                    {lang === "mm" ? "အနေအထား" : "Position"}
-                                  </span>
-                                  <span className="text-[10px] font-semibold" style={{ color: subtextColor, opacity: 0.8 }}>
-                                    {lang === "mm" ? "အောက် > အပေါ်" : "Bottom > Top"} ({srtMarginV}%)
-                                  </span>
-                                </div>
-                                <input
-                                  type="range"
-                                  min="0"
-                                  max="100"
-                                  value={srtMarginV}
-                                  onChange={e => setSrtMarginV(Number(e.target.value))}
-                                  className="premium-slider w-full"
-                                />
-                              </div>
-                            </div>
-
-                            {/* Full Width Toggle */}
-                            <div className="flex items-center justify-between mt-3 py-2.5 px-3 rounded-xl" style={{
-                              background: isDark ? "rgba(255,255,255,0.03)" : "rgba(192,111,48,0.03)",
-                              border: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "rgba(192,111,48,0.08)"}`,
-                            }}>
-                              <span className="text-xs font-semibold" style={{ color: subtextColor }}>
-                                {lang === "mm" ? "အပြည့်အစုံ" : "Full Width"}
-                              </span>
-                              <button
-                                onClick={() => setSrtFullWidth(!srtFullWidth)}
-                                className="relative w-11 h-6 rounded-full transition-all duration-300 flex-shrink-0 border-2 border-transparent"
-                                style={{
-                                  background: srtFullWidth
-                                    ? "linear-gradient(135deg, #C06F30, #F4B34F)"
-                                    : isDark ? "rgba(255,255,255,0.1)" : "#E5E0D8",
-                                  boxShadow: srtFullWidth ? "0 2px 8px rgba(192,111,48,0.25)" : "inset 0 1px 3px rgba(0,0,0,0.1)",
-                                }}
-                              >
-                                <div
-                                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${srtFullWidth ? "translate-x-5" : "translate-x-0"}`}
-                                />
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* ── Group: Background ── */}
+                          {/* ── Group: Background (includes Layout) ── */}
                           <div className="p-3 rounded-2xl" style={{
                             background: isDark ? "rgba(255,255,255,0.03)" : "rgba(192,111,48,0.03)",
                             backdropFilter: "blur(12px)",
@@ -2848,6 +2769,80 @@ export default function TTSGenerator() {
                           </div>
                           </div>
                         )}
+
+                        {/* ── Layout (inside Background) ── */}
+                        <div className="mt-4 pt-3" style={{ borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "rgba(192,111,48,0.08)"}` }}>
+                          <div className="section-header mb-2">
+                            <span>◈</span>
+                            <span>{lang === "mm" ? "အနေအထား" : "LAYOUT"}</span>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            {/* Box Height */}
+                            <div>
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="text-xs font-semibold" style={{ color: subtextColor }}>
+                                  {lang === "mm" ? "အမြင့်" : "Height"}
+                                </span>
+                                <span className="text-xs font-bold" style={{ color: accent }}>
+                                  {srtBoxPadding}px
+                                </span>
+                              </div>
+                              <input
+                                type="range"
+                                min="2"
+                                max="20"
+                                value={srtBoxPadding}
+                                onChange={e => setSrtBoxPadding(Number(e.target.value))}
+                                className="premium-slider w-full"
+                              />
+                            </div>
+
+                            {/* Position */}
+                            <div>
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="text-xs font-semibold" style={{ color: subtextColor }}>
+                                  {lang === "mm" ? "အနေအထား" : "Position"}
+                                </span>
+                                <span className="text-[10px] font-semibold" style={{ color: subtextColor, opacity: 0.8 }}>
+                                  {lang === "mm" ? "အောက် > အပေါ်" : "Bottom > Top"} ({srtMarginV}%)
+                                </span>
+                              </div>
+                              <input
+                                type="range"
+                                min="0"
+                                max="100"
+                                value={srtMarginV}
+                                onChange={e => setSrtMarginV(Number(e.target.value))}
+                                className="premium-slider w-full"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Full Width Toggle */}
+                          <div className="flex items-center justify-between mt-3 py-2.5 px-3 rounded-xl" style={{
+                            background: isDark ? "rgba(255,255,255,0.03)" : "rgba(192,111,48,0.03)",
+                            border: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "rgba(192,111,48,0.08)"}`,
+                          }}>
+                            <span className="text-xs font-semibold" style={{ color: subtextColor }}>
+                              {lang === "mm" ? "အပြည့်အစုံ" : "Full Width"}
+                            </span>
+                            <button
+                              onClick={() => setSrtFullWidth(!srtFullWidth)}
+                              className="relative w-11 h-6 rounded-full transition-all duration-300 flex-shrink-0 border-2 border-transparent"
+                              style={{
+                                background: srtFullWidth
+                                  ? "linear-gradient(135deg, #C06F30, #F4B34F)"
+                                  : isDark ? "rgba(255,255,255,0.1)" : "#E5E0D8",
+                                boxShadow: srtFullWidth ? "0 2px 8px rgba(192,111,48,0.25)" : "inset 0 1px 3px rgba(0,0,0,0.1)",
+                              }}
+                            >
+                              <div
+                                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${srtFullWidth ? "translate-x-5" : "translate-x-0"}`}
+                              />
+                            </button>
+                          </div>
+                        </div>
                       </div>
 
                       {/* Progress Bar */}
