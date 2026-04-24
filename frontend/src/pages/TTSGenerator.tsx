@@ -2314,9 +2314,9 @@ export default function TTSGenerator() {
 
 {/* ── STEP: Video Preview + Settings ── */}
                   {dubPreviewUrl && !dubResult && (
-                    <div className="flex flex-col lg:flex-row gap-3 w-full">
-                      {/* Video Preview - Left Side (sticky) */}
-                      <div className="lg:w-[45%] lg:sticky lg:top-16 lg:h-fit lg:z-10 shrink-0">
+                    <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-80px)]">
+                      {/* Video Preview - Left Side (sticky, constrained height) */}
+                      <div className="lg:w-[45%] lg:sticky lg:top-0 h-full flex flex-col shrink-0">
                         <div
                           className={box}
                           style={{
@@ -2324,9 +2324,11 @@ export default function TTSGenerator() {
                             borderColor: cardBorder,
                             boxShadow,
                             height: '100%',
+                            display: 'flex',
+                            flexDirection: 'column',
                           }}
                         >
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center justify-between p-2 pb-0">
                             <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>
                               {lang === "mm" ? "ဗီဒီယိုကြိုကြည့်" : "Video Preview"}
                             </div>
@@ -2334,21 +2336,23 @@ export default function TTSGenerator() {
                               ✕
                             </button>
                           </div>
-                          <div className="flex justify-center items-center h-[calc(100%-40px)] p-2">
+                          
+                          {/* Video Container - Strictly contained */}
+                          <div className="flex-1 overflow-hidden flex items-center justify-center p-2">
                             {dubPreviewUrl === "loading" || dubPreviewMutation.isPending ? (
-                              <div className="w-full rounded-xl flex flex-col items-center justify-center gap-3" style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}`, minHeight: "200px" }}>
+                              <div className="w-full h-full rounded-xl flex flex-col items-center justify-center gap-3" style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}` }}>
                                 <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
                                 <span className="text-xs font-semibold" style={{ color: subtextColor }}>{lang === "mm" ? "ဗီဒီယို ပြင်ဆင်နေသည်..." : "Preparing preview..."}</span>
                               </div>
                             ) : (
-                              <video ref={dubPreviewRef} src={dubPreviewUrl} controls className="w-full h-full object-contain rounded-lg" />
+                              <video ref={dubPreviewRef} src={dubPreviewUrl} controls className="w-full h-full rounded-lg" style={{ objectFit: 'contain' }} />
                             )}
                           </div>
                         </div>
                       </div>
 
-                      {/* Settings - Right Side (scrollable inside flex) */}
-                      <div className="lg:w-[55%] flex-1 min-w-0 space-y-4 lg:overflow-y-auto lg:h-[calc(100vh-8rem)]">
+                      {/* Settings - Right Side (scrollable) */}
+                      <div className="lg:w-[55%] h-full overflow-y-auto space-y-4 pr-1">
 
                       {/* ── ACCORDION: Voice Selection ── */}
                       <div
