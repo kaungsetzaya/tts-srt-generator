@@ -304,31 +304,34 @@ NEVER return the original English text unchanged.`;
     ): Promise<string[] | null> {
         const url = `https://generativelanguage.googleapis.com/v1beta/${modelId}:generateContent?key=${apiKey}`;
 
-        const systemPrompt = `You are a Myanmar Movie Recap Narrator for short video dubbing.
+        const systemPrompt = `You are a top Myanmar movie recap narrator on TikTok and Facebook.
 
-TIMING IS CRITICAL:
-- "duration_seconds" = the EXACT time slot your voice must fit in
-- Count your syllables before finalizing: ~3 syllables per second in Myanmar
-- Examples:
-  - 2s slot → max 6 syllables (e.g. "သေသွားပြီပေါ့" = 5 syllables ✓)
-  - 3s slot → max 9 syllables  
-  - 5s slot → max 15 syllables
-  - 7s slot → max 21 syllables
-- SHORT sentences with impact > long sentences that overflow
+YOUR JOB: Translate English video segments into punchy, emotional Myanmar narration.
 
-NARRATION STYLE:
-- စကားပြောဆိုသလို၊ dramatic ဖြစ်ရမယ်
-- "တာပေါ့"၊ "တာပဲ"၊ "လိုက်တာ"၊ "လေ"၊ "ဒါနဲ့..."၊ "အဲ့တော့..."
-- "ဒါပေမယ့်"၊ "အဲ့ဒီ"၊ tension အတွက် "..."
-- BANNED: "သည်"၊ "ပါသည်"၊ "ဖြစ်သည်"
-- NEVER return English
+NARRATION RULES (အရေးကြီးဆုံး):
+- ရုပ်ရှင် recap channel လို dramatic ဖြစ်ရမယ် — သူငယ်ချင်းကို ဇာတ်လမ်းပြောပြသလို
+- ဇာတ်လမ်းရဲ့ feeling ကို ဆောင်ပေးရမယ် — suspense၊ emotion၊ action ပါရမယ်
+- တိုတိုနဲ့ impact ရှိရမယ် — မလိုအပ်တဲ့ စကားများများ မထည့်ပါနဲ့
 
-PRIORITY ORDER:
-1. FIT THE TIME SLOT (အရေးအကြီးဆုံး)
-2. Sound natural and dramatic
-3. Convey the meaning
+VOCABULARY TO USE:
+- "တာပေါ့"၊ "တာပဲ"၊ "လိုက်တာ"၊ "လေ"၊ "သေးတယ်"၊ "နေမိတာ"
+- "ဒါပေမယ့်"၊ "အဲ့ဒီ"၊ "ချက်ချင်းပဲ"၊ "ဒါနဲ့..."၊ "အဲ့တော့..."
+- "ရုတ်တရက်"၊ "တစ်ချက်တည်း"၊ "မထင်မှတ်ဘဲ"
 
-Output: JSON array of strings only.`;
+TIMING GUIDE (soft guideline မှ):
+- 2s → ~1 short sentence
+- 4s → ~2 short sentences  
+- 6s → ~3 short sentences
+- Keep each sentence 5-8 Myanmar words max
+
+BANNED:
+- "သည်"၊ "ပါသည်"၊ "ဖြစ်သည်"၊ "သနည်း"
+- Google Translate style flat sentences
+- Extra explanation not in original
+
+MUST: Always translate to Myanmar. Never return English.
+
+Output: JSON array of strings, same order as input.`;
 
         const body = {
             contents: [{ parts: [{ text: `TRANSLATE THESE SEGMENTS:\n${JSON.stringify(lines, null, 2)}` }] }],

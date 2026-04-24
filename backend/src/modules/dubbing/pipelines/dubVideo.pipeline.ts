@@ -198,10 +198,18 @@ export class DubVideoPipeline {
         const isChar = options.voice in CHARACTER_VOICES;
         let audioBuffer: Buffer;
         if (isChar) {
-          const r = await ttsService.generateSpeechWithCharacter(seg.translatedText, options.voice as CharacterKey, 1.0, "16:9", options.pitch ?? 0);
+          const r = await ttsService.generateSpeechWithCharacter(
+            seg.translatedText, options.voice as CharacterKey, 
+            1.15,  // ← 1.0 မဟုတ်တော့ဘူး
+            "16:9", options.pitch ?? 0
+          );
           audioBuffer = r.audioBuffer;
         } else {
-          const r = await ttsService.generateSpeech(seg.translatedText, options.voice as VoiceKey, 1.0, options.pitch ?? 0, "16:9");
+          const r = await ttsService.generateSpeech(
+            seg.translatedText, options.voice as VoiceKey,
+            1.15,  // ← 1.0 မဟုတ်တော့ဘူး
+            options.pitch ?? 0, "16:9"
+          );
           audioBuffer = r.audioBuffer;
         }
 
@@ -228,7 +236,7 @@ export class DubVideoPipeline {
         let finalDurationMs = durationMs;
 
         // ratio 1.5x ကျော်ရင် တိုတိုပြန်ပြောင်း retry
-        if (durationMs / slotMs > 1.5) {
+        if (durationMs / slotMs > 1.3) {
           console.warn(`[TTS] seg ${seg.index} ratio=${(durationMs/slotMs).toFixed(2)}x too high, retrying with shorter text...`);
           const shorterText = await geminiService.makeShorter(seg.translatedText, slotMs, options.userApiKey);
           if (shorterText) {
