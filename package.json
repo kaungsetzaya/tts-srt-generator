@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "NODE_ENV=development tsx watch backend/_core/index.ts",
     "build": "vite build && cp -r frontend/dist/* dist/public/ && esbuild backend/_core/index.ts --platform=node --bundle --format=cjs --outfile=dist/index.cjs --sourcemap --external:dotenv --external:fs --external:path --external:os --external:crypto --external:fs/promises --external:@sentry/profiling-node --external:@sentry-internal/node-cpu-profiler --alias:@shared/const=./dist/shared/const.ts --alias:@shared/types=./dist/shared/types.ts --alias:@shared/_core/errors=./dist/shared/_core/errors.ts && cp -r shared dist/ && node scripts/upload-sentry-sourcemaps.js",
-    "start": "NODE_ENV=production node dist/index.cjs",
+    "start": "NODE_ENV=production node dist/start.cjs",
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run",
