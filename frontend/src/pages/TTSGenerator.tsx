@@ -2314,7 +2314,7 @@ export default function TTSGenerator() {
 
 {/* ── STEP: Video Preview + Settings ── */}
                   {dubPreviewUrl && !dubResult && (
-                    <div className="flex flex-row w-full h-full overflow-hidden">
+                    <div className="flex flex-row w-full h-[calc(100vh-3.5rem)] overflow-hidden">
                       {/* Video Preview - Left Side (Fixed, no scroll) */}
                       <div className="hidden lg:flex w-[45%] h-full p-2 flex-col shrink-0">
                         <div
