@@ -2314,17 +2314,9 @@ export default function TTSGenerator() {
 
 {/* ── STEP: Video Preview + Settings ── */}
                   {dubPreviewUrl && !dubResult && (
-                    <div className="w-full" style={{ height: 'calc(100vh - 3.5rem)' }}>
-                      {/* Video Preview - Left Side (Fixed position) */}
-                      <div style={{
-                        position: 'fixed',
-                        left: '4rem',
-                        top: '3.5rem',
-                        width: '45%',
-                        height: 'calc(100vh - 3.5rem)',
-                        padding: '0.5rem',
-                        zIndex: 20,
-                      }}>
+                    <div className="flex w-full" style={{ height: 'calc(100vh - 3.5rem)' }}>
+                      {/* Video Preview - Left Side (Sticky) */}
+                      <div className="hidden lg:flex w-[45%] flex-col p-2" style={{ height: '100%' }}>
                         <div
                           className={box}
                           style={{
@@ -2358,14 +2350,8 @@ export default function TTSGenerator() {
                         </div>
                       </div>
 
-                      {/* Settings - Right Side (Offset for fixed preview) */}
-                      <div style={{
-                        marginLeft: '45%',
-                        width: '55%',
-                        height: '100%',
-                        overflowY: 'auto',
-                        padding: '0.5rem',
-                      }} className="space-y-4">
+                      {/* Settings - Right Side (Scrollable) */}
+                      <div className="w-full lg:w-[55%] flex flex-col p-2" style={{ height: '100%', overflowY: 'auto' }}>
 
                       {/* ── ACCORDION: Voice Selection ── */}
                       <div
