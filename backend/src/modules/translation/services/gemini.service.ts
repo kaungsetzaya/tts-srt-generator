@@ -175,6 +175,129 @@ private sanitize(text: string): string {
         const results: TranslatedSegment[] = [];
         for (const chunk of chunks) {
             let chunkTranslated: string[] | null = null;
+
+            // ── Duration info ပါတဲ့ lines တည်ဆောက် ──
+            const linesWithDuration = chunk.map(s => ({
+                text: s.text,
+                duration_seconds: parseFloat((s.end - s.start).toFixed(1))
+            }));
+
+            for (const model of MODELS) {
+                if (getDailyCount(model.id) >= model.rpd) continue;
+                for (const apiKey of allKeys) {
+                    chunkTranslated = await this.callBatchApi(linesWithDuration, model.id, apiKey);
+                    if (chunkTranslated && chunkTranslated.length === chunk.length) {
+                        incrementQuota(model.id);
+                        break;
+                    }
+                }
+                if (chunkTranslated) break;
+            }
+
+            if (!chunkTranslated) {
+                console.warn(`[Gemini] Batch failed, retrying individually...`);
+                for (const s of chunk) {
+                    try {
+                        let singleResult: string[] | null = null;
+                        const single = [{ text: s.text, duration_seconds: parseFloat((s.end - s.start).toFixed(1)) }];
+                        for (const model of MODELS) {
+                            if (getDailyCount(model.id) >= model.rpd) continue;
+                            for (const apiKey of allKeys) {
+                                singleResult = await this.callBatchApi(single, model.id, apiKey);
+                                if (singleResult?.[0]) { incrementQuota(model.id); break; }
+                            }
+                            if (singleResult?.[0]) break;
+                        }
+                        results.push({
+                            ...s,
+                            translatedText: singleResult?.[0]
+                                ? this.applyPhonetics(this.sanitize(singleResult[0]))
+                                : s.text
+                        });
+                    } catch {
+                        results.push({ ...s, translatedText: s.text });
+                    }
+                }
+            } else {
+                results.push(...chunk.map((s, idx) => ({
+                    ...s,
+                    translatedText: chunkTranslated![idx]
+                        ? this.applyPhonetics(this.sanitize(chunkTranslated![idx]))
+                        : s.text
+                })));
+            }
+        }
+        return results;
+    }
+
+private async callBatchApi(
+    lines: Array<{ text: string; duration_seconds: number }>,
+    modelId: string,
+    apiKey: string
+): Promise<string[] | null> {
+    const url = `https://generativelanguage.googleapis.com/v1beta/${modelId}:generateContent?key=${apiKey}`;
+
+    const systemPrompt = `You are a Professional Video Dubbing Translator for Myanmar (Burmese).
+
+CRITICAL TIMING RULE:
+- Each segment has a "duration_seconds" field — this is how long the audio slot is
+- Your translation MUST fit within that time when spoken aloud
+- Roughly: 1 second = 3-4 Myanmar syllables when spoken naturally
+- duration=2s → max ~8 syllables | duration=5s → max ~20 syllables | duration=8s → max ~32 syllables
+- NEVER write more than the slot allows. SHORT is always better than LONG.
+
+STYLE RULES:
+1. Spoken casual Burmese — like telling a story to a friend
+2. Use: "တာပေါ့"၊ "တာပဲ"၊ "လိုက်တာ"၊ "လေ"၊ "သေးတယ်"၊ "ဒါပေမယ့်"၊ "အဲ့ဒီ"
+3. Punctuation: (၊) for pauses၊ (။) for sentence ends — NO English (,) or (.)
+4. BANNED words: "သည်"၊ "ပါသည်"၊ "သနည်း"
+5. MUST translate to Myanmar — NEVER return English unchanged
+
+OUTPUT: JSON array of translated strings only, same order as input.`;
+
+    const body = {
+        contents: [{ parts: [{ text: `TRANSLATE THESE SEGMENTS:\n${JSON.stringify(lines, null, 2)}` }] }],
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: { type: "ARRAY", items: { type: "STRING" } }
+        }
+    };
+
+    const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+    });
+
+    if (!res.ok) {
+        console.error(`[Gemini API Error] HTTP ${res.status} for ${modelId}`);
+        return null;
+    }
+
+    const data = await res.json();
+    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+    if (!rawText) {
+        console.warn(`[Gemini API] Empty response from ${modelId}`);
+        return null;
+    }
+
+    try {
+        return JSON.parse(rawText);
+    } catch {
+        const jsonMatch = rawText.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+            try { return JSON.parse(jsonMatch[0]); } catch {}
+        }
+        console.error(`[Gemini API] Parse failed:`, rawText.slice(0, 200));
+        return null;
+    }
+}
+
+        const results: TranslatedSegment[] = [];
+        for (const chunk of chunks) {
+            let chunkTranslated: string[] | null = null;
             
             for (const model of MODELS) {
                 if (getDailyCount(model.id) >= model.rpd) continue;
