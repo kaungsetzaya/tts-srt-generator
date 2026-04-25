@@ -522,9 +522,10 @@ export default function AdminDashboard() {
   };
 
   const { data: me } = trpc.auth.me.useQuery();
-  const { data: users, refetch } = trpc.admin.getUsers.useQuery(undefined, {
+  const { data: usersData, refetch } = trpc.admin.getUsers.useQuery(undefined, {
     refetchInterval: 3000,
   });
+  const users = usersData?.users;
   const { data: analytics } = trpc.admin.getAnalytics.useQuery({ month: revenueMonth });
   const { data: health } = trpc.admin.getServerHealth.useQuery(undefined, {
     refetchInterval: 30000,
@@ -546,6 +547,11 @@ export default function AdminDashboard() {
   const [trialStartDate, setTrialStartDate] = useState("");
   const [trialEndDate, setTrialEndDate] = useState("");
   const [trialEnabled, setTrialEnabled] = useState(false);
+  const [toast, setToast] = useState("");
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(""), 4000);
+  };
   const { data: settingsData } = trpc.settings.get.useQuery(undefined);
   useEffect(() => {
     if (!settingsData) return;
@@ -577,7 +583,7 @@ export default function AdminDashboard() {
       setPaymentSlipPreview("");
     },
     onError: (error) => {
-      alert("Error giving subscription: " + error.message);
+      showToast("Error giving subscription: " + error.message);
     },
   });
   const cancelSub = trpc.admin.cancelSubscription.useMutation({
@@ -707,6 +713,13 @@ export default function AdminDashboard() {
           backgroundSize: "60px 60px",
         }}
       />
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg bg-destructive text-destructive-foreground text-xs font-bold shadow-lg">
+          {toast}
+        </div>
+      )}
 
       {/* User Detail Drawer */}
       {userDrawer && (
@@ -2219,7 +2232,7 @@ export default function AdminDashboard() {
                         const file = ev.target.files?.[0];
                         if (!file) return;
                         if (file.size > 5 * 1024 * 1024) {
-                          alert("Slip image max 5MB");
+                          showToast("Slip image max 5MB");
                           return;
                         }
                         const reader = new FileReader();

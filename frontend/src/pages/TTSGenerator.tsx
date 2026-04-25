@@ -151,7 +151,11 @@ export default function TTSGenerator() {
   const [libraryFilter, setLibraryFilter] = useState<"all" | "video" | "audio" | "text">("all");
   const [menuOpen, setMenuOpen] = useState(true);
   const { theme, toggleTheme } = useTheme();
-  const [lang, setLang] = useState<Lang>("mm");
+  const [lang, setLangRaw] = useState<Lang>(() => (localStorage.getItem("lumix_lang") as Lang) || "mm");
+  const setLang = (l: Lang) => {
+    localStorage.setItem("lumix_lang", l);
+    setLangRaw(l);
+  };
   const t = T[lang];
 
   // Error toast state
@@ -167,6 +171,9 @@ export default function TTSGenerator() {
     setSuccessToast(msg);
     setTimeout(() => setSuccessToast(""), 3000);
   };
+
+  // tRPC utils — MUST be declared before hooks that use it
+  const utils = trpc.useUtils();
 
   const {
     text, setText,
@@ -197,6 +204,8 @@ export default function TTSGenerator() {
     translatePreviewUrl, setTranslatePreviewUrl,
     translateVideoLoading, setTranslateVideoLoading,
     translateVideoError, setTranslateVideoError,
+    translateMutationPending,
+    translateLinkMutationPending,
     handleVideoFile,
     handleTranslate,
     handleVideoCopy,
@@ -235,6 +244,8 @@ export default function TTSGenerator() {
     dubFileRef, dubResultVideoRef, dubPreviewRef,
     computeSrtPreviewStyle,
     activeJobId,
+    startDubMutationPending,
+    dubFileMutationPending,
     handleDubVideoFile,
     handleDubGenerate,
     handleDubDownload,
@@ -252,7 +263,6 @@ export default function TTSGenerator() {
   const [srtAccordionOpen, setSrtAccordionOpen] = useState(true);
 
   const [, navigate] = useLocation();
-  const utils = trpc.useUtils();
   const { data: unifiedHistory, isLoading: historyLoading } =
     trpc.history.getUnifiedHistory.useQuery({ limit: 100 });
   const { data: userFiles, isLoading: filesLoading } =
@@ -1289,8 +1299,8 @@ export default function TTSGenerator() {
                         <button
                           onClick={handleTranslate}
                           disabled={
-                            translateMutation.isPending ||
-                            translateLinkMutation.isPending ||
+                            translateMutationPending ||
+                            translateLinkMutationPending ||
                             !!translateJobId
                           }
                           className="w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 rounded-2xl text-white font-black uppercase tracking-widest transition-all disabled:opacity-50 hover:scale-[1.02] mt-4 shadow-lg text-sm sm:text-base relative"
@@ -1299,8 +1309,8 @@ export default function TTSGenerator() {
                             boxShadow: `0 4px 12px rgba(0,0,0,0.15)`,
                           }}
                         >
-                          {translateMutation.isPending ||
-                          translateLinkMutation.isPending ? (
+                          {translateMutationPending ||
+                          translateLinkMutationPending ? (
                             <>
                               <Loader2 className="w-5 h-5 animate-spin" />
                               {t.translating}
@@ -2158,19 +2168,19 @@ export default function TTSGenerator() {
                       <motion.button
                         onClick={handleDubGenerate}
                         disabled={
-                          startDubMutation.isPending ||
-                          dubFileMutation.isPending ||
+                          startDubMutationPending ||
+                          dubFileMutationPending ||
                           activeJobId !== null
                         }
-                        whileHover={{ scale: startDubMutation.isPending || dubFileMutation.isPending || activeJobId !== null ? 1 : 1.02 }}
-                        whileTap={{ scale: startDubMutation.isPending || dubFileMutation.isPending || activeJobId !== null ? 1 : 0.98 }}
+                        whileHover={{ scale: startDubMutationPending || dubFileMutationPending || activeJobId !== null ? 1 : 1.02 }}
+                        whileTap={{ scale: startDubMutationPending || dubFileMutationPending || activeJobId !== null ? 1 : 0.98 }}
                         className="w-full relative overflow-hidden group flex items-center justify-center gap-3 py-4 sm:py-5 rounded-2xl text-white font-black uppercase tracking-wider transition-all disabled:opacity-50 mt-2 text-sm sm:text-base"
                         style={{
                           background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`,
                         }}
                       >
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                        {startDubMutation.isPending || dubFileMutation.isPending || activeJobId !== null ? (
+                        {startDubMutationPending || dubFileMutationPending || activeJobId !== null ? (
                           <>
                             <motion.div
                               animate={{ rotate: 360 }}

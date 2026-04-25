@@ -31,6 +31,10 @@ export interface UseVideoStateReturn {
   translateVideoError: string;
   setTranslateVideoError: (v: string) => void;
 
+  // Mutation status
+  translateMutationPending: boolean;
+  translateLinkMutationPending: boolean;
+
   // Handlers
   handleVideoFile: (f: File) => void;
   handleTranslate: () => Promise<void>;
@@ -266,6 +270,8 @@ export function useVideoState(
     translatePreviewUrl, setTranslatePreviewUrl,
     translateVideoLoading, setTranslateVideoLoading,
     translateVideoError, setTranslateVideoError,
+    translateMutationPending: translateMutation.isPending,
+    translateLinkMutationPending: translateLinkMutation.isPending,
     handleVideoFile,
     handleTranslate,
     handleVideoCopy,

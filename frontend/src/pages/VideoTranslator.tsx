@@ -16,7 +16,13 @@ export default function VideoTranslator() {
   const [jobId, setJobId] = useState<string | null>(null);
   const [jobError, setJobError] = useState<string | null>(null);
   const [jobProgress, setJobProgress] = useState(0);
+  const [toast, setToast] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(""), 4000);
+  };
 
   const { data: me } = trpc.auth.me.useQuery();
   const translateMutation = trpc.video.translate.useMutation();
@@ -47,9 +53,9 @@ export default function VideoTranslator() {
   }, [jobId, getJobQuery.data]);
 
   const handleFile = (f: File) => {
-    if (f.size > 25 * 1024 * 1024) { alert("Max file size is 25MB"); return; }
+    if (f.size > 25 * 1024 * 1024) { showToast("Max file size is 25MB"); return; }
     const validTypes = ["video/mp4", "video/webm", "video/quicktime", "video/x-msvideo", "video/mkv"];
-    if (!validTypes.some(t => f.type.startsWith("video/"))) { alert("Please upload a video file"); return; }
+    if (!validTypes.some(t => f.type.startsWith("video/"))) { showToast("Please upload a video file"); return; }
     setFile(f);
     setResult(null);
   };
@@ -110,6 +116,13 @@ export default function VideoTranslator() {
       }
     >
       <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6 pb-24">
+        {/* Toast */}
+        {toast && (
+          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg bg-destructive text-destructive-foreground text-xs font-bold shadow-lg">
+            {toast}
+          </div>
+        )}
+
         {/* Title */}
         <div className="text-center py-4 sm:py-6">
           <div className="flex items-center justify-center gap-3 sm:gap-4 mt-3 text-[10px] sm:text-xs opacity-40 uppercase font-bold tracking-tighter">

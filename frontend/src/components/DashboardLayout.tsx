@@ -114,7 +114,6 @@ function DashboardLayoutContent({
   const isMobile = useIsMobile();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
-  console.log('[Sidebar] state:', state, 'isCollapsed:', isCollapsed, 'isMobile:', isMobile);
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const activeMenuItem = menuItems.find(item => item.path === location);

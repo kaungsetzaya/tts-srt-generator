@@ -38,9 +38,7 @@ function Router() {
         <Route path={"/login"} component={Login} />
         <Route path={"/home"} component={Landing} />
       <Route path={"/lumix"}>
-        <AuthGuard>
-          <TTSGenerator />
-        </AuthGuard>
+        {() => { window.location.href = "/"; return null; }}
       </Route>
       <Route path={"/admin"}>
         <AuthGuard>
