@@ -231,6 +231,7 @@ function UserDetailDrawer({
             <p className="font-black text-lg" style={{ color: C }}>
               {userName}
             </p>
+            <p className="text-[10px] opacity-25 font-mono">ID: {userId}</p>
             <p className="text-xs opacity-40">30-day activity breakdown</p>
           </div>
           <button
@@ -1277,6 +1278,7 @@ export default function AdminDashboard() {
                               {displayName}
                             </p>
                             <p className="text-xs opacity-40">@{username}</p>
+                            <p className="text-[10px] opacity-25 font-mono">ID: {user.id}</p>
                           </button>
                         </td>
                         <td className="p-3">
@@ -1434,6 +1436,7 @@ export default function AdminDashboard() {
                       <span className="text-xs opacity-40 ml-2">
                         @{user.username ?? "—"}
                       </span>
+                      <span className="text-[10px] opacity-25 font-mono ml-2">ID: {user.id}</span>
                     </div>
                     {user.id !== me?.userId ? (
                       <button
