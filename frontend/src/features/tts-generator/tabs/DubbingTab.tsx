@@ -456,11 +456,16 @@ function DubbingTab({
                       }
                       if (platform === "facebook") {
                         return (
-                          <div className="w-full h-full flex items-center justify-center p-4">
-                            <span className="text-xs font-semibold text-center" style={{ color: subtextColor }}>
-                              {lang === "mm" ? "Facebook ဗီဒီယိုကို preview မရနိုင်ပါ (Embed လိုအပ်သည်)" : "Facebook video preview requires authentication. Proceed to generate."}
-                            </span>
-                          </div>
+                          <iframe
+                            src={`https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(embedUrl)}&show_text=false&width=100%`}
+                            className="w-full h-full"
+                            style={{ border: "none", overflow: "hidden" }}
+                            scrolling="no"
+                            frameBorder="0"
+                            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                            allowFullScreen
+                            title="Facebook video preview"
+                          />
                         );
                       }
                       if (platform === "tiktok") {
