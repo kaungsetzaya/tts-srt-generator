@@ -153,6 +153,29 @@ export function useDubbingState(
     }
   );
 
+  // Extract platform thumbnail from URL
+  const getPlatformThumbnail = (url: string): string | null => {
+    // YouTube
+    const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
+    if (ytMatch) {
+      return `https://img.youtube.com/vi/${ytMatch[1]}/maxresdefault.jpg`;
+    }
+    // YouTube share URLs (youtube.com/share/v/...)
+    const ytShareMatch = url.match(/youtube\.com\/share\/v\/([a-zA-Z0-9_-]+)/);
+    if (ytShareMatch) {
+      return `https://img.youtube.com/vi/${ytShareMatch[1]}/maxresdefault.jpg`;
+    }
+    // Facebook - use generic placeholder
+    if (url.includes("facebook.com") || url.includes("fb.watch")) {
+      return "facebook";
+    }
+    // TikTok - use generic placeholder
+    if (url.includes("tiktok.com")) {
+      return "tiktok";
+    }
+    return null;
+  };
+
   // Auto-preview when URL changes
   const dubPreviewUrlRef = useRef<string>("");
 
@@ -176,8 +199,13 @@ export function useDubbingState(
       if (isDirectVideo) {
         setDubPreviewUrl(url);
       } else {
-        // For platform URLs (YouTube/Facebook/TikTok), show placeholder
-        setDubPreviewUrl("platform-url");
+        // For platform URLs, try to get thumbnail
+        const thumbnail = getPlatformThumbnail(url);
+        if (thumbnail) {
+          setDubPreviewUrl(`thumb:${thumbnail}`);
+        } else {
+          setDubPreviewUrl("platform-url");
+        }
       }
       setVideoLoading(false);
     }, 800);
