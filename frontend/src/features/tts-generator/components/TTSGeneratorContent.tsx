@@ -176,6 +176,8 @@ export default function TTSGeneratorContent(props: UseTTSGeneratorStateReturn) {
     setSpeedAccordionOpen,
     srtAccordionOpen,
     setSrtAccordionOpen,
+    linkPreview,
+    linkPreviewLoading,
   } = props;
 
   return (
@@ -438,6 +440,8 @@ export default function TTSGeneratorContent(props: UseTTSGeneratorStateReturn) {
                   accent={accent}
                   accentSecondary={accentSecondary}
                   showError={showError}
+                  linkPreview={linkPreview}
+                  linkPreviewLoading={linkPreviewLoading}
                 />
               )}
             </>

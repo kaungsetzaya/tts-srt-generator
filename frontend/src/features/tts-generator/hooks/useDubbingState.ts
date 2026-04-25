@@ -139,6 +139,17 @@ export function useDubbingState(
 
   // Job-based status
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
+
+  // Link preview for platform URLs (Facebook, etc.)
+  const linkPreviewQuery = trpc.video.getLinkPreview.useQuery(
+    { url: dubVideoUrl.trim() },
+    {
+      enabled: !!dubVideoUrl.trim() && !dubVideoFile && !dubPreviewUrl.startsWith("http"),
+      retry: false,
+      staleTime: Infinity,
+    }
+  );
+
   const jobStatusQuery = trpc.jobs.getStatus.useQuery(
     { jobId: activeJobId ?? "" },
     {
@@ -596,5 +607,7 @@ export function useDubbingState(
     isExternalVideoUrl,
     isYouTubeUrl,
     getYouTubeVideoId,
+    linkPreview: linkPreviewQuery.data,
+    linkPreviewLoading: linkPreviewQuery.isLoading,
   };
 }

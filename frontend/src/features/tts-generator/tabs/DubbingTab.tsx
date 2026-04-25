@@ -111,6 +111,8 @@ export interface DubbingTabProps {
   accent: string;
   accentSecondary: string;
   showError: (msg: string) => void;
+  linkPreview?: { title: string; description: string; image: string; siteName: string } | null;
+  linkPreviewLoading?: boolean;
 }
 
 function DubbingTab({
@@ -192,6 +194,8 @@ function DubbingTab({
   accent,
   accentSecondary,
   showError,
+  linkPreview,
+  linkPreviewLoading,
 }: DubbingTabProps) {
   const {
     isDark,
@@ -455,18 +459,44 @@ function DubbingTab({
                         );
                       }
                       if (platform === "facebook") {
-                        // Facebook embeds are often blocked; show thumbnail instead
+                        // Show fetched thumbnail if available
+                        const previewImage = linkPreview?.image;
                         return (
-                          <div className="relative w-full h-full flex items-center justify-center bg-gradient-to-br from-[#1877F2]/20 to-[#1877F2]/5">
-                            <div className="flex flex-col items-center justify-center gap-3">
-                              <svg className="w-16 h-16" fill="#1877F2" viewBox="0 0 24 24">
-                                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                              </svg>
-                              <span className="text-sm font-bold" style={{ color: "#1877F2" }}>Facebook Video</span>
-                              <span className="text-xs text-center px-4 opacity-60" style={{ color: subtextColor }}>
-                                {lang === "mm" ? "ဒေါင်းလုတ်လုပ်ပြီး AI dubbing လုပ်မည်" : "Paste link to generate AI dubbing"}
-                              </span>
-                            </div>
+                          <div className="relative w-full h-full flex items-center justify-center overflow-hidden rounded-2xl bg-black/40">
+                            {linkPreviewLoading ? (
+                              <div className="flex flex-col items-center gap-2">
+                                <Loader2 className="w-8 h-8 animate-spin" style={{ color: accent }} />
+                                <span className="text-xs font-semibold" style={{ color: subtextColor }}>Loading preview...</span>
+                              </div>
+                            ) : previewImage ? (
+                              <>
+                                <img
+                                  src={previewImage}
+                                  alt={linkPreview?.title || "Facebook Video"}
+                                  className="absolute inset-0 w-full h-full object-cover"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = "none";
+                                  }}
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                                <div className="absolute bottom-0 left-0 right-0 p-4">
+                                  <p className="text-white font-bold text-sm line-clamp-2">{linkPreview?.title || "Facebook Video"}</p>
+                                  <p className="text-white/60 text-xs mt-1">{linkPreview?.siteName || "facebook.com"}</p>
+                                </div>
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: "rgba(24,119,242,0.9)" }}>
+                                    <Play className="w-8 h-8 text-white ml-1" />
+                                  </div>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="flex flex-col items-center justify-center gap-3">
+                                <svg className="w-16 h-16" fill="#1877F2" viewBox="0 0 24 24">
+                                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                                </svg>
+                                <span className="text-sm font-bold" style={{ color: "#1877F2" }}>Facebook Video</span>
+                              </div>
+                            )}
                           </div>
                         );
                       }
