@@ -436,43 +436,46 @@ function DubbingTab({
                       {lang === "mm" ? "ဗီဒီယိုဖိုင်ကို ဒေါင်းလုတ်လုပ်ပြီးမှ ကြိုတင်ကြည့်ရှုနိုင်ပါမည်" : "Video preview not available for platform URLs. Proceed to generate."}
                     </span>
                   </div>
-                ) : dubPreviewUrl.startsWith("thumb:") ? (
-                  <div className="relative w-full h-full flex items-center justify-center overflow-hidden rounded-2xl bg-black/40">
-                    {dubPreviewUrl === "thumb:facebook" ? (
-                      <div className="flex flex-col items-center justify-center gap-3">
-                        <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: "rgba(24,119,242,0.2)" }}>
-                          <svg className="w-8 h-8" fill="#1877F2" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                        </div>
-                        <span className="text-xs font-semibold" style={{ color: subtextColor }}>Facebook Video</span>
-                      </div>
-                    ) : dubPreviewUrl === "thumb:tiktok" ? (
-                      <div className="flex flex-col items-center justify-center gap-3">
-                        <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: "rgba(254,44,85,0.2)" }}>
-                          <svg className="w-8 h-8" fill="#FE2C55" viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg>
-                        </div>
-                        <span className="text-xs font-semibold" style={{ color: subtextColor }}>TikTok Video</span>
-                      </div>
-                    ) : (
-                      <>
-                        <img
-                          src={dubPreviewUrl.replace("thumb:", "")}
-                          alt="Video thumbnail"
-                          className="absolute inset-0 w-full h-full object-cover"
-                          onError={(e) => {
-                            // Fallback to hqdefault if maxresdefault fails
-                            const img = e.currentTarget;
-                            if (img.src.includes("maxresdefault")) {
-                              img.src = img.src.replace("maxresdefault", "hqdefault");
-                            }
-                          }}
-                        />
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                          <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: "rgba(192,111,48,0.9)" }}>
-                            <Play className="w-7 h-7 text-white ml-1" />
+                ) : dubPreviewUrl.startsWith("embed:") ? (
+                  <div className="relative w-full h-full flex items-center justify-center overflow-hidden rounded-2xl bg-black">
+                    {(() => {
+                      const parts = dubPreviewUrl.split(":");
+                      const platform = parts[1];
+                      const embedUrl = parts.slice(2).join(":");
+                      if (platform === "youtube") {
+                        return (
+                          <iframe
+                            src={embedUrl}
+                            className="w-full h-full"
+                            style={{ border: "none" }}
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            title="YouTube video preview"
+                          />
+                        );
+                      }
+                      if (platform === "facebook") {
+                        return (
+                          <div className="w-full h-full flex items-center justify-center p-4">
+                            <span className="text-xs font-semibold text-center" style={{ color: subtextColor }}>
+                              {lang === "mm" ? "Facebook ဗီဒီယိုကို preview မရနိုင်ပါ (Embed လိုအပ်သည်)" : "Facebook video preview requires authentication. Proceed to generate."}
+                            </span>
                           </div>
-                        </div>
-                      </>
-                    )}
+                        );
+                      }
+                      if (platform === "tiktok") {
+                        return (
+                          <iframe
+                            src={embedUrl}
+                            className="w-full h-full"
+                            style={{ border: "none" }}
+                            allow="fullscreen"
+                            title="TikTok video preview"
+                          />
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 ) : (
                   <div className="relative w-full h-full flex items-center justify-center overflow-hidden rounded-2xl">

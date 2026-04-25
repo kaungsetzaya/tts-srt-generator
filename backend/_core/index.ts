@@ -51,7 +51,7 @@ async function startServer() {
         imgSrc: ["'self'", "data:", "https:", "https://wsrv.nl", "https://img.youtube.com"],
         mediaSrc: ["'self'", "blob:", "data:", "https:"],
         connectSrc: ["'self'", "https://choco.de5.net", "https://lumix-studio.vercel.app", "https://*.vercel.app", "https://*.facebook.com", "https://*.tiktok.com", "https://*.youtube.com", "https://youtu.be"],
-        frameSrc: ["'none'"],
+        frameSrc: ["'self'", "https://www.youtube.com", "https://www.tiktok.com", "https://www.facebook.com"],
         objectSrc: ["'none'"],
         baseUri: ["'self'"],
         formAction: ["'self'"],

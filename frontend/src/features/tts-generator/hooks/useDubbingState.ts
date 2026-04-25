@@ -153,27 +153,31 @@ export function useDubbingState(
     }
   );
 
-  // Extract platform thumbnail from URL
-  const getPlatformThumbnail = (url: string): string | null => {
+  // Extract platform embed URL from URL for actual video preview
+  const getPlatformEmbedUrl = (url: string): { type: "youtube" | "facebook" | "tiktok" | null; embedUrl: string | null } => {
     // YouTube
     const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
     if (ytMatch) {
-      return `https://img.youtube.com/vi/${ytMatch[1]}/maxresdefault.jpg`;
+      return { type: "youtube", embedUrl: `https://www.youtube.com/embed/${ytMatch[1]}` };
     }
-    // YouTube share URLs (youtube.com/share/v/...)
+    // YouTube share URLs
     const ytShareMatch = url.match(/youtube\.com\/share\/v\/([a-zA-Z0-9_-]+)/);
     if (ytShareMatch) {
-      return `https://img.youtube.com/vi/${ytShareMatch[1]}/maxresdefault.jpg`;
+      return { type: "youtube", embedUrl: `https://www.youtube.com/embed/${ytShareMatch[1]}` };
     }
-    // Facebook - use generic placeholder
+    // Facebook
     if (url.includes("facebook.com") || url.includes("fb.watch")) {
-      return "facebook";
+      return { type: "facebook", embedUrl: url };
     }
-    // TikTok - use generic placeholder
+    // TikTok
+    const tiktokMatch = url.match(/tiktok\.com\/(@[\w.]+)\/video\/(\d+)/);
+    if (tiktokMatch) {
+      return { type: "tiktok", embedUrl: `https://www.tiktok.com/embed/${tiktokMatch[2]}` };
+    }
     if (url.includes("tiktok.com")) {
-      return "tiktok";
+      return { type: "tiktok", embedUrl: null };
     }
-    return null;
+    return { type: null, embedUrl: null };
   };
 
   // Auto-preview when URL changes
@@ -199,10 +203,12 @@ export function useDubbingState(
       if (isDirectVideo) {
         setDubPreviewUrl(url);
       } else {
-        // For platform URLs, try to get thumbnail
-        const thumbnail = getPlatformThumbnail(url);
-        if (thumbnail) {
-          setDubPreviewUrl(`thumb:${thumbnail}`);
+        // For platform URLs, get embed URL for iframe preview
+        const embed = getPlatformEmbedUrl(url);
+        if (embed.type && embed.embedUrl) {
+          setDubPreviewUrl(`embed:${embed.type}:${embed.embedUrl}`);
+        } else if (embed.type) {
+          setDubPreviewUrl("platform-url");
         } else {
           setDubPreviewUrl("platform-url");
         }
