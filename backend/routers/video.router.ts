@@ -378,4 +378,11 @@ export const videoRouter = t.router({
         result: job.status === "completed" ? job.result : undefined,
       };
     }),
+
+  getLinkPreview: protectedProcedure
+    .input(z.object({ url: z.string().url() }))
+    .query(async ({ input }) => {
+      const { fetchLinkPreview } = await import("../src/modules/media/services/linkPreview.service");
+      return fetchLinkPreview(input.url);
+    }),
 });
