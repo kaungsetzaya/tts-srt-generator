@@ -427,12 +427,7 @@ function DubbingTab({
                     <span className="text-xs font-semibold" style={{ color: subtextColor }}>Preparing preview...</span>
                   </div>
                 ) : (
-                  <div
-                    className="relative w-full h-full flex justify-center items-center overflow-hidden rounded-2xl"
-                    style={{
-                      aspectRatio: dubDetectedRatio === '9:16' ? '9/16' : '16/9',
-                    }}
-                  >
+                  <div className="relative w-full h-full flex items-center justify-center overflow-hidden rounded-2xl">
                     {/* Background Layer — blurred cinematic fill */}
                     <video
                       src={dubPreviewUrl}
@@ -443,68 +438,65 @@ function DubbingTab({
                       playsInline
                       preload="metadata"
                     />
-                    {/* Foreground Layer — clean video with correct aspect ratio */}
-                    <div className="relative z-10 w-full h-full flex items-center justify-center">
-                      <video
-                        ref={dubPreviewRef}
-                        src={dubPreviewUrl}
-                        className="w-full h-full object-contain rounded-lg cursor-pointer"
-                        controls
-                        preload="metadata"
-                        onError={() => {
-                          setVideoPreviewError("Failed to load video preview.");
+                    {/* Foreground Layer — clean video fills container, object-contain preserves aspect ratio */}
+                    <video
+                      ref={dubPreviewRef}
+                      src={dubPreviewUrl}
+                      className="relative z-10 w-full h-full object-contain rounded-lg cursor-pointer"
+                      controls
+                      preload="metadata"
+                      onError={() => {
+                        setVideoPreviewError("Failed to load video preview.");
+                      }}
+                      onClick={() => {
+                        const v = dubPreviewRef.current;
+                        if (!v) return;
+                        v.paused ? v.play() : v.pause();
+                      }}
+                    />
+                    {/* Real-time Subtitle Preview */}
+                    {srtEnabled && activeJobId === null && (
+                      <div
+                        className="absolute left-0 right-0 flex justify-center pointer-events-none px-3 z-20"
+                        style={{
+                          bottom: `${Math.max(2, Math.min(40, srtMarginV * 0.4))}%`,
                         }}
-                        onClick={() => {
-                          const v = dubPreviewRef.current;
-                          if (!v) return;
-                          v.paused ? v.play() : v.pause();
-                        }}
-                      />
-                      {/* Real-time Subtitle Preview */}
-                      {srtEnabled && activeJobId === null && (
+                      >
                         <div
-                          className="absolute left-0 right-0 flex justify-center pointer-events-none px-3"
+                          className="text-center"
                           style={{
-                            zIndex: 20,
-                            bottom: `${Math.max(2, Math.min(40, srtMarginV * 0.4))}%`,
+                            fontSize: `${Math.max(10, Math.min(22, srtFontSize * 0.45))}px`,
+                            color: srtColor,
+                            fontWeight: 'bold',
+                            textShadow: '0 2px 4px rgba(0,0,0,0.9), 0 -1px 2px rgba(0,0,0,0.6)',
+                            background: srtBlurBg
+                              ? srtBlurColor === 'black'
+                                ? `rgba(0,0,0,${srtBlurOpacity / 100})`
+                                : srtBlurColor === 'white'
+                                  ? `rgba(255,255,255,${srtBlurOpacity / 100})`
+                                  : `rgba(128,128,128,${srtBlurOpacity / 100})`
+                              : 'transparent',
+                            backdropFilter: srtBlurBg ? `blur(${Math.max(2, srtBlurOpacity / 15)}px)` : 'none',
+                            borderRadius: srtBorderRadius === 'rounded' ? '6px' : '0px',
+                            padding: `${Math.max(2, srtBoxPadding)}px ${Math.max(6, srtBoxPadding * 1.5)}px`,
+                            width: srtFullWidth ? 'calc(100% - 24px)' : 'auto',
+                            maxWidth: 'calc(100% - 24px)',
+                            minWidth: 0,
+                            wordWrap: 'break-word',
+                            wordBreak: 'normal',
+                            overflowWrap: 'anywhere',
+                            lineHeight: 1.3,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
                           }}
                         >
-                          <div
-                            className="text-center"
-                            style={{
-                              fontSize: `${Math.max(10, Math.min(22, srtFontSize * 0.45))}px`,
-                              color: srtColor,
-                              fontWeight: 'bold',
-                              textShadow: '0 2px 4px rgba(0,0,0,0.9), 0 -1px 2px rgba(0,0,0,0.6)',
-                              background: srtBlurBg
-                                ? srtBlurColor === 'black'
-                                  ? `rgba(0,0,0,${srtBlurOpacity / 100})`
-                                  : srtBlurColor === 'white'
-                                    ? `rgba(255,255,255,${srtBlurOpacity / 100})`
-                                    : `rgba(128,128,128,${srtBlurOpacity / 100})`
-                                : 'transparent',
-                              backdropFilter: srtBlurBg ? `blur(${Math.max(2, srtBlurOpacity / 15)}px)` : 'none',
-                              borderRadius: srtBorderRadius === 'rounded' ? '6px' : '0px',
-                              padding: `${Math.max(2, srtBoxPadding)}px ${Math.max(6, srtBoxPadding * 1.5)}px`,
-                              width: srtFullWidth ? 'calc(100% - 24px)' : 'auto',
-                              maxWidth: 'calc(100% - 24px)',
-                              minWidth: 0,
-                              wordWrap: 'break-word',
-                              wordBreak: 'normal',
-                              overflowWrap: 'anywhere',
-                              lineHeight: 1.3,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                            }}
-                          >
-                            {lang === "mm" ? "ဤနေရာတွင် စာတန်းထိုးကို မြင်ရပါမည်" : "Subtitle preview"}
-                          </div>
+                          {lang === "mm" ? "ဤနေရာတွင် စာတန်းထိုးကို မြင်ရပါမည်" : "Subtitle preview"}
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                     {/* Dubbing Loader Overlay */}
                     {activeJobId !== null && (
                       <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/40 backdrop-blur-sm">
@@ -1072,13 +1064,7 @@ function DubbingTab({
                 : "Auto Creator Generated Video"}
             </div>
             <div className="flex justify-center mt-2 p-2">
-              <div
-                className="relative w-full flex justify-center items-center overflow-hidden rounded-2xl shadow-2xl"
-                style={{
-                  maxHeight: '75vh',
-                  aspectRatio: dubDetectedRatio === "9:16" ? "9/16" : "16/9",
-                }}
-              >
+              <div className="relative w-full overflow-hidden rounded-2xl shadow-2xl" style={{ maxHeight: '75vh', aspectRatio: dubDetectedRatio === "9:16" ? "9/16" : "16/9" }}>
                 {/* Background Layer — blurred cinematic fill */}
                 <video
                   src={dubResult.videoUrl}
@@ -1090,21 +1076,19 @@ function DubbingTab({
                   preload="metadata"
                 />
                 {/* Foreground Layer — clean video */}
-                <div className="relative z-10 w-full h-full flex items-center justify-center">
-                  <video
-                    key={dubResult.videoUrl}
-                    ref={dubResultVideoRef}
-                    controls
-                    preload="metadata"
-                    className="w-full h-full object-contain rounded-lg"
-                    src={dubResult.videoUrl}
-                    onError={() => {
-                      setVideoPreviewError("Failed to load the generated video. The download link may have expired. Try downloading instead.");
+                <video
+                  key={dubResult.videoUrl}
+                  ref={dubResultVideoRef}
+                  controls
+                  preload="metadata"
+                  className="relative z-10 w-full h-full object-contain rounded-lg"
+                  src={dubResult.videoUrl}
+                  onError={() => {
+                    setVideoPreviewError("Failed to load the generated video. The download link may have expired. Try downloading instead.");
                     }}
                   />
                 </div>
               </div>
-            </div>
             {videoPreviewError && (
               <div className="mt-3 p-3 rounded-xl mx-auto max-w-md" style={{ background: "rgba(220, 38, 38, 0.1)", border: "1px solid rgba(220, 38, 38, 0.3)" }}>
                 <p className="text-xs font-semibold text-center" style={{ color: "#dc2626" }}>{videoPreviewError}</p>
