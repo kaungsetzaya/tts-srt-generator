@@ -603,7 +603,6 @@ export default function TTSGenerator() {
   }, [videoUrl, videoFile]);
 
   // Auto-preview video for dubbing tab when URL changes
-  const dubPreviewMutation = trpc.video.previewLink.useMutation();
   const dubPreviewUrlRef = useRef<string>("");
 
   useEffect(() => {
@@ -856,12 +855,18 @@ export default function TTSGenerator() {
       showError("File too large. Max 25MB.");
       return;
     }
+    // Revoke old object URL to prevent memory leak
+    if (dubPreviewUrl && dubVideoFile) {
+      URL.revokeObjectURL(dubPreviewUrl);
+    }
     setDubVideoFile(f);
     setDubVideoUrl("");
     setDubResult(null);
+    setVideoPreviewError("");
     // Create preview URL from uploaded file
     const url = URL.createObjectURL(f);
     setDubPreviewUrl(url);
+    setVideoLoading(false);
   };
 
   // Character voice base mapping (for sending correct base voice)
@@ -879,6 +884,11 @@ export default function TTSGenerator() {
   const handleDubGenerate = async () => {
     console.log("[GENERATE] Starting dubbing...");
     const dubVoiceToUse = dubSelectedVoice;
+
+    // Clear previous result before starting new generation
+    setDubResult(null);
+    setDubProgress(0);
+    setVideoPreviewError("");
 
     // Use job-based API for dubbing (handles long processing time)
     if (dubVideoUrl.trim()) {
@@ -938,6 +948,7 @@ export default function TTSGenerator() {
         });
         console.log("[GENERATE] File job started:", res.jobId);
         setActiveJobId(res.jobId);
+        pollJobStatus(res.jobId);
         utils.subscription.myStatus.invalidate();
       } catch (e: any) {
         console.error("[DUB FILE ERROR]", e);
@@ -1067,21 +1078,22 @@ export default function TTSGenerator() {
       if (dubVideoFile) {
         const url = URL.createObjectURL(dubVideoFile);
         setDubPreviewUrl(url);
+        setVideoLoading(false);
       } else if (dubVideoUrl.trim()) {
         // For external URLs (YouTube/TikTok/FB), we can't preview directly
         // but we set the URL to show the external link card
         setDubPreviewUrl(dubVideoUrl.trim());
-        if (isExternalVideoUrl(dubVideoUrl.trim())) {
-          setVideoLoading(false); // No loading for external URLs
-        }
+        setVideoLoading(false);
       }
     } catch (error) {
       setVideoPreviewError("Failed to load video. Please try again.");
+      setVideoLoading(false);
       console.error("Video preview error:", error);
     }
   };
 
   const handleDubReset = () => {
+    // Always revoke object URL if it was created from a file
     if (dubPreviewUrl && dubVideoFile) {
       URL.revokeObjectURL(dubPreviewUrl);
     }
@@ -1090,6 +1102,8 @@ export default function TTSGenerator() {
     setDubResult(null);
     setDubPreviewUrl("");
     setDubDetectedRatio("16:9");
+    setVideoLoading(false);
+    setVideoPreviewError("");
   };
 
   const { fmtTime } = useSystemTime();
@@ -2361,7 +2375,7 @@ export default function TTSGenerator() {
                             <button onClick={() => { setDubVideoUrl(""); setDubPreviewUrl(""); setDubVideoFile(null); }} className="text-xs px-2 py-1 rounded hover:bg-red-500/20 text-red-400">✕</button>
                           </div>
                           <div className="flex justify-center items-center p-1 relative overflow-hidden" style={{ height: 'calc(100vh - 16rem)', minHeight: '300px' }}>
-                            {dubPreviewUrl === "loading" || dubPreviewMutation.isPending ? (
+                            {videoLoading ? (
                               <div className="w-full h-full rounded-xl flex flex-col items-center justify-center gap-3" style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}` }}>
                                 <span className="text-xs font-semibold" style={{ color: subtextColor }}>Preparing preview...</span>
                               </div>
@@ -2382,6 +2396,11 @@ export default function TTSGenerator() {
                                     src={dubPreviewUrl}
                                     className="w-full h-full rounded-lg cursor-pointer"
                                     style={{ objectFit: 'contain', display: 'block' }}
+                                    controls
+                                    preload="metadata"
+                                    onError={() => {
+                                      setVideoPreviewError("Failed to load video preview.");
+                                    }}
                                     onClick={() => {
                                       const v = dubPreviewRef.current;
                                       if (!v) return;
@@ -2441,6 +2460,12 @@ export default function TTSGenerator() {
                                       <div className="dubbing-loader-label">Generating</div>
                                       <div className="dubbing-loader-percent">{dubProgress}%</div>
                                     </div>
+                                  </div>
+                                )}
+                                {/* Video Preview Error */}
+                                {videoPreviewError && activeJobId === null && (
+                                  <div className="mt-3 p-3 rounded-xl" style={{ background: "rgba(220, 38, 38, 0.1)", border: "1px solid rgba(220, 38, 38, 0.3)" }}>
+                                    <p className="text-xs font-semibold" style={{ color: "#dc2626" }}>{videoPreviewError}</p>
                                   </div>
                                 )}
                               </>
@@ -3005,9 +3030,17 @@ export default function TTSGenerator() {
                                 display: "block",
                               }}
                               src={dubResult.videoUrl}
+                              onError={() => {
+                                setVideoPreviewError("Failed to load the generated video. The download link may have expired. Try downloading instead.");
+                              }}
                             />
                           </div>
                         </div>
+                        {videoPreviewError && (
+                          <div className="mt-3 p-3 rounded-xl mx-auto max-w-md" style={{ background: "rgba(220, 38, 38, 0.1)", border: "1px solid rgba(220, 38, 38, 0.3)" }}>
+                            <p className="text-xs font-semibold text-center" style={{ color: "#dc2626" }}>{videoPreviewError}</p>
+                          </div>
+                        )}
                         <div className="flex items-center justify-center gap-3 mt-4 flex-wrap">
                           <button
                             onClick={handleDubDownload}
