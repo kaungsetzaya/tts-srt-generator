@@ -87,10 +87,35 @@ function isYouTube(url: string): boolean {
   return url.includes("youtube.com") || url.includes("youtu.be");
 }
 
+// Force Facebook to re-scrape the URL so og:image is refreshed
+async function forceFacebookRescrape(url: string): Promise<void> {
+  const token = process.env.FACEBOOK_APP_ACCESS_TOKEN;
+  if (!token) {
+    console.log("[Facebook] No FACEBOOK_APP_ACCESS_TOKEN set, skipping re-scrape");
+    return;
+  }
+  try {
+    const rescrapeUrl = `https://graph.facebook.com/?id=${encodeURIComponent(url)}&scrape=true&access_token=${token}`;
+    const response = await fetch(rescrapeUrl, { method: "POST", timeout: 8000 } as any);
+    if (response.ok) {
+      console.log("[Facebook] Re-scraped", url);
+    } else {
+      console.warn("[Facebook] Re-scrape failed:", response.status, await response.text());
+    }
+  } catch (e: any) {
+    console.warn("[Facebook] Re-scrape error:", e.message);
+  }
+}
+
 export async function getVideoInfo(url: string): Promise<{ duration: number; filesize: number; title?: string } | null> {
   if (!isAllowedVideoUrl(url)) {
     console.warn("[Downloader] Unsupported platform:", url);
     return null;
+  }
+
+  // Force Facebook re-scrape before fetching info
+  if (url.includes("facebook.com") || url.includes("fb.watch")) {
+    await forceFacebookRescrape(url);
   }
 
   // Extra delay for YouTube

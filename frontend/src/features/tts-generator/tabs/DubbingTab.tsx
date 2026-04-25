@@ -471,7 +471,7 @@ function DubbingTab({
                             ) : previewImage ? (
                               <>
                                 <img
-                                  src={previewImage}
+                                  src={`${previewImage}${previewImage.includes("?") ? "&" : "?"}v=${Date.now()}`}
                                   alt={linkPreview?.title || "Facebook Video"}
                                   className="absolute inset-0 w-full h-full object-cover"
                                   onError={(e) => {

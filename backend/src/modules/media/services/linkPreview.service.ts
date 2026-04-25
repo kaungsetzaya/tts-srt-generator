@@ -67,6 +67,10 @@ export async function fetchLinkPreview(url: string): Promise<LinkPreviewData> {
       image = resolveUrl(url, image);
     }
 
+    // Check og:image dimensions — Facebook prefers explicit width/height
+    const imageWidth = getMeta("og:image:width");
+    const imageHeight = getMeta("og:image:height");
+
     // Facebook fallback
     const isFacebook = url.includes("facebook.com") || url.includes("fb.watch");
     if (isFacebook && !image) {
