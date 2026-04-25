@@ -212,7 +212,27 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
   res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   // Content-Security-Policy: primary XSS mitigation for modern browsers
-  const csp = process.env.CSP_POLICY || "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; media-src 'self' https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';";
+  let csp = process.env.CSP_POLICY || "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; media-src 'self' https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';";
+
+  // Ensure critical sources are always allowed regardless of env override
+  const ensureDirective = (directive: string, ...values: string[]) => {
+    const regex = new RegExp(`(${directive}\\s+)([^;]+)`);
+    const match = csp.match(regex);
+    if (match) {
+      const existing = match[2];
+      const additions = values.filter(v => !existing.includes(v));
+      if (additions.length) {
+        csp = csp.replace(regex, `$1${existing} ${additions.join(" ")}`);
+      }
+    } else {
+      csp += ` ${directive} ${values.join(" ")};`;
+    }
+  };
+  ensureDirective("media-src", "'self'", "blob:", "data:", "https:");
+  ensureDirective("connect-src", "'self'", "https:");
+  ensureDirective("img-src", "'self'", "data:", "https:");
+  ensureDirective("frame-src", "'self'", "https:");
+
   res.setHeader("Content-Security-Policy", csp);
   next();
 }

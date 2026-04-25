@@ -414,32 +414,42 @@ function DubbingTab({
         <div className="flex flex-col w-full">
           {/* Preview - Full width */}
           <div className="w-full">
-            <div className="relative border backdrop-blur-xl transition-all duration-300 rounded-2xl overflow-hidden" style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
+            <div className="relative border backdrop-blur-xl transition-all duration-300 rounded-3xl overflow-hidden shadow-2xl" style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
               <div className="flex items-center justify-between px-3 pt-2">
                 <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>
                   {lang === "mm" ? "ဗီဒီယိုကြိုကြည့်" : "Video Preview"}
                 </div>
                 <button onClick={() => { setDubVideoUrl(""); setDubPreviewUrl(""); setDubVideoFile(null); }} className="text-xs px-2 py-1 rounded hover:bg-red-500/20 text-red-400">✕</button>
               </div>
-              <div className="flex justify-center items-center relative overflow-hidden" style={{ height: 'calc(100vh - 5rem)', minHeight: '500px' }}>
+              <div className="flex justify-center items-center p-2 relative">
                 {videoLoading ? (
-                  <div className="w-full h-full rounded-xl flex flex-col items-center justify-center gap-3" style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}` }}>
+                  <div className="w-full h-64 rounded-xl flex flex-col items-center justify-center gap-3" style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}` }}>
                     <span className="text-xs font-semibold" style={{ color: subtextColor }}>Preparing preview...</span>
                   </div>
                 ) : (
-                  <>
-                    <div
-                      className="relative flex justify-center items-center mx-auto"
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                      }}
-                    >
+                  <div
+                    className="relative w-full flex justify-center items-center overflow-hidden rounded-2xl"
+                    style={{
+                      maxHeight: '75vh',
+                      aspectRatio: dubDetectedRatio === '9:16' ? '9/16' : '16/9',
+                    }}
+                  >
+                    {/* Background Layer — blurred cinematic fill */}
+                    <video
+                      src={dubPreviewUrl}
+                      className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-30 pointer-events-none"
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                      preload="metadata"
+                    />
+                    {/* Foreground Layer — clean video with correct aspect ratio */}
+                    <div className="relative z-10 w-full h-full flex items-center justify-center">
                       <video
                         ref={dubPreviewRef}
                         src={dubPreviewUrl}
-                        className="w-full h-full rounded-lg cursor-pointer"
-                        style={{ objectFit: 'cover', display: 'block' }}
+                        className="w-full h-full object-contain rounded-lg cursor-pointer"
                         controls
                         preload="metadata"
                         onError={() => {
@@ -456,7 +466,7 @@ function DubbingTab({
                         <div
                           className="absolute left-0 right-0 flex justify-center pointer-events-none px-3"
                           style={{
-                            zIndex: 5,
+                            zIndex: 20,
                             bottom: `${Math.max(2, Math.min(40, srtMarginV * 0.4))}%`,
                           }}
                         >
@@ -498,21 +508,23 @@ function DubbingTab({
                     </div>
                     {/* Dubbing Loader Overlay */}
                     {activeJobId !== null && (
-                      <div className="dubbing-loader-wrapper">
-                        <div className="dubbing-loader" />
-                        <div className="dubbing-loader-text">
-                          <div className="dubbing-loader-label">Generating</div>
-                          <div className="dubbing-loader-percent">{dubProgress}%</div>
+                      <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+                          <div className="text-center">
+                            <div className="text-white text-sm font-bold">Generating</div>
+                            <div className="text-white text-2xl font-black">{dubProgress}%</div>
+                          </div>
                         </div>
                       </div>
                     )}
                     {/* Video Preview Error */}
                     {videoPreviewError && activeJobId === null && (
-                      <div className="mt-3 p-3 rounded-xl" style={{ background: "rgba(220, 38, 38, 0.1)", border: "1px solid rgba(220, 38, 38, 0.3)" }}>
-                        <p className="text-xs font-semibold" style={{ color: "#dc2626" }}>{videoPreviewError}</p>
+                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 px-4 py-2 rounded-xl" style={{ background: "rgba(220, 38, 38, 0.9)", border: "1px solid rgba(220, 38, 38, 0.5)" }}>
+                        <p className="text-xs font-semibold text-white">{videoPreviewError}</p>
                       </div>
                     )}
-                  </>
+                  </div>
                 )}
               </div>
             </div>
@@ -1054,30 +1066,38 @@ function DubbingTab({
                 ? "AI ဖန်တီးပြီး ဗီဒီယို"
                 : "Auto Creator Generated Video"}
             </div>
-            <div className="flex justify-center mt-2">
+            <div className="flex justify-center mt-2 p-2">
               <div
-                className={dubDetectedRatio === "9:16" ? "w-full max-w-[420px]" : "w-full max-w-[960px]"}
+                className="relative w-full flex justify-center items-center overflow-hidden rounded-2xl shadow-2xl"
                 style={{
+                  maxHeight: '75vh',
                   aspectRatio: dubDetectedRatio === "9:16" ? "9/16" : "16/9",
-                  borderRadius: "12px",
-                  overflow: "hidden",
-                  margin: dubDetectedRatio === "9:16" ? "0 auto" : "0",
                 }}
               >
+                {/* Background Layer — blurred cinematic fill */}
                 <video
-                  key={dubResult.videoUrl}
-                  ref={dubResultVideoRef}
-                  controls
-                  preload="metadata"
-                  className="w-full h-full"
-                  style={{
-                    display: "block",
-                  }}
                   src={dubResult.videoUrl}
-                  onError={() => {
-                    setVideoPreviewError("Failed to load the generated video. The download link may have expired. Try downloading instead.");
-                  }}
+                  className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-30 pointer-events-none"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  preload="metadata"
                 />
+                {/* Foreground Layer — clean video */}
+                <div className="relative z-10 w-full h-full flex items-center justify-center">
+                  <video
+                    key={dubResult.videoUrl}
+                    ref={dubResultVideoRef}
+                    controls
+                    preload="metadata"
+                    className="w-full h-full object-contain rounded-lg"
+                    src={dubResult.videoUrl}
+                    onError={() => {
+                      setVideoPreviewError("Failed to load the generated video. The download link may have expired. Try downloading instead.");
+                    }}
+                  />
+                </div>
               </div>
             </div>
             {videoPreviewError && (
