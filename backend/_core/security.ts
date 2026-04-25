@@ -230,10 +230,10 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
   };
   ensureDirective("style-src", "'self'", "'unsafe-inline'", "https://fonts.googleapis.com");
   ensureDirective("font-src", "'self'", "data:", "https://fonts.gstatic.com");
-  ensureDirective("media-src", "'self'", "blob:", "data:", "https:");
-  ensureDirective("connect-src", "'self'", "https:");
-  ensureDirective("img-src", "'self'", "data:", "https:");
-  ensureDirective("frame-src", "'self'", "https:");
+  ensureDirective("media-src", "'self'", "blob:", "data:", "https:", "*.r2.cloudflarestorage.com", "lumixstudio.cc");
+  ensureDirective("connect-src", "'self'", "https:", "*.r2.cloudflarestorage.com", "lumixstudio.cc");
+  ensureDirective("img-src", "'self'", "data:", "https:", "*.r2.cloudflarestorage.com", "lumixstudio.cc");
+  ensureDirective("frame-src", "'self'", "https:", "*.r2.cloudflarestorage.com", "lumixstudio.cc");
 
   res.setHeader("Content-Security-Policy", csp);
   next();
