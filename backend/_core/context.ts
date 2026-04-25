@@ -13,13 +13,11 @@ export type TrpcContext = {
 };
 
 // Ã°Å¸â€Â JWT Secret
-if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
+if (!process.env.JWT_SECRET) {
   console.error("[SECURITY] FATAL: JWT_SECRET is not set!");
   process.exit(1);
 }
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "dev-only-secret-do-not-use-in-production"
-);
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 
 export async function createContext(
   opts: CreateExpressContextOptions

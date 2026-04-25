@@ -13,59 +13,86 @@ import { promisify } from "util";
 const execFileAsync = promisify(execFile);
 
 export const adminRouter = t.router({
-  getUsers: adminProcedure.query(async () => {
-    const db = await getDb();
-    if (!db) return [];
-    try {
-      const userList = await db.select().from(users).limit(500);
-      const allSubs = await db
-        .select()
-        .from(subscriptions)
-        .where(sql`expires_at > NOW()`);
+  getUsers: adminProcedure
+    .input(z.object({
+      cursor: z.string().optional(),
+      limit: z.number().min(1).max(100).default(50),
+    }).optional())
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return { users: [], nextCursor: null };
+      try {
+        const limit = input?.limit || 50;
+        const userList = await db
+          .select()
+          .from(users)
+          .orderBy(desc(users.createdAt))
+          .limit(limit + 1)
+          .offset(input?.cursor ? parseInt(input.cursor, 10) : 0);
 
-      // Count from all generation tables (ttsConversions + credit transactions for dubbing/translate)
-      // Include credit transactions as gen counts since they track actual job usage
-      const allCreditCounts = await db
-        .select({ userId: creditTransactions.userId, count: count() })
-        .from(creditTransactions)
-        .where(sql`type LIKE 'video_%' OR type LIKE 'dub_%'`)
-        .groupBy(creditTransactions.userId);
-      
-      const allGenCounts = await db
-        .select({ userId: ttsConversions.userId, count: count() })
-        .from(ttsConversions)
-        .groupBy(ttsConversions.userId);
+        const hasMore = userList.length > limit;
+        const trimmedList = hasMore ? userList.slice(0, limit) : userList;
+        const nextCursor = hasMore ? String((input?.cursor ? parseInt(input.cursor, 10) : 0) + limit) : null;
 
-      return userList.map((user: any) => {
-        const userSub = allSubs.find((s: any) => s.userId === user.id);
-        const ttsGen = allGenCounts.find((g: any) => g.userId === user.id);
-        const jobGen = allCreditCounts.find((j: any) => j.userId === user.id);
-        const totalGens = (ttsGen?.count || 0) + (jobGen?.count || 0);
-        return {
-          id: user.id,
-          name: user.telegramFirstName || user.name || "Unknown",
-          username: user.telegramUsername || "",
-          email: user.email || "",
-          role: user.role || "user",
-          banned: !!user.bannedAt,
-          credits: user.credits || 0,
-          subscription: userSub || null,
-          genCount: totalGens,
-          daysLeft: userSub
-            ? Math.ceil(
-                (new Date(userSub.expiresAt).getTime() - Date.now()) /
-                  (1000 * 60 * 60 * 24)
-              )
-            : 0,
-          lastLoginAt: user.lastLoginAt,
-          createdAt: user.createdAt,
-        };
-      });
-    } catch (e) {
-      console.error("[getUsers Error]", e);
-      return [];
-    }
-  }),
+        const userIds = trimmedList.map((u: any) => u.id);
+        const allSubs = userIds.length > 0
+          ? await db
+              .select()
+              .from(subscriptions)
+              .where(and(sql`expires_at > NOW()`, sql`user_id IN (${userIds.join(",")})`))
+          : [];
+
+        const allCreditCounts = userIds.length > 0
+          ? await db
+              .select({ userId: creditTransactions.userId, count: count() })
+              .from(creditTransactions)
+              .where(and(
+                sql`type LIKE 'video_%' OR type LIKE 'dub_%'`,
+                sql`user_id IN (${userIds.join(",")})`
+              ))
+              .groupBy(creditTransactions.userId)
+          : [];
+
+        const allGenCounts = userIds.length > 0
+          ? await db
+              .select({ userId: ttsConversions.userId, count: count() })
+              .from(ttsConversions)
+              .where(sql`user_id IN (${userIds.join(",")})`)
+              .groupBy(ttsConversions.userId)
+          : [];
+
+        const mappedUsers = trimmedList.map((user: any) => {
+          const userSub = allSubs.find((s: any) => s.userId === user.id);
+          const ttsGen = allGenCounts.find((g: any) => g.userId === user.id);
+          const jobGen = allCreditCounts.find((j: any) => j.userId === user.id);
+          const totalGens = (ttsGen?.count || 0) + (jobGen?.count || 0);
+          return {
+            id: user.id,
+            name: user.telegramFirstName || user.name || "Unknown",
+            username: user.telegramUsername || "",
+            email: user.email || "",
+            role: user.role || "user",
+            banned: !!user.bannedAt,
+            credits: user.credits || 0,
+            subscription: userSub || null,
+            genCount: totalGens,
+            daysLeft: userSub
+              ? Math.ceil(
+                  (new Date(userSub.expiresAt).getTime() - Date.now()) /
+                    (1000 * 60 * 60 * 24)
+                )
+              : 0,
+            lastLoginAt: user.lastLoginAt,
+            createdAt: user.createdAt,
+          };
+        });
+
+        return { users: mappedUsers, nextCursor };
+      } catch (e) {
+        console.error("[getUsers Error]", e);
+        return { users: [], nextCursor: null };
+      }
+    }),
 
   banUser: adminProcedure
     .input(z.object({ userId: z.string(), ban: z.boolean() }))
