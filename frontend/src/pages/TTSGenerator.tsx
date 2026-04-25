@@ -41,6 +41,7 @@ import {
 import CircularLoader from "@/features/tts-generator/components/CircularLoader";
 import { useDubbingState } from "@/features/tts-generator/hooks/useDubbingState";
 import { useTTSState } from "@/features/tts-generator/hooks/useTTSState";
+import { useVideoState } from "@/features/tts-generator/hooks/useVideoState";
 import {
   ALL_VOICES,
   TIER1_VOICES,
@@ -183,54 +184,27 @@ export default function TTSGenerator() {
   } = useTTSState(showError, lang, utils);
 
   // === VIDEO TAB STATE ===
-  const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [videoUrl, setVideoUrl] = useState<string>("");
-  const [dragOver, setDragOver] = useState(false);
-  const [videoResult, setVideoResult] = useState<{
-    myanmarText: string;
-    srtContent?: string;
-  } | null>(null);
-  const [editedVideoText, setEditedVideoText] = useState("");
-  const [videoCopied, setVideoCopied] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
-  // Translation job polling state
-  const [translateJobId, setTranslateJobId] = useState<string | null>(null);
-  const [translateJobProgress, setTranslateJobProgress] = useState(0);
-  const [translateJobMessage, setTranslateJobMessage] = useState("");
-  const [translateJobType, setTranslateJobType] = useState<"file" | "link">("file");
-
-  // tRPC polling queries for translation jobs
-  const translateFileJobQuery = trpc.video.getTranslateJob.useQuery(
-    { jobId: translateJobId ?? "" },
-    {
-      enabled: !!translateJobId && translateJobType === "file",
-      refetchInterval: (query) => {
-        const data = query.state.data;
-        if (data?.status === "completed" || data?.status === "failed") return false;
-        return 3000;
-      },
-      retry: false,
-      staleTime: 0,
-    }
-  );
-  const translateLinkJobQuery = trpc.video.getTranslateLinkJob.useQuery(
-    { jobId: translateJobId ?? "" },
-    {
-      enabled: !!translateJobId && translateJobType === "link",
-      refetchInterval: (query) => {
-        const data = query.state.data;
-        if (data?.status === "completed" || data?.status === "failed") return false;
-        return 3000;
-      },
-      retry: false,
-      staleTime: 0,
-    }
-  );
-
-  // Video preview state for translate tab
-  const [translatePreviewUrl, setTranslatePreviewUrl] = useState<string>("");
-  const [translateVideoLoading, setTranslateVideoLoading] = useState(false);
-  const [translateVideoError, setTranslateVideoError] = useState<string>("");
+  // === VIDEO TAB STATE (extracted to hook) ===
+  const {
+    videoFile, setVideoFile,
+    videoUrl, setVideoUrl,
+    dragOver, setDragOver,
+    videoResult, setVideoResult,
+    editedVideoText, setEditedVideoText,
+    videoCopied, setVideoCopied,
+    fileRef,
+    translateJobId, translateJobProgress, translateJobMessage, translateJobType,
+    translatePreviewUrl, setTranslatePreviewUrl,
+    translateVideoLoading, setTranslateVideoLoading,
+    translateVideoError, setTranslateVideoError,
+    handleVideoFile,
+    handleTranslate,
+    handleVideoCopy,
+    handleVideoReset,
+    handleVideoDownloadFromUrl,
+    downloadFile,
+    pollTranslateJob,
+  } = useVideoState(showError, utils);
 
   // === DUBBING TAB STATE (extracted to hook) ===
   const {
@@ -302,8 +276,6 @@ export default function TTSGenerator() {
       utils.history.getUnifiedHistory.invalidate();
     },
   });
-  const translateMutation = trpc.video.translate.useMutation();
-  const translateLinkMutation = trpc.video.translateLink.useMutation();
   // Separate mutations for dubbing tab
 
 
@@ -346,23 +318,6 @@ export default function TTSGenerator() {
     : { background: "linear-gradient(160deg, #FFFFFF 0%, #FFF9F2 100%)", border: "1px solid rgba(192,111,48,0.15)", boxShadow: "0 16px 48px rgba(192,111,48,0.08), 0 4px 16px rgba(0,0,0,0.04), inset 0 2px 0 rgba(255,255,255,0.95)" };
 
   // Auto-preview video for translate tab when URL changes
-  useEffect(() => {
-    if (videoUrl.trim() && !videoFile) {
-      setTranslateVideoLoading(true);
-      setTranslateVideoError("");
-      // Simulate loading delay
-      const timer = setTimeout(() => {
-        setTranslatePreviewUrl(videoUrl.trim());
-        setTranslateVideoLoading(false);
-      }, 500);
-      return () => clearTimeout(timer);
-    } else if (!videoUrl && !videoFile) {
-      setTranslatePreviewUrl("");
-      setTranslateVideoError("");
-      setTranslateVideoLoading(false);
-    }
-  }, [videoUrl, videoFile]);
-
   // Set audio source when generatedFiles.audioObjectUrl changes
   useEffect(() => {
     if (generatedFiles?.audioObjectUrl && audioRef.current) {
@@ -384,153 +339,6 @@ export default function TTSGenerator() {
     "relative border p-4 md:p-5 pt-8 backdrop-blur-xl transition-all duration-300 rounded-2xl mt-6";
   const labelStyle =
     "absolute -top-3.5 left-4 px-3 py-1 text-xs uppercase tracking-widest font-black rounded-lg z-10 border";
-
-  const handleVideoFile = (f: File) => {
-    if (f.size > 25 * 1024 * 1024) {
-      showError("File too large. Max 25MB.");
-      return;
-    }
-    setVideoFile(f);
-    setVideoUrl("");
-    setVideoResult(null);
-  };
-
-  // React to translation job query data — handles ALL states and errors
-  const activeTranslateJobQuery = translateJobType === "file" ? translateFileJobQuery : translateLinkJobQuery;
-  const activeTranslateJobData = activeTranslateJobQuery.data;
-  const activeTranslateJobError = activeTranslateJobQuery.error;
-
-  useEffect(() => {
-    if (!translateJobId) return;
-
-    // Handle network/server error from the polling request itself
-    if (activeTranslateJobError) {
-      const errMsg = (activeTranslateJobError as any)?.message || "Translation polling failed. Please try again.";
-      showError(errMsg);
-      setTranslateJobId(null);
-      setTranslateJobProgress(0);
-      setTranslateJobMessage("");
-      return;
-    }
-
-    if (!activeTranslateJobData) return;
-
-    if (activeTranslateJobData.status === "completed" && activeTranslateJobData.result) {
-      setVideoResult({
-        myanmarText: activeTranslateJobData.result.myanmarText,
-        srtContent: activeTranslateJobData.result.srtContent,
-      });
-      setEditedVideoText(activeTranslateJobData.result.myanmarText);
-      setTranslateJobId(null);
-      setTranslateJobProgress(100);
-      setTranslateJobMessage("");
-      utils.subscription.myStatus.invalidate();
-    } else if (activeTranslateJobData.status === "failed") {
-      showError(activeTranslateJobData.error || "Translation failed. Please try again.");
-      setTranslateJobId(null);
-      setTranslateJobProgress(0);
-      setTranslateJobMessage("");
-    } else {
-      // Still processing: update progress + message
-      const pct = activeTranslateJobData.progress ?? 0;
-      setTranslateJobProgress(pct > 0 ? pct : 10);
-      setTranslateJobMessage((activeTranslateJobData as any).message || "");
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [translateJobId, activeTranslateJobData, activeTranslateJobError]);
-
-  // Timeout guard: if translation takes > 10 minutes, surface an error
-  useEffect(() => {
-    if (!translateJobId) return;
-    const timeout = setTimeout(() => {
-      if (translateJobId) {
-        showError("Translation timed out after 10 minutes. Please try a shorter video.");
-        setTranslateJobId(null);
-        setTranslateJobProgress(0);
-      }
-    }, 10 * 60 * 1000);
-    return () => clearTimeout(timeout);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [translateJobId]);
-
-  // Poll translation job status — just set the jobId and let tRPC queries do the work
-  const pollTranslateJob = (jobId: string, jobType: "file" | "link") => {
-    setTranslateJobType(jobType);
-    setTranslateJobId(jobId);
-    setTranslateJobProgress(10);
-  };
-
-  const handleTranslate = async () => {
-    if (videoUrl.trim()) {
-      try {
-        const res = await translateLinkMutation.mutateAsync({
-          url: videoUrl.trim(),
-        });
-        if (res.jobId) {
-          pollTranslateJob(res.jobId, "link");
-        }
-      } catch (e: any) {
-        showError(e?.message || "Link Translation failed");
-      }
-      return;
-    }
-
-    if (!videoFile) return;
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = (reader.result as string).split(",")[1];
-      try {
-        const res = await translateMutation.mutateAsync({
-          videoBase64: base64,
-          filename: videoFile.name,
-        });
-        if (res.jobId) {
-          pollTranslateJob(res.jobId, "file");
-        }
-      } catch (e: any) {
-        showError(e?.message || "Translation failed");
-      }
-    };
-    reader.readAsDataURL(videoFile);
-  };
-
-  const handleVideoCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(editedVideoText);
-      setVideoCopied(true);
-      setTimeout(() => setVideoCopied(false), 2000);
-    } catch {
-      /* fallback */
-    }
-  };
-
-  const downloadFile = (content: string, filename: string) => {
-    const normalized = content.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-    const withCRLF = normalized.replace(/\n/g, "\r\n");
-    const blob = new Blob(["\uFEFF" + withCRLF], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleVideoReset = () => {
-    setVideoFile(null);
-    setVideoUrl("");
-    setVideoResult(null);
-    setEditedVideoText("");
-    setTranslateJobId(null);
-    setTranslateJobProgress(0);
-  };
-
-  // Video download from URL (for video tab)
-  const handleVideoDownloadFromUrl = async () => {
-    if (!videoUrl.trim()) return;
-    // Open in new tab to let browser handle download
-    window.open(videoUrl.trim(), "_blank");
-  };
 
 
 
