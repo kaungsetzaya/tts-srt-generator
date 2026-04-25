@@ -23,8 +23,10 @@
     "@sentry/node": "^10.50.0",
     "@sentry/profiling-node": "^10.50.0",
     "@sentry/vite-plugin": "^5.2.0",
+    "bullmq": "^5.76.2",
     "dotenv": "^17.2.2",
-    "drizzle-orm": "^0.45.2"
+    "drizzle-orm": "^0.45.2",
+    "ioredis": "^5.10.1"
   },
   "devDependencies": {
     "@builder.io/vite-plugin-jsx-loc": "^0.1.1",

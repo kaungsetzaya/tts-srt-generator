@@ -289,7 +289,7 @@ function VideoTranslateTab({
 
           {/* Video Preview removed from translate tab — not needed */}
 
-          {(videoFile || videoUrl) && !translateJobId && (
+           {(videoFile || videoUrl) && !translateJobId && (
             <button
               onClick={handleTranslate}
               disabled={
@@ -327,8 +327,31 @@ function VideoTranslateTab({
                )}
              </button>
            )}
-         </React.Fragment>
-       )}
+
+           {/* Progress Bar */}
+           {translateJobId !== null && (
+             <div className="w-full mt-4">
+               <div className="flex justify-between items-center mb-1">
+                 <span className="text-xs font-semibold" style={{ color: subtextColor }}>
+                   {translateJobMessage || (lang === "mm" ? "ဘာသာပြန်နေသည်..." : "Translating...")}
+                 </span>
+                 <span className="text-xs font-bold" style={{ color: accent }}>
+                   {translateJobProgress}%
+                 </span>
+               </div>
+               <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: isDark ? "rgba(255,255,255,0.1)" : "rgba(192,111,48,0.1)" }}>
+                 <motion.div 
+                   className="h-full rounded-full"
+                   style={{ background: `linear-gradient(135deg, ${accent}, ${accentSecondary})` }}
+                   initial={{ width: 0 }}
+                   animate={{ width: `${translateJobProgress}%` }}
+                   transition={{ duration: 0.5 }}
+                 />
+               </div>
+             </div>
+           )}
+          </React.Fragment>
+        )}
 
        {videoResult && (
         <div

@@ -118,6 +118,8 @@ export default function TTSGeneratorContent(props: UseTTSGeneratorStateReturn) {
     setDubResult,
     dubProgress,
     setDubProgress,
+    dubProgressMessage,
+    setDubProgressMessage,
     dubPreviewUrl,
     setDubPreviewUrl,
     dubDetectedRatio,
@@ -369,6 +371,8 @@ export default function TTSGeneratorContent(props: UseTTSGeneratorStateReturn) {
                   setDubResult={setDubResult}
                   dubProgress={dubProgress}
                   setDubProgress={setDubProgress}
+                  dubProgressMessage={dubProgressMessage}
+                  setDubProgressMessage={setDubProgressMessage}
                   dubPreviewUrl={dubPreviewUrl}
                   setDubPreviewUrl={setDubPreviewUrl}
                   dubDetectedRatio={dubDetectedRatio}

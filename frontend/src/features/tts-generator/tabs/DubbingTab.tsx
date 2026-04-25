@@ -43,7 +43,9 @@ export interface DubbingTabProps {
   dubResult: any;
   setDubResult: (v: any) => void;
   dubProgress: number;
-  setDubProgress: (v: number) => void;
+  setDubProgress: (p: number) => void;
+  dubProgressMessage: string;
+  setDubProgressMessage: (m: string) => void;
   dubPreviewUrl: string;
   setDubPreviewUrl: (v: string) => void;
   dubDetectedRatio: "9:16" | "16:9";
@@ -124,6 +126,7 @@ function DubbingTab({
   setDubResult,
   dubProgress,
   setDubProgress,
+  dubProgressMessage,
   dubPreviewUrl,
   setDubPreviewUrl,
   dubDetectedRatio,
@@ -206,7 +209,7 @@ function DubbingTab({
   } = themeValues;
 
   return (
-    <div className="w-full px-4 lg:px-6 animate-in fade-in zoom-in-95 duration-300 lg:h-[calc(100vh-4rem)] lg:overflow-hidden">
+    <div className="w-full px-4 lg:px-6 animate-in fade-in zoom-in-95 duration-300 h-full flex flex-col overflow-y-auto overflow-x-hidden">
       <div className="text-center mb-2 sm:mb-4">
         {!isAdmin && !hasPlan && me && !subLoading && (
           <div
@@ -229,7 +232,7 @@ function DubbingTab({
 
       {/* ── STEP: Video Input ── */}
       {!dubPreviewUrl && !dubResult && (
-        <div className="space-y-4">
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pb-6">
           <div
             className={box}
             style={{
@@ -411,9 +414,9 @@ function DubbingTab({
 
 {/* ── STEP: Video Preview + Settings ── */}
       {dubPreviewUrl && !dubResult && (
-        <div className="flex flex-col lg:flex-row lg:h-[calc(100vh-5rem)] lg:overflow-hidden gap-4">
-          {/* Preview - Left column, sticky on desktop */}
-          <div className="w-full lg:w-1/2 lg:sticky lg:top-0 lg:h-full lg:overflow-hidden flex-shrink-0">
+        <div className="flex flex-col lg:flex-row flex-1 min-h-0 gap-4">
+          {/* Preview - Left column, fills height */}
+          <div className="w-full lg:w-1/2 h-64 lg:h-full flex-shrink-0 flex flex-col min-h-0">
             <div className="relative border backdrop-blur-xl transition-all duration-300 rounded-3xl overflow-hidden shadow-2xl h-full flex flex-col" style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
               <div className="flex items-center justify-between px-3 pt-2 flex-shrink-0">
                 <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>
@@ -527,6 +530,7 @@ function DubbingTab({
             style={{
               scrollbarWidth: 'thin',
               scrollbarColor: `${accent}40 transparent`,
+              overscrollBehavior: 'contain',
             }}
           >
 
@@ -953,7 +957,7 @@ function DubbingTab({
             <div className="w-full mb-4">
               <div className="flex justify-between items-center mb-1">
                 <span className="text-xs font-semibold" style={{ color: subtextColor }}>
-                  {lang === "mm" ? "ဖန်တီးနေသည်..." : "Generating..."}
+                  {dubProgressMessage || (lang === "mm" ? "ဖန်တီးနေသည်..." : "Generating...")}
                 </span>
                 <span className="text-xs font-bold" style={{ color: accent }}>
                   {dubProgress}%
@@ -1041,7 +1045,7 @@ function DubbingTab({
 
       {/* Dubbing Result — Final Video + Download */}
       {dubResult && (
-        <div className="space-y-4">
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pb-6">
           {/* Video Player */}
           <div
             className={box}

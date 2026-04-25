@@ -134,7 +134,7 @@ export async function generateSpeechWithCharacter(
   const form = new FormData();
   form.set("voice_id", char.murfId);
   form.set("format", "MP3");
-  form.set("file", new Blob([baseResult.audioBuffer], { type: "audio/mpeg" }), "audio.mp3");
+  form.set("file", new Blob([new Uint8Array(baseResult.audioBuffer)], { type: "audio/mpeg" }), "audio.mp3");
 
   const response = await fetch("https://api.murf.ai/v1/voice-changer/convert", {
     method: "POST",

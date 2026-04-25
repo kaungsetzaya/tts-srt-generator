@@ -60,8 +60,8 @@ export function TTSGeneratorLayout({
 
   return (
     <>
-      <SidebarProvider defaultOpen>
-        <div className="flex flex-col min-h-screen w-full">
+      <SidebarProvider defaultOpen className="h-[100dvh] overflow-hidden">
+        <div className="flex flex-col h-full w-full overflow-hidden">
           {/* ── Full Header Bar ── */}
           <header
             className="fixed top-0 left-0 right-0 z-[100] h-14 w-full border-b border-white/5 bg-background/80 backdrop-blur-xl flex items-center px-3 gap-3"
@@ -110,7 +110,7 @@ export function TTSGeneratorLayout({
             )}
           </header>
 
-          <div className="flex flex-1 pt-14 w-full">
+          <div className="flex flex-1 pt-14 w-full min-h-0 overflow-hidden">
             {/* Sidebar — now under header */}
             <div className="sticky top-14 h-[calc(100vh-3.5rem)] shrink-0">
               <TTSGeneratorSidebar
@@ -124,8 +124,8 @@ export function TTSGeneratorLayout({
               />
             </div>
             <SidebarRail className="hidden md:block" />
-            <SidebarInset className="flex-1 flex flex-col min-h-[calc(100vh-3.5rem)] relative z-10">
-              <main className="flex-1 overflow-visible pb-0 relative">
+            <SidebarInset className="flex-1 flex flex-col h-full min-h-0 overflow-hidden relative z-10">
+              <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative">
                 {children}
               </main>
               <MobileBottomNavigation
@@ -230,7 +230,7 @@ function TTSGeneratorSidebar({
   return (
     <Sidebar
       collapsible="icon"
-      className={`hidden md:block glass-sidebar relative z-50 ${isDark ? "dark" : "light"}`}
+      className={`hidden md:!flex !relative !h-full glass-sidebar z-50 ${isDark ? "dark" : "light"}`}
       style={
         {
           backgroundColor: isDark
@@ -244,7 +244,7 @@ function TTSGeneratorSidebar({
       }
     >
       {/* No SidebarHeader — logo moved to top header bar */}
-      <SidebarContent className="bg-transparent px-2 py-4 overflow-hidden">
+      <SidebarContent className="bg-transparent px-2 py-4 overflow-y-auto">
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1.5">

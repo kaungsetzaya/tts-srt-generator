@@ -228,6 +228,8 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
       csp += ` ${directive} ${values.join(" ")};`;
     }
   };
+  ensureDirective("style-src", "'self'", "'unsafe-inline'", "https://fonts.googleapis.com");
+  ensureDirective("font-src", "'self'", "data:", "https://fonts.gstatic.com");
   ensureDirective("media-src", "'self'", "blob:", "data:", "https:");
   ensureDirective("connect-src", "'self'", "https:");
   ensureDirective("img-src", "'self'", "data:", "https:");

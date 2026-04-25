@@ -18,6 +18,7 @@ export const ENV = {
   vpsTtsApiUrl: (process.env.VPS_TTS_API_URL ?? "").trim() || null,
   vpsTtsAudioBaseUrl: (process.env.VPS_TTS_AUDIO_BASE_URL ?? "").trim() || null,
   vpsTtsHealthCheckUrl: (process.env.VPS_TTS_HEALTH_CHECK_URL ?? "").trim() || null,
+  redisUrl: (process.env.REDIS_URL ?? "").trim() || null,
 };
 
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Startup validation Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
@@ -38,6 +39,7 @@ const ENV_REQUIREMENTS: EnvRequirement[] = [
   { key: "ALLOWED_ORIGINS", required: false, description: "Comma-separated list of allowed CORS origins" },
   { key: "DOWNLOAD_SECRET", required: true, description: "Separate secret for HMAC download URL signing (min 32 chars)" },
   { key: "BASE_URL", required: false, description: "Public base URL (e.g. https://choco.de5.net)" },
+  { key: "REDIS_URL", required: false, description: "Upstash Redis URL for BullMQ job queue (redis:// or rediss://)" },
 ];
 
 /**

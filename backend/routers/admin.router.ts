@@ -7,7 +7,7 @@ import { t, adminProcedure } from "./trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
 import { users, subscriptions, ttsConversions, creditTransactions } from "../../shared/drizzle/schema";
-import { eq, count, sql, desc, and, gt } from "drizzle-orm";
+import { eq, count, sql, desc, and, gt, inArray } from "drizzle-orm";
 import { execFile } from "child_process";
 import { promisify } from "util";
 const execFileAsync = promisify(execFile);
@@ -39,33 +39,35 @@ export const adminRouter = t.router({
           ? await db
               .select()
               .from(subscriptions)
-              .where(and(sql`expires_at > NOW()`, sql`user_id IN (${userIds.join(",")})`))
-          : [];
-
-        const allCreditCounts = userIds.length > 0
-          ? await db
-              .select({ userId: creditTransactions.userId, count: count() })
-              .from(creditTransactions)
-              .where(and(
-                sql`type LIKE 'video_%' OR type LIKE 'dub_%'`,
-                sql`user_id IN (${userIds.join(",")})`
-              ))
-              .groupBy(creditTransactions.userId)
+              .where(and(sql`expires_at > NOW()`, inArray(subscriptions.userId, userIds)))
           : [];
 
         const allGenCounts = userIds.length > 0
           ? await db
               .select({ userId: ttsConversions.userId, count: count() })
               .from(ttsConversions)
-              .where(sql`user_id IN (${userIds.join(",")})`)
+              .where(inArray(ttsConversions.userId, userIds))
               .groupBy(ttsConversions.userId)
+          : [];
+
+        const allFeatureCounts = userIds.length > 0
+          ? await db
+              .select({ userId: ttsConversions.userId, feature: ttsConversions.feature, count: count() })
+              .from(ttsConversions)
+              .where(inArray(ttsConversions.userId, userIds))
+              .groupBy(ttsConversions.userId, ttsConversions.feature)
           : [];
 
         const mappedUsers = trimmedList.map((user: any) => {
           const userSub = allSubs.find((s: any) => s.userId === user.id);
           const ttsGen = allGenCounts.find((g: any) => g.userId === user.id);
-          const jobGen = allCreditCounts.find((j: any) => j.userId === user.id);
-          const totalGens = (ttsGen?.count || 0) + (jobGen?.count || 0);
+          const totalGens = ttsGen?.count || 0;
+          const userFeatures = allFeatureCounts
+            .filter((f: any) => f.userId === user.id)
+            .reduce((acc: Record<string, number>, f: any) => {
+              acc[f.feature ?? "tts"] = f.count;
+              return acc;
+            }, {});
           return {
             id: user.id,
             name: user.telegramFirstName || user.name || "Unknown",
@@ -76,6 +78,7 @@ export const adminRouter = t.router({
             credits: user.credits || 0,
             subscription: userSub || null,
             genCount: totalGens,
+            featureBreakdown: userFeatures,
             daysLeft: userSub
               ? Math.ceil(
                   (new Date(userSub.expiresAt).getTime() - Date.now()) /
@@ -251,7 +254,7 @@ export const adminRouter = t.router({
         let videoCount = 0;
         featureCounts.forEach((f: any) => {
           if (f.feature === "tts") ttsCount = f.count;
-          else if (f.feature === "video_link" || f.feature === "video_upload") videoCount += f.count;
+          else if (["video_link", "video_upload", "dub_file", "dub_link"].includes(f.feature)) videoCount += f.count;
         });
 
         const planRows = await db

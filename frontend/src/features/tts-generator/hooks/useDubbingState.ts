@@ -22,6 +22,8 @@ export interface UseDubbingStateReturn {
   setDubResult: (r: DubbingResult | null) => void;
   dubProgress: number;
   setDubProgress: (p: number) => void;
+  dubProgressMessage: string;
+  setDubProgressMessage: (m: string) => void;
   dubPreviewUrl: string;
   setDubPreviewUrl: (url: string) => void;
   dubDetectedRatio: "9:16" | "16:9";
@@ -101,6 +103,7 @@ export function useDubbingState(
   const [dubDragOver, setDubDragOver] = useState(false);
   const [dubResult, setDubResult] = useState<DubbingResult | null>(null);
   const [dubProgress, setDubProgress] = useState<number>(0);
+  const [dubProgressMessage, setDubProgressMessage] = useState<string>("");
   const dubResultVideoRef = useRef<HTMLVideoElement>(null);
 
   // Dubbing wizard state
@@ -181,6 +184,7 @@ export function useDubbingState(
       showError(errMsg);
       setActiveJobId(null);
       setDubProgress(0);
+      setDubProgressMessage("");
       return;
     }
     if (!jobStatusQuery.data) return;
@@ -189,13 +193,16 @@ export function useDubbingState(
       setDubResult(status.result as DubbingResult);
       setActiveJobId(null);
       setDubProgress(100);
+      setDubProgressMessage("");
       utils.subscription.myStatus.invalidate();
     } else if (status.status === "failed") {
       showError(status.error || "Dubbing failed. Please try again.");
       setActiveJobId(null);
       setDubProgress(0);
-    } else if (status.status === "processing") {
+      setDubProgressMessage("");
+    } else if (status.status === "processing" || status.status === "pending") {
       setDubProgress(status.progress ?? 0);
+      setDubProgressMessage(status.message || "");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeJobId, jobStatusQuery.data, jobStatusQuery.error]);
@@ -491,6 +498,8 @@ export function useDubbingState(
     setDubResult,
     dubProgress,
     setDubProgress,
+    dubProgressMessage,
+    setDubProgressMessage,
     dubPreviewUrl,
     setDubPreviewUrl,
     dubDetectedRatio,

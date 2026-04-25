@@ -1196,14 +1196,30 @@ function SecondaryTabContent({
                                     {size}
                                   </span>
                                 </div>
-                                <p className="font-bold text-sm truncate mb-2" style={{ color: textColor }}>
-                                  {file.filename}
-                                </p>
-                                <div className="flex items-center gap-1.5 mb-4">
-                                  <ClockIcon
-                                    className="w-3.5 h-3.5 flex-shrink-0"
-                                    style={{ color: isExpiringSoon ? "#ef4444" : subtextColor }}
-                                  />
+                                 <p className="font-bold text-sm truncate mb-1" style={{ color: textColor }}>
+                                   {file.filename}
+                                 </p>
+                                 <p className="text-[10px] font-medium mb-3" style={{ color: subtextColor }}>
+                                   {(() => {
+                                     const d = new Date(file.lastModified);
+                                     const dateStr = d.toLocaleDateString(lang === "mm" ? "my-MM" : "en-US", {
+                                       year: "numeric",
+                                       month: "short",
+                                       day: "numeric",
+                                     });
+                                     const timeStr = d.toLocaleTimeString(lang === "mm" ? "my-MM" : "en-US", {
+                                       hour: "2-digit",
+                                       minute: "2-digit",
+                                       hour12: true,
+                                     });
+                                     return `${dateStr} · ${timeStr}`;
+                                   })()}
+                                 </p>
+                                 <div className="flex items-center gap-1.5 mb-4">
+                                   <ClockIcon
+                                     className="w-3.5 h-3.5 flex-shrink-0"
+                                     style={{ color: isExpiringSoon ? "#ef4444" : subtextColor }}
+                                   />
                                   <span
                                     className="text-xs font-semibold"
                                     style={{ color: isExpiringSoon ? "#ef4444" : subtextColor }}

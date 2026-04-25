@@ -72,6 +72,27 @@ export const ttsRouter = t.router({
         );
       } catch (error: any) {
         console.error("[TTS Error]", error?.message || error);
+        // Record failed conversion for analytics
+        try {
+          const db = await getDb();
+          if (db) {
+            await db.insert(ttsConversions).values({
+              id: randomUUID(),
+              userId,
+              voice: voiceId,
+              character: null,
+              text: input.text.slice(0, 500),
+              charCount: input.text.length,
+              durationMs: 0,
+              credits: creditsNeeded,
+              feature: "tts",
+              status: "fail",
+              errorMsg: (error?.message || "TTS generation failed").slice(0, 490),
+            });
+          }
+        } catch (dbErr) {
+          console.error("[TTS DB Log Error]", dbErr);
+        }
         if (error.code !== "BAD_REQUEST" && error.code !== "NOT_FOUND") {
           await addCredits(userId, creditsNeeded, "tts_refund", `Refund: ${voiceId} TTS failed`);
         }
@@ -88,6 +109,27 @@ export const ttsRouter = t.router({
 
       if (!result || !result.audioBuffer || result.audioBuffer.length === 0) {
         console.error("[TTS Error] Empty audio buffer returned");
+        // Record empty-result failure
+        try {
+          const db = await getDb();
+          if (db) {
+            await db.insert(ttsConversions).values({
+              id: randomUUID(),
+              userId,
+              voice: voiceId,
+              character: null,
+              text: input.text.slice(0, 500),
+              charCount: input.text.length,
+              durationMs: 0,
+              credits: creditsNeeded,
+              feature: "tts",
+              status: "fail",
+              errorMsg: "Empty audio buffer",
+            });
+          }
+        } catch (dbErr) {
+          console.error("[TTS DB Log Error]", dbErr);
+        }
         await addCredits(userId, creditsNeeded, "tts_refund", `Refund: ${voiceId} TTS empty result`);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -95,7 +137,7 @@ export const ttsRouter = t.router({
         });
       }
 
-      // Record conversion
+      // Record successful conversion
       try {
         const db = await getDb();
         if (db) {
@@ -109,6 +151,7 @@ export const ttsRouter = t.router({
             durationMs: result.durationMs,
             credits: creditsNeeded,
             feature: "tts",
+            status: "success",
           });
         }
       } catch (e) {

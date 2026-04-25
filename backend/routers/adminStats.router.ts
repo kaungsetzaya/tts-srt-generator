@@ -336,13 +336,18 @@ export const adminStatsRouter = t.router({
     .query(async ({ input }) => {
       const db = await getDb();
       const empty = {
-        totalGens: 0, recentGens: 0, totalChars: 0, totalDurationMs: 0,
+        totalGens: 0, recentGens: 0, allTimeGens: 0, totalChars: 0, totalDurationMs: 0,
         statusBreakdown: { success: 0, fail: 0 },
         features: [], voices: [], activeHours: [], daily: [],
         recentLogs: [], subscription: null as any,
       };
       if (!db) return empty;
       try {
+        const [statsAllTime] = await db
+          .select({ count: count() })
+          .from(ttsConversions)
+          .where(eq(ttsConversions.userId, input.userId));
+
         const [stats30] = await db
           .select({
             count: count(),
@@ -414,6 +419,7 @@ export const adminStatsRouter = t.router({
         return {
           totalGens: stats30?.count || 0,
           recentGens: stats7?.count || 0,
+          allTimeGens: statsAllTime?.count || 0,
           totalChars: Number(stats30?.chars) || 0,
           totalDurationMs: Number(stats30?.duration) || 0,
           statusBreakdown,

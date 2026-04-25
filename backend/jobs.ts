@@ -1,7 +1,8 @@
-// Background job system for long-running tasks like video dubbing and translation
-// Jobs are persisted to the DB so they survive server restarts.
+// Background job system — BullMQ + Upstash Redis with in-memory fallback
+// Supports graceful degradation when REDIS_URL is not configured
 import { randomUUID } from "crypto";
-import { DubOptions, DubResult } from "@shared/types";
+import { Job as BullMQJob } from "bullmq";
+import { getVideoQueue, isBullMQEnabled, initVideoQueue } from "./jobs/queue";
 
 export type JobStatus = "pending" | "processing" | "completed" | "failed";
 
@@ -21,15 +22,16 @@ export interface Job {
   updatedAt: Date;
 }
 
-// ─── In-memory cache (primary store for active/recent jobs) ─────────────────────
+// ─── In-memory cache (primary store for fast reads) ─────────────────────
 const jobs = new Map<string, Job>();
+
+// Map our job IDs to BullMQ Job objects for progress updates
+const bullmqJobMap = new Map<string, BullMQJob>();
+const lastBullMQProgressUpdate = new Map<string, number>();
 
 const MAX_CONCURRENT = 5;
 
-/** AsyncSemaphore — proper queue-based slot management.
- *  In Node.js the event loop is single-threaded, so the counter
- *  check-and-decrement is effectively atomic. We wrap it in a
- *  small class to make the intent explicit. */
+/** AsyncSemaphore — proper queue-based slot management. */
 class AsyncSemaphore {
   private permits: number;
   private queue: Array<() => void> = [];
@@ -67,7 +69,7 @@ class AsyncSemaphore {
 
 const jobSemaphore = new AsyncSemaphore(MAX_CONCURRENT);
 
-// Job processors map
+// Job processors map (fallback when BullMQ is not available)
 const processors: Partial<Record<JobType, (job: Job) => Promise<void>>> = {};
 
 export function registerProcessor(type: JobType, processor: (job: Job) => Promise<void>) {
@@ -86,7 +88,36 @@ export function getQueueStatus() {
   return jobSemaphore.status();
 }
 
-// ─── DB persistence helpers (fire-and-forget, never throw) ───────────────────────
+// ─── BullMQ integration ─────────────────────────────────────────────────────
+
+export function registerBullMQJob(id: string, bullmqJob: BullMQJob) {
+  bullmqJobMap.set(id, bullmqJob);
+}
+
+export function unregisterBullMQJob(id: string) {
+  bullmqJobMap.delete(id);
+  lastBullMQProgressUpdate.delete(id);
+}
+
+async function updateBullMQProgressThrottled(id: string, progress: number, message: string) {
+  const bullmqJob = bullmqJobMap.get(id);
+  if (!bullmqJob) return;
+
+  const last = lastBullMQProgressUpdate.get(id) || 0;
+  const now = Date.now();
+  // Throttle to 5 seconds, but always allow 0% and 100%
+  if (now - last >= 5000 || progress === 0 || progress === 100) {
+    try {
+      await bullmqJob.updateProgress({ progress, message });
+      lastBullMQProgressUpdate.set(id, now);
+    } catch (err: any) {
+      // Non-fatal — Redis might be temporarily unavailable
+      console.warn(`[BullMQ] Progress update failed for ${id}:`, err.message);
+    }
+  }
+}
+
+// ─── DB persistence helpers (fire-and-forget, never throw) ───────────────────
 
 async function persistJobCreate(job: Job): Promise<void> {
   try {
@@ -115,16 +146,12 @@ async function persistJobUpdate(id: string, updates: Partial<Pick<Job, "status" 
     const { eq } = await import("drizzle-orm");
     const db = await getDb();
     if (!db) return;
-    const row: any = {
-      updatedAt: new Date(),
-    };
+    const row: any = { updatedAt: new Date() };
     if (updates.status !== undefined) row.status = updates.status;
     if (updates.progress !== undefined) row.progress = updates.progress;
     if (updates.message !== undefined) row.message = updates.message;
     if (updates.error !== undefined) row.error = updates.error?.slice(0, 990);
     if (updates.result !== undefined) row.resultJson = JSON.stringify(updates.result);
-    
-    // Ensure we don't overwrite a final status with an earlier one (though unlikely in current flow)
     await db.update(ttsJobs).set(row).where(eq(ttsJobs.id, id));
   } catch (e) {
     console.warn("[Jobs] DB persist update failed (non-fatal):", (e as any)?.message);
@@ -160,7 +187,6 @@ async function loadJobFromDb(id: string): Promise<Job | undefined> {
 }
 
 // On startup: mark any previously "processing" jobs as failed
-// (they were interrupted by the server restart)
 export async function recoverInterruptedJobs(): Promise<void> {
   try {
     const { getDb } = await import("./db");
@@ -177,7 +203,7 @@ export async function recoverInterruptedJobs(): Promise<void> {
   }
 }
 
-// ─── Core API ──────────────────────────────────────────────────────────────────
+// ─── Core API ───────────────────────────────────────────────────────────────
 
 export function createJob(type: JobType, input: any, userId?: string): string {
   const id = `job_${Date.now()}_${randomUUID().replace(/-/g, "").slice(0, 12)}`;
@@ -198,9 +224,22 @@ export function createJob(type: JobType, input: any, userId?: string): string {
   // Persist to DB (fire-and-forget)
   persistJobCreate(job).catch(() => {});
 
-  // Auto-process if processor registered
+  // ─── BullMQ path ──────────────────────────────────────────────────────
+  const videoQueue = initVideoQueue();
+  if (videoQueue) {
+    videoQueue.add(type, { ...input, userId }, { jobId: id }).catch((err: any) => {
+      console.error(`[BullMQ] Failed to add job ${id}:`, err.message);
+      // Fallback to in-memory processing if queue add fails
+      if (processors[type]) {
+        processJob(id).catch((e) => console.error(`[Job ${id}] Fallback process error:`, e));
+      }
+    });
+    return id;
+  }
+
+  // ─── Fallback: in-memory auto-processing ──────────────────────────────
   if (processors[type]) {
-    processJob(id).catch(err => console.error(`[Job ${id}] Process error:`, err));
+    processJob(id).catch((err) => console.error(`[Job ${id}] Process error:`, err));
   }
 
   return id;
@@ -236,36 +275,65 @@ async function processJob(jobId: string) {
 }
 
 export function getJob(id: string): Job | undefined {
-  const inMemory = jobs.get(id);
-  return inMemory;
+  return jobs.get(id);
 }
 
-/**
- * Async version that falls back to DB.
- * CRITICAL: We always check DB for active jobs to ensure cache consistency 
- * across multiple server instances or if the memory cache is stale.
- */
 export async function getJobAsync(id: string): Promise<Job | undefined> {
-  const inMemory = jobs.get(id);
-  
-  // If job is in memory AND it's a final state, it's safe to return.
-  if (inMemory && (inMemory.status === "completed" || inMemory.status === "failed")) {
-    return inMemory;
+  // 1. In-memory cache (fastest)
+  const cached = jobs.get(id);
+  if (cached) return cached;
+
+  // 2. BullMQ lookup (if available)
+  if (isBullMQEnabled()) {
+    try {
+      const videoQueue = getVideoQueue();
+      if (videoQueue) {
+        const { Job: BullMQJobClass } = await import("bullmq");
+        const bullmqJob = await BullMQJobClass.fromId(videoQueue, id);
+        if (bullmqJob) {
+          const progress = bullmqJob.progress as any;
+          const job: Job = {
+            id: bullmqJob.id!,
+            type: bullmqJob.name as JobType,
+            status: bullmqJob.returnvalue ? "completed" : bullmqJob.failedReason ? "failed" : "processing",
+            progress: typeof progress === "object" ? progress.progress || 0 : progress || 0,
+            message: typeof progress === "object" ? progress.message || "" : "",
+            input: bullmqJob.data || {},
+            result: bullmqJob.returnvalue || undefined,
+            error: bullmqJob.failedReason || undefined,
+            userId: bullmqJob.data?.userId,
+            createdAt: new Date(bullmqJob.timestamp),
+            updatedAt: new Date(bullmqJob.processedOn || bullmqJob.timestamp),
+          };
+          jobs.set(id, job);
+          return job;
+        }
+      }
+    } catch (err: any) {
+      console.warn(`[BullMQ] Failed to fetch job ${id}:`, err.message);
+    }
   }
 
-  // Otherwise, ALWAYS check DB for the latest progress/status.
+  // 3. DB fallback
   const fromDb = await loadJobFromDb(id);
   if (fromDb) {
     jobs.set(id, fromDb);
-    return fromDb;
   }
-
-  return inMemory;
+  return fromDb;
 }
 
 export function updateJob(id: string, updates: Partial<Pick<Job, "status" | "progress" | "message" | "result" | "error">>): void {
   const job = jobs.get(id);
-  if (job) Object.assign(job, updates, { updatedAt: new Date() });
+  if (job) {
+    Object.assign(job, updates, { updatedAt: new Date() });
+  }
+
+  // Update BullMQ progress (throttled to 5s)
+  if (updates.progress !== undefined || updates.message !== undefined) {
+    const progress = updates.progress ?? job?.progress ?? 0;
+    const message = updates.message ?? job?.message ?? "";
+    updateBullMQProgressThrottled(id, progress, message).catch(() => {});
+  }
 
   // Persist to DB (fire-and-forget)
   persistJobUpdate(id, updates).catch(() => {});
@@ -275,11 +343,8 @@ export async function cleanupOldJobs(): Promise<void> {
   // ─── In-memory cleanup (1h TTL) ─────────────────────
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
   for (const [id, job] of jobs.entries()) {
-    if (job.updatedAt < oneHourAgo) {
-      // Don't clean up pending jobs — they might still be needed
-      if (job.status !== "pending") {
-        jobs.delete(id);
-      }
+    if (job.updatedAt < oneHourAgo && job.status !== "pending") {
+      jobs.delete(id);
     }
   }
 
@@ -293,7 +358,6 @@ export async function cleanupOldJobs(): Promise<void> {
     await db.delete(ttsJobs)
       .where(sql`status IN ('completed', 'failed') AND updated_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)`);
   } catch (e) {
-    // Non-fatal — DB cleanup is best-effort
     console.warn("[Jobs] DB cleanup failed (non-fatal):", (e as any)?.message);
   }
 }

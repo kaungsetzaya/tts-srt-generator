@@ -131,7 +131,7 @@ async function generateTier2Speech(
   const form = new FormData();
   form.set("voice_id", char.murfId);
   form.set("format", "MP3");
-  form.set("file", new Blob([baseResult.audioBuffer], { type: "audio/mpeg" }), "audio.mp3");
+  form.set("file", new Blob([new Uint8Array(baseResult.audioBuffer)], { type: "audio/mpeg" }), "audio.mp3");
 
   console.log(`[TTS Tier2] Converting via Murf: ${char.name} (${char.murfId})`);
 
