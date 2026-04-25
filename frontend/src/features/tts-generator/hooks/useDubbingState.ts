@@ -199,6 +199,7 @@ export function useDubbingState(
       setDubPreviewUrl("");
       setVideoPreviewError("");
       setVideoLoading(false);
+      setDubResult(null);
       dubPreviewUrlRef.current = "";
       return;
     }
@@ -208,6 +209,7 @@ export function useDubbingState(
       if (!url || dubPreviewUrlRef.current === url) return;
       dubPreviewUrlRef.current = url;
       setVideoPreviewError("");
+      setDubResult(null);
       // Only auto-preview if URL looks like a direct video file
       // YouTube/Facebook/TikTok share links are HTML pages, not videos
       const isDirectVideo = /\.(mp4|webm|mov|mkv|avi)(\?.*)?$/i.test(url);
