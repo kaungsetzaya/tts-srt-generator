@@ -266,6 +266,9 @@ export function createWorker(): Worker | null {
       {
         connection: redisConnection,
         concurrency: 3,
+        lockDuration: 30000,
+        stalledInterval: 300000,
+        drainDelay: 10,
         limiter: {
           max: 3,
           duration: 1000,

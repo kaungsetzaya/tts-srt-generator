@@ -47,13 +47,17 @@ export function initVideoQueue(): Queue | null {
     videoQueue = new Queue("video-tasks", {
       connection: redisConnection,
       defaultJobOptions: {
-        removeOnComplete: true,
-        removeOnFail: { age: 24 * 3600 },
+        removeOnComplete: { count: 100, age: 3600 },
+        removeOnFail: { count: 50, age: 86400 },
         attempts: 2,
         backoff: {
           type: "exponential",
           delay: 5000,
         },
+      },
+      settings: {
+        lockDuration: 30000,
+        stalledInterval: 300000,
       },
     });
 
