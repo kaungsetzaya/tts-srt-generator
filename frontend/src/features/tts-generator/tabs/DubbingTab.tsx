@@ -459,7 +459,13 @@ function DubbingTab({
                         );
                       }
                       if (platform === "facebook") {
-                        const previewImage = linkPreview?.image;
+                        const rawImage = linkPreview?.image || "";
+                        // Fallback: if image is the Wikipedia logo, treat as no preview
+                        const isFallbackIcon = rawImage.includes("wikipedia");
+                        // Cache buster: append timestamp to fbcdn.net and/or fallback URLs
+                        const displayImage = rawImage.includes("fbcdn.net") || isFallbackIcon
+                          ? `${rawImage}${rawImage.includes("?") ? "&" : "?"}t=${Date.now()}`
+                          : rawImage;
                         return (
                           <div className="relative w-full h-full flex items-center justify-center overflow-hidden rounded-2xl bg-black/40">
                             {linkPreviewLoading ? (
@@ -467,16 +473,17 @@ function DubbingTab({
                                 <Loader2 className="w-8 h-8 animate-spin" style={{ color: accent }} />
                                 <span className="text-xs font-semibold" style={{ color: subtextColor }}>Loading preview...</span>
                               </div>
-                            ) : previewImage ? (
+                            ) : displayImage && !isFallbackIcon ? (
                               <>
                                 <img
-                                  src={`${previewImage}${previewImage.includes("?") ? "&" : "?"}v=${Date.now()}`}
+                                  src={displayImage}
                                   alt={linkPreview?.title || "Facebook Video"}
                                   className="absolute inset-0 w-full h-full object-cover"
+                                  crossOrigin="anonymous"
                                   onError={(e) => {
                                     e.currentTarget.style.display = "none";
                                   }}
-                                />
+                                /> 
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                                 <div className="absolute bottom-0 left-0 right-0 p-4">
                                   <p className="text-white font-bold text-sm line-clamp-2">{linkPreview?.title || "Facebook Video"}</p>
