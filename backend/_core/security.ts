@@ -152,6 +152,11 @@ export function xssProtectionMiddleware(req: Request, res: Response, next: NextF
   // - React auto-escaping output on frontend
   // - Drizzle ORM parameterized queries on backend
   // - Proper input validation in each router
+  // Skip pattern check for tRPC JSON endpoints (already validated by tRPC)
+  if (req.path?.startsWith("/trpc/")) {
+    return next();
+  }
+
   const checkTargets = [
     req.body,
     req.query,
@@ -159,14 +164,12 @@ export function xssProtectionMiddleware(req: Request, res: Response, next: NextF
   ];
   for (const target of checkTargets) {
     if (target && containsDangerousPattern(target)) {
-      console.warn(`[SECURITY] Suspicious payload detected from ${req.ip} at ${req.path} — logged only, request allowed`);
-      // Do NOT block — the pattern list is incomplete and bypassable
+      console.debug(`[SECURITY] Suspicious payload from ${req.ip} at ${req.path}`);
       break;
     }
   }
   next();
 }
-
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 // Ã¢Å“â€¦ 4. API Rate Limiter Ã¢â‚¬â€ /api/* Ã¡â‚¬ÂÃ¡â‚¬Â½Ã¡â‚¬â€žÃ¡â‚¬Âº Request Ã¡â‚¬â‚¬Ã¡â‚¬â€Ã¡â‚¬Â·Ã¡â‚¬ÂºÃ¡â‚¬Å¾Ã¡â‚¬ÂÃ¡â‚¬Âº
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
