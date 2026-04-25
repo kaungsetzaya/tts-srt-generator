@@ -204,6 +204,21 @@ export async function fetchLinkPreview(url: string): Promise<LinkPreviewData> {
       }
     }
 
+    // Fallback: try yt-dlp
+    if (!image) {
+      console.log("[LinkPreview] Falling back to downloaderService (yt-dlp) for FB video info...");
+      try {
+        const { downloaderService } = require("./downloader.service");
+        const info = await downloaderService.getVideoInfo(url);
+        if (info?.thumbnail) {
+          image = await proxyImageToR2(info.thumbnail);
+          if (info.title) title = info.title;
+        }
+      } catch (e: any) {
+        console.warn("[LinkPreview] yt-dlp fallback failed:", e.message);
+      }
+    }
+
     return {
       title: title || "Facebook Video",
       description: "",
