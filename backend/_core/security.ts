@@ -235,7 +235,7 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
   ensureDirective("font-src", "'self'", "data:", "https://fonts.gstatic.com");
   ensureDirective("media-src", "'self'", "blob:", "data:", "https:", "*.r2.cloudflarestorage.com", "lumixstudio.cc", "facebook.com", "www.facebook.com", "fb.watch", "fbcdn.net", "tiktok.com", "www.tiktok.com", "vm.tiktok.com", "youtube.com", "youtu.be", "googlevideo.com");
   ensureDirective("connect-src", "'self'", "https:", "*.r2.cloudflarestorage.com", "lumixstudio.cc", "facebook.com", "www.facebook.com", "fbcdn.net", "tiktok.com", "youtube.com", "googlevideo.com");
-  ensureDirective("img-src", "'self'", "data:", "blob:", "https:", "*.r2.cloudflarestorage.com", "lumixstudio.cc", "https://*.fbcdn.net", "https://*.facebook.com", "https://fb.watch", "https://scontent.xx.fbcdn.net", "tiktok.com", "youtube.com");
+  ensureDirective("img-src", "'self'", "data:", "blob:", "https:", "*.r2.cloudflarestorage.com", "lumixstudio.cc", "https://*.fbcdn.net", "https://*.facebook.com", "https://fb.watch", "https://scontent.xx.fbcdn.net", "https://scontent.frgn1-1.fna.fbcdn.net", "tiktok.com", "youtube.com");
   ensureDirective("frame-src", "'self'", "https:", "*.r2.cloudflarestorage.com", "lumixstudio.cc", "https://www.facebook.com", "https://web.facebook.com", "tiktok.com", "youtube.com");
 
   res.setHeader("Content-Security-Policy", csp);

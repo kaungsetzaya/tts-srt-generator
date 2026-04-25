@@ -115,7 +115,7 @@ function isFacebookReel(url: string): boolean {
   return false;
 }
 
-export async function getVideoInfo(url: string): Promise<{ duration: number; filesize: number; title?: string } | null> {
+export async function getVideoInfo(url: string): Promise<{ duration: number; filesize: number; title?: string; thumbnail?: string } | null> {
   if (!isAllowedVideoUrl(url)) {
     console.warn("[Downloader] Unsupported platform:", url);
     return null;
@@ -156,7 +156,8 @@ export async function getVideoInfo(url: string): Promise<{ duration: number; fil
     return {
       duration: info.duration || 0,
       filesize: info.filesize || info.filesize_approx || 0,
-      title: info.title || ""
+      title: info.title || "",
+      thumbnail: info.thumbnail || "",
     };
   } catch (error: any) {
     console.error("[Downloader getVideoInfo Error]", error);
@@ -173,7 +174,8 @@ export async function getVideoInfo(url: string): Promise<{ duration: number; fil
         return {
           duration: info.duration || 0,
           filesize: info.filesize || info.filesize_approx || 0,
-          title: info.title || ""
+          title: info.title || "",
+          thumbnail: info.thumbnail || "",
         };
       } catch (e) {
         console.error("[Downloader getVideoInfo Fallback Error]", e);

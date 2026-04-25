@@ -150,6 +150,18 @@ export function useDubbingState(
     }
   );
 
+  // Fallback: fetch video info (thumbnail) from yt-dlp when link preview has no image
+  const isFacebook = dubVideoUrl.includes("facebook.com") || dubVideoUrl.includes("fb.watch");
+  const needsThumbnailFallback = isFacebook && !!linkPreviewQuery.data && !linkPreviewQuery.data.image;
+  const videoInfoQuery = trpc.video.getVideoInfo.useQuery(
+    { url: dubVideoUrl.trim() },
+    {
+      enabled: needsThumbnailFallback,
+      retry: false,
+      staleTime: Infinity,
+    }
+  );
+
   const jobStatusQuery = trpc.jobs.getStatus.useQuery(
     { jobId: activeJobId ?? "" },
     {
@@ -609,7 +621,15 @@ export function useDubbingState(
     isExternalVideoUrl,
     isYouTubeUrl,
     getYouTubeVideoId,
-    linkPreview: linkPreviewQuery.data,
-    linkPreviewLoading: linkPreviewQuery.isLoading,
+    linkPreview: linkPreviewQuery.data
+      ? {
+          ...linkPreviewQuery.data,
+          image:
+            linkPreviewQuery.data.image ||
+            videoInfoQuery.data?.thumbnail ||
+            "",
+        }
+      : undefined,
+    linkPreviewLoading: linkPreviewQuery.isLoading || videoInfoQuery.isLoading,
   };
 }

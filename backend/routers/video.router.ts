@@ -385,4 +385,12 @@ export const videoRouter = t.router({
       const { fetchLinkPreview } = await import("../src/modules/media/services/linkPreview.service");
       return fetchLinkPreview(input.url);
     }),
+
+  getVideoInfo: protectedProcedure
+    .input(z.object({ url: z.string().url() }))
+    .query(async ({ input }) => {
+      const { getVideoInfo } = await import("../src/modules/media/services/downloader.service");
+      const info = await getVideoInfo(input.url);
+      return info ?? { duration: 0, filesize: 0, title: "", thumbnail: "" };
+    }),
 });

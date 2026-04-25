@@ -42,6 +42,15 @@ function resolveUrl(base: string, relative: string): string {
   }
 }
 
+function isFbcdnUrl(url: string): boolean {
+  try {
+    const hostname = new URL(url).hostname.toLowerCase();
+    return hostname === "fbcdn.net" || hostname.endsWith(".fbcdn.net");
+  } catch {
+    return false;
+  }
+}
+
 // Proxy fetch: download image and upload to R2 to avoid hotlinking blocks
 async function proxyImageToR2(imageUrl: string): Promise<string> {
   if (!r2Service.isEnabled()) return imageUrl;
@@ -92,25 +101,32 @@ export async function fetchLinkPreview(url: string): Promise<LinkPreviewData> {
     const html = await response.text();
     const $ = load(html);
 
-    const getMeta = (prop: string): string => {
-      const val = $(`meta[property="${prop}"]`).attr("content") ||
-                  $(`meta[name="${prop}"]`).attr("content") || "";
-      return val.trim();
+    // Explicit meta[property="..."] helpers to avoid cheerio selector ambiguity
+    const getMetaProp = (property: string): string => {
+      const el = $(`meta[property="${property}"]`);
+      return el.attr("content")?.trim() || "";
+    };
+    const getMetaName = (name: string): string => {
+      const el = $(`meta[name="${name}"]`);
+      return el.attr("content")?.trim() || "";
     };
 
     // Metadata extraction in order:
-    // 1. og:image:secure_url  2. og:image:url  3. og:image  4. twitter:image:src  5. twitter:image
-    let image = getMeta("og:image:secure_url") ||
-                getMeta("og:image:url") ||
-                getMeta("og:image") ||
-                getMeta("twitter:image:src") ||
-                getMeta("twitter:image") ||
-                "";
+    // 1. og:image:secure_url  2. og:image:url  3. og:image
+    // 4. twitter:image:src  5. twitter:image  6. name="thumbnail" (Facebook fallback)
+    let image =
+      getMetaProp("og:image:secure_url") ||
+      getMetaProp("og:image:url") ||
+      getMetaProp("og:image") ||
+      getMetaName("twitter:image:src") ||
+      getMetaName("twitter:image") ||
+      (isFacebook ? getMetaName("thumbnail") : "") ||
+      "";
 
     if (image) {
       image = resolveUrl(url, image);
       // For Facebook, try to proxy the image to avoid hotlink blocks
-      if (isFacebook && image.includes("fbcdn.net")) {
+      if (isFacebook && isFbcdnUrl(image)) {
         image = await proxyImageToR2(image);
       }
     }
@@ -120,10 +136,10 @@ export async function fetchLinkPreview(url: string): Promise<LinkPreviewData> {
     }
 
     return {
-      title: getMeta("og:title") || getMeta("twitter:title") || $("title").text() || url,
-      description: getMeta("og:description") || getMeta("twitter:description") || getMeta("description"),
+      title: getMetaProp("og:title") || getMetaName("twitter:title") || $("title").text() || url,
+      description: getMetaProp("og:description") || getMetaName("twitter:description") || getMetaName("description"),
       image,
-      siteName: getMeta("og:site_name") || getMeta("twitter:site") || new URL(url).hostname,
+      siteName: getMetaProp("og:site_name") || getMetaName("twitter:site") || new URL(url).hostname,
     };
   } catch (error: any) {
     console.error("[LinkPreview] Failed to fetch preview for", url, error.message);
