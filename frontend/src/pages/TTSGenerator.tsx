@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import CircularLoader from "@/features/tts-generator/components/CircularLoader";
 import { useDubbingState } from "@/features/tts-generator/hooks/useDubbingState";
+import { useTTSState } from "@/features/tts-generator/hooks/useTTSState";
 import {
   ALL_VOICES,
   TIER1_VOICES,
@@ -166,18 +167,20 @@ export default function TTSGenerator() {
     setTimeout(() => setSuccessToast(""), 3000);
   };
 
-  const [text, setText] = useState("");
-  const [selectedVoice, setSelectedVoice] = useState<string>("thiha");
-  const [selectedTier, setSelectedTier] = useState<VoiceTier>("tier1");
-  const [tone, setTone] = useState(0);
-  const [speed, setSpeed] = useState(1.0);
-  const [aspectRatio, setAspectRatio] = useState<"9:16" | "16:9">("16:9");
-  const [generatedFiles, setGeneratedFiles] = useState<{
-    audioObjectUrl: string;
-    srtContent: string;
-    durationMs: number;
-  } | null>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const {
+    text, setText,
+    selectedVoice, setSelectedVoice,
+    selectedTier, setSelectedTier,
+    tone, setTone,
+    speed, setSpeed,
+    aspectRatio, setAspectRatio,
+    generatedFiles, setGeneratedFiles,
+    audioRef,
+    geminiKey, setGeminiKey,
+    savedKey, setSavedKey,
+    handleGenerate,
+    getCharLimit,
+  } = useTTSState(showError, lang, utils);
 
   // === VIDEO TAB STATE ===
   const [videoFile, setVideoFile] = useState<File | null>(null);
@@ -274,11 +277,6 @@ export default function TTSGenerator() {
   const [speedAccordionOpen, setSpeedAccordionOpen] = useState(false);
   const [srtAccordionOpen, setSrtAccordionOpen] = useState(true);
 
-  const [geminiKey, setGeminiKey] = useState("");
-  const [savedKey, setSavedKey] = useState(
-    () => localStorage.getItem("gemini_key") || ""
-  );
-
   const [, navigate] = useLocation();
   const utils = trpc.useUtils();
   const { data: unifiedHistory, isLoading: historyLoading } =
@@ -316,18 +314,7 @@ export default function TTSGenerator() {
   const planUsage = subStatus?.usage;
   const currentPlan = subStatus?.plan;
 
-  // Compute character limit for current voice mode based on plan
-  const getCharLimit = () => {
-    if (isAdmin) return 99999;
-    if (!currentPlan) return 0; // No plan yet
-    // Tier 1 voices have higher limits
-    if (selectedTier === "tier1") {
-      return currentPlan === "trial" ? 5000 : 30000;
-    }
-    // Tier 2 & 3 have lower limits
-    return currentPlan === "trial" ? 1600 : 2000;
-  };
-  const currentCharLimit = getCharLimit();
+  const currentCharLimit = getCharLimit(isAdmin, currentPlan);
 
   const daysLeft = subStatus?.expiresAt
     ? Math.max(
@@ -397,61 +384,6 @@ export default function TTSGenerator() {
     "relative border p-4 md:p-5 pt-8 backdrop-blur-xl transition-all duration-300 rounded-2xl mt-6";
   const labelStyle =
     "absolute -top-3.5 left-4 px-3 py-1 text-xs uppercase tracking-widest font-black rounded-lg z-10 border";
-
-  const handleGenerate = async () => {
-    if (!text.trim()) return;
-    try {
-      const result = await generateMutation.mutateAsync({
-        text,
-        voice: selectedVoice as any,
-        tone,
-        speed,
-        aspectRatio,
-      });
-      if (result.success && result.audioBase64) {
-        try {
-          const binary = atob(result.audioBase64);
-          const bytes = new Uint8Array(binary.length);
-          for (let i = 0; i < binary.length; i++)
-            bytes[i] = binary.charCodeAt(i);
-          if (bytes.length === 0) {
-            showError(
-              lang === "mm"
-                ? "အသံ ဖန်တီး၍ မရပါ။ ထပ်ကြိုးစားပါ။"
-                : "Generated audio is empty. Please try again."
-            );
-            return;
-          }
-          const blob = new Blob([bytes], {
-            type: result.mimeType || "audio/mpeg",
-          });
-          const audioObjectUrl = URL.createObjectURL(blob);
-          setGeneratedFiles({
-            audioObjectUrl,
-            srtContent: result.srtContent || "",
-            durationMs: result.durationMs || 0,
-          });
-          utils.subscription.myStatus.invalidate();
-        } catch (decodeErr: any) {
-          console.error("[TTS Decode Error]", decodeErr);
-          showError(
-            lang === "mm"
-              ? "အသံ ဖိုင် ပြင်ဆင်၍ မရပါ။"
-              : "Failed to process audio file."
-          );
-        }
-      } else {
-        showError(
-          lang === "mm"
-            ? "အသံ ဖန်တီး၍ မရပါ။ ထပ်ကြိုးစားပါ。"
-            : "No audio was generated. Please try again."
-        );
-      }
-    } catch (e: any) {
-      console.error("[TTS Generate Error]", e);
-      showError(e?.message || "Failed");
-    }
-  };
 
   const handleVideoFile = (f: File) => {
     if (f.size > 25 * 1024 * 1024) {
