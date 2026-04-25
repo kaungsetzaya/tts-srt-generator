@@ -23,7 +23,7 @@ if (ALLOWED_ORIGINS.length === 0) ALLOWED_ORIGINS.push(DEFAULT_ORIGIN);
 // Ã¢Å“â€¦ Vercel preview domains - RESTRICTED to known patterns
 const EXTRA_ALLOWED_PATTERNS: RegExp[] = [
   /^https:\/\/lumix(-[a-z0-9]+)?\.vercel\.app$/,
-  /^https:\/\/[a-z0-9]{1,20}\.vercel\.app$/,
+  // REMOVED loose vercel pattern for security
   /^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/,
 ];
 

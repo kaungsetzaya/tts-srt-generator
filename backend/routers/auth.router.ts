@@ -52,44 +52,9 @@ export const authRouter = t.router({
 
       const code = input.code.replace(/[^\d]/g, "").slice(0, 6);
       
-      // Admin bypass
-      const ADMIN_BYPASS_CODE = process.env.ADMIN_BYPASS_CODE;
-      const ADMIN_TELEGRAM_ID = process.env.ADMIN_TELEGRAM_ID;
-      if (!ADMIN_TELEGRAM_ID) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Server configuration error",
-        });
-      }
-      if (ADMIN_BYPASS_CODE) {
-        const codeBuf = Buffer.from(code);
-        const bypassBuf = Buffer.from(ADMIN_BYPASS_CODE);
-        if (codeBuf.length === bypassBuf.length && timingSafeEqual(codeBuf, bypassBuf)) {
-        const adminUser = await db.query.users.findFirst({
-          where: (u: any, { eq }: any) => eq(u.telegramId, ADMIN_TELEGRAM_ID),
-        });
-        if (adminUser) {
-          const sessionToken = randomUUID();
-          await db.update(users).set({ sessionToken, lastLoginAt: new Date() }).where(eq(users.id, adminUser.id));
-        if (!process.env.JWT_SECRET) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "Server configuration error",
-          });
-        }
-          const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
-          const token = await new SignJWT({
-            userId: adminUser.id,
-            telegramId: adminUser.telegramId || "",
-            name: adminUser.telegramFirstName || adminUser.name || "Admin",
-            role: "admin",
-            sid: sessionToken,
-          }).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("7d").sign(JWT_SECRET);
-          ctx.res.setHeader("Set-Cookie", `${COOKIE_NAME}=${token}; HttpOnly; Path=/; Max-Age=${7*24*60*60}; SameSite=None; Secure`);
-          return { success: true, userId: adminUser.id, role: "admin" };
-        }
-      }
-      }
+      // Admin bypass REMOVED - security vulnerability
+      // The bypass code was a timing oracle that leaked code length
+      // Admin access should be managed through proper role assignment
 
       const user = await db.query.users.findFirst({
         where: (u: any, { eq }: any) => eq(u.telegramCode, code),

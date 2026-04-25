@@ -34,10 +34,11 @@ export async function generateSignedDownloadUrl(
   }
   const baseUrl = process.env.BASE_URL || "https://choco.de5.net";
   const expiry = String(Date.now() + 60 * 60 * 1000);
+  // Use full 64-char HMAC for max security
   const signature = createHmac("sha256", secret)
     .update(`${filename}:${expiry}`)
-    .digest("hex")
-    .slice(0, 32);
-  const token = `${signature}-${expiry}`;
+    .digest("hex");
+  // Use underscore delimiter to avoid filename conflicts (filenames may contain hyphens)
+  const token = `${signature}_${expiry}`;
   return `${baseUrl}/downloads/${token}/${filename}`;
 }

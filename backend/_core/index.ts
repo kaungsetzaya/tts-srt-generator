@@ -149,8 +149,8 @@ async function startServer() {
     const { token, filename } = req.params;
 
     // Validate token: HMAC(filename + expiry, secret)
-    // Token format: hex_signature-expiry_timestamp
-    const parts = token.split('-');
+    // Token format: hex_signature_expiry_timestamp (underscore delimiter)
+    const parts = token.split('_');
     if (parts.length !== 2) {
       res.status(403).json({ error: "Invalid download token" });
       return;
@@ -164,10 +164,10 @@ async function startServer() {
       return;
     }
 
+    // Verify full 64-char HMAC signature
     const expected = createHmac('sha256', DOWNLOAD_SECRET)
       .update(`${filename}:${expiryStr}`)
-      .digest('hex')
-      .slice(0, 32);
+      .digest('hex');
 
     const sigBuf = Buffer.from(signature, "hex");
     const expBuf = Buffer.from(expected, "hex");
