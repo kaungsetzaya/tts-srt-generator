@@ -1610,17 +1610,17 @@ export default function TTSGenerator() {
 
 {/* ── STEP: Video Preview + Settings ── */}
                   {dubPreviewUrl && !dubResult && (
-                    <div className="flex flex-col lg:flex-row lg:items-start w-full">
-                      {/* Preview - Left on desktop, top on mobile */}
-                      <div className="w-full lg:w-3/5 p-2">
-                        <div className={`${box} lg:sticky lg:top-4`} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
-                          <div className="flex items-center justify-between px-2 pt-2">
+                    <div className="flex flex-col w-full">
+                      {/* Preview - Full width */}
+                      <div className="w-full">
+                        <div className="relative border backdrop-blur-xl transition-all duration-300 rounded-2xl overflow-hidden" style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
+                          <div className="flex items-center justify-between px-3 pt-2">
                             <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>
                               {lang === "mm" ? "ဗီဒီယိုကြိုကြည့်" : "Video Preview"}
                             </div>
                             <button onClick={() => { setDubVideoUrl(""); setDubPreviewUrl(""); setDubVideoFile(null); }} className="text-xs px-2 py-1 rounded hover:bg-red-500/20 text-red-400">✕</button>
                           </div>
-                          <div className="flex justify-center items-center p-1 relative overflow-hidden" style={{ height: 'calc(100vh - 6rem)', minHeight: '400px' }}>
+                          <div className="flex justify-center items-center relative overflow-hidden" style={{ height: 'calc(100vh - 5rem)', minHeight: '500px' }}>
                             {videoLoading ? (
                               <div className="w-full h-full rounded-xl flex flex-col items-center justify-center gap-3" style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}` }}>
                                 <span className="text-xs font-semibold" style={{ color: subtextColor }}>Preparing preview...</span>
@@ -1717,8 +1717,8 @@ export default function TTSGenerator() {
                         </div>
                       </div>
 
-                      {/* Settings - Right on desktop, bottom on mobile */}
-                      <div className="w-full lg:w-2/5 space-y-4 p-2 pb-24">
+                      {/* Settings - Below preview */}
+                      <div className="w-full space-y-4 pb-24 mt-4">
 
                       {/* ── ACCORDION: Voice Selection ── */}
                       <div
