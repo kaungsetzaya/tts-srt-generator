@@ -32,6 +32,11 @@ import {
   ExternalLink,
   Subtitles,
   Star,
+  FolderOpen,
+  FileAudio,
+  FileText,
+  Play,
+  Trash2,
 } from "lucide-react";
 import {
   ALL_VOICES,
@@ -49,7 +54,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { ACCENT, ACCENT_SECONDARY } from "@shared/const";
 
 type MainTab = "tts" | "video" | "dubbing";
-type SecondaryTab = "history" | "plan" | "guide" | "settings" | null;
+type SecondaryTab = "history" | "plan" | "guide" | "settings" | "files" | null;
 type Lang = "mm" | "en";
 
 // ─── Shared Circular Loader Component ───────────
@@ -307,6 +312,7 @@ const accent80 = withOpacity(ACCENT, 0.8);
 export default function TTSGenerator() {
   const [mainTab, setMainTab] = useState<MainTab>("dubbing");
   const [secondaryTab, setSecondaryTab] = useState<SecondaryTab>(null);
+  const [libraryFilter, setLibraryFilter] = useState<"all" | "video" | "audio" | "text">("all");
   const [menuOpen, setMenuOpen] = useState(true);
   const { theme, toggleTheme } = useTheme();
   const [lang, setLang] = useState<Lang>("mm");
@@ -398,6 +404,7 @@ export default function TTSGenerator() {
   const [dubResult, setDubResult] = useState<{
     videoUrl: string;
     srtUrl?: string;
+    srtContent?: string;
     videoId?: string;
   } | null>(null);
   const [dubProgress, setDubProgress] = useState<number>(0);
@@ -484,6 +491,13 @@ export default function TTSGenerator() {
   const utils = trpc.useUtils();
   const { data: unifiedHistory, isLoading: historyLoading } =
     trpc.history.getUnifiedHistory.useQuery({ limit: 100 });
+  const { data: userFiles, isLoading: filesLoading } =
+    trpc.files.list.useQuery(undefined, { enabled: secondaryTab === "files" });
+  const deleteFileMutation = trpc.files.deleteFile.useMutation({
+    onSuccess: () => {
+      utils.files.list.invalidate();
+    },
+  });
   const { data: me } = trpc.auth.me.useQuery();
   const { data: subStatus, isLoading: subLoading } =
     trpc.subscription.myStatus.useQuery();
@@ -2994,7 +3008,7 @@ export default function TTSGenerator() {
                             />
                           </div>
                         </div>
-                        <div className="flex items-center justify-center gap-3 mt-4">
+                        <div className="flex items-center justify-center gap-3 mt-4 flex-wrap">
                           <button
                             onClick={handleDubDownload}
                             className="flex items-center gap-2 px-5 sm:px-6 py-3 rounded-xl font-black text-sm uppercase tracking-wider transition-all hover:scale-105 shadow-lg text-white"
@@ -3006,6 +3020,34 @@ export default function TTSGenerator() {
                             <Download className="w-5 h-5" />{" "}
                             {lang === "mm" ? "MP4 ဒေါင်းလုတ်" : "Download MP4"}
                           </button>
+                          {(dubResult?.srtUrl || dubResult?.srtContent) && (
+                            <button
+                              onClick={() => {
+                                if (dubResult.srtUrl) {
+                                  window.open(dubResult.srtUrl, "_blank");
+                                } else if (dubResult.srtContent) {
+                                  const blob = new Blob([dubResult.srtContent], { type: "text/plain;charset=utf-8" });
+                                  const url = URL.createObjectURL(blob);
+                                  const a = document.createElement("a");
+                                  a.href = url;
+                                  a.download = `LUMIX_${dubResult.videoId || "dub"}_SRT.srt`;
+                                  document.body.appendChild(a);
+                                  a.click();
+                                  document.body.removeChild(a);
+                                  URL.revokeObjectURL(url);
+                                }
+                              }}
+                              className="flex items-center gap-2 px-5 sm:px-6 py-3 rounded-xl font-black text-sm uppercase tracking-wider transition-all hover:scale-105 shadow-lg"
+                              style={{
+                                background: "rgba(34,197,94,0.15)",
+                                color: "#22c55e",
+                                border: "2px solid rgba(34,197,94,0.3)",
+                              }}
+                            >
+                              <Subtitles className="w-5 h-5" />
+                              {lang === "mm" ? "SRT ဒေါင်းလုတ်" : "Download SRT"}
+                            </button>
+                          )}
                         </div>
                       </div>
 
@@ -3818,6 +3860,346 @@ export default function TTSGenerator() {
                     : "Contact Admin via Telegram to subscribe"}
                 </p>
               </div>
+            </div>
+          )}
+
+          {/* === FILES TAB === */}
+          {secondaryTab === "files" && (
+            <div className="max-w-4xl mx-auto py-2 sm:py-4 animate-in fade-in zoom-in-95 duration-300">
+              {/* Header */}
+              <div className="text-center mb-6">
+                <h2
+                  className="text-2xl sm:text-3xl font-black uppercase tracking-widest mb-2"
+                  style={{ color: accent }}
+                >
+                  {lang === "mm" ? "လိုင်ဘရီ" : "Library"}
+                </h2>
+                <p className="text-xs sm:text-sm" style={{ color: subtextColor }}>
+                  {lang === "mm"
+                    ? "သင့်ဖန်တီးထားသော ဖိုင်အားလုံးကို ဤနေရာတွင် ကြည့်ရှုပါ"
+                    : "All your generated files in one place"}
+                </p>
+              </div>
+
+              {/* Privacy Notice */}
+              <div
+                className="mb-6 rounded-xl border p-4 flex items-start gap-3"
+                style={{
+                  background: isDark ? "rgba(192,111,48,0.08)" : "rgba(192,111,48,0.04)",
+                  borderColor: isDark ? "rgba(192,111,48,0.25)" : "rgba(192,111,48,0.15)",
+                }}
+              >
+                <ClockIcon className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: accent }} />
+                <div>
+                  <p className="text-sm font-bold" style={{ color: textColor }}>
+                    {lang === "mm" ? "လုံခြုံမှု အသိပေးချက်" : "Privacy Notice"}
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: subtextColor }}>
+                    {lang === "mm"
+                      ? "ဖိုင်များကို လုံခြုံမှု အတွက် ၇ ရက် အတွင်း အလိုအလျောက် ပျက်သွားပါမည်။"
+                      : "Files are automatically deleted after 7 days for security."}
+                  </p>
+                </div>
+              </div>
+
+              {filesLoading ? (
+                <div className="flex items-center justify-center py-20">
+                  <div
+                    className="w-8 h-8 border-2 rounded-full animate-spin"
+                    style={{ borderColor: accent, borderTopColor: "transparent" }}
+                  />
+                </div>
+              ) : !userFiles || userFiles.length === 0 ? (
+                <div
+                  className={box}
+                  style={{ background: cardBg, borderColor: cardBorder, boxShadow }}
+                >
+                  <div className="text-center py-12 sm:py-16 px-4">
+                    <div
+                      className="w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center"
+                      style={{ background: accent15 }}
+                    >
+                      <FolderOpen className="w-10 h-10" style={{ color: accent }} />
+                    </div>
+                    <h3 className="text-xl sm:text-2xl font-bold mb-2" style={{ color: textColor }}>
+                      {lang === "mm" ? "လိုင်ဘရီမှာ ဖိုင် မရှိသေးပါ" : "Library is empty"}
+                    </h3>
+                    <p className="text-sm mb-6 max-w-md mx-auto" style={{ color: subtextColor, lineHeight: "1.7" }}>
+                      {lang === "mm"
+                        ? "ပထမဆုံး TTS၊ Video Translate သို့မဟုတ် Dubbing ကို စတင်ဖန်တီးပါ"
+                        : "Start generating your first TTS, Video Translation, or Dubbing"}
+                    </p>
+                    <button
+                      onClick={() => setSecondaryTab(null)}
+                      className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all hover:scale-105 hover:shadow-lg"
+                      style={{ background: accent, border: `2px solid ${accent}`, color: "#fff" }}
+                    >
+                      <Wand2 className="w-4 h-4" />
+                      {lang === "mm" ? "စတင်ဖန်တီးရန်" : "Start Creating"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Category Filter Tabs */}
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                    {([
+                      { key: "all", label: lang === "mm" ? "အားလုံး" : "All", icon: FolderOpen },
+                      { key: "video", label: lang === "mm" ? "ဗီဒီယို" : "Video", icon: FileVideo },
+                      { key: "audio", label: lang === "mm" ? "အသံ" : "Audio", icon: FileAudio },
+                      { key: "text", label: lang === "mm" ? "စာသား" : "Text", icon: FileText },
+                    ] as const).map((tab) => {
+                      const isActive = libraryFilter === tab.key;
+                      return (
+                        <button
+                          key={tab.key}
+                          onClick={() => setLibraryFilter(tab.key)}
+                          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap"
+                          style={{
+                            background: isActive ? accent : isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
+                            color: isActive ? "#fff" : subtextColor,
+                            border: isActive ? `2px solid ${accent}` : `2px solid ${cardBorder}`,
+                            boxShadow: isActive ? `0 4px 12px ${accent}40` : "none",
+                          }}
+                        >
+                          <tab.icon className="w-4 h-4" />
+                          {tab.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* File Sections */}
+                  {(() => {
+                    const sections = [];
+                    if (libraryFilter === "all" || libraryFilter === "video") {
+                      const videoFiles = userFiles.filter((f) => f.type === "video");
+                      if (videoFiles.length > 0) {
+                        sections.push({
+                          type: "video" as const,
+                          title: lang === "mm" ? "ဗီဒီယိုဖိုင်များ" : "Videos",
+                          icon: FileVideo,
+                          color: "#ef4444",
+                          files: videoFiles,
+                        });
+                      }
+                    }
+                    if (libraryFilter === "all" || libraryFilter === "audio") {
+                      const audioFiles = userFiles.filter((f) => f.type === "audio");
+                      if (audioFiles.length > 0) {
+                        sections.push({
+                          type: "audio" as const,
+                          title: lang === "mm" ? "အသံဖိုင်များ" : "Audio",
+                          icon: FileAudio,
+                          color: "#8b5cf6",
+                          files: audioFiles,
+                        });
+                      }
+                    }
+                    if (libraryFilter === "all" || libraryFilter === "audio" || libraryFilter === "text") {
+                      const srtFiles = userFiles.filter((f) => f.type === "subtitle");
+                      if (srtFiles.length > 0) {
+                        if (libraryFilter === "audio") {
+                          // Under Audio tab, show SRT alongside audio
+                          const existing = sections.find((s) => s.type === "audio");
+                          if (existing) {
+                            existing.files = [...existing.files, ...srtFiles];
+                          } else {
+                            sections.push({
+                              type: "audio" as const,
+                              title: lang === "mm" ? "အသံ နှင့် စာတန်း" : "Audio & Subtitles",
+                              icon: FileAudio,
+                              color: "#8b5cf6",
+                              files: srtFiles,
+                            });
+                          }
+                        } else {
+                          sections.push({
+                            type: "subtitle" as const,
+                            title: lang === "mm" ? "စာတန်းထိုးဖိုင်များ" : "Subtitles",
+                            icon: FileText,
+                            color: "#22c55e",
+                            files: srtFiles,
+                          });
+                        }
+                      }
+                    }
+                    return sections.length === 0 ? (
+                      <div className="text-center py-16">
+                        <p className="text-sm font-semibold" style={{ color: subtextColor }}>
+                          {lang === "mm" ? "ဤကဏ္ဍတွင် ဖိုင် မရှိပါ" : "No files in this category"}
+                        </p>
+                      </div>
+                    ) : (
+                      sections.map((section) => (
+                        <div key={section.type + section.title}>
+                          <div className="flex items-center gap-2 mb-3">
+                            <div
+                              className="w-8 h-8 rounded-lg flex items-center justify-center"
+                              style={{ background: section.color + "15" }}
+                            >
+                              <section.icon className="w-4 h-4" style={{ color: section.color }} />
+                            </div>
+                            <h3 className="text-sm font-black uppercase tracking-wider" style={{ color: textColor }}>
+                              {section.title}
+                            </h3>
+                            <span
+                              className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                              style={{ background: section.color + "15", color: section.color }}
+                            >
+                              {section.files.length}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {section.files.map((file, idx) => {
+                              const shortIdMatch = file.filename.match(/LUMIX_(LMX[A-Z0-9]+)_(DUB|TRANS|TTS|SRT)/);
+                              const shortId = shortIdMatch?.[1] ?? "—";
+                              const feature = shortIdMatch?.[2] ?? "";
+                              const size = file.size
+                                ? file.size > 1024 * 1024
+                                  ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+                                  : `${(file.size / 1024).toFixed(1)} KB`
+                                : "";
+                              const daysLeft = file.lastModified
+                                ? Math.max(0, Math.ceil(
+                                    (new Date(file.lastModified).getTime() + 7 * 24 * 60 * 60 * 1000 - Date.now()) /
+                                      (24 * 60 * 60 * 1000)
+                                  ))
+                                : 7;
+                              const isExpiringSoon = daysLeft <= 2;
+                              return (
+                                <motion.div
+                                  key={file.key}
+                                  initial={{ opacity: 0, y: 10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ delay: idx * 0.05 }}
+                                  className="group relative rounded-2xl border overflow-hidden transition-all hover:border-opacity-60 hover:shadow-lg"
+                                  style={{
+                                    background: isDark ? "rgba(20,20,20,0.5)" : "rgba(255,255,255,0.6)",
+                                    borderColor: cardBorder,
+                                    boxShadow,
+                                  }}
+                                >
+                                  {section.type === "video" ? (
+                                    <a
+                                      href={file.downloadUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="relative block w-full aspect-video bg-black/40 overflow-hidden"
+                                    >
+                                      <div className="absolute inset-0 flex items-center justify-center">
+                                        <div
+                                          className="w-14 h-14 rounded-full flex items-center justify-center transition-transform group-hover:scale-110"
+                                          style={{ background: "rgba(192,111,48,0.9)", boxShadow: "0 4px 20px rgba(192,111,48,0.4)" }}
+                                        >
+                                          <Play className="w-6 h-6 text-white ml-0.5" fill="white" />
+                                        </div>
+                                      </div>
+                                      <div className="absolute top-2 right-2">
+                                        <span
+                                          className="text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-wider backdrop-blur-md"
+                                          style={{ background: "rgba(0,0,0,0.6)", color: "#fff" }}
+                                        >
+                                          {feature}
+                                        </span>
+                                      </div>
+                                      <div className="absolute bottom-2 left-2">
+                                        <span
+                                          className="text-[10px] font-bold px-2 py-1 rounded-full backdrop-blur-md"
+                                          style={{ background: "rgba(0,0,0,0.5)", color: "rgba(255,255,255,0.8)" }}
+                                        >
+                                          {size}
+                                        </span>
+                                      </div>
+                                    </a>
+                                  ) : (
+                                    <div className="relative w-full aspect-video flex items-center justify-center overflow-hidden" style={{ background: section.color + "08" }}>
+                                      <div
+                                        className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                                        style={{ background: section.color + "12" }}
+                                      >
+                                        <section.icon className="w-8 h-8" style={{ color: section.color }} />
+                                      </div>
+                                      <div className="absolute top-2 right-2">
+                                        <span
+                                          className="text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-wider"
+                                          style={{ background: section.color + "12", color: section.color }}
+                                        >
+                                          {feature}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  <div className="p-4">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <span
+                                        className="text-[10px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider"
+                                        style={{ background: accent15, color: accent }}
+                                      >
+                                        {shortId}
+                                      </span>
+                                      <span className="text-[10px] font-medium" style={{ color: subtextColor }}>
+                                        {size}
+                                      </span>
+                                    </div>
+                                    <p className="font-bold text-sm truncate mb-2" style={{ color: textColor }}>
+                                      {file.filename}
+                                    </p>
+                                    <div className="flex items-center gap-1.5 mb-4">
+                                      <ClockIcon
+                                        className="w-3.5 h-3.5 flex-shrink-0"
+                                        style={{ color: isExpiringSoon ? "#ef4444" : subtextColor }}
+                                      />
+                                      <span
+                                        className="text-xs font-semibold"
+                                        style={{ color: isExpiringSoon ? "#ef4444" : subtextColor }}
+                                      >
+                                        {daysLeft === 0
+                                          ? lang === "mm" ? "ယနေ့ ပျက်မည်" : "Expires today"
+                                          : lang === "mm"
+                                            ? `⏳ ${daysLeft} ရက် ကျန်`
+                                            : `⏳ ${daysLeft} day${daysLeft !== 1 ? "s" : ""} left`}
+                                      </span>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                      <a
+                                        href={file.downloadUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all hover:brightness-110 hover:scale-[1.02]"
+                                        style={{ background: accent, color: "#fff" }}
+                                      >
+                                        <Download className="w-4 h-4" />
+                                        {lang === "mm" ? "ဒေါင်းလုတ်" : "Download"}
+                                      </a>
+                                      <button
+                                        onClick={() => {
+                                          const msg = lang === "mm" ? `"${file.filename}" ဖိုင်ကို ဖျက်မည်မှာ သေချာပါသလား?` : `Are you sure you want to delete "${file.filename}"?`;
+                                          if (window.confirm(msg)) {
+                                            deleteFileMutation.mutate({ key: file.key });
+                                          }
+                                        }}
+                                        disabled={deleteFileMutation.isPending}
+                                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all hover:brightness-110 disabled:opacity-50 hover:scale-[1.02]"
+                                        style={{ background: "rgba(239,68,68,0.12)", color: "#ef4444" }}
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                        {lang === "mm" ? "ဖျက်ရန်" : "Delete"}
+                                      </button>
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))
+                    );
+                  })()}
+                </div>
+              )}
             </div>
           )}
 

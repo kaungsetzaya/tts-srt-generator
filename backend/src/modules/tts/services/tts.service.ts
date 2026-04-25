@@ -131,7 +131,6 @@ export async function generateSpeechWithCharacter(
   const murfApiKey = getMurfKey();
   if (!murfApiKey) throw new Error("MURF_API_KEY not configured");
 
-  const { FormData, Blob } = await import("formdata-node");
   const form = new FormData();
   form.set("voice_id", char.murfId);
   form.set("format", "MP3");

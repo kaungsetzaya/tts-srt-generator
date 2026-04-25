@@ -3,6 +3,7 @@ import express from "express";
 import helmet from "helmet";
 import { createServer } from "http";
 import path from "path";
+import * as Sentry from "@sentry/node";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "../routers";
 import { createContext } from "./context";

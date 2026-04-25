@@ -95,6 +95,9 @@ export interface DubOptions {
 export interface DubResult {
   videoUrl?: string;  // Download URL (new)
   videoBase64?: string;  // Keep for backward compat
+  filename?: string;     // Final output filename e.g. LUMIX_LMX782_DUB.mp4
+  shortId?: string;      // Project short ID e.g. LMX782
+  srtUrl?: string;       // Signed URL for SRT file
   myanmarText: string;
   srtContent: string;
   durationMs: number;

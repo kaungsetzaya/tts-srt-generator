@@ -1,5 +1,5 @@
 /**
- * TTS Router Ã¢â‚¬â€ text-to-speech generation
+ * TTS Router — text-to-speech generation
  */
 import { z } from "zod";
 import { randomUUID } from "crypto";
@@ -10,6 +10,9 @@ import { ttsConversions } from "../../shared/drizzle/schema";
 import { ttsService, getVoiceCredits, type VoiceId } from "../src/modules/tts";
 import { deductCredits, addCredits } from "./credits";
 import { acquireSlot, releaseSlot } from "../jobs";
+import { r2Service, r2Key } from "../src/modules/media/services/r2.service";
+import { generateShortId, buildOutputFilename } from "../src/modules/_core/filename";
+import { generateSignedDownloadUrl } from "../_core/signedUrl";
 
 // All valid voice IDs for validation
 const ALL_VOICE_IDS = [
@@ -111,12 +114,38 @@ export const ttsRouter = t.router({
         console.error("[TTS DB Log Error]", e);
       }
 
+      // Optionally upload to R2 with clean naming
+      const shortId = generateShortId();
+      let audioUrl: string | undefined;
+      let srtUrl: string | undefined;
+
+      if (r2Service.isEnabled()) {
+        try {
+          const audioFilename = buildOutputFilename(shortId, "TTS", "mp3");
+          const audioKey = r2Key("audio", audioFilename, userId);
+          await r2Service.uploadFile(audioKey, result.audioBuffer, "audio/mpeg");
+          audioUrl = await generateSignedDownloadUrl(audioFilename, userId, "audio");
+
+          if (result.srtContent) {
+            const srtFilename = buildOutputFilename(shortId, "SRT", "srt");
+            const srtKey = r2Key("subtitle", srtFilename, userId);
+            await r2Service.uploadFile(srtKey, Buffer.from(result.srtContent, "utf-8"), "text/plain; charset=utf-8");
+            srtUrl = await generateSignedDownloadUrl(srtFilename, userId, "subtitle");
+          }
+        } catch (r2Err) {
+          console.error("[TTS] R2 upload failed:", r2Err);
+        }
+      }
+
       return {
         success: true,
         audioBase64: result.audioBuffer.toString("base64"),
         mimeType: "audio/mpeg",
         durationMs: result.durationMs,
         srtContent: result.srtContent,
+        audioUrl,
+        srtUrl,
+        shortId,
       };
     }),
 });

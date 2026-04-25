@@ -12,6 +12,7 @@ import { assBuilderService } from '../services/assBuilder.service';
 import { isAllowedVideoUrl } from '../../../../_core/security';
 import { updateJob } from '../../../../jobs';
 import { generateSignedDownloadUrl } from '../../../../_core/signedUrl';
+import { generateShortId, buildOutputFilename } from '../../../../src/modules/_core/filename';
 
 function formatTimestamp(ms: number): string {
     const totalSec = Math.floor(ms / 1000);
@@ -111,6 +112,7 @@ export class DubVideoPipeline {
   }
 
   async execute(videoBuffer: Buffer, filename: string, options: DubOptions, jobId?: string) {
+    const shortId = generateShortId();
     const id = randomUUID();
     const tempDir = path.join(tmpdir(), `dub_pipe_${id}`);
     await fs.mkdir(tempDir, { recursive: true });
@@ -512,7 +514,7 @@ export class DubVideoPipeline {
       );
 
       // ── Save output ──
-      const finalFilename = `dub_${id}.mp4`;
+      const finalFilename = buildOutputFilename(shortId, "DUB", "mp4");
       const finalDir  = path.join(process.cwd(), 'static', 'downloads');
       await fs.mkdir(finalDir, { recursive: true });
       await fs.copyFile(tempOutputPath, path.join(finalDir, finalFilename));
@@ -525,6 +527,7 @@ export class DubVideoPipeline {
       return {
         videoUrl:    await generateSignedDownloadUrl(finalFilename),
         filename:    finalFilename,
+        shortId,
         id,
         myanmarText: allTranslatedText,
         srtContent:  allSrtContent,

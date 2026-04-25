@@ -23,12 +23,13 @@ import {
   Mic,
   FileVideo,
   Wand2,
+  FolderOpen,
 } from "lucide-react";
 
 interface TTSGeneratorLayoutProps {
   children: ReactNode;
   currentSecondaryTab: string | null;
-  onTabChange: (tab: "history" | "plan" | "guide" | "settings" | null) => void;
+  onTabChange: (tab: "history" | "plan" | "guide" | "settings" | "files" | null) => void;
   backgroundStyle?: React.CSSProperties;
   mainTab: "tts" | "video" | "dubbing";
   setMainTab: (tab: "tts" | "video" | "dubbing") => void;
@@ -144,7 +145,7 @@ export function TTSGeneratorLayout({
 
 interface TTSGeneratorSidebarProps {
   currentTab: string | null;
-  onTabChange: (tab: "history" | "plan" | "guide" | "settings" | null) => void;
+  onTabChange: (tab: "history" | "plan" | "guide" | "settings" | "files" | null) => void;
   mainTab: "tts" | "video" | "dubbing";
   setMainTab: (tab: "tts" | "video" | "dubbing") => void;
   isDark?: boolean;
@@ -194,6 +195,13 @@ function TTSGeneratorSidebar({
       label: "မှတ်တမ်း",
       labelEn: "History",
       icon: History,
+      type: "secondary" as const,
+    },
+    {
+      id: "files",
+      label: "လိုင်ဘရီ",
+      labelEn: "Library",
+      icon: FolderOpen,
       type: "secondary" as const,
     },
     {
@@ -357,6 +365,7 @@ function MobileBottomNavigation({
   ];
   const secondaryItems = [
     { id: "history", icon: History, label: "History" },
+    { id: "files", icon: FolderOpen, label: "Library" },
     { id: "settings", icon: Settings, label: "Settings" },
   ];
 

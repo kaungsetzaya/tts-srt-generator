@@ -3,7 +3,11 @@ import { dubVideoPipeline } from "../dubbing/pipelines/dubVideo.pipeline";
 import { translateVideoPipeline } from "../translation/pipelines/translateVideo.pipeline";
 import { addCredits } from "../../../routers/credits";
 import { generateSignedDownloadUrl } from "../../../_core/signedUrl";
+import { r2Service, r2Key } from "../media/services/r2.service";
 import { recordConversion } from "./stats";
+import { buildOutputFilename } from "./filename";
+import * as path from "path";
+import { promises as fs } from "fs";
 
 /**
  * Centrally registers all background job processors.
@@ -18,9 +22,33 @@ export function registerAllProcessors() {
             const buffer = Buffer.from(videoBase64, 'base64');
             const result = await dubVideoPipeline.execute(buffer, filename, options, job.id);
             
-            // Sign the download URL before completing
+            // Upload to R2 and sign the download URL before completing
             if (result.filename) {
+                const localPath = path.join(process.cwd(), "static", "downloads", result.filename);
                 result.videoUrl = await generateSignedDownloadUrl(result.filename);
+
+                if (r2Service.isEnabled() && userId) {
+                    try {
+                        const videoKey = r2Key("video", result.filename, userId);
+                        await r2Service.uploadFromPath(videoKey, localPath, "video/mp4");
+                        result.videoUrl = await generateSignedDownloadUrl(result.filename, userId, "video");
+                        await fs.unlink(localPath).catch(() => {});
+                    } catch (r2Err) {
+                        console.error(`[Job ${job.id}] R2 video upload failed, keeping local file:`, r2Err);
+                    }
+
+                    // Upload SRT if generated
+                    if (result.srtContent && result.shortId) {
+                        const srtFilename = buildOutputFilename(result.shortId, "SRT", "srt");
+                        try {
+                            const srtKey = r2Key("subtitle", srtFilename, userId);
+                            await r2Service.uploadFile(srtKey, Buffer.from(result.srtContent, "utf-8"), "text/plain; charset=utf-8");
+                            (result as any).srtUrl = await generateSignedDownloadUrl(srtFilename, userId, "subtitle");
+                        } catch (r2Err) {
+                            console.error(`[Job ${job.id}] R2 subtitle upload failed:`, r2Err);
+                        }
+                    }
+                }
             }
 
             console.log(`[Job ${job.id}] Dub file successful: ${result.videoUrl}`);
@@ -55,9 +83,33 @@ export function registerAllProcessors() {
         try {
             const result = await dubVideoPipeline.executeFromLink(url, options, job.id);
 
-            // Sign the download URL before completing
+            // Upload to R2 and sign the download URL before completing
             if (result.filename) {
+                const localPath = path.join(process.cwd(), "static", "downloads", result.filename);
                 result.videoUrl = await generateSignedDownloadUrl(result.filename);
+
+                if (r2Service.isEnabled() && userId) {
+                    try {
+                        const videoKey = r2Key("video", result.filename, userId);
+                        await r2Service.uploadFromPath(videoKey, localPath, "video/mp4");
+                        result.videoUrl = await generateSignedDownloadUrl(result.filename, userId, "video");
+                        await fs.unlink(localPath).catch(() => {});
+                    } catch (r2Err) {
+                        console.error(`[Job ${job.id}] R2 video upload failed, keeping local file:`, r2Err);
+                    }
+
+                    // Upload SRT if generated
+                    if (result.srtContent && result.shortId) {
+                        const srtFilename = buildOutputFilename(result.shortId, "SRT", "srt");
+                        try {
+                            const srtKey = r2Key("subtitle", srtFilename, userId);
+                            await r2Service.uploadFile(srtKey, Buffer.from(result.srtContent, "utf-8"), "text/plain; charset=utf-8");
+                            (result as any).srtUrl = await generateSignedDownloadUrl(srtFilename, userId, "subtitle");
+                        } catch (r2Err) {
+                            console.error(`[Job ${job.id}] R2 subtitle upload failed:`, r2Err);
+                        }
+                    }
+                }
             }
 
             console.log(`[Job ${job.id}] Dub link successful: ${result.videoUrl}`);

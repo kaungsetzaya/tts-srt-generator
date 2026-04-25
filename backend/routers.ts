@@ -18,6 +18,7 @@ import { settingsRouter } from "./routers/settings.router";
 import { adminRouter } from "./routers/admin.router";
 import { adminStatsRouter } from "./routers/adminStats.router";
 import { errorLoggingRouter } from "./routers/errorLogging.router";
+import { filesRouter } from "./routers/files.router";
 
 // System info (public)
 const systemRouter = t.router({
@@ -59,6 +60,7 @@ export const appRouter = t.router({
   admin: adminRouter,
   adminStats: adminStatsRouter,
   logBrowserError: errorLoggingRouter,
+  files: filesRouter,
   system: systemRouter,
 });
 
