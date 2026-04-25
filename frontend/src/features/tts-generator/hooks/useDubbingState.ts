@@ -74,6 +74,10 @@ export interface UseDubbingStateReturn {
   // Job state
   activeJobId: string | null;
 
+  // Mutation status
+  startDubMutationPending: boolean;
+  dubFileMutationPending: boolean;
+
   // Handlers
   handleDubVideoFile: (f: File) => void;
   handleDubGenerate: () => Promise<void>;
@@ -530,6 +534,8 @@ export function useDubbingState(
     dubPreviewRef,
     computeSrtPreviewStyle,
     activeJobId,
+    startDubMutationPending: startDubMutation.isPending,
+    dubFileMutationPending: dubFileMutation.isPending,
     handleDubVideoFile,
     handleDubGenerate,
     handleDubDownload,
