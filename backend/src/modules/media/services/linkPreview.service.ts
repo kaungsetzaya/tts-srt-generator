@@ -1,7 +1,7 @@
 import { load } from "cheerio";
 
-// Mobile User-Agent is more likely to get full HTML from social platforms
-const MOBILE_USER_AGENT = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Mobile/15E148 Safari/604.1";
+// Desktop User-Agent for Facebook (must match a real browser exactly)
+const DESKTOP_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
 export interface LinkPreviewData {
   title: string;
@@ -12,8 +12,17 @@ export interface LinkPreviewData {
 
 const FALLBACK_FACEBOOK_ICON = "https://upload.wikimedia.org/wikipedia/commons/b/b9/2023_Facebook_icon.svg";
 
+function isFacebookUrl(url: string): boolean {
+  return url.includes("facebook.com") || url.includes("fb.watch");
+}
+
 function resolveUrl(base: string, relative: string): string {
-  if (!relative || relative.startsWith("http://") || relative.startsWith("https://") || relative.startsWith("//")) {
+  if (!relative) return "";
+  // If relative starts with /, prepend Facebook domain
+  if (relative.startsWith("/")) {
+    return `https://www.facebook.com${relative}`;
+  }
+  if (relative.startsWith("http://") || relative.startsWith("https://") || relative.startsWith("//")) {
     return relative;
   }
   try {
@@ -24,19 +33,28 @@ function resolveUrl(base: string, relative: string): string {
 }
 
 export async function fetchLinkPreview(url: string): Promise<LinkPreviewData> {
+  const isFacebook = isFacebookUrl(url);
+
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
+    // Use Facebook-specific headers when scraping Facebook URLs
+    const fetchHeaders: Record<string, string> = isFacebook
+      ? {
+          "User-Agent": DESKTOP_USER_AGENT,
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.9",
+        }
+      : {
+          "User-Agent": DESKTOP_USER_AGENT,
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.9",
+        };
 
     const response = await fetch(url, {
       signal: controller.signal,
-      headers: {
-        "User-Agent": MOBILE_USER_AGENT,
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Connection": "keep-alive",
-        "Upgrade-Insecure-Requests": "1",
-      },
+      headers: fetchHeaders,
       redirect: "follow",
     });
     clearTimeout(timeout);
@@ -48,31 +66,26 @@ export async function fetchLinkPreview(url: string): Promise<LinkPreviewData> {
     const html = await response.text();
     const $ = load(html);
 
-    // Extract Open Graph, Twitter Card, and link rel meta tags
     const getMeta = (prop: string): string => {
       const val = $(`meta[property="${prop}"]`).attr("content") ||
                   $(`meta[name="${prop}"]`).attr("content") || "";
       return val.trim();
     };
 
-    // Look for image in order: og:image, twitter:image, link[rel='image_src']
-    let image = getMeta("og:image") || 
-                getMeta("twitter:image") || 
+    // Metadata extraction in specific order:
+    // 1. og:image:secure_url  2. og:image  3. twitter:image
+    let image = getMeta("og:image:secure_url") ||
+                getMeta("og:image") ||
+                getMeta("twitter:image") ||
                 getMeta("twitter:image:src") ||
-                $("link[rel='image_src']").attr("href") ||
                 "";
 
-    // Resolve relative URLs to absolute
+    // Fix relative URLs — prepend https://www.facebook.com for Facebook paths
     if (image) {
       image = resolveUrl(url, image);
     }
 
-    // Check og:image dimensions — Facebook prefers explicit width/height
-    const imageWidth = getMeta("og:image:width");
-    const imageHeight = getMeta("og:image:height");
-
     // Facebook fallback
-    const isFacebook = url.includes("facebook.com") || url.includes("fb.watch");
     if (isFacebook && !image) {
       image = FALLBACK_FACEBOOK_ICON;
     }
@@ -85,8 +98,8 @@ export async function fetchLinkPreview(url: string): Promise<LinkPreviewData> {
     };
   } catch (error: any) {
     console.error("[LinkPreview] Failed to fetch preview for", url, error.message);
-    
-    if (url.includes("facebook.com") || url.includes("fb.watch")) {
+
+    if (isFacebook) {
       return {
         title: "Facebook Video",
         description: "",
