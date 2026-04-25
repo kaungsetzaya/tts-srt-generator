@@ -1612,7 +1612,7 @@ export default function TTSGenerator() {
                   {dubPreviewUrl && !dubResult && (
                     <div className="flex flex-col lg:flex-row lg:items-start w-full">
                       {/* Preview - Left on desktop, top on mobile */}
-                      <div className="w-full lg:w-1/2 p-2">
+                      <div className="w-full lg:w-3/5 p-2">
                         <div className={`${box} lg:sticky lg:top-4`} style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
                           <div className="flex items-center justify-between px-2 pt-2">
                             <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>
@@ -1620,7 +1620,7 @@ export default function TTSGenerator() {
                             </div>
                             <button onClick={() => { setDubVideoUrl(""); setDubPreviewUrl(""); setDubVideoFile(null); }} className="text-xs px-2 py-1 rounded hover:bg-red-500/20 text-red-400">✕</button>
                           </div>
-                          <div className="flex justify-center items-center p-1 relative overflow-hidden" style={{ height: 'calc(100vh - 16rem)', minHeight: '300px' }}>
+                          <div className="flex justify-center items-center p-1 relative overflow-hidden" style={{ height: 'calc(100vh - 6rem)', minHeight: '400px' }}>
                             {videoLoading ? (
                               <div className="w-full h-full rounded-xl flex flex-col items-center justify-center gap-3" style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}` }}>
                                 <span className="text-xs font-semibold" style={{ color: subtextColor }}>Preparing preview...</span>
@@ -1630,18 +1630,15 @@ export default function TTSGenerator() {
                                 <div
                                   className="relative flex justify-center items-center mx-auto"
                                   style={{
-                                    aspectRatio: dubDetectedRatio === '9:16' ? '9/16' : '16/9',
-                                    maxWidth: '100%',
-                                    maxHeight: '100%',
-                                    height: dubDetectedRatio === '9:16' ? '100%' : 'auto',
-                                    width: dubDetectedRatio === '9:16' ? 'auto' : '100%',
+                                    width: '100%',
+                                    height: '100%',
                                   }}
                                 >
                                   <video
                                     ref={dubPreviewRef}
                                     src={dubPreviewUrl}
                                     className="w-full h-full rounded-lg cursor-pointer"
-                                    style={{ objectFit: 'contain', display: 'block' }}
+                                    style={{ objectFit: 'cover', display: 'block' }}
                                     controls
                                     preload="metadata"
                                     onError={() => {
@@ -1721,7 +1718,7 @@ export default function TTSGenerator() {
                       </div>
 
                       {/* Settings - Right on desktop, bottom on mobile */}
-                      <div className="w-full lg:w-1/2 space-y-4 p-2 pb-24">
+                      <div className="w-full lg:w-2/5 space-y-4 p-2 pb-24">
 
                       {/* ── ACCORDION: Voice Selection ── */}
                       <div
@@ -2258,7 +2255,7 @@ export default function TTSGenerator() {
                         </div>
                         <div className="flex justify-center mt-2">
                           <div
-                            className={dubDetectedRatio === "9:16" ? "w-[240px] sm:w-[280px]" : "w-full max-w-[640px]"}
+                            className={dubDetectedRatio === "9:16" ? "w-full max-w-[420px]" : "w-full max-w-[960px]"}
                             style={{
                               aspectRatio: dubDetectedRatio === "9:16" ? "9/16" : "16/9",
                               borderRadius: "12px",
