@@ -108,7 +108,7 @@ export const jobsRouter = t.router({
         await addCredits(userId, creditsNeeded, "video_dub_refund", "Refund: Dub link job creation failed").catch(() => {});
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: error.message || "Failed to start dub job.",
+          message: "Failed to start dub job. Please try again.",
         });
       }
     }),
@@ -164,8 +164,9 @@ export const jobsRouter = t.router({
         const jobId = createJob(type, { ...input, userId }, userId);
         return { jobId };
       } catch (err: any) {
+        console.error("[Jobs] startTranslate error:", err);
         await addCredits(userId, creditsNeeded, "video_translate_refund", "Refund: Failed to start translate job");
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: err.message });
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to start translation job. Please try again." });
       }
     }),
 

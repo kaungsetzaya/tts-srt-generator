@@ -70,7 +70,7 @@ export const dubRouter = t.router({
         await addCredits(userId, 10, "video_dub_refund", "Refund: Dub link job creation failed");
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: error.message || "Failed to start dub job.",
+          message: "Failed to start dub job. Please try again.",
         });
       }
     }),

@@ -302,14 +302,18 @@ export function requestIdMiddleware(req: Request, res: Response, next: NextFunct
 // Ã¢Å“â€¦ 9. Global Memory Threshold Ã¢â‚¬â€ Pause new tasks if RAM > 90%
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 import { totalmem } from "os";
+import { getHeapStatistics } from "v8";
 
 export function memoryGuardMiddleware(req: Request, res: Response, next: NextFunction) {
   try {
     const mem = process.memoryUsage();
-    const totalSystem = totalmem();
-    const usedPercent = (mem.rss / totalSystem) * 100;
+    // Use explicit memory cap from env, or heap limit, or system RAM as fallback
+    const memoryCapMB = process.env.MEMORY_CAP_MB
+      ? parseInt(process.env.MEMORY_CAP_MB, 10) * 1024 * 1024
+      : getHeapStatistics().heap_size_limit;
+    const usedPercent = (mem.rss / memoryCapMB) * 100;
     if (usedPercent > 90) {
-      console.warn(`[MEMORY] Server RAM usage at ${usedPercent.toFixed(1)}% Ã¢â‚¬â€ rejecting request`);
+      console.warn(`[MEMORY] RSS ${(mem.rss / 1024 / 1024).toFixed(0)}MB / cap ${(memoryCapMB / 1024 / 1024).toFixed(0)}MB = ${usedPercent.toFixed(1)}% — rejecting request`);
       res.status(503).json({ error: "Server is currently overloaded. Please try again later." });
       return;
     }

@@ -114,9 +114,10 @@ export const videoRouter = t.router({
         // Job creation failed — refund and clean up
         await addCredits(userId, 10, "video_dub_refund", `Refund: Video dub job creation failed`);
         await fs.unlink(tempFilePath).catch(() => {});
+        console.error("[dubFile] Job creation failed:", error);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: error.message || "Failed to start dub job.",
+          message: "Failed to start dub job. Please try again.",
         });
       }
     }),
@@ -205,9 +206,10 @@ export const videoRouter = t.router({
         return { jobId };
       } catch (error: any) {
         await addCredits(userId, 10, "video_dub_refund", "Refund: Dub link job creation failed");
+        console.error("[dubLink] Job creation failed:", error);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: error.message || "Failed to start dub job.",
+          message: "Failed to start dub job. Please try again.",
         });
       }
     }),
