@@ -131,6 +131,7 @@ tmp_video/
 .env
 # PM2 ecosystem files can contain hardcoded secrets
 ecosystem.cjs
+ecosystem.config.js
 # Static downloads generated at runtime
 static/downloads/
 scratch.py

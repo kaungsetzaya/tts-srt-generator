@@ -103,7 +103,8 @@ export class DubVideoPipeline {
     const id = randomUUID();
     const tempVideoPath = path.join(tmpdir(), `dl_${id}.mp4`);
     try {
-      await downloadVideo(url, tempVideoPath);
+      const dl = await downloadVideo(url, tempVideoPath);
+      if (!dl.success) throw new Error(dl.error || "Download failed");
       const buffer = await fs.readFile(tempVideoPath);
       return await this.execute(buffer, "video.mp4", options, jobId);
     } finally {

@@ -459,7 +459,6 @@ function DubbingTab({
                         );
                       }
                       if (platform === "facebook") {
-                        // Show fetched thumbnail if available
                         const previewImage = linkPreview?.image;
                         return (
                           <div className="relative w-full h-full flex items-center justify-center overflow-hidden rounded-2xl bg-black/40">

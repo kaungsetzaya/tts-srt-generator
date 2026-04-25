@@ -96,7 +96,7 @@ async function forceFacebookRescrape(url: string): Promise<void> {
   }
   try {
     const rescrapeUrl = `https://graph.facebook.com/?id=${encodeURIComponent(url)}&scrape=true&access_token=${token}`;
-    const response = await fetch(rescrapeUrl, { method: "POST", timeout: 8000 } as any);
+    const response = await fetch(rescrapeUrl, { method: "POST", signal: AbortSignal.timeout(8000) });
     if (response.ok) {
       console.log("[Facebook] Re-scraped", url);
     } else {
@@ -105,6 +105,14 @@ async function forceFacebookRescrape(url: string): Promise<void> {
   } catch (e: any) {
     console.warn("[Facebook] Re-scrape error:", e.message);
   }
+}
+
+function isFacebookReel(url: string): boolean {
+  // Direct reel URL
+  if (url.includes("/reel/")) return true;
+  // fb.watch short links for reels often redirect to reel pages
+  // (We resolve them lazily; most share/v/ links that fail are reels)
+  return false;
 }
 
 export async function getVideoInfo(url: string): Promise<{ duration: number; filesize: number; title?: string } | null> {
@@ -150,9 +158,9 @@ export async function getVideoInfo(url: string): Promise<{ duration: number; fil
       filesize: info.filesize || info.filesize_approx || 0,
       title: info.title || ""
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("[Downloader getVideoInfo Error]", error);
-    
+
     // For YouTube, try with cookies + retry
     if (isYouTube(url)) {
       try {
@@ -171,6 +179,7 @@ export async function getVideoInfo(url: string): Promise<{ duration: number; fil
         console.error("[Downloader getVideoInfo Fallback Error]", e);
       }
     }
+
     return null;
   }
 }
@@ -209,7 +218,7 @@ export async function downloadVideo(url: string, outputPath: string, options: { 
       return { success: true };
     } catch (error: any) {
       console.error("[Downloader Error - Trying with cookies]", error);
-      
+
       // Fallback with cookies for age-restricted
       try {
         await execFileAsync("yt-dlp", [
@@ -220,7 +229,10 @@ export async function downloadVideo(url: string, outputPath: string, options: { 
         return { success: true };
       } catch (cookieError: any) {
         console.error("[Downloader Fallback Error]", cookieError);
-        return { success: false, error: cookieError.message || "Failed to download video" };
+        return {
+          success: false,
+          error: cookieError.message || "Failed to download video",
+        };
       }
     }
   });

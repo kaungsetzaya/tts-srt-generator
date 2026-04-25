@@ -55,7 +55,7 @@ async function proxyImageToR2(imageUrl: string): Promise<string> {
     const ext = imageUrl.split("?")[0].split(".").pop() || "jpg";
     const key = `static/previews/${generateShortId()}_preview.${ext}`;
     await r2Service.uploadFile(key, buffer, `image/${ext}`);
-    return await r2Service.getSignedUrl(key, 3600);
+    return await r2Service.getSignedDownloadUrl(key, 3600);
   } catch (e: any) {
     console.warn("[LinkPreview] Proxy fetch failed, returning original URL:", e.message);
     return imageUrl;

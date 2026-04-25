@@ -55,10 +55,7 @@ export function initVideoQueue(): Queue | null {
           delay: 5000,
         },
       },
-      settings: {
-        lockDuration: 30000,
-        stalledInterval: 300000,
-      },
+      // Worker-specific settings (lockDuration, stalledInterval) are set in worker.ts
     });
 
     console.log("[BullMQ] video-tasks queue initialized");
