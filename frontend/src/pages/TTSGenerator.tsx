@@ -39,6 +39,7 @@ import {
   Trash2,
 } from "lucide-react";
 import CircularLoader from "@/features/tts-generator/components/CircularLoader";
+import { useDubbingState } from "@/features/tts-generator/hooks/useDubbingState";
 import {
   ALL_VOICES,
   TIER1_VOICES,
@@ -189,8 +190,6 @@ export default function TTSGenerator() {
   const [editedVideoText, setEditedVideoText] = useState("");
   const [videoCopied, setVideoCopied] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const dubFileRef = useRef<HTMLInputElement>(null);
-
   // Translation job polling state
   const [translateJobId, setTranslateJobId] = useState<string | null>(null);
   const [translateJobProgress, setTranslateJobProgress] = useState(0);
@@ -230,85 +229,45 @@ export default function TTSGenerator() {
   const [translateVideoLoading, setTranslateVideoLoading] = useState(false);
   const [translateVideoError, setTranslateVideoError] = useState<string>("");
 
-  // === DUBBING TAB STATE (fully independent) ===
-  const [dubVideoFile, setDubVideoFile] = useState<File | null>(null);
-  const [dubVideoUrl, setDubVideoUrl] = useState<string>("");
-  const [dubDragOver, setDubDragOver] = useState(false);
-  const [dubResult, setDubResult] = useState<{
-    videoUrl: string;
-    srtUrl?: string;
-    srtContent?: string;
-    videoId?: string;
-  } | null>(null);
-  const [dubProgress, setDubProgress] = useState<number>(0);
-  const dubResultVideoRef = useRef<HTMLVideoElement>(null);
-
-  // Dubbing wizard state
-  const [dubPreviewUrl, setDubPreviewUrl] = useState<string>("");
-  const dubPreviewRef = useRef<HTMLVideoElement>(null);
-  const [dubDetectedRatio, setDubDetectedRatio] = useState<"9:16" | "16:9">(
-    "16:9"
-  );
-  const [dubVideoWidth, setDubVideoWidth] = useState(1920);
-  const [dubVideoHeight, setDubVideoHeight] = useState(1080);
-  const [videoPreviewError, setVideoPreviewError] = useState<string>("");
-  const [videoLoading, setVideoLoading] = useState(false);
-  const [dubSelectedVoice, setDubSelectedVoice] = useState<string>("thiha");
-  const [dubSelectedTier, setDubSelectedTier] = useState<VoiceTier>("tier1");
-
-  // Dubbing SRT overlay settings
-  const [srtEnabled, setSrtEnabled] = useState(true);
-  const [srtFontSize, setSrtFontSize] = useState(24); // Better for Burmese text
-  const [srtColor, setSrtColor] = useState("#ffffff");
-  const [srtDropShadow, setSrtDropShadow] = useState(true);
-  const [srtBlurBg, setSrtBlurBg] = useState(true);
-  const [srtMarginV, setSrtMarginV] = useState(30);
-  const [srtBlurOpacity, setSrtBlurOpacity] = useState(50);
-  const [srtBlurColor, setSrtBlurColor] = useState<"black" | "white" | "transparent">("black");
-  const [srtFullWidth, setSrtFullWidth] = useState(false);
-  const [srtBorderRadius, setSrtBorderRadius] = useState<"rounded" | "square">(
-    "rounded"
-  );
-  const [srtBoxPadding, setSrtBoxPadding] = useState(4); // Blur box height/padding in px
-
-  const computeSrtPreviewStyle = useMemo(() => {
-    const vw = dubVideoWidth;
-    const vh = dubVideoHeight;
-    const containerWidth = dubDetectedRatio === "9:16" ? Math.min(240, window.innerWidth * 0.55) : window.innerWidth;
-    const scale = containerWidth / vw;
-    
-    // Match backend calculation: fontSize = srtFontSize * fontScaleFactor * 1.5
-    const fontScaleFactor = vh / 720;
-    const baseFontSize = (srtFontSize ?? 24) * fontScaleFactor * 1.5;
-    const scaledFontSize = baseFontSize * scale;
-    
-    // Match backend margin calculation
-    const marginV = 80 + (srtMarginV ?? 30) * 3 * (vh / 1080);
-    const topPercent = ((vh - marginV) / vh) * 100;
-    const bgAlpha = srtBlurOpacity / 100;
-    const outline = Math.max(4, (srtBoxPadding ?? 4) * 3);
-    const scaledPadding = outline * scale;
-    const shadowSize = 2 * scale;
-
-    return {
-      wrapperTop: `${Math.max(2, Math.round(topPercent))}%`,
-      fontSize: `${Math.max(6, Math.round(scaledFontSize))}px`,
-      padding: srtFullWidth
-        ? `${scaledPadding}px 0`
-        : `${scaledPadding}px ${scaledPadding + 10 * scale}px`,
-      background: srtBlurBg
-        ? srtBlurColor === "black"
-          ? `rgba(0,0,0,${bgAlpha.toFixed(2)})`
-          : srtBlurColor === "white"
-            ? `rgba(255,255,255,${bgAlpha.toFixed(2)})`
-            : "transparent"
-        : "transparent",
-      backdropFilter: srtBlurBg && srtBlurColor === "transparent" ? `blur(${Math.max(4, srtBlurOpacity / 8)}px)` : "none",
-      textShadow: srtDropShadow
-        ? `${shadowSize}px ${shadowSize}px ${4 * scale}px rgba(0,0,0,0.8)`
-        : "none",
-    };
-  }, [dubVideoWidth, dubVideoHeight, dubDetectedRatio, srtFontSize, srtMarginV, srtBlurOpacity, srtBlurColor, srtBlurBg, srtBoxPadding, srtFullWidth, srtDropShadow]);
+  // === DUBBING TAB STATE (extracted to hook) ===
+  const {
+    dubVideoFile, setDubVideoFile,
+    dubVideoUrl, setDubVideoUrl,
+    dubDragOver, setDubDragOver,
+    dubResult, setDubResult,
+    dubProgress, setDubProgress,
+    dubPreviewUrl, setDubPreviewUrl,
+    dubDetectedRatio, setDubDetectedRatio,
+    dubVideoWidth, setDubVideoWidth,
+    dubVideoHeight, setDubVideoHeight,
+    videoPreviewError, setVideoPreviewError,
+    videoLoading, setVideoLoading,
+    dubSelectedVoice, setDubSelectedVoice,
+    dubSelectedTier, setDubSelectedTier,
+    srtEnabled, setSrtEnabled,
+    srtFontSize, setSrtFontSize,
+    srtColor, setSrtColor,
+    srtDropShadow, setSrtDropShadow,
+    srtBlurBg, setSrtBlurBg,
+    srtMarginV, setSrtMarginV,
+    srtBlurOpacity, setSrtBlurOpacity,
+    srtBlurColor, setSrtBlurColor,
+    srtFullWidth, setSrtFullWidth,
+    srtBorderRadius, setSrtBorderRadius,
+    srtBoxPadding, setSrtBoxPadding,
+    dubFileRef, dubResultVideoRef, dubPreviewRef,
+    computeSrtPreviewStyle,
+    activeJobId,
+    handleDubVideoFile,
+    handleDubGenerate,
+    handleDubDownload,
+    handleDubPreview,
+    handleDubReset,
+    pollJobStatus,
+    isExternalVideoUrl,
+    isYouTubeUrl,
+    getYouTubeVideoId,
+  } = useDubbingState(showError, showSuccess, utils);
 
   // Accordion state for mobile-friendly collapsible sections
   const [voiceAccordionOpen, setVoiceAccordionOpen] = useState(true);
@@ -348,25 +307,7 @@ export default function TTSGenerator() {
   const translateMutation = trpc.video.translate.useMutation();
   const translateLinkMutation = trpc.video.translateLink.useMutation();
   // Separate mutations for dubbing tab
-  const dubFileMutation = trpc.video.dubFile.useMutation();
-  const dubLinkMutation = trpc.video.dubLink.useMutation();
 
-  // Job-based mutations
-  const startDubMutation = trpc.jobs.startDub.useMutation();
-  const [activeJobId, setActiveJobId] = useState<string | null>(null);
-  const jobStatusQuery = trpc.jobs.getStatus.useQuery(
-    { jobId: activeJobId ?? "" },
-    {
-      enabled: !!activeJobId,
-      refetchInterval: (query) => {
-        const data = query.state.data;
-        if (data?.status === "completed" || data?.status === "failed") return false;
-        return 3000;
-      },
-      retry: false,
-      staleTime: 0,
-    }
-  );
 
   const isAdmin = me?.role === "admin";
   const hasActiveSub = isAdmin || subStatus?.active;
@@ -434,29 +375,6 @@ export default function TTSGenerator() {
       setTranslateVideoLoading(false);
     }
   }, [videoUrl, videoFile]);
-
-  // Auto-preview video for dubbing tab when URL changes
-  const dubPreviewUrlRef = useRef<string>("");
-
-  useEffect(() => {
-    if (!dubVideoUrl && !dubVideoFile) {
-      setDubPreviewUrl("");
-      setVideoPreviewError("");
-      setVideoLoading(false);
-      dubPreviewUrlRef.current = "";
-      return;
-    }
-    if (!dubVideoUrl.trim() || dubVideoFile) return;
-    const timer = setTimeout(() => {
-      const url = dubVideoUrl.trim();
-      if (!url || dubPreviewUrlRef.current === url) return;
-      dubPreviewUrlRef.current = url;
-      setVideoPreviewError("");
-      setDubPreviewUrl(url);
-      setVideoLoading(false);
-    }, 800);
-    return () => clearTimeout(timer);
-  }, [dubVideoUrl, dubVideoFile]);
 
   // Set audio source when generatedFiles.audioObjectUrl changes
   useEffect(() => {
@@ -682,262 +600,7 @@ export default function TTSGenerator() {
     window.open(videoUrl.trim(), "_blank");
   };
 
-  // === DUBBING TAB HANDLERS (fully independent) ===
-  const handleDubVideoFile = (f: File) => {
-    if (f.size > 25 * 1024 * 1024) {
-      showError("File too large. Max 25MB.");
-      return;
-    }
-    // Revoke old object URL to prevent memory leak
-    if (dubPreviewUrl && dubVideoFile) {
-      URL.revokeObjectURL(dubPreviewUrl);
-    }
-    setDubVideoFile(f);
-    setDubVideoUrl("");
-    setDubResult(null);
-    setVideoPreviewError("");
-    // Create preview URL from uploaded file
-    const url = URL.createObjectURL(f);
-    setDubPreviewUrl(url);
-    setVideoLoading(false);
-  };
 
-  // Character voice base mapping (for sending correct base voice)
-  const CHARACTER_VOICES_MAP: Record<string, { base: string }> = {
-    ryan: { base: "thiha" },
-    ronnie: { base: "thiha" },
-    lucas: { base: "thiha" },
-    daniel: { base: "thiha" },
-    evander: { base: "thiha" },
-    michelle: { base: "nilar" },
-    iris: { base: "nilar" },
-    charlotte: { base: "nilar" },
-    amara: { base: "nilar" },
-  };
-  const handleDubGenerate = async () => {
-    console.log("[GENERATE] Starting dubbing...");
-    const dubVoiceToUse = dubSelectedVoice;
-
-    // Clear previous result before starting new generation
-    setDubResult(null);
-    setDubProgress(0);
-    setVideoPreviewError("");
-
-    // Use job-based API for dubbing (handles long processing time)
-    if (dubVideoUrl.trim()) {
-      try {
-        console.log("[GENERATE] Using URL:", dubVideoUrl.trim());
-        const res = await startDubMutation.mutateAsync({
-           url: dubVideoUrl.trim(),
-           voice: dubVoiceToUse as any,
-           srtEnabled,
-           srtFontSize,
-           srtColor,
-           srtMarginV,
-           srtBlurBg,
-           srtBlurOpacity,
-           srtBlurColor,
-           srtBoxPadding,
-           srtFullWidth,
-           srtDropShadow,
-           srtBorderRadius,
-         });
-        console.log("[GENERATE] Job started:", res.jobId);
-        setActiveJobId(res.jobId);
-        // Poll for job status
-        pollJobStatus(res.jobId);
-      } catch (e: any) {
-        console.error("[DUB LINK ERROR]", e);
-        showError(e?.message || "Dubbing failed");
-      }
-      return;
-    }
-
-    if (!dubVideoFile) {
-      console.log("[GENERATE] No video file or URL");
-      return;
-    }
-    
-    console.log("[GENERATE] Using file:", dubVideoFile.name);
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = (reader.result as string).split(",")[1];
-      try {
-         const res = await dubFileMutation.mutateAsync({
-          videoBase64: base64,
-          filename: dubVideoFile.name,
-          voice: dubVoiceToUse as any,
-          srtEnabled,
-          srtFontSize,
-          srtColor,
-          srtMarginV,
-          srtBlurBg,
-          srtBlurOpacity,
-          srtBlurColor,
-          srtBoxPadding,
-          srtFullWidth,
-          srtDropShadow,
-          srtBorderRadius,
-        });
-        console.log("[GENERATE] File job started:", res.jobId);
-        setActiveJobId(res.jobId);
-        pollJobStatus(res.jobId);
-        utils.subscription.myStatus.invalidate();
-      } catch (e: any) {
-        console.error("[DUB FILE ERROR]", e);
-        showError(e?.message || "Dubbing failed");
-      }
-    };
-    reader.readAsDataURL(dubVideoFile);
-  };
-
-  // React to dub job status changes — handles ALL states and errors
-  useEffect(() => {
-    if (!activeJobId) return;
-    if (jobStatusQuery.error) {
-      const errMsg = (jobStatusQuery.error as any)?.message || "Dubbing status check failed. Please try again.";
-      showError(errMsg);
-      setActiveJobId(null);
-      setDubProgress(0);
-      return;
-    }
-    if (!jobStatusQuery.data) return;
-    const status = jobStatusQuery.data;
-    if (status.status === "completed" && status.result) {
-      setDubResult(status.result as any);
-      setActiveJobId(null);
-      setDubProgress(100);
-      utils.subscription.myStatus.invalidate();
-    } else if (status.status === "failed") {
-      showError(status.error || "Dubbing failed. Please try again.");
-      setActiveJobId(null);
-      setDubProgress(0);
-    } else if (status.status === "processing") {
-      setDubProgress(status.progress ?? 0);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeJobId, jobStatusQuery.data, jobStatusQuery.error]);
-
-  // Timeout guard: if dubbing takes > 15 minutes, surface an error
-  useEffect(() => {
-    if (!activeJobId) return;
-    const timeout = setTimeout(() => {
-      if (activeJobId) {
-        showError("Dubbing timed out after 15 minutes. Please try a shorter video.");
-        setActiveJobId(null);
-      }
-    }, 15 * 60 * 1000);
-    return () => clearTimeout(timeout);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeJobId]);
-
-  // Load video when result arrives
-  useEffect(() => {
-    if (dubResult?.videoUrl && dubResultVideoRef.current) {
-      dubResultVideoRef.current.load();
-    }
-  }, [dubResult?.videoUrl]);
-
-  // Poll job status — just set activeJobId and let tRPC query handle polling
-  const pollJobStatus = (jobId: string) => {
-    setActiveJobId(jobId);
-  };
-
-  const handleDubDownload = () => {
-    if (dubResult?.videoUrl) {
-      // Direct download from URL
-      const a = document.createElement("a");
-      a.href = dubResult.videoUrl;
-      a.download = `Dubbed_Myanmar_${Date.now()}.mp4`;
-      a.click();
-    } else if (dubResult?.videoBase64) {
-      // Fallback to base64
-      const binary = atob(dubResult.videoBase64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      const blob = new Blob([bytes], { type: "video/mp4" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `Dubbed_Myanmar_${Date.now()}.mp4`;
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-  };
-
-  // Detect if a URL is an external platform link (YouTube, TikTok, Facebook)
-  const isExternalVideoUrl = (url: string) => {
-    if (!url) return false;
-    const lower = url.toLowerCase();
-    return (
-      lower.includes("youtube.com") ||
-      lower.includes("youtu.be") ||
-      lower.includes("tiktok.com") ||
-      lower.includes("facebook.com") ||
-      lower.includes("fb.watch") ||
-      lower.includes("fb.com")
-    );
-  };
-
-  // Extract YouTube video ID from various URL formats
-  const getYouTubeVideoId = (url: string): string | null => {
-    if (!url) return null;
-    // youtube.com/watch?v=VIDEO_ID
-    const watchMatch = url.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
-    if (watchMatch) return watchMatch[1];
-    // youtube.com/shorts/VIDEO_ID
-    const shortsMatch = url.match(/\/shorts\/([a-zA-Z0-9_-]{11})/);
-    if (shortsMatch) return shortsMatch[1];
-    // youtu.be/VIDEO_ID
-    const shortMatch = url.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
-    if (shortMatch) return shortMatch[1];
-    // youtube.com/embed/VIDEO_ID
-    const embedMatch = url.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
-    if (embedMatch) return embedMatch[1];
-    return null;
-  };
-
-  const isYouTubeUrl = (url: string) => {
-    if (!url) return false;
-    const lower = url.toLowerCase();
-    return lower.includes("youtube.com") || lower.includes("youtu.be");
-  };
-
-  const handleDubPreview = () => {
-    setVideoLoading(true);
-    setVideoPreviewError("");
-
-    try {
-      if (dubVideoFile) {
-        const url = URL.createObjectURL(dubVideoFile);
-        setDubPreviewUrl(url);
-        setVideoLoading(false);
-      } else if (dubVideoUrl.trim()) {
-        // For external URLs (YouTube/TikTok/FB), we can't preview directly
-        // but we set the URL to show the external link card
-        setDubPreviewUrl(dubVideoUrl.trim());
-        setVideoLoading(false);
-      }
-    } catch (error) {
-      setVideoPreviewError("Failed to load video. Please try again.");
-      setVideoLoading(false);
-      console.error("Video preview error:", error);
-    }
-  };
-
-  const handleDubReset = () => {
-    // Always revoke object URL if it was created from a file
-    if (dubPreviewUrl && dubVideoFile) {
-      URL.revokeObjectURL(dubPreviewUrl);
-    }
-    setDubVideoFile(null);
-    setDubVideoUrl("");
-    setDubResult(null);
-    setDubPreviewUrl("");
-    setDubDetectedRatio("16:9");
-    setVideoLoading(false);
-    setVideoPreviewError("");
-  };
 
   const { fmtTime } = useSystemTime();
 
