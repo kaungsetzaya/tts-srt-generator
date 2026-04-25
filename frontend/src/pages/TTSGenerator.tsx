@@ -52,10 +52,28 @@ import { TTSGeneratorLayout } from "@/components/TTSGeneratorLayout";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useTheme } from "@/contexts/ThemeContext";
 import { ACCENT, ACCENT_SECONDARY } from "@shared/const";
+import { T } from "@/features/tts-generator/constants/translations";
+import type { Lang } from "@/features/tts-generator/constants/translations";
+import {
+  accent,
+  accentSecondary,
+  deepRed,
+  peach,
+  cream,
+  darkBrown,
+  lightBg,
+  lightCardBg,
+  lightCardBorder,
+  lightText,
+  lightSubtext,
+  accent15,
+  accent30,
+  accent40,
+  accent80,
+} from "@/features/tts-generator/constants/colors";
 
 type MainTab = "tts" | "video" | "dubbing";
 type SecondaryTab = "history" | "plan" | "guide" | "settings" | "files" | null;
-type Lang = "mm" | "en";
 
 // ─── Shared Circular Loader Component ───────────
 const CircularLoader = ({ text, color }: { text: string; color: string }) => (
@@ -159,155 +177,7 @@ function friendlyError(raw: string): string {
   return "တစ်ခုခု မှားယွင်းနေပါသည်။ ထပ်ကြိုးစားပါ။";
 }
 
-const T = {
-  mm: {
-    appName: "LUMIX",
-    tabs: {
-      tts: "စာမှအသံ",
-      video: "ဗီဒီယိုဘာသာပြန်",
-      dubbing: "Auto Creator",
-      settings: "ဆက်တင်",
-      history: "မှတ်တမ်း",
-      plan: "Plan",
-      guide: "လမ်းညွှန်",
-    },
-    inputText: "စာသားထည့်ပါ",
-    inputPlaceholder: "စာသားရိုက်ထည့်ပါ...",
-    voiceSelection: "အသံရွေးချယ်မှု",
-    male: "ကျား",
-    female: "မ",
-    tone: "အသံနိမ့်မြင့်",
-    speed: "အမြန်နှုန်း",
-    aspectRatio: "SRT အချိုး",
-    generate: "ဖန်တီးမည်",
-    generating: "ဖန်တီးနေသည်...",
-    download: "ဒေါင်းလုတ်",
-    noSub: "Subscription မရှိပါ",
-    noSubMsg: "TTS Generator သုံးဖို့ subscription လိုအပ်ပါတယ်",
-    contact: "Admin ကိုဆက်သွယ်ပါ",
-    logout: "ထွက်မည်",
-    admin: "Admin",
-    daysLeft: "ရက် ကျန်သည်",
-    lower: "နိမ့်",
-    higher: "မြင့်",
-    slower: "နှေး",
-    faster: "မြန်",
-    preview: "နားဆင်မည်",
-    videoTitle: "ဗီဒီယိုမှ မြန်မာဘာသာပြန်",
-    videoDesc: "ဗီဒီယို ဖိုင်တင်ပါ",
-    videoLimit: "အများဆုံး ၂၅MB (သို့) ဗီဒီယိုအရှည်၂မိနစ်၃ဝစက္ကန့်",
-    dropVideo: "ဗီဒီယိုဖိုင် ဤနေရာတွင်ချပါ သို့မဟုတ် နှိပ်ပါ",
-    linkInputLabel: "VIDEO LINK ထည့်ရန်",
-    linkPlaceholder: "https://youtube.com/...",
-    orLine: "သို့မဟုတ်",
-    translateBtn: "မြန်မာဘာသာပြန်မည်",
-    translating: "ဘာသာပြန်နေသည်...",
-    result: "ဘာသာပြန်ရလဒ်",
-    translateAnother: "နောက်ထပ် ဗီဒီယိုဘာသာပြန်မည်",
-    settingsTitle: "ဆက်တင်များ",
-    geminiKey: "API Key",
-    geminiKeyDesc: "သင်၏ API key ထည့်ပါ",
-    geminiKeyPlaceholder: "API key...",
-    saveKey: "သိမ်းမည်",
-    removeKey: "ဖျက်မည်",
-    keyWarning: "သတိ: API key သည် browser ထဲတွင် သိမ်းထားခြင်းဖြစ်သည်။ shared device တွင် မသိမ်းပါနှင့်။",
-    // ...
-    keyNone: "API Key မရှိ",
-    copyText: "ကော်ပီကူးမည်",
-    copied: "ကော်ပီကူးပြီး",
-    downloadVideo: "ဗီဒီယိုဒေါင်းလုတ်",
-  },
-  en: {
-    appName: "LUMIX",
-    tabs: {
-      tts: "TTS",
-      video: "Translate",
-      dubbing: "Auto Creator",
-      settings: "Settings",
-      history: "History",
-      plan: "Plan",
-      guide: "Guide",
-    },
-    inputText: "Input Text",
-    inputPlaceholder: "Enter your text here...",
-    voiceSelection: "Voice Selection",
-    male: "Male",
-    female: "Female",
-    tone: "Tone / Pitch",
-    speed: "Speed / Rate",
-    aspectRatio: "SRT Aspect Ratio",
-    generate: "Generate",
-    generating: "Generating...",
-    download: "Download",
-    noSub: "No Subscription",
-    noSubMsg: "You need a subscription to use TTS Generator",
-    contact: "Contact Admin",
-    logout: "Logout",
-    admin: "Admin",
-    daysLeft: "days left",
-    lower: "Lower",
-    higher: "Higher",
-    slower: "Slower",
-    faster: "Faster",
-    preview: "Preview",
-    videoTitle: "VIDEO TRANSLATION",
-    videoDesc: "Upload video for Myanmar translation",
-    videoLimit: "Max 25MB or video length 2 minutes 30 seconds",
-    dropVideo: "Drop video here or click to upload",
-    linkInputLabel: "VIDEO LINK",
-    linkPlaceholder: "https://youtube.com/...",
-    orLine: "OR",
-    translateBtn: "Translate to Myanmar",
-    translating: "Translating...",
-    result: "Translation Result",
-    translateAnother: "Translate Another Video",
-    settingsTitle: "Settings",
-    geminiKey: "API Key",
-    geminiKeyDesc: "Add your own API key",
-    geminiKeyPlaceholder: "API key...",
-    saveKey: "Save",
-    removeKey: "Remove",
-    keyWarning: "Warning: API key is stored in your browser. Do not use on shared devices.",
-    // ...
-    keyNone: "No API Key",
-    copyText: "Copy Text",
-    copied: "Copied!",
-    downloadVideo: "Download Video",
-  },
-};
 
-// Helper: hex color + opacity → 8-digit hex
-const withOpacity = (color: string, opacity: number) => {
-  if (color.startsWith("#") && color.length === 7) {
-    const hex = color.slice(1);
-    const alpha = Math.round(opacity * 255)
-      .toString(16)
-      .padStart(2, "0");
-    return `#${hex}${alpha}`;
-  }
-  return color;
-};
-
-
-// Premium UI Colors (Derived from shared constants)
-const accent = ACCENT;
-const accentSecondary = ACCENT_SECONDARY;
-const deepRed = "#861C1C";
-const peach = "#ECCEB6";
-const cream = "#EBE6D8";
-const darkBrown = "#2B1D1C";
-
-// Premium color scheme for light mode — Warm Sand & Copper
-const lightBg = "#FBF8F4";
-const lightCardBg = "#FFFFFF";
-const lightCardBorder = "rgba(192,111,48,0.12)";
-const lightText = "#2B1D1C";
-const lightSubtext = "#8B7355";
-
-const accent15 = withOpacity(ACCENT, 0.15);
-const accent30 = withOpacity(ACCENT, 0.3);
-const accent40 = withOpacity(ACCENT, 0.4);
-const accent80 = withOpacity(ACCENT, 0.8);
 
 export default function TTSGenerator() {
   const [mainTab, setMainTab] = useState<MainTab>("dubbing");
