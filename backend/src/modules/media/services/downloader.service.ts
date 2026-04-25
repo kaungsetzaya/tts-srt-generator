@@ -135,7 +135,6 @@ export async function getVideoInfo(url: string): Promise<{ duration: number; fil
     "--no-download",
     "--no-playlist",
     "--abort-on-unavailable-fragment",
-    "--max-redirects", "3",
   ];
   
   if (proxyUrl) {
@@ -199,7 +198,6 @@ export async function downloadVideo(url: string, outputPath: string, options: { 
       "-o", outputPath,
       "--no-playlist",
       "--abort-on-unavailable-fragment",
-      "--max-redirects", "3",
     ];
     
     if (proxyUrl) {
