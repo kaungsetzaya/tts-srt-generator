@@ -1,7 +1,18 @@
 import { load } from "cheerio";
+import { r2Service } from "./r2.service";
+import { generateShortId } from "../../../modules/_core/filename";
 
-// Desktop User-Agent for Facebook (must match a real browser exactly)
-const DESKTOP_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+// Randomized mobile User-Agents to bypass Facebook bot detection
+const MOBILE_USER_AGENTS = [
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Mobile/15E148 Safari/604.1",
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/123.0.6312.52 Mobile/15E148 Safari/604.1",
+  "Mozilla/5.0 (Linux; Android 14; SM-S928B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Mobile Safari/537.36",
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
+];
+
+function getRandomUserAgent(): string {
+  return MOBILE_USER_AGENTS[Math.floor(Math.random() * MOBILE_USER_AGENTS.length)];
+}
 
 export interface LinkPreviewData {
   title: string;
@@ -18,7 +29,6 @@ function isFacebookUrl(url: string): boolean {
 
 function resolveUrl(base: string, relative: string): string {
   if (!relative) return "";
-  // If relative starts with /, prepend Facebook domain
   if (relative.startsWith("/")) {
     return `https://www.facebook.com${relative}`;
   }
@@ -32,6 +42,26 @@ function resolveUrl(base: string, relative: string): string {
   }
 }
 
+// Proxy fetch: download image and upload to R2 to avoid hotlinking blocks
+async function proxyImageToR2(imageUrl: string): Promise<string> {
+  if (!r2Service.isEnabled()) return imageUrl;
+  try {
+    const response = await fetch(imageUrl, {
+      headers: { "User-Agent": getRandomUserAgent() },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) return imageUrl;
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const ext = imageUrl.split("?")[0].split(".").pop() || "jpg";
+    const key = `static/previews/${generateShortId()}_preview.${ext}`;
+    await r2Service.uploadFile(key, buffer, `image/${ext}`);
+    return await r2Service.getSignedUrl(key, 3600);
+  } catch (e: any) {
+    console.warn("[LinkPreview] Proxy fetch failed, returning original URL:", e.message);
+    return imageUrl;
+  }
+}
+
 export async function fetchLinkPreview(url: string): Promise<LinkPreviewData> {
   const isFacebook = isFacebookUrl(url);
 
@@ -39,22 +69,18 @@ export async function fetchLinkPreview(url: string): Promise<LinkPreviewData> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
 
-    // Use Facebook-specific headers when scraping Facebook URLs
-    const fetchHeaders: Record<string, string> = isFacebook
-      ? {
-          "User-Agent": DESKTOP_USER_AGENT,
-          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-          "Accept-Language": "en-US,en;q=0.9",
-        }
-      : {
-          "User-Agent": DESKTOP_USER_AGENT,
-          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-          "Accept-Language": "en-US,en;q=0.9",
-        };
+    const userAgent = isFacebook ? getRandomUserAgent() : MOBILE_USER_AGENTS[0];
 
     const response = await fetch(url, {
       signal: controller.signal,
-      headers: fetchHeaders,
+      headers: {
+        "User-Agent": userAgent,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+      },
       redirect: "follow",
     });
     clearTimeout(timeout);
@@ -72,20 +98,23 @@ export async function fetchLinkPreview(url: string): Promise<LinkPreviewData> {
       return val.trim();
     };
 
-    // Metadata extraction in specific order:
-    // 1. og:image:secure_url  2. og:image  3. twitter:image
+    // Metadata extraction in order:
+    // 1. og:image:secure_url  2. og:image:url  3. og:image  4. twitter:image:src  5. twitter:image
     let image = getMeta("og:image:secure_url") ||
+                getMeta("og:image:url") ||
                 getMeta("og:image") ||
-                getMeta("twitter:image") ||
                 getMeta("twitter:image:src") ||
+                getMeta("twitter:image") ||
                 "";
 
-    // Fix relative URLs — prepend https://www.facebook.com for Facebook paths
     if (image) {
       image = resolveUrl(url, image);
+      // For Facebook, try to proxy the image to avoid hotlink blocks
+      if (isFacebook && image.includes("fbcdn.net")) {
+        image = await proxyImageToR2(image);
+      }
     }
 
-    // Facebook fallback
     if (isFacebook && !image) {
       image = FALLBACK_FACEBOOK_ICON;
     }
