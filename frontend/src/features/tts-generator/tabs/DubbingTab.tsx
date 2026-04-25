@@ -416,7 +416,7 @@ function DubbingTab({
       {dubPreviewUrl && !dubResult && (
         <div className="flex flex-col lg:flex-row flex-1 min-h-0 gap-4">
           {/* Preview - Left column, fills height */}
-          <div className="w-full lg:w-1/2 h-48 lg:h-[60vh] flex-shrink-0 flex flex-col min-h-0">
+          <div className="w-full lg:w-1/2 h-48 lg:h-[40vh] flex-shrink-0 flex flex-col min-h-0">
             <div className="relative border backdrop-blur-xl transition-all duration-300 rounded-3xl overflow-hidden shadow-2xl h-full flex flex-col" style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
               <div className="flex items-center justify-between px-3 pt-2 flex-shrink-0">
                 <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>
@@ -426,7 +426,7 @@ function DubbingTab({
               </div>
               <div className="flex-1 min-h-0 p-2 relative flex justify-center items-center">
                 {videoLoading ? (
-                  <div className="w-full h-48 rounded-xl flex flex-col items-center justify-center gap-3" style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}` }}>
+                  <div className="w-full h-64 rounded-xl flex flex-col items-center justify-center gap-3" style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}` }}>
                     <span className="text-xs font-semibold" style={{ color: subtextColor }}>Preparing preview...</span>
                   </div>
                 ) : (
@@ -526,7 +526,7 @@ function DubbingTab({
 
           {/* Settings - Right column, scrollable on desktop */}
           <div
-            className="w-full lg:w-1/2 lg:h-[60vh] lg:overflow-y-auto space-y-4 pb-24 lg:pb-8 lg:pr-2"
+            className="w-full lg:w-1/2 lg:h-full lg:overflow-y-auto space-y-4 pb-24 lg:pb-8 lg:pr-2"
             style={{
               scrollbarWidth: 'thin',
               scrollbarColor: `${accent}40 transparent`,
@@ -1068,7 +1068,7 @@ function DubbingTab({
                 : "Auto Creator Generated Video"}
             </div>
             <div className="flex justify-center mt-2 p-2">
-              <div className="relative w-full overflow-hidden rounded-2xl shadow-2xl" style={{ maxHeight: '50vh', aspectRatio: dubDetectedRatio === "9:16" ? "9/16" : "16/9" }}>
+              <div className="relative w-full overflow-hidden rounded-2xl shadow-2xl" style={{ maxHeight: '75vh', aspectRatio: dubDetectedRatio === "9:16" ? "9/16" : "16/9" }}>
                 {/* Background Layer — blurred cinematic fill */}
                 <video
                   src={dubResult.videoUrl}
