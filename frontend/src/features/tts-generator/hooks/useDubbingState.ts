@@ -170,7 +170,15 @@ export function useDubbingState(
       if (!url || dubPreviewUrlRef.current === url) return;
       dubPreviewUrlRef.current = url;
       setVideoPreviewError("");
-      setDubPreviewUrl(url);
+      // Only auto-preview if URL looks like a direct video file
+      // YouTube/Facebook/TikTok share links are HTML pages, not videos
+      const isDirectVideo = /\.(mp4|webm|mov|mkv|avi)(\?.*)?$/i.test(url);
+      if (isDirectVideo) {
+        setDubPreviewUrl(url);
+      } else {
+        // For platform URLs (YouTube/Facebook/TikTok), show placeholder
+        setDubPreviewUrl("platform-url");
+      }
       setVideoLoading(false);
     }, 800);
     return () => clearTimeout(timer);

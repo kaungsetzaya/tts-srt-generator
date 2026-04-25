@@ -429,6 +429,13 @@ function DubbingTab({
                   <div className="w-full h-64 rounded-xl flex flex-col items-center justify-center gap-3" style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}` }}>
                     <span className="text-xs font-semibold" style={{ color: subtextColor }}>Preparing preview...</span>
                   </div>
+                ) : dubPreviewUrl === "platform-url" ? (
+                  <div className="w-full h-64 rounded-xl flex flex-col items-center justify-center gap-3" style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}` }}>
+                    <FileVideo className="w-10 h-10" style={{ color: accent }} />
+                    <span className="text-xs font-semibold text-center px-4" style={{ color: subtextColor }}>
+                      {lang === "mm" ? "ဗီဒီယိုဖိုင်ကို ဒေါင်းလုတ်လုပ်ပြီးမှ ကြိုတင်ကြည့်ရှုနိုင်ပါမည်" : "Video preview not available for platform URLs. Proceed to generate."}
+                    </span>
+                  </div>
                 ) : (
                   <div className="relative w-full h-full flex items-center justify-center overflow-hidden rounded-2xl">
                     {/* Background Layer — blurred cinematic fill */}
