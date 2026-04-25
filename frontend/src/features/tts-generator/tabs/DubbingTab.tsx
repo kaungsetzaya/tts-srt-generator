@@ -414,9 +414,9 @@ function DubbingTab({
 
 {/* ── STEP: Video Preview + Settings ── */}
       {dubPreviewUrl && !dubResult && (
-        <div className="flex flex-col lg:flex-row flex-1 min-h-0 gap-4">
-          {/* Preview - Left column, fills height */}
-          <div className="w-full lg:w-1/2 h-48 lg:h-[40vh] flex-shrink-0 flex flex-col min-h-0">
+        <div className="flex flex-col lg:flex-row flex-1 min-h-0 gap-4 overflow-y-auto pb-20 lg:pb-4">
+          {/* Preview - Left column */}
+          <div className="w-full lg:w-1/2 h-[56vw] lg:basis-1/2 shrink-0 flex flex-col">
             <div className="relative border backdrop-blur-xl transition-all duration-300 rounded-3xl overflow-hidden shadow-2xl h-full flex flex-col" style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
               <div className="flex items-center justify-between px-3 pt-2 flex-shrink-0">
                 <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>
@@ -524,9 +524,9 @@ function DubbingTab({
             </div>
           </div>
 
-          {/* Settings - Right column, scrollable on desktop */}
+          {/* Settings - Right column, scrollable on both mobile and desktop */}
           <div
-            className="w-full lg:w-1/2 lg:h-full lg:overflow-y-auto space-y-4 pb-24 lg:pb-8 lg:pr-2"
+            className="w-full lg:w-1/2 overflow-y-auto space-y-4 pb-24 lg:pb-8"
             style={{
               scrollbarWidth: 'thin',
               scrollbarColor: `${accent}40 transparent`,
