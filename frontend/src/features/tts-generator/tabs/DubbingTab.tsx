@@ -206,7 +206,7 @@ function DubbingTab({
   } = themeValues;
 
   return (
-    <div className="w-full px-4 lg:px-6 animate-in fade-in zoom-in-95 duration-300">
+    <div className="w-full px-4 lg:px-6 animate-in fade-in zoom-in-95 duration-300 lg:h-[calc(100vh-4rem)] lg:overflow-hidden">
       <div className="text-center mb-2 sm:mb-4">
         {!isAdmin && !hasPlan && me && !subLoading && (
           <div
@@ -411,26 +411,25 @@ function DubbingTab({
 
 {/* ── STEP: Video Preview + Settings ── */}
       {dubPreviewUrl && !dubResult && (
-        <div className="flex flex-col w-full">
-          {/* Preview - Full width */}
-          <div className="w-full">
-            <div className="relative border backdrop-blur-xl transition-all duration-300 rounded-3xl overflow-hidden shadow-2xl" style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
-              <div className="flex items-center justify-between px-3 pt-2">
+        <div className="flex flex-col lg:flex-row lg:h-[calc(100vh-5rem)] lg:overflow-hidden gap-4">
+          {/* Preview - Left column, sticky on desktop */}
+          <div className="w-full lg:w-1/2 lg:sticky lg:top-0 lg:h-full lg:overflow-hidden flex-shrink-0">
+            <div className="relative border backdrop-blur-xl transition-all duration-300 rounded-3xl overflow-hidden shadow-2xl h-full flex flex-col" style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
+              <div className="flex items-center justify-between px-3 pt-2 flex-shrink-0">
                 <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>
                   {lang === "mm" ? "ဗီဒီယိုကြိုကြည့်" : "Video Preview"}
                 </div>
                 <button onClick={() => { setDubVideoUrl(""); setDubPreviewUrl(""); setDubVideoFile(null); }} className="text-xs px-2 py-1 rounded hover:bg-red-500/20 text-red-400">✕</button>
               </div>
-              <div className="flex justify-center items-center p-2 relative">
+              <div className="flex-1 min-h-0 p-2 relative flex justify-center items-center">
                 {videoLoading ? (
                   <div className="w-full h-64 rounded-xl flex flex-col items-center justify-center gap-3" style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}` }}>
                     <span className="text-xs font-semibold" style={{ color: subtextColor }}>Preparing preview...</span>
                   </div>
                 ) : (
                   <div
-                    className="relative w-full flex justify-center items-center overflow-hidden rounded-2xl"
+                    className="relative w-full h-full flex justify-center items-center overflow-hidden rounded-2xl"
                     style={{
-                      maxHeight: '75vh',
                       aspectRatio: dubDetectedRatio === '9:16' ? '9/16' : '16/9',
                     }}
                   >
@@ -530,8 +529,14 @@ function DubbingTab({
             </div>
           </div>
 
-          {/* Settings - Below preview */}
-          <div className="w-full space-y-4 pb-24 mt-4">
+          {/* Settings - Right column, scrollable on desktop */}
+          <div
+            className="w-full lg:w-1/2 lg:h-full lg:overflow-y-auto space-y-4 pb-24 lg:pb-8 lg:pr-2"
+            style={{
+              scrollbarWidth: 'thin',
+              scrollbarColor: `${accent}40 transparent`,
+            }}
+          >
 
           {/* ── ACCORDION: Voice Selection ── */}
           <div
