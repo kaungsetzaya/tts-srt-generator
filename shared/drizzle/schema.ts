@@ -96,6 +96,17 @@ export const creditTransactions = mysqlTable("credit_transactions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Immutable audit log for admin actions
+export const auditLogs = mysqlTable("audit_logs", {
+  id: varchar("id", { length: 36 }).primaryKey().default(""),
+  action: varchar("action", { length: 100 }).notNull(),
+  adminId: varchar("admin_id", { length: 36 }).notNull(),
+  targetUserId: varchar("target_user_id", { length: 36 }).notNull(),
+  details: text("details"),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Persistent job storage (survives server restarts)
 export const ttsJobs = mysqlTable("tts_jobs", {
   id: varchar("id", { length: 64 }).primaryKey(),

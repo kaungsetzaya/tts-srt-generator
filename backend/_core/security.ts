@@ -7,6 +7,9 @@
 
 import type { Request, Response, NextFunction } from "express";
 import { nanoid } from "nanoid";
+import { randomUUID } from "crypto";
+import { getDb } from "../db";
+import { auditLogs } from "../../shared/drizzle/schema";
 
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 // Ã¢Å“â€¦ 1. CORS Ã¢â‚¬â€ Ã¡â‚¬â‚¬Ã¡â‚¬Â­Ã¡â‚¬Â¯Ã¡â‚¬Å¡Ã¡â‚¬Â·Ã¡â‚¬Âº Domain Ã¡â‚¬â„¢Ã¡â‚¬Â¾ Ã¡â‚¬Å“Ã¡â‚¬Â¬Ã¡â‚¬Å¾Ã¡â‚¬Â±Ã¡â‚¬Â¬ Request Ã¡â‚¬Å¾Ã¡â‚¬Â¬ Ã¡â‚¬ÂÃ¡â‚¬Â½Ã¡â‚¬â€žÃ¡â‚¬Â·Ã¡â‚¬ÂºÃ¡â‚¬â€¢Ã¡â‚¬Â¼Ã¡â‚¬Â¯Ã¡â‚¬Å¾Ã¡â‚¬Å Ã¡â‚¬Âº
@@ -89,13 +92,11 @@ function parseAdminIps(): Set<string> {
 const ADMIN_IPS = parseAdminIps();
 
 export function adminIpWhitelist(req: Request, res: Response, next: NextFunction) {
-  // Dev mode: no whitelist = allow localhost only
-  if (process.env.NODE_ENV !== "production") {
-    return next();
-  }
+  // Always enforce IP whitelist, even in dev mode
+  // Previously: dev mode skipped ALL checks — staging servers were wide open
 
-  // Production mode: require IP whitelist
-  if (ADMIN_IPS.size <= 3) { // Only localhost entries
+  // Production mode: require IP whitelist env var
+  if (process.env.NODE_ENV === "production" && ADMIN_IPS.size <= 3) {
     console.error("[SECURITY] FATAL: ADMIN_WHITELIST_IPS is not set in production! Admin access blocked.");
     res.status(403).json({ error: "Access denied." });
     return;
@@ -146,10 +147,22 @@ function containsDangerousPattern(value: unknown): boolean {
 }
 
 export function xssProtectionMiddleware(req: Request, res: Response, next: NextFunction) {
-  if (req.body && containsDangerousPattern(req.body)) {
-    console.warn(`[SECURITY] Suspicious payload detected from ${req.ip} at ${req.path}`);
-    res.status(400).json({ error: "Invalid request content." });
-    return;
+  // LOGGING-ONLY: The regex blacklist is bypassable and gives false confidence.
+  // Real protection comes from:
+  // - React auto-escaping output on frontend
+  // - Drizzle ORM parameterized queries on backend
+  // - Proper input validation in each router
+  const checkTargets = [
+    req.body,
+    req.query,
+    req.headers,
+  ];
+  for (const target of checkTargets) {
+    if (target && containsDangerousPattern(target)) {
+      console.warn(`[SECURITY] Suspicious payload detected from ${req.ip} at ${req.path} — logged only, request allowed`);
+      // Do NOT block — the pattern list is incomplete and bypassable
+      break;
+    }
   }
   next();
 }
@@ -204,16 +217,40 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 // Ã¢Å“â€¦ 6. Audit Log Helper Ã¢â‚¬â€ Admin Ã¡â‚¬Å“Ã¡â‚¬Â¯Ã¡â‚¬â€¢Ã¡â‚¬ÂºÃ¡â‚¬â€ Ã¡â‚¬Â±Ã¡â‚¬Â¬Ã¡â‚¬â€žÃ¡â‚¬ÂºÃ¡â‚¬â„¢Ã¡â‚¬Â¾Ã¡â‚¬Â¯Ã¡â‚¬â„¢Ã¡â‚¬Â»Ã¡â‚¬Â¬Ã¡â‚¬Â¸ Ã¡â‚¬â„¢Ã¡â‚¬Â¾Ã¡â‚¬ÂÃ¡â‚¬ÂºÃ¡â‚¬â€˜Ã¡â‚¬Â¬Ã¡â‚¬Â¸
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-export function auditLog(action: string, adminId: string, targetUserId: string, details?: string) {
+export async function auditLog(
+  action: string,
+  adminId: string,
+  targetUserId: string,
+  details?: string,
+  ipAddress?: string
+) {
   const entry = {
     timestamp: new Date().toISOString(),
     action,
     adminId,
     targetUserId,
     details: details || "",
+    ipAddress: ipAddress || "",
   };
-  // Console Ã¡â‚¬â„¢Ã¡â‚¬Â¾Ã¡â‚¬Â¬ Ã¡â‚¬â„¢Ã¡â‚¬Â¾Ã¡â‚¬ÂÃ¡â‚¬ÂºÃ¡â‚¬â€˜Ã¡â‚¬Â¬Ã¡â‚¬Â¸ (Production Ã¡â‚¬â„¢Ã¡â‚¬Â¾Ã¡â‚¬Â¬ file/DB Ã¡â‚¬Å¾Ã¡â‚¬Â­Ã¡â‚¬Â¯Ã¡â‚¬Â· pipe Ã¡â‚¬Å“Ã¡â‚¬Â¯Ã¡â‚¬â€¢Ã¡â‚¬ÂºÃ¡â‚¬â€ºÃ¡â‚¬â„¢Ã¡â‚¬Å Ã¡â‚¬Âº)
+  // Also log to console for real-time monitoring
   console.log(`[AUDIT] ${JSON.stringify(entry)}`);
+
+  // Persist to DB (fire-and-forget, never throw)
+  try {
+    const db = await getDb();
+    if (db) {
+      await db.insert(auditLogs).values({
+        id: randomUUID(),
+        action,
+        adminId,
+        targetUserId,
+        details: details || "",
+        ipAddress: ipAddress || "",
+      });
+    }
+  } catch (e) {
+    console.warn("[AUDIT] DB persist failed (non-fatal):", (e as any)?.message);
+  }
 }
 
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬

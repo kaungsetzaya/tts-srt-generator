@@ -101,9 +101,11 @@ async function startServer() {
     "91.108.4.0/22",
   ];
   function ipInCidr(ip: string, cidr: string): boolean {
+    // Strip IPv6-mapped IPv4 prefix (::ffff:)
+    const cleanIp = ip.startsWith("::ffff:") ? ip.slice(7) : ip;
     const [range, bits] = cidr.split("/");
     const mask = parseInt(bits, 10);
-    const ipNum = ip.split(".").reduce((a, b) => (a << 8) + parseInt(b, 10), 0) >>> 0;
+    const ipNum = cleanIp.split(".").reduce((a, b) => (a << 8) + parseInt(b, 10), 0) >>> 0;
     const rangeNum = range.split(".").reduce((a, b) => (a << 8) + parseInt(b, 10), 0) >>> 0;
     const maskNum = ~((1 << (32 - mask)) - 1) >>> 0;
     return (ipNum & maskNum) === (rangeNum & maskNum);

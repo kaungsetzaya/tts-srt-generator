@@ -17,10 +17,12 @@ import { promises as fs } from "fs";
 export function registerAllProcessors() {
     // 1. Dub File Processor
     registerProcessor("dub_file", async (job) => {
-        const { videoBase64, filename, userId, ...options } = job.input;
+        const { tempFilePath, filename, userId, ...options } = job.input;
         try {
-            const buffer = Buffer.from(videoBase64, 'base64');
+            const buffer = await fs.readFile(tempFilePath);
             const result = await dubVideoPipeline.execute(buffer, filename, options, job.id);
+            // Clean up temp upload file after reading
+            await fs.unlink(tempFilePath).catch(() => {});
             
             // Upload to R2 and sign the download URL before completing
             if (result.filename) {
@@ -140,10 +142,12 @@ export function registerAllProcessors() {
 
     // 3. Translate File Processor
     registerProcessor("translate_file", async (job) => {
-        const { videoBase64, filename, userId, userApiKey } = job.input;
+        const { tempFilePath, filename, userId, userApiKey } = job.input;
         try {
-            const buffer = Buffer.from(videoBase64, 'base64');
+            const buffer = await fs.readFile(tempFilePath);
             const result = await translateVideoPipeline.execute(buffer, filename, userApiKey, job.id);
+            // Clean up temp upload file after reading
+            await fs.unlink(tempFilePath).catch(() => {});
             updateJob(job.id, { status: "completed", progress: 100, result });
 
             await recordConversion({

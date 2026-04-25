@@ -102,13 +102,15 @@ export async function getVideoInfo(url: string): Promise<{ duration: number; fil
   const proxyUrl = getProxyUrl();
   const baseArgs = [
     "--user-agent", USER_AGENT,
-    "--no-check-certificates",
     "--no-warnings",
     "--quiet",
     "--extractor-args", "youtube:player_client=android",
     "--add-header", "Accept-Language: en-US,en;q=0.9",
     "--dump-json",
     "--no-download",
+    "--no-playlist",
+    "--abort-on-unavailable-fragment",
+    "--max-redirects", "3",
   ];
   
   if (proxyUrl) {
@@ -165,12 +167,14 @@ export async function downloadVideo(url: string, outputPath: string, options: { 
     const proxyUrl = getProxyUrl();
     const baseArgs = [
       "--user-agent", USER_AGENT,
-      "--no-check-certificates",
       "--extractor-args", "youtube:player_client=android",
       "--add-header", "Accept-Language: en-US,en;q=0.9",
       "-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
       "--merge-output-format", "mp4",
       "-o", outputPath,
+      "--no-playlist",
+      "--abort-on-unavailable-fragment",
+      "--max-redirects", "3",
     ];
     
     if (proxyUrl) {

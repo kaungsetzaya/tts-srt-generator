@@ -12,6 +12,10 @@ import { createJob, getJobAsync, updateJob } from "../jobs";
 import { deductCredits, addCredits } from "./credits";
 import { whisperService } from "../src/modules/translation/services/whisper.service";
 import { downloaderService } from "../src/modules/media/services/downloader.service";
+import { promises as fs } from "fs";
+import * as path from "path";
+import { tmpdir } from "os";
+import { randomUUID } from "crypto";
 
 export const videoRouter = t.router({
   dubFile: protectedProcedure
@@ -67,10 +71,25 @@ export const videoRouter = t.router({
       // Ã¢â€â‚¬Ã¢â€â‚¬ Gate 3: Deduct credits BEFORE creating job Ã¢â€â‚¬Ã¢â€â‚¬
       await deductCredits(userId, 10, "video_dub", `Video Dub: ${input.voice}`);
 
-      // Ã¢â€â‚¬Ã¢â€â‚¬ Gate 4: Create job (auto-dispatches to processor) Ã¢â€â‚¬Ã¢â€â‚¬
+      // Gate 4: Save base64 to temp file, store only path in job (prevents OOM)
+      const tempDir = path.join(tmpdir(), `lumix_uploads`);
+      await fs.mkdir(tempDir, { recursive: true });
+      const tempFilePath = path.join(tempDir, `dub_${userId}_${randomUUID()}.mp4`);
+      try {
+        const buffer = Buffer.from(input.videoBase64, "base64");
+        await fs.writeFile(tempFilePath, buffer);
+      } catch (writeErr: any) {
+        await addCredits(userId, 10, "video_dub_refund", "Refund: Failed to save upload");
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to process upload. Please try again.",
+        });
+      }
+
+      // Gate 5: Create job with temp file path only (no base64 in memory)
       try {
         const jobId = createJob("dub_file", {
-          videoBase64: input.videoBase64,
+          tempFilePath,
           filename: input.filename,
           voice: input.voice,
           speed: input.speed,
@@ -92,8 +111,9 @@ export const videoRouter = t.router({
 
         return { jobId };
       } catch (error: any) {
-        // Job creation failed Ã¢â‚¬â€ refund immediately
+        // Job creation failed — refund and clean up
         await addCredits(userId, 10, "video_dub_refund", `Refund: Video dub job creation failed`);
+        await fs.unlink(tempFilePath).catch(() => {});
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: error.message || "Failed to start dub job.",
@@ -249,9 +269,24 @@ export const videoRouter = t.router({
       // Ã¢â€â‚¬Ã¢â€â‚¬ Gate 3: Deduct credits BEFORE creating job Ã¢â€â‚¬Ã¢â€â‚¬
       await deductCredits(userId, 5, "video_translate", "Video Translate");
       
-      // Ã¢â€â‚¬Ã¢â€â‚¬ Gate 4: Create job Ã¢â€â‚¬Ã¢â€â‚¬
+      // Gate 4: Save base64 to temp file, store only path in job (prevents OOM)
+      const transTempDir = path.join(tmpdir(), `lumix_uploads`);
+      await fs.mkdir(transTempDir, { recursive: true });
+      const transTempFilePath = path.join(transTempDir, `trans_${userId}_${randomUUID()}.mp4`);
+      try {
+        const transBuffer = Buffer.from(input.videoBase64, "base64");
+        await fs.writeFile(transTempFilePath, transBuffer);
+      } catch (writeErr: any) {
+        await addCredits(userId, 5, "video_translate_refund", "Refund: Failed to save upload");
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to process upload. Please try again.",
+        });
+      }
+
+      // Gate 5: Create job with temp file path only
       const jobId = createJob("translate_file", { 
-        videoBase64: input.videoBase64, 
+        tempFilePath: transTempFilePath,
         filename: input.filename,
         userId 
       }, userId);
