@@ -360,11 +360,7 @@ export function useDubbingState(
       wordWrap: "break-word" as const,
       wordBreak: "break-word" as const,
       overflowWrap: "anywhere" as const,
-      lineHeight: 1.4,
-      display: "-webkit-box" as const,
-      WebkitLineClamp: 2,
-      WebkitBoxOrient: "vertical" as const,
-      overflow: "hidden" as const,
+      lineHeight: 1.55,
       // Absolute positioning anchored to bottom inside the video container
       position: "absolute" as const,
       left: `${sidePct}%`,
@@ -374,6 +370,8 @@ export function useDubbingState(
       zIndex: 50,
       textAlign: "center" as const,
       pointerEvents: "none" as const,
+      marginLeft: "auto",
+      marginRight: "auto",
     };
   // Additional non-style values needed by DubbingTab for the wrapper font-size
   // are exposed via computeSrtFontSizePct below.
