@@ -350,10 +350,12 @@ export function useDubbingState(
       WebkitLineClamp: 2,
       WebkitBoxOrient: "vertical" as const,
       position: "absolute" as const,
+      bottom: 0,
       left: 0,
       right: 0,
-      bottom: `${Math.max(2, Math.min(40, topPercent * 0.4))}%`,
-      zIndex: 5,
+      padding: "10px 20px",
+      zIndex: 999999,
+      background: "rgba(255,0,0,0.8)", // debug - red background
       textAlign: "center" as const,
       pointerEvents: "none" as const,
     };

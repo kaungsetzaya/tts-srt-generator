@@ -241,10 +241,10 @@ export class DubVideoPipeline {
 
         let finalWav = rawWav;
         try {
-          await ffmpegService.trimSilenceWav(rawWav, trimWav, -50, 0.05);
+          await ffmpegService.trimSilenceWav(rawWav, trimWav, -35, 0.1);
           const trimDur = await ffmpegService.getAudioDurationMs(trimWav);
           const rawDur  = await ffmpegService.getAudioDurationMs(rawWav);
-          if (trimDur >= rawDur * 0.5) {
+          if (trimDur >= rawDur * 0.75) {  // 0.5 → 0.75
             finalWav = trimWav;
             console.log(`[TTS] trimmed seg ${seg.index}: ${rawDur}ms → ${trimDur}ms`);
           }
@@ -298,10 +298,10 @@ export class DubVideoPipeline {
             // Silence trim လည်း retry မှာ လုပ်ရမယ်
             const trimShort = path.join(tempDir, `tts_short_trim_${seg.index}.wav`);
             try {
-              await ffmpegService.trimSilenceWav(wavShort, trimShort, -50, 0.05);
+              await ffmpegService.trimSilenceWav(wavShort, trimShort, -35, 0.1);
               const trimDur = await ffmpegService.getAudioDurationMs(trimShort);
               const rawDur  = await ffmpegService.getAudioDurationMs(wavShort);
-              if (trimDur >= rawDur * 0.5) {
+              if (trimDur >= rawDur * 0.75) {
                 await fs.copyFile(trimShort, wavShort);
               }
             } catch {}

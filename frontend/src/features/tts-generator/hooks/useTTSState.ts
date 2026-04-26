@@ -56,12 +56,12 @@ export function useTTSState(
   });
 
   const getCharLimit = (isAdmin: boolean, currentPlan?: string | null) => {
-    if (isAdmin) return 99999;
+    if (isAdmin) return 999999;
     if (!currentPlan) return 0;
     if (selectedTier === "tier1") {
-      return currentPlan === "trial" ? 5000 : 30000;
+      return currentPlan === "trial" ? 50000 : 100000;
     }
-    return currentPlan === "trial" ? 1600 : 2000;
+    return currentPlan === "trial" ? 10000 : 50000;
   };
 
   const handleGenerate = async () => {

@@ -527,10 +527,10 @@ function TTSTab({
                         </motion.button>
 
                         {generatedFiles && (
-                          <div
-                            className="mt-5 sm:mt-6 pt-5 sm:pt-6 border-t"
-                            style={{ borderColor: cardBorder }}
-                          >
+                           <div
+                             className="pt-5 sm:pt-6 border-t"
+                             style={{ borderColor: cardBorder }}
+                           >
                             <p
                               className="text-xs font-bold uppercase tracking-wider mb-3"
                               style={{ color: subtextColor }}

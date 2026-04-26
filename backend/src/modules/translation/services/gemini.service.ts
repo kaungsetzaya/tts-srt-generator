@@ -10,15 +10,22 @@ const QUOTA_FILE = path.join(process.cwd(), 'backend/.gemini_quota.json');
 
 const MODELS = [
   {
+    id: "models/gemini-3-flash-preview",
+    name: "Gemini 3 Flash",
+    rpd: 20,
+    rpm: 5,
+    primary: true,
+  },
+  {
     id: "models/gemini-3.1-flash-lite-preview",
     name: "Gemini 3.1 Flash Lite",
     rpd: 500,
     rpm: 15,
-    primary: true,
+    primary: false,
   },
   {
-    id: "models/gemini-3-flash-preview",
-    name: "Gemini 3 Flash",
+    id: "models/gemini-2.5-flash",
+    name: "Gemini 2.5 Flash",
     rpd: 20,
     rpm: 5,
     primary: false,
@@ -28,13 +35,6 @@ const MODELS = [
     name: "Gemini 2.5 Flash Lite",
     rpd: 20,
     rpm: 10,
-    primary: false,
-  },
-  {
-    id: "models/gemini-2.5-flash",
-    name: "Gemini 2.5 Flash",
-    rpd: 20,
-    rpm: 5,
     primary: false,
   },
 ];
@@ -144,12 +144,14 @@ export class GeminiService {
         return cleaned.trim();
     }
 
-    /**
-     * Make text shorter to fit time slot
-     */
+     /**
+      * Make text shorter to fit time slot
+      */
     async makeShorter(text: string, slotMs: number, userApiKey?: string): Promise<string | null> {
         const allKeys = this.getAllKeys(userApiKey);
-        const targetSyllables = Math.floor((slotMs / 1000) * 3);
+        // 90% of slot at 1.15x speed = effective target
+        const targetSec = ((slotMs * 0.9) / 1000).toFixed(1);
+        const targetSyllables = Math.floor((slotMs / 1000) * 3.5); // 1.15x speed ဆိုတော့ ပိုများသောင်း
         
         for (const model of MODELS) {
             if (getDailyCount(model.id) >= model.rpd) continue;
@@ -157,14 +159,28 @@ export class GeminiService {
                 try {
                     const url = `https://generativelanguage.googleapis.com/v1beta/${model.id}:generateContent?key=${apiKey}`;
                     const body = {
-                        contents: [{ parts: [{ text: `Shorten this Myanmar text to fit ${targetSyllables} syllables max (${(slotMs/1000).toFixed(1)}s slot). Keep the key meaning. Return only the shortened Myanmar text, nothing else:\n\n${text}` }] }],
-                        systemInstruction: { parts: [{ text: `You are a Myanmar text editor. Shorten Myanmar dubbing text to fit exact time slots. Keep dramatic style. Return ONLY the shortened text.` }] }
+                        contents: [{ parts: [{ text:
+                            `ဒီမြန်မာစာကို့ ${targetSec} စက္ကို့အတွက် ပိုများသောင်း။\n` +
+                            `အဓိကအချက်အဓိပ္ပာရှိနေရမယ်။ ` +
+                            `Never make it TOO short — aim for natural speech pace. ` +
+                            `Return ONLY the Myanmar text.`
+                        }] }],
+                        systemInstruction: { parts: [{ text:
+                            `Myanmar dubbing text editor. ` +
+                            `Shorten text to fit time slot but keep at least 70% of the meaning. ` +
+                            `Never make it TOO short — aim for natural speech pace. ` +
+                            `Return ONLY the Myanmar text.`
+                        }] }
                     };
-                    const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+                    const res = await fetch(url, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(body)
+                    });
                     if (!res.ok) continue;
                     const data = await res.json();
-                    const result = data.candidates?.[0]?.content?.parts?.[0]?.text || null;
-                    if (result) {
+                    const result = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || null;
+                    if (result && /[\u1000-\u109F]/.test(result)) {
                         incrementQuota(model.id);
                         return this.applyPhonetics(this.sanitize(result));
                     }
