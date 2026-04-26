@@ -23,6 +23,8 @@ import {
   getVoiceCredits,
 } from "./voices";
 import { generateGeminiSpeechWithSRT } from "./geminiTTS.service";
+import { ffmpegService } from "../media/services/ffmpeg.service";
+import ffmpeg from "fluent-ffmpeg";
 
 const execFileAsync = promisify(execFile);
 
@@ -58,59 +60,105 @@ async function generateTier1Speech(
   const voice = TIER1_VOICES[voiceId];
   if (!voice) throw new Error(`Unknown Tier 1 voice: ${voiceId}`);
 
-  const safeText = text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/၊/g, ", <break time='400ms'/>")
-    .replace(/။/g, ". <break time='800ms'/>");
-
-  const rateStr = rate >= 1.0 ? `+${Math.round((rate-1)*100)}%` : `-${Math.round((1-rate)*100)}%`;
+  const MYANMAR_SPEED_MULTIPLIER = 1.1;
+  const adjustedRate = rate * MYANMAR_SPEED_MULTIPLIER;
+  const rateStr = adjustedRate >= 1.0 ? `+${Math.round((adjustedRate-1)*100)}%` : `-${Math.round((1-adjustedRate)*100)}%`;
   const pitchStr = pitch >= 0 ? `+${pitch}Hz` : `${pitch}Hz`;
 
-  const ssml = `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='my-MM'>
-    <voice name='${voice.edgeVoice}'>
-      <prosody rate='${rateStr}' pitch='${pitchStr}'>
-        ${safeText}
-      </prosody>
-    </voice>
-  </speak>`;
-
-  const id = nanoid(10);
-  const audioPath = path.join(OUTPUT_DIR, `${id}.mp3`);
-  const srtPath = path.join(OUTPUT_DIR, `${id}.srt`);
-  const tmpXml = path.join(OUTPUT_DIR, `${id}.xml`);
-
-  await fs.writeFile(tmpXml, ssml, "utf8");
-
   const pythonCmd = process.platform === "win32" ? "python" : "python3";
+  const baseId = nanoid(10);
+  const tempDir = path.join(OUTPUT_DIR, `tts_${baseId}`);
+  await fs.mkdir(tempDir, { recursive: true });
 
-  try {
-    await execFileAsync(pythonCmd, [
-      "-m", "edge_tts",
-      "--voice", voice.edgeVoice,
-      "--file", tmpXml,
-      "--write-media", audioPath,
-      "--write-subtitles", srtPath,
-    ], {
-      timeout: 120000,
-      env: { ...process.env, HTTPS_PROXY: getProxyUrl(), HTTP_PROXY: getProxyUrl() }
-    });
+  const PAUSE_MS = 0.2;
+  const segments: { text: string; startMs: number; endMs: number }[] = [];
+  const audioChunks: string[] = [];
+  let currentMs = 0;
 
-    const audioBuffer = await fs.readFile(audioPath);
-    const rawSrt = await fs.readFile(srtPath, "utf8").catch(() => "");
-    const durationMs = parseLastEndTime(rawSrt);
-    const srtContent = buildSRTFromRaw(rawSrt, text, aspectRatio);
+  const chunkTexts = text.split(/(၊|။)/);
+  console.log(`[TTS Chunked] Split into ${chunkTexts.length} chunks:`, chunkTexts.map(c => c.slice(0, 20)));
 
-    return { audioBuffer, rawSrt, srtContent, durationMs };
-  } finally {
-    await fs.unlink(tmpXml).catch(() => {});
-    await fs.unlink(audioPath).catch(() => {});
-    await fs.unlink(srtPath).catch(() => {});
+  for (let i = 0; i < chunkTexts.length; i++) {
+    const chunkText = chunkTexts[i];
+
+    if (chunkText === '၊') {
+      console.log(`[TTS Chunked] Chunk ${i}: Adding ${PAUSE_MS}ms pause (၊)`);
+      const silencePath = path.join(tempDir, `silence_${i}.wav`);
+      await ffmpegService.generateSilenceWav(PAUSE_MS, silencePath);
+      audioChunks.push(silencePath);
+      currentMs += PAUSE_MS;
+    } else if (chunkText === '။') {
+      console.log(`[TTS Chunked] Chunk ${i}: Adding ${PAUSE_MS}ms pause (။)`);
+      const silencePath = path.join(tempDir, `silence_${i}.wav`);
+      await ffmpegService.generateSilenceWav(PAUSE_MS, silencePath);
+      audioChunks.push(silencePath);
+      currentMs += PAUSE_MS;
+    } else {
+      const cleanText = chunkText.trim();
+      if (!cleanText) continue;
+
+      console.log(`[TTS Chunked] Chunk ${i}: Generating TTS for "${cleanText.slice(0, 30)}..."`);
+      const chunkMp3 = path.join(tempDir, `chunk_${i}.mp3`);
+      const chunkWav = path.join(tempDir, `chunk_${i}.wav`);
+
+      await execFileAsync(pythonCmd, [
+        "-m", "edge_tts",
+        "--voice", voice.edgeVoice,
+        "--rate", rateStr,
+        "--pitch", pitchStr,
+        "--text", cleanText,
+        "--write-media", chunkMp3,
+      ], {
+        timeout: 60000,
+        env: { ...process.env, HTTPS_PROXY: getProxyUrl(), HTTP_PROXY: getProxyUrl() }
+      });
+
+      await ffmpegService.convertToWav(chunkMp3, chunkWav);
+      const chunkDurationMs = await ffmpegService.getAudioDurationMs(chunkWav);
+
+      console.log(`[TTS Chunked] Chunk ${i}: Generated ${chunkDurationMs}ms audio`);
+      segments.push({ text: cleanText, startMs: currentMs, endMs: currentMs + chunkDurationMs });
+      audioChunks.push(chunkWav);
+
+      await fs.unlink(chunkMp3).catch(() => {});
+
+      currentMs += chunkDurationMs;
+    }
   }
+
+  console.log(`[TTS Chunked] Merging ${audioChunks.length} audio chunks, total duration: ${currentMs}ms`);
+
+  const finalWav = path.join(tempDir, `final_${baseId}.wav`);
+  const finalMp3 = path.join(tempDir, `final_${baseId}.mp3`);
+
+  await ffmpegService.concatAudioFiles(audioChunks, finalWav);
+
+  await new Promise<void>((resolve, reject) => {
+    (ffmpeg as any)(finalWav)
+      .audioCodec('libmp3lame')
+      .audioBitrate('128k')
+      .on('end', () => resolve())
+      .on('error', reject)
+      .save(finalMp3);
+  });
+
+  const audioBuffer = await fs.readFile(finalMp3);
+  const durationMs = currentMs;
+
+  const srtContent = segments.map((s, idx) => {
+    const start = msToSrtTime(s.startMs);
+    const end = msToSrtTime(s.endMs - 20);
+    return `${idx + 1}\n${start} --> ${end}\n${s.text}\n`;
+  }).join("\n");
+
+  await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
+
+  console.log(`[TTS Chunked] Done. ${segments.length} SRT segments, ${durationMs}ms total`);
+
+return { audioBuffer, rawSrt: srtContent, srtContent, durationMs };
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Tier 2: Murf AI Voice Cloning Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// Ã¢Å"â‚¬Ã¢Å"â‚¬Ã¢Å"â‚¬ Tier 2: Murf AI Voice Cloning Ã¢Å"â‚¬Ã¢Å"â‚¬Ã¢Å"â‚¬
 async function generateTier2Speech(
   text: string,
   voiceId: Tier2VoiceId,
