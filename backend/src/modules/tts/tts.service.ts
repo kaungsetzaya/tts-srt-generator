@@ -58,43 +58,43 @@ async function generateTier1Speech(
   const voice = TIER1_VOICES[voiceId];
   if (!voice) throw new Error(`Unknown Tier 1 voice: ${voiceId}`);
 
-  const MYANMAR_SPEED_MULTIPLIER = 1.1;
-  const actualRate = rate * MYANMAR_SPEED_MULTIPLIER;
-  const ratePercent = Math.round((actualRate - 1.0) * 100);
-  const rateStr = ratePercent >= 0 ? `+${ratePercent}%` : `${ratePercent}%`;
-  const clampedPitch = Math.max(-20, Math.min(20, pitch));
-  const pitchStr = clampedPitch >= 0 ? `+${clampedPitch}Hz` : `${clampedPitch}Hz`;
+  const safeText = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/၊/g, ", <break time='400ms'/>")
+    .replace(/။/g, ". <break time='800ms'/>");
+
+  const rateStr = rate >= 1.0 ? `+${Math.round((rate-1)*100)}%` : `-${Math.round((1-rate)*100)}%`;
+  const pitchStr = pitch >= 0 ? `+${pitch}Hz` : `${pitch}Hz`;
+
+  const ssml = `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='my-MM'>
+    <voice name='${voice.edgeVoice}'>
+      <prosody rate='${rateStr}' pitch='${pitchStr}'>
+        ${safeText}
+      </prosody>
+    </voice>
+  </speak>`;
 
   const id = nanoid(10);
   const audioPath = path.join(OUTPUT_DIR, `${id}.mp3`);
   const srtPath = path.join(OUTPUT_DIR, `${id}.srt`);
-  const tmpText = path.join(OUTPUT_DIR, `${id}.txt`);
+  const tmpXml = path.join(OUTPUT_DIR, `${id}.xml`);
 
-  await fs.writeFile(tmpText, text, "utf8");
-
-  if (!text.trim()) {
-    throw new Error("Cannot generate speech for empty text");
-  }
+  await fs.writeFile(tmpXml, ssml, "utf8");
 
   const pythonCmd = process.platform === "win32" ? "python" : "python3";
-  console.log(`[TTS Tier1] Generating: "${text.slice(0, 50)}..." [Voice: ${voice.edgeVoice}]`);
 
   try {
     await execFileAsync(pythonCmd, [
       "-m", "edge_tts",
       "--voice", voice.edgeVoice,
-      `--rate=${rateStr}`,
-      `--pitch=${pitchStr}`,
-      "--file", tmpText,
+      "--file", tmpXml,
       "--write-media", audioPath,
       "--write-subtitles", srtPath,
     ], {
       timeout: 120000,
-      env: {
-        ...process.env,
-        HTTPS_PROXY: getProxyUrl(),
-        HTTP_PROXY: getProxyUrl(),
-      },
+      env: { ...process.env, HTTPS_PROXY: getProxyUrl(), HTTP_PROXY: getProxyUrl() }
     });
 
     const audioBuffer = await fs.readFile(audioPath);
@@ -104,7 +104,7 @@ async function generateTier1Speech(
 
     return { audioBuffer, rawSrt, srtContent, durationMs };
   } finally {
-    await fs.unlink(tmpText).catch(() => {});
+    await fs.unlink(tmpXml).catch(() => {});
     await fs.unlink(audioPath).catch(() => {});
     await fs.unlink(srtPath).catch(() => {});
   }

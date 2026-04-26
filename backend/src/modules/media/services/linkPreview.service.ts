@@ -8,6 +8,34 @@ import path from "path";
 
 const execFileAsync = promisify(execFile);
 
+const YTDLP_PATH = process.env.YTDL_PATH || "yt-dlp";
+const COOKIE_PATH = process.env.YTDL_COOKIE_PATH || path.resolve(process.cwd(), "backend/cookies.txt");
+
+async function fetchThumbnailViaYtDlp(url: string): Promise<{ thumbnail: string; title: string } | null> {
+  const baseArgs = [
+    "--no-warnings", "--quiet",
+    "--dump-json", "--no-download", "--no-playlist",
+  ];
+  const proxyUrl = getProxyUrl();
+  if (proxyUrl) baseArgs.push("--proxy", proxyUrl);
+
+  const tryRun = async (args: string[]): Promise<{ thumbnail: string; title: string } | null> => {
+    try {
+      const { stdout } = await execFileAsync(YTDLP_PATH, [...args, url], { timeout: 30000 });
+      const info = JSON.parse(stdout);
+      if (info?.thumbnail || info?.title) {
+        return { thumbnail: info.thumbnail || "", title: info.title || "" };
+      }
+    } catch {}
+    return null;
+  };
+
+  const result = await tryRun(baseArgs);
+  if (result) return result;
+  return tryRun([...baseArgs, "--cookies", COOKIE_PATH]);
+}
+
+
 const MOBILE_USER_AGENTS = [
   "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Mobile/15E148 Safari/604.1",
   "Mozilla/5.0 (iPhone; CPU iPhone OS 17_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/123.0.6312.52 Mobile/15E148 Safari/604.1",
@@ -35,7 +63,6 @@ function getFacebookCookieString(): string {
     const fs = require("fs");
     const cookiePath = path.resolve(process.cwd(), "backend/cookies.txt");
     const content = fs.readFileSync(cookiePath, "utf-8");
-    // Parse Netscape cookie format to Cookie header string
     const lines = content.split("\n");
     const cookies: string[] = [];
     for (const line of lines) {
@@ -236,9 +263,23 @@ export async function fetchLinkPreview(url: string): Promise<LinkPreviewData> {
     let image = "";
     let title = "Facebook Video";
 
+    // Try yt-dlp FIRST - most reliable for Facebook thumbnails
+    try {
+      console.log("[LinkPreview] Trying yt-dlp for Facebook thumbnail:", url);
+      const ytdlpResult = await fetchThumbnailViaYtDlp(url);
+      if (ytdlpResult?.thumbnail) {
+        image = ytdlpResult.thumbnail;
+        if (ytdlpResult.title) title = ytdlpResult.title;
+        image = await proxyImageToR2(image);
+        console.log("[LinkPreview] yt-dlp Facebook thumbnail success");
+      }
+    } catch (e: any) {
+      console.warn("[LinkPreview] yt-dlp Facebook failed:", e.message);
+    }
+
     const cookieString = getFacebookCookieString();
 
-    if (cookieString) {
+    if (!image && cookieString) {
       try {
         const puppeteerResult = await fetchFacebookWithPuppeteer(url);
         if (puppeteerResult && puppeteerResult.image) {
@@ -252,7 +293,7 @@ export async function fetchLinkPreview(url: string): Promise<LinkPreviewData> {
       }
     }
 
-    if (!image) {
+    if (!image && cookieString) {
       try {
         console.log("[LinkPreview] Fetching Facebook URL with Cookie header:", url);
         const controller = new AbortController();
@@ -330,69 +371,70 @@ export async function fetchLinkPreview(url: string): Promise<LinkPreviewData> {
   }
 
   if (url.includes("tiktok.com")) {
-    // Try oEmbed first (using curl since Node fetch doesn't support HTTP proxies well)
-    try {
-      // Clean the URL - remove query params for oEmbed
-      const cleanUrl = url.split("?")[0];
-      console.log("[LinkPreview] Fetching TikTok oEmbed:", cleanUrl);
-      const oembedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(cleanUrl)}`;
-      const proxyUrl = getProxyUrl();
-      const curlArgs = ["-s", "--max-time", "10"];
-      if (proxyUrl) {
-        curlArgs.push("--proxy", proxyUrl);
-        console.log("[LinkPreview] TikTok oEmbed using proxy");
-      }
-      curlArgs.push("-H", "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36");
-      curlArgs.push(oembedUrl);
+    let tiktokImage = "";
+    let tiktokTitle = "TikTok Video";
 
-      const { stdout } = await execFileAsync("curl", curlArgs, { timeout: 15000 });
-      console.log("[LinkPreview] TikTok oEmbed raw response length:", stdout?.length || 0);
-      if (stdout) {
-        const data = JSON.parse(stdout);
-        console.log("[LinkPreview] TikTok oEmbed parsed:", { 
-          title: data?.title?.slice(0, 50), 
-          hasThumbnail: !!data?.thumbnail_url,
-          thumbnail: data?.thumbnail_url?.slice(0, 80)
+    // Try yt-dlp first - most reliable
+    try {
+      console.log("[LinkPreview] Trying yt-dlp for TikTok thumbnail:", url);
+      const ytdlpResult = await fetchThumbnailViaYtDlp(url);
+      if (ytdlpResult?.thumbnail) {
+        tiktokImage = ytdlpResult.thumbnail;
+        if (ytdlpResult.title) tiktokTitle = ytdlpResult.title;
+        console.log("[LinkPreview] yt-dlp TikTok thumbnail success");
+      }
+    } catch (e: any) {
+      console.warn("[LinkPreview] yt-dlp TikTok failed:", e.message);
+    }
+
+    // Fallback: oEmbed API
+    if (!tiktokImage) {
+      try {
+        const cleanUrl = url.split("?")[0];
+        const oembedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(cleanUrl)}`;
+        const proxyUrl = getProxyUrl();
+        const curlArgs = ["-s", "--max-time", "10"];
+        if (proxyUrl) curlArgs.push("--proxy", proxyUrl);
+        curlArgs.push("-H", "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+        curlArgs.push(oembedUrl);
+        const { stdout } = await execFileAsync("curl", curlArgs, { timeout: 15000 });
+        if (stdout) {
+          const data = JSON.parse(stdout);
+          if (data?.thumbnail_url) {
+            tiktokImage = data.thumbnail_url;
+            tiktokTitle = data.title || data.author_name || tiktokTitle;
+            console.log("[LinkPreview] TikTok oEmbed success");
+          }
+        }
+      } catch (e: any) {
+        console.warn("[LinkPreview] TikTok oEmbed failed:", e.message);
+      }
+    }
+
+    // Fallback: generic og:image fetch
+    if (!tiktokImage) {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+        const response = await fetch(url, {
+          signal: controller.signal,
+          headers: { "User-Agent": getRandomUserAgent() },
         });
-        if (data && data.thumbnail_url) {
-          const title = data.title || data.author_name || "TikTok Video";
-          const thumbnail = data.thumbnail_url;
-          console.log("[LinkPreview] TikTok oEmbed success:", { title: title.slice(0, 50), thumbnail: thumbnail.slice(0, 60) });
-          return { title, description: "", image: thumbnail, siteName: "TikTok" };
-        } else if (data && !data.thumbnail_url) {
-          console.warn("[LinkPreview] TikTok oEmbed has no thumbnail_url, keys:", Object.keys(data));
+        clearTimeout(timeout);
+        if (response.ok) {
+          const html = await response.text();
+          const $ = load(html);
+          const getMeta = (prop: string) => $(`meta[property="${prop}"]`).attr("content") || $(`meta[name="${prop}"]`).attr("content") || "";
+          tiktokImage = getMeta("og:image:secure_url") || getMeta("og:image:url") || getMeta("og:image") || getMeta("twitter:image") || "";
+          tiktokTitle = getMeta("og:title") || $("title").text() || tiktokTitle;
+          if (tiktokImage) console.log("[LinkPreview] TikTok og:image fetch success");
         }
+      } catch (e: any) {
+        console.warn("[LinkPreview] TikTok generic fetch failed:", e.message);
       }
-    } catch (e: any) {
-      console.warn("[LinkPreview] TikTok oEmbed failed:", e.message);
     }
 
-    // Fallback: try generic fetch to get og:image
-    try {
-      console.log("[LinkPreview] TikTok oEmbed failed, trying generic fetch for og:image...");
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000);
-      const response = await fetch(url, {
-        signal: controller.signal,
-        headers: { "User-Agent": getRandomUserAgent() },
-      });
-      clearTimeout(timeout);
-
-      if (response.ok) {
-        const html = await response.text();
-        const $ = load(html);
-        const getMeta = (prop: string) => $(`meta[property="${prop}"]`).attr("content") || $(`meta[name="${prop}"]`).attr("content") || "";
-        const image = getMeta("og:image:secure_url") || getMeta("og:image:url") || getMeta("og:image") || getMeta("twitter:image") || "";
-        const title = getMeta("og:title") || $("title").text() || "TikTok Video";
-
-        if (image) {
-          console.log("[LinkPreview] TikTok generic fetch found og:image");
-          return { title, description: "", image, siteName: "TikTok" };
-        }
-      }
-    } catch (e: any) {
-      console.warn("[LinkPreview] TikTok generic fetch failed:", e.message);
-    }
+    return { title: tiktokTitle, description: "", image: tiktokImage, siteName: "TikTok" };
   }
 
   try {

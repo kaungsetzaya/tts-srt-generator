@@ -531,7 +531,6 @@ function DubbingTab({
                                   src={rawImage}
                                   alt={linkPreview?.title || "TikTok Video"}
                                   className="absolute inset-0 w-full h-full object-cover"
-                                  crossOrigin="anonymous"
                                   onError={(e) => { e.currentTarget.style.display = "none"; }}
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
