@@ -1,5 +1,6 @@
 import { load } from "cheerio";
-import { HttpsProxyAgent } from "https-proxy-agent";
+import pkg from "https-proxy-agent";
+const { HttpsProxyAgent } = pkg;
 import { r2Service } from "./r2.service";
 import { generateShortId } from "../../../modules/_core/filename";
 import { execFile } from "child_process";

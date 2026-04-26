@@ -422,7 +422,7 @@ function DubbingTab({
           {/* Preview - Left column */}
           <div className="w-full lg:w-1/2 lg:sticky lg:top-4 shrink-0 flex flex-col">
             <div 
-              className="relative border backdrop-blur-xl transition-all duration-300 rounded-3xl overflow-visible shadow-2xl flex flex-col w-full mx-auto" 
+              className="relative border backdrop-blur-xl transition-all duration-300 rounded-3xl overflow-hidden shadow-2xl flex flex-col w-full mx-auto" 
               style={{ 
                 background: cardBg, 
                 borderColor: cardBorder, 
@@ -450,7 +450,7 @@ function DubbingTab({
                     </span>
                   </div>
                 ) : dubPreviewUrl.startsWith("embed:") ? (
-                  <div className="relative w-full h-full flex items-center justify-center overflow-visible rounded-2xl bg-black">
+                  <div className="relative w-full h-full flex items-center justify-center overflow-hidden rounded-2xl bg-black">
                     {(() => {
                       const parts = dubPreviewUrl.split(":");
                       const platform = parts[1];
@@ -476,7 +476,7 @@ function DubbingTab({
                           ? `${rawImage}${rawImage.includes("?") ? "&" : "?"}t=${Date.now()}`
                           : rawImage;
                         return (
-                          <div className="relative w-full h-full flex items-center justify-center overflow-visible rounded-2xl bg-black/40">
+                          <div className="relative w-full h-full flex items-center justify-center overflow-hidden rounded-2xl bg-black/40">
                             {linkPreviewLoading ? (
                               <div className="flex flex-col items-center gap-2">
                                 <Loader2 className="w-8 h-8 animate-spin" style={{ color: accent }} />
@@ -519,7 +519,7 @@ function DubbingTab({
                         const rawImage = linkPreview?.image || "";
                         const isFallback = !rawImage || rawImage.includes("tiktokcdn");
                         return (
-                          <div className="relative w-full h-full flex items-center justify-center overflow-visible rounded-2xl bg-black/40">
+                          <div className="relative w-full h-full flex items-center justify-center overflow-hidden rounded-2xl bg-black/40">
                             {linkPreviewLoading ? (
                               <div className="flex flex-col items-center gap-2">
                                 <Loader2 className="w-8 h-8 animate-spin" style={{ color: accent }} />
@@ -559,7 +559,7 @@ function DubbingTab({
                     })()}
                   </div>
                 ) : (
-                  <div className="relative w-full h-full flex items-center justify-center rounded-2xl overflow-visible">
+                  <div className="relative w-full h-full flex items-center justify-center rounded-2xl overflow-hidden">
                     {/* Background Layer — blurred cinematic fill */}
                     <video
                       src={dubPreviewUrl}
@@ -574,7 +574,7 @@ function DubbingTab({
                     <video
                       ref={dubPreviewRef}
                       src={dubPreviewUrl}
-                      className="absolute inset-0 w-full h-full object-contain rounded-lg cursor-pointer z-1"
+                      className="absolute inset-0 w-full h-full object-contain rounded-lg cursor-pointer z-10"
                       controls
                       preload="metadata"
                       onLoadedMetadata={(e) => {
@@ -594,22 +594,8 @@ function DubbingTab({
                     />
                     {/* Real-time Subtitle Preview */}
                     {srtEnabled && activeJobId === null && (
-                      <div style={{ position: "absolute", inset: 0, zIndex: 100, isolation: "isolate" }}>
-                        <div 
-                          style={{
-                            position: "absolute",
-                            bottom: "10%",
-                            left: "50%",
-                            transform: "translateX(-50%)",
-                            color: srtColor || "#ffffff",
-                            fontSize: "18px",
-                            fontWeight: "bold",
-                            textShadow: "2px 2px 4px rgba(0,0,0,0.9)",
-                            pointerEvents: "none",
-                          }}
-                        >
-                          {lang === "mm" ? "ဤနေရာတွင် စာတန်းထိုးကို မြင်ရပါမည်" : "Subtitle preview"}
-                        </div>
+                      <div style={computeSrtPreviewStyle}>
+                        {lang === "mm" ? "ဤနေရာတွင် စာတန်းထိုးကို မြင်ရပါမည်" : "Subtitle preview"}
                       </div>
                     )}
                     {/* Dubbing Loader Overlay */}
@@ -1173,7 +1159,7 @@ function DubbingTab({
                 : "Auto Creator Generated Video"}
             </div>
             <div className="flex justify-center mt-2 p-2">
-              <div className="relative w-full overflow-visible rounded-2xl shadow-2xl" style={{ maxHeight: '75vh', aspectRatio: dubDetectedRatio === "9:16" ? "9/16" : "16/9" }}>
+              <div className="relative w-full overflow-hidden rounded-2xl shadow-2xl" style={{ maxHeight: '75vh', aspectRatio: dubDetectedRatio === "9:16" ? "9/16" : "16/9" }}>
                 {/* Background Layer — blurred cinematic fill */}
                 <video
                   src={dubResult.videoUrl}
