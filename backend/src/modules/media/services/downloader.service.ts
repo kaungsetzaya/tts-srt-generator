@@ -1,4 +1,4 @@
-﻿import { randomBytes } from "crypto";
+import { randomBytes } from "crypto";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import * as path from "path";
@@ -162,24 +162,22 @@ export async function getVideoInfo(url: string): Promise<{ duration: number; fil
   } catch (error: any) {
     console.error("[Downloader getVideoInfo Error]", error);
 
-    // For YouTube, try with cookies + retry
-    if (isYouTube(url)) {
-      try {
-        const { stdout } = await execFileAsync("yt-dlp", [
-          "--cookies", COOKIE_PATH,
-          ...baseArgs,
-          url
-        ], { timeout: 60000 });
-        const info = JSON.parse(stdout);
-        return {
-          duration: info.duration || 0,
-          filesize: info.filesize || info.filesize_approx || 0,
-          title: info.title || "",
-          thumbnail: info.thumbnail || "",
-        };
-      } catch (e) {
-        console.error("[Downloader getVideoInfo Fallback Error]", e);
-      }
+    // Try with cookies + retry for all platforms if first attempt fails
+    try {
+      const { stdout } = await execFileAsync("yt-dlp", [
+        "--cookies", COOKIE_PATH,
+        ...baseArgs,
+        url
+      ], { timeout: 60000 });
+      const info = JSON.parse(stdout);
+      return {
+        duration: info.duration || 0,
+        filesize: info.filesize || info.filesize_approx || 0,
+        title: info.title || "",
+        thumbnail: info.thumbnail || "",
+      };
+    } catch (e) {
+      console.error("[Downloader getVideoInfo Fallback Error]", e);
     }
 
     return null;

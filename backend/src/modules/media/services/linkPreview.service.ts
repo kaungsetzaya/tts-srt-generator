@@ -204,19 +204,31 @@ export async function fetchLinkPreview(url: string): Promise<LinkPreviewData> {
       }
     }
 
-    // Fallback: try yt-dlp
+    // Fallback: try yt-dlp (Now with cookies enabled for all platforms)
     if (!image) {
       console.log("[LinkPreview] Falling back to downloaderService (yt-dlp) for FB video info...");
       try {
         const { downloaderService } = require("./downloader.service");
         const info = await downloaderService.getVideoInfo(url);
         if (info?.thumbnail) {
+          console.log("[LinkPreview] Found thumbnail via yt-dlp:", info.thumbnail.slice(0, 50));
           image = await proxyImageToR2(info.thumbnail);
           if (info.title) title = info.title;
+        } else {
+          console.warn("[LinkPreview] yt-dlp returned no thumbnail for", url);
         }
       } catch (e: any) {
         console.warn("[LinkPreview] yt-dlp fallback failed:", e.message);
       }
+    }
+
+    // Last resort: try to find any large image in the page if we have HTML
+    if (!image && cookieString) {
+      // (This part is already covered by the og:image check above)
+    }
+
+    if (!image) {
+      console.warn("[LinkPreview] All thumbnail extraction methods failed for", url);
     }
 
     return {
