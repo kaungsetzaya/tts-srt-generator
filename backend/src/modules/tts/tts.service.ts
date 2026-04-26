@@ -70,69 +70,65 @@ async function generateTier1Speech(
   const tempDir = path.join(OUTPUT_DIR, `tts_${baseId}`);
   await fs.mkdir(tempDir, { recursive: true });
 
-  const PAUSE_MS = 0.2;
+  const PAUSE_MS = 400;
+
+  // Split by sentence-ending punctuation
+  const sentences = text.split(/(?<=[။])/u).map(s => s.trim()).filter(s => s.length > 0);
+
+  const audioParts: string[] = [];
   const segments: { text: string; startMs: number; endMs: number }[] = [];
-  const audioChunks: string[] = [];
   let currentMs = 0;
 
-  const chunkTexts = text.split(/(၊|။)/);
-  console.log(`[TTS Chunked] Split into ${chunkTexts.length} chunks:`, chunkTexts.map(c => c.slice(0, 20)));
+  for (let i = 0; i < sentences.length; i++) {
+    const sentence = sentences[i];
+    const chunkMp3 = path.join(tempDir, `chunk_${i}.mp3`);
+    const chunkWav = path.join(tempDir, `chunk_${i}.wav`);
 
-  for (let i = 0; i < chunkTexts.length; i++) {
-    const chunkText = chunkTexts[i];
+    // Generate TTS for this sentence
+    await execFileAsync(pythonCmd, [
+      "-m", "edge_tts",
+      "--voice", voice.edgeVoice,
+      `--rate=${rateStr}`,
+      `--pitch=${pitchStr}`,
+      "--text", sentence,
+      "--write-media", chunkMp3,
+    ], {
+      timeout: 60000,
+      env: {
+        ...process.env,
+        HTTPS_PROXY: getProxyUrl(),
+        HTTP_PROXY: getProxyUrl(),
+      },
+    });
 
-    if (chunkText === '၊') {
-      console.log(`[TTS Chunked] Chunk ${i}: Adding ${PAUSE_MS}ms pause (၊)`);
-      const silencePath = path.join(tempDir, `silence_${i}.wav`);
+    // Convert to WAV for consistent format
+    await ffmpegService.convertToWav(chunkMp3, chunkWav);
+    const chunkDurationMs = await ffmpegService.getAudioDurationMs(chunkWav);
+
+    // Add to parts list
+    audioParts.push(chunkWav);
+    segments.push({ text: sentence, startMs: currentMs, endMs: currentMs + chunkDurationMs });
+    currentMs += chunkDurationMs;
+
+    // Add pause between sentences (but not after the last one)
+    if (i < sentences.length - 1) {
+      const silencePath = path.join(tempDir, `pause_${i}.wav`);
       await ffmpegService.generateSilenceWav(PAUSE_MS, silencePath);
-      audioChunks.push(silencePath);
+      audioParts.push(silencePath);
       currentMs += PAUSE_MS;
-    } else if (chunkText === '။') {
-      console.log(`[TTS Chunked] Chunk ${i}: Adding ${PAUSE_MS}ms pause (။)`);
-      const silencePath = path.join(tempDir, `silence_${i}.wav`);
-      await ffmpegService.generateSilenceWav(PAUSE_MS, silencePath);
-      audioChunks.push(silencePath);
-      currentMs += PAUSE_MS;
-    } else {
-      const cleanText = chunkText.trim();
-      if (!cleanText) continue;
-
-      console.log(`[TTS Chunked] Chunk ${i}: Generating TTS for "${cleanText.slice(0, 30)}..."`);
-      const chunkMp3 = path.join(tempDir, `chunk_${i}.mp3`);
-      const chunkWav = path.join(tempDir, `chunk_${i}.wav`);
-
-      await execFileAsync(pythonCmd, [
-        "-m", "edge_tts",
-        "--voice", voice.edgeVoice,
-        "--rate", rateStr,
-        "--pitch", pitchStr,
-        "--text", cleanText,
-        "--write-media", chunkMp3,
-      ], {
-        timeout: 60000,
-        env: { ...process.env, HTTPS_PROXY: getProxyUrl(), HTTP_PROXY: getProxyUrl() }
-      });
-
-      await ffmpegService.convertToWav(chunkMp3, chunkWav);
-      const chunkDurationMs = await ffmpegService.getAudioDurationMs(chunkWav);
-
-      console.log(`[TTS Chunked] Chunk ${i}: Generated ${chunkDurationMs}ms audio`);
-      segments.push({ text: cleanText, startMs: currentMs, endMs: currentMs + chunkDurationMs });
-      audioChunks.push(chunkWav);
-
-      await fs.unlink(chunkMp3).catch(() => {});
-
-      currentMs += chunkDurationMs;
     }
+
+    // Cleanup MP3
+    await fs.unlink(chunkMp3).catch(() => {});
   }
 
-  console.log(`[TTS Chunked] Merging ${audioChunks.length} audio chunks, total duration: ${currentMs}ms`);
-
+  // Merge all parts
   const finalWav = path.join(tempDir, `final_${baseId}.wav`);
   const finalMp3 = path.join(tempDir, `final_${baseId}.mp3`);
 
-  await ffmpegService.concatAudioFiles(audioChunks, finalWav);
+  await ffmpegService.concatAudioFiles(audioParts, finalWav);
 
+  // Convert merged WAV to MP3
   await new Promise<void>((resolve, reject) => {
     (ffmpeg as any)(finalWav)
       .audioCodec('libmp3lame')
@@ -143,19 +139,18 @@ async function generateTier1Speech(
   });
 
   const audioBuffer = await fs.readFile(finalMp3);
-  const durationMs = currentMs;
 
+  // Build SRT from segment timings
   const srtContent = segments.map((s, idx) => {
     const start = msToSrtTime(s.startMs);
-    const end = msToSrtTime(s.endMs - 20);
+    const end = msToSrtTime(s.endMs);
     return `${idx + 1}\n${start} --> ${end}\n${s.text}\n`;
   }).join("\n");
 
+  // Cleanup temp dir
   await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
 
-  console.log(`[TTS Chunked] Done. ${segments.length} SRT segments, ${durationMs}ms total`);
-
-return { audioBuffer, rawSrt: srtContent, srtContent, durationMs };
+  return { audioBuffer, rawSrt: srtContent, srtContent, durationMs: currentMs };
 }
 
 // Ã¢Å"â‚¬Ã¢Å"â‚¬Ã¢Å"â‚¬ Tier 2: Murf AI Voice Cloning Ã¢Å"â‚¬Ã¢Å"â‚¬Ã¢Å"â‚¬
