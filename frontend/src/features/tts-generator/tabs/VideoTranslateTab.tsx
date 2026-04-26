@@ -70,6 +70,8 @@ function VideoTranslateTab({
   videoCopied,
   fileRef,
   translateJobId,
+  translateJobProgress,
+  translateJobMessage,
   translateMutationPending,
   translateLinkMutationPending,
   handleVideoFile,

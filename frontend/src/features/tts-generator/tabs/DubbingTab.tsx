@@ -418,10 +418,19 @@ function DubbingTab({
 
 {/* ── STEP: Video Preview + Settings ── */}
       {dubPreviewUrl && !dubResult && (
-        <div className="flex flex-col lg:flex-row flex-1 min-h-0 gap-4 overflow-y-auto pb-20 lg:pb-4">
+        <div className="flex flex-col lg:flex-row flex-1 min-h-0 gap-6 overflow-y-auto pb-20 lg:pb-4 lg:items-start relative">
           {/* Preview - Left column */}
-          <div className="w-full lg:w-1/2 h-[56vw] lg:basis-1/2 shrink-0 flex flex-col">
-            <div className="relative border backdrop-blur-xl transition-all duration-300 rounded-3xl overflow-hidden shadow-2xl h-full flex flex-col" style={{ background: cardBg, borderColor: cardBorder, boxShadow }}>
+          <div className="w-full lg:w-1/2 lg:sticky lg:top-0 shrink-0 flex flex-col z-20">
+            <div 
+              className="relative border backdrop-blur-xl transition-all duration-300 rounded-3xl overflow-hidden shadow-2xl flex flex-col w-full mx-auto" 
+              style={{ 
+                background: cardBg, 
+                borderColor: cardBorder, 
+                boxShadow,
+                aspectRatio: dubDetectedRatio === "9:16" ? "9/16" : "16/9",
+                maxHeight: "calc(100vh - 140px)"
+              }}
+            >
               <div className="flex items-center justify-between px-3 pt-2 flex-shrink-0">
                 <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>
                   {lang === "mm" ? "ဗီဒီယိုကြိုကြည့်" : "Video Preview"}
@@ -539,6 +548,12 @@ function DubbingTab({
                       className="relative z-10 w-full h-full object-contain rounded-lg cursor-pointer"
                       controls
                       preload="metadata"
+                      onLoadedMetadata={(e) => {
+                        const v = e.currentTarget;
+                        setDubVideoWidth(v.videoWidth);
+                        setDubVideoHeight(v.videoHeight);
+                        setDubDetectedRatio(v.videoWidth < v.videoHeight ? "9:16" : "16:9");
+                      }}
                       onError={() => {
                         setVideoPreviewError("Failed to load video preview.");
                       }}
@@ -550,45 +565,8 @@ function DubbingTab({
                     />
                     {/* Real-time Subtitle Preview */}
                     {srtEnabled && activeJobId === null && (
-                      <div
-                        className="absolute left-0 right-0 flex justify-center pointer-events-none px-3 z-20"
-                        style={{
-                          bottom: `${Math.max(2, Math.min(40, srtMarginV * 0.4))}%`,
-                        }}
-                      >
-                        <div
-                          className="text-center"
-                          style={{
-                            fontSize: `${Math.max(10, Math.min(22, srtFontSize * 0.45))}px`,
-                            color: srtColor,
-                            fontWeight: 'bold',
-                            textShadow: '0 2px 4px rgba(0,0,0,0.9), 0 -1px 2px rgba(0,0,0,0.6)',
-                            background: srtBlurBg
-                              ? srtBlurColor === 'black'
-                                ? `rgba(0,0,0,${srtBlurOpacity / 100})`
-                                : srtBlurColor === 'white'
-                                  ? `rgba(255,255,255,${srtBlurOpacity / 100})`
-                                  : `rgba(128,128,128,${srtBlurOpacity / 100})`
-                              : 'transparent',
-                            backdropFilter: srtBlurBg ? `blur(${Math.max(2, srtBlurOpacity / 15)}px)` : 'none',
-                            borderRadius: srtBorderRadius === 'rounded' ? '6px' : '0px',
-                            padding: `${Math.max(2, srtBoxPadding)}px ${Math.max(6, srtBoxPadding * 1.5)}px`,
-                            width: srtFullWidth ? 'calc(100% - 24px)' : 'auto',
-                            maxWidth: 'calc(100% - 24px)',
-                            minWidth: 0,
-                            wordWrap: 'break-word',
-                            wordBreak: 'normal',
-                            overflowWrap: 'anywhere',
-                            lineHeight: 1.3,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                          }}
-                        >
-                          {lang === "mm" ? "ဤနေရာတွင် စာတန်းထိုးကို မြင်ရပါမည်" : "Subtitle preview"}
-                        </div>
+                      <div style={computeSrtPreviewStyle}>
+                        {lang === "mm" ? "ဤနေရာတွင် စာတန်းထိုးကို မြင်ရပါမည်" : "Subtitle preview"}
                       </div>
                     )}
                     {/* Dubbing Loader Overlay */}
@@ -1201,34 +1179,7 @@ function DubbingTab({
                 <Download className="w-5 h-5" />{" "}
                 {lang === "mm" ? "MP4 ဒေါင်းလုတ်" : "Download MP4"}
               </button>
-              {(dubResult?.srtUrl || dubResult?.srtContent) && (
-                <button
-                  onClick={() => {
-                    if (dubResult.srtUrl) {
-                      window.open(dubResult.srtUrl, "_blank");
-                    } else if (dubResult.srtContent) {
-                      const blob = new Blob([dubResult.srtContent], { type: "text/plain;charset=utf-8" });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement("a");
-                      a.href = url;
-                      a.download = `LUMIX_${dubResult.videoId || "dub"}_SRT.srt`;
-                      document.body.appendChild(a);
-                      a.click();
-                      document.body.removeChild(a);
-                      URL.revokeObjectURL(url);
-                    }
-                  }}
-                  className="flex items-center gap-2 px-5 sm:px-6 py-3 rounded-xl font-black text-sm uppercase tracking-wider transition-all hover:scale-105 shadow-lg"
-                  style={{
-                    background: "rgba(34,197,94,0.15)",
-                    color: "#22c55e",
-                    border: "2px solid rgba(34,197,94,0.3)",
-                  }}
-                >
-                  <Subtitles className="w-5 h-5" />
-                  {lang === "mm" ? "SRT ဒေါင်းလုတ်" : "Download SRT"}
-                </button>
-              )}
+
             </div>
           </div>
 

@@ -712,15 +712,13 @@ export default function AdminDashboard() {
               <button
                 onClick={() => {
                   updateSettingsBulk.mutate({
-                    settings: [
-                      { key: "auto_trial_enabled", value: String(autoTrialEnabled) },
-                      { key: "auto_trial_days", value: String(autoTrialDays) },
-                      { key: "trial_credits", value: String(trialCredits) },
-                      { key: "trial_start_date", value: trialStartDate },
-                      { key: "trial_end_date", value: trialEndDate },
-                      { key: "trial_enabled", value: String(trialEnabled) },
-                      { key: "maintenance_mode", value: String(maintenanceModeEnabled) },
-                    ],
+                    auto_trial_enabled: String(autoTrialEnabled),
+                    auto_trial_days: String(autoTrialDays),
+                    trial_credits: String(trialCredits),
+                    trial_start_date: trialStartDate,
+                    trial_end_date: trialEndDate,
+                    trial_enabled: String(trialEnabled),
+                    maintenance_mode: String(maintenanceModeEnabled),
                   });
                   showToast("Settings saved!");
                 }}

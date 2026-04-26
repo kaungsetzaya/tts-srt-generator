@@ -90,6 +90,8 @@ export interface UseDubbingStateReturn {
   isExternalVideoUrl: (url: string) => boolean;
   isYouTubeUrl: (url: string) => boolean;
   getYouTubeVideoId: (url: string) => string | null;
+  linkPreview?: { title: string; description: string; image: string; siteName: string };
+  linkPreviewLoading: boolean;
 }
 
 export function useDubbingState(
@@ -326,7 +328,8 @@ export function useDubbingState(
       backdropFilter: srtBlurBg ? `blur(${Math.max(2, srtBlurOpacity / 15)}px)` : "none",
       borderRadius: srtBorderRadius === "rounded" ? "6px" : "0px",
       padding: `${Math.max(2, scaledPadding)}px ${Math.max(6, scaledPadding * 1.5)}px`,
-      width: srtFullWidth ? "calc(100% - 24px)" : "auto",
+      width: srtFullWidth ? "calc(100% - 24px)" : "fit-content",
+      margin: "0 auto",
       maxWidth: "calc(100% - 24px)",
       minWidth: 0,
       wordWrap: "break-word" as const,
