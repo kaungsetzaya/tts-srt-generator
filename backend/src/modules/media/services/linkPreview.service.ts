@@ -26,7 +26,7 @@ function getFacebookCookieString(): string {
   // Try to read from cookies.txt file
   try {
     const fs = require("fs");
-    const cookiePath = path.resolve(process.cwd(), "backend/cookies.txt");
+    const cookiePath = path.resolve("C:\\Users\\kaung\\Desktop\\LUMIX\\tts-srt-generator\\backend\\cookies.txt");
     const content = fs.readFileSync(cookiePath, "utf-8");
     // Parse Netscape cookie format to Cookie header string
     const lines = content.split("\n");
