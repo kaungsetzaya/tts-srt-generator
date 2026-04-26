@@ -72,6 +72,9 @@ export interface UseDubbingStateReturn {
 
   // Computed
   computeSrtPreviewStyle: React.CSSProperties;
+  // % of container height used as font-size base for subtitle preview wrapper
+  // formula: (srtFontSize / 720) * 100  — mirrors ASS srtFontSize*(h/720)
+  srtFontSizeContainerPct: number;
 
   // Job state
   activeJobId: string | null;
@@ -305,62 +308,77 @@ export function useDubbingState(
   }, [dubResult?.videoUrl]);
 
   const computeSrtPreviewStyle = useMemo(() => {
-    const vw = dubVideoWidth;
-    const vh = dubVideoHeight;
-    const containerWidth = dubDetectedRatio === "9:16" ? Math.min(240, window.innerWidth * 0.55) : window.innerWidth;
-    const scale = containerWidth / vw;
-    const fontScaleFactor = vh / 720;
-    const baseFontSize = (srtFontSize ?? 24) * fontScaleFactor * 1.5;
-    const scaledFontSize = baseFontSize * scale;
-    const marginV = 80 + (srtMarginV ?? 30) * 3 * (vh / 1080);
-    const topPercent = ((vh - marginV) / vh) * 100;
+    const vw = dubVideoWidth;   // actual video pixel width (for side margin calc)
+
+    // ── Mirror ASS builder math exactly ──────────────────────────────────
+    // Backend: fontSize = round(srtFontSize * (videoHeight / 720))
+    // The preview container height is proportional to the video aspect ratio.
+    // We express font size as a % of container height so it auto-scales:
+    //   fontSizePct = (srtFontSize / 720) * 100
+    // → px = fontSizePct/100 * containerH = srtFontSize * containerH/720  ✓
+    const fontSizePct = ((srtFontSize ?? 24) / 720) * 100;
+
+    // Backend: marginV = (srtMarginV / 100) * videoHeight
+    // In the preview this maps directly to: bottom = srtMarginV% of container height.
+    // The UI slider range is 1–50 (representing % of video height).
+    // Clamp to keep text comfortably inside the video area.
+    const bottomPct = Math.max(2, Math.min(45, srtMarginV ?? 5));
+
     const bgAlpha = srtBlurOpacity / 100;
-    const outline = Math.max(4, (srtBoxPadding ?? 4) * 3);
-    const scaledPadding = outline * scale;
-    const shadowSize = 2 * scale;
+
+    // Backend: padPx = lineH * (boxPadding / 20), lineH = fontSize * 1.55
+    // In preview: padEm = (boxPadding / 20) * 1.55  (proportional to font-size)
+    const padEm = Math.max(0.15, ((srtBoxPadding ?? 4) / 20) * 1.55);
+
+    // Side margins: ASS uses 5% of PlayResX for marginL/R when not full-width
+    // We mirror this as CSS padding / maxWidth restriction
+    const sidePct = srtFullWidth ? 0 : (vw > 0 ? 5 : 5); // 5% each side
 
     return {
-      fontSize: `${Math.max(10, Math.min(22, scaledFontSize))}px`,
+      // fontSize = 1em because the parent wrapper sets the base px font-size
+      // matching backend: srtFontSize * (containerH / 720)
+      fontSize: "1em",
       color: srtColor,
       fontWeight: "bold" as const,
       textShadow: srtDropShadow
-        ? `0 ${shadowSize}px ${shadowSize * 2}px rgba(0,0,0,0.9), 0 -${shadowSize / 2}px ${shadowSize}px rgba(0,0,0,0.6)`
+        ? `0 1px 3px rgba(0,0,0,0.9), 0 -1px 2px rgba(0,0,0,0.6), 1px 0 2px rgba(0,0,0,0.8), -1px 0 2px rgba(0,0,0,0.8)`
         : "none",
       background: srtBlurBg
         ? srtBlurColor === "black"
           ? `rgba(0,0,0,${bgAlpha})`
           : srtBlurColor === "white"
             ? `rgba(255,255,255,${bgAlpha})`
-            : `rgba(128,128,128,${bgAlpha})`
+            : "transparent"
         : "transparent",
-      backdropFilter: srtBlurBg ? `blur(${Math.max(2, srtBlurOpacity / 15)}px)` : "none",
+      backdropFilter: srtBlurBg && srtBlurColor !== "transparent" ? `blur(${Math.max(2, srtBlurOpacity / 15)}px)` : "none",
+      WebkitBackdropFilter: srtBlurBg && srtBlurColor !== "transparent" ? `blur(${Math.max(2, srtBlurOpacity / 15)}px)` : "none",
       borderRadius: srtBorderRadius === "rounded" ? "6px" : "0px",
-      padding: `${Math.max(2, scaledPadding)}px ${Math.max(6, scaledPadding * 1.5)}px`,
-      width: srtFullWidth ? "calc(100% - 24px)" : "fit-content",
-      margin: "0 auto",
-      maxWidth: "calc(100% - 24px)",
+      padding: `${padEm.toFixed(3)}em ${(padEm * 1.5).toFixed(3)}em`,
+      width: srtFullWidth ? `${100 - sidePct * 2}%` : "fit-content",
+      maxWidth: `${100 - sidePct * 2}%`,
       minWidth: 0,
       wordWrap: "break-word" as const,
-      wordBreak: "normal" as const,
+      wordBreak: "break-word" as const,
       overflowWrap: "anywhere" as const,
-      lineHeight: 1.3,
-      overflow: "hidden",
-      textOverflow: "ellipsis",
+      lineHeight: 1.4,
       display: "-webkit-box" as const,
       WebkitLineClamp: 2,
       WebkitBoxOrient: "vertical" as const,
+      overflow: "hidden" as const,
+      // Absolute positioning anchored to bottom inside the video container
       position: "absolute" as const,
-      left: 0,
-      right: 0,
-      bottom: `${Math.max(2, Math.min(40, topPercent * 0.4))}%`,
+      left: `${sidePct}%`,
+      right: `${sidePct}%`,
+      // bottom% mirrors ASS MarginV = (srtMarginV/100)*videoH exactly
+      bottom: `${bottomPct}%`,
       zIndex: 50,
       textAlign: "center" as const,
       pointerEvents: "none" as const,
     };
+  // Additional non-style values needed by DubbingTab for the wrapper font-size
+  // are exposed via computeSrtFontSizePct below.
   }, [
     dubVideoWidth,
-    dubVideoHeight,
-    dubDetectedRatio,
     srtFontSize,
     srtMarginV,
     srtBlurOpacity,
@@ -372,6 +390,12 @@ export function useDubbingState(
     srtBorderRadius,
     srtColor,
   ]);
+
+  // Font-size expressed as % of container height for use as CSS custom property.
+  // DubbingTab wraps the subtitle div in a span with this as font-size so that
+  // em-based sizing in computeSrtPreviewStyle scales correctly.
+  // formula: srtFontSize * (containerH / 720)  →  (srtFontSize / 720) * 100%
+  const srtFontSizeContainerPct = ((srtFontSize ?? 24) / 720) * 100;
 
   const handleDubVideoFile = (f: File) => {
     if (f.size > 25 * 1024 * 1024) {
@@ -620,6 +644,7 @@ export function useDubbingState(
     dubResultVideoRef,
     dubPreviewRef,
     computeSrtPreviewStyle,
+    srtFontSizeContainerPct,
     activeJobId,
     startDubMutationPending: startDubMutation.isPending,
     dubFileMutationPending: dubFileMutation.isPending,

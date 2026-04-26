@@ -162,6 +162,7 @@ export default function TTSGeneratorContent(props: UseTTSGeneratorStateReturn) {
     dubResultVideoRef,
     dubPreviewRef,
     computeSrtPreviewStyle,
+    srtFontSizeContainerPct,
     activeJobId,
     startDubMutationPending,
     dubFileMutationPending,
@@ -417,6 +418,7 @@ export default function TTSGeneratorContent(props: UseTTSGeneratorStateReturn) {
                   dubResultVideoRef={dubResultVideoRef}
                   dubPreviewRef={dubPreviewRef}
                   computeSrtPreviewStyle={computeSrtPreviewStyle}
+                  srtFontSizeContainerPct={srtFontSizeContainerPct}
                   activeJobId={activeJobId}
                   startDubMutationPending={startDubMutationPending}
                   dubFileMutationPending={dubFileMutationPending}

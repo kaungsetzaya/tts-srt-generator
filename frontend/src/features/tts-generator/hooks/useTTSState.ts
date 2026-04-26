@@ -30,6 +30,7 @@ export interface UseTTSStateReturn {
   setSavedKey: (v: string) => void;
   handleGenerate: () => Promise<void>;
   getCharLimit: (isAdmin: boolean, currentPlan?: string | null) => number;
+  generateMutation: { isPending: boolean };
 }
 
 export function useTTSState(
@@ -141,5 +142,6 @@ export function useTTSState(
     setSavedKey,
     handleGenerate,
     getCharLimit,
+    generateMutation,
   };
 }

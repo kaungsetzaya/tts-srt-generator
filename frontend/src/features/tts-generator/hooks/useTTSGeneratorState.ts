@@ -83,11 +83,9 @@ export function useTTSGeneratorState() {
       window.location.href = "/login";
     },
   });
-  const generateMutation = trpc.tts.generateAudio.useMutation({
-    onSuccess: () => {
-      utils.history.getUnifiedHistory.invalidate();
-    },
-  });
+  // generateMutation is now owned by useTTSState and exposed via ttsState.
+  // Do NOT create a second instance here — it would be a separate mutation
+  // instance, causing isGenerating to always be false in TTSTab.
 
   const isAdmin = me?.role === "admin";
   const hasActiveSub = !!(isAdmin || subStatus?.active);
@@ -211,7 +209,7 @@ export function useTTSGeneratorState() {
     subStatus,
     subLoading,
     logoutMutation,
-    generateMutation,
+    generateMutation: ttsState.generateMutation,
     isAdmin,
     hasActiveSub,
     hasPlan,

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -88,6 +88,8 @@ export interface DubbingTabProps {
   dubResultVideoRef: React.RefObject<HTMLVideoElement | null>;
   dubPreviewRef: React.RefObject<HTMLVideoElement | null>;
   computeSrtPreviewStyle: React.CSSProperties;
+  // % of container height → font-size in px = (srtFontSizeContainerPct/100) * containerH
+  srtFontSizeContainerPct: number;
   activeJobId: string | null;
   startDubMutationPending: boolean;
   dubFileMutationPending: boolean;
@@ -171,6 +173,7 @@ function DubbingTab({
   dubResultVideoRef,
   dubPreviewRef,
   computeSrtPreviewStyle,
+  srtFontSizeContainerPct,
   activeJobId,
   startDubMutationPending,
   dubFileMutationPending,
@@ -211,6 +214,20 @@ function DubbingTab({
     box,
     labelStyle,
   } = themeValues;
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerHeight, setContainerHeight] = useState(0);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setContainerHeight(entry.contentRect.height);
+      }
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <div className="w-full px-4 lg:px-6 animate-in fade-in zoom-in-95 duration-300">
@@ -559,7 +576,7 @@ function DubbingTab({
                     })()}
                   </div>
                 ) : (
-                  <div className="relative w-full h-full flex items-center justify-center rounded-2xl overflow-hidden">
+                  <div ref={containerRef} className="relative w-full h-full flex items-center justify-center rounded-2xl overflow-hidden">
                     {/* Background Layer — blurred cinematic fill */}
                     <video
                       src={dubPreviewUrl}
@@ -594,8 +611,18 @@ function DubbingTab({
                     />
                     {/* Real-time Subtitle Preview */}
                     {srtEnabled && activeJobId === null && (
-                      <div style={computeSrtPreviewStyle}>
-                        {lang === "mm" ? "ဤနေရာတွင် စာတန်းထိုးကို မြင်ရပါမည်" : "Subtitle preview"}
+                      <div 
+                        style={{ 
+                          position: "absolute", 
+                          inset: 0, 
+                          pointerEvents: "none", 
+                          zIndex: 40,
+                          fontSize: `${(srtFontSizeContainerPct / 100) * containerHeight}px`
+                        }}
+                      >
+                        <div style={computeSrtPreviewStyle}>
+                          {lang === "mm" ? "ဤနေရာတွင် စာတန်းထိုးကို မြင်ရပါမည်" : "Subtitle preview"}
+                        </div>
                       </div>
                     )}
                     {/* Dubbing Loader Overlay */}
