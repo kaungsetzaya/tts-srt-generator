@@ -433,19 +433,17 @@ function DubbingTab({
         </div>
       )}
 
-{/* ── STEP: Video Preview + Settings ── */}
+      {/* ── STEP: Video Preview + Settings ── */}
       {dubPreviewUrl && !dubResult && (
-        <div className="flex flex-col lg:flex-row gap-6 pb-20 lg:pb-4 items-start relative">
+        <div className="flex flex-col lg:flex-row gap-6 pb-20 lg:pb-0 items-stretch relative">
           {/* Preview - Left column */}
-          <div className="w-full lg:w-1/2 lg:sticky lg:top-4 shrink-0 flex flex-col">
+          <div className="w-full lg:w-1/2 shrink-0 flex flex-col">
             <div 
-              className="relative border backdrop-blur-xl transition-all duration-300 rounded-3xl overflow-hidden shadow-2xl flex flex-col w-full mx-auto" 
+              className={`relative border backdrop-blur-xl transition-all duration-300 rounded-3xl overflow-hidden shadow-2xl flex flex-col w-full mx-auto lg:h-full ${dubDetectedRatio === "9:16" ? "aspect-[9/16]" : "aspect-video"} lg:aspect-auto`} 
               style={{ 
                 background: cardBg, 
                 borderColor: cardBorder, 
                 boxShadow,
-                aspectRatio: dubDetectedRatio === "9:16" ? "9/16" : "16/9",
-                maxHeight: "calc(100vh - 140px)"
               }}
             >
               <div className="flex items-center justify-between px-3 pt-2 flex-shrink-0">
