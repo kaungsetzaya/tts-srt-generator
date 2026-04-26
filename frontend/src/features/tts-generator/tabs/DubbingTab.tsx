@@ -213,7 +213,7 @@ function DubbingTab({
   } = themeValues;
 
   return (
-    <div className="w-full px-4 lg:px-6 animate-in fade-in zoom-in-95 duration-300 h-full flex flex-col overflow-y-auto overflow-x-hidden">
+    <div className="w-full px-4 lg:px-6 animate-in fade-in zoom-in-95 duration-300">
       <div className="text-center mb-2 sm:mb-4">
         {!isAdmin && !hasPlan && me && !subLoading && (
           <div
@@ -418,9 +418,9 @@ function DubbingTab({
 
 {/* ── STEP: Video Preview + Settings ── */}
       {dubPreviewUrl && !dubResult && (
-        <div className="flex flex-col lg:flex-row flex-1 min-h-0 gap-6 overflow-y-auto pb-20 lg:pb-4 lg:items-start relative">
+        <div className="flex flex-col lg:flex-row gap-6 pb-20 lg:pb-4 items-start relative">
           {/* Preview - Left column */}
-          <div className="w-full lg:w-1/2 lg:sticky lg:top-0 shrink-0 flex flex-col z-20">
+          <div className="w-full lg:w-1/2 lg:sticky lg:top-4 shrink-0 flex flex-col z-20">
             <div 
               className="relative border backdrop-blur-xl transition-all duration-300 rounded-3xl overflow-hidden shadow-2xl flex flex-col w-full mx-auto" 
               style={{ 
@@ -594,14 +594,7 @@ function DubbingTab({
           </div>
 
           {/* Settings - Right column, scrollable on both mobile and desktop */}
-          <div
-            className="w-full lg:w-1/2 overflow-y-auto space-y-4 pb-24 lg:pb-8"
-            style={{
-              scrollbarWidth: 'thin',
-              scrollbarColor: `${accent}40 transparent`,
-              overscrollBehavior: 'contain',
-            }}
-          >
+          <div className="w-full lg:w-1/2 space-y-4 pb-24 lg:pb-8">
 
           {/* ── ACCORDION: Voice Selection ── */}
           <div

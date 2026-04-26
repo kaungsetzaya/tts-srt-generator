@@ -115,6 +115,8 @@ function isFacebookReel(url: string): boolean {
   return false;
 }
 
+const YTDLP_PATH = "C:\\Users\\kaung\\AppData\\Local\\Programs\\Python\\Python312\\Scripts\\yt-dlp.exe";
+
 export async function getVideoInfo(url: string): Promise<{ duration: number; filesize: number; title?: string; thumbnail?: string } | null> {
   if (!isAllowedVideoUrl(url)) {
     console.warn("[Downloader] Unsupported platform:", url);
@@ -151,7 +153,7 @@ export async function getVideoInfo(url: string): Promise<{ duration: number; fil
 
   // Try without cookies first
   try {
-    const { stdout } = await execFileAsync("yt-dlp", [...baseArgs, url], { timeout: 60000 });
+    const { stdout } = await execFileAsync(YTDLP_PATH, [...baseArgs, url], { timeout: 60000 });
     const info = JSON.parse(stdout);
     return {
       duration: info.duration || 0,
@@ -164,7 +166,7 @@ export async function getVideoInfo(url: string): Promise<{ duration: number; fil
 
     // Try with cookies + retry for all platforms if first attempt fails
     try {
-      const { stdout } = await execFileAsync("yt-dlp", [
+      const { stdout } = await execFileAsync(YTDLP_PATH, [
         "--cookies", COOKIE_PATH,
         ...baseArgs,
         url
@@ -214,14 +216,14 @@ export async function downloadVideo(url: string, outputPath: string, options: { 
     }
 
     try {
-      await execFileAsync("yt-dlp", [...baseArgs, url], { timeout: options.timeout || 300000 });
+      await execFileAsync(YTDLP_PATH, [...baseArgs, url], { timeout: options.timeout || 300000 });
       return { success: true };
     } catch (error: any) {
       console.error("[Downloader Error - Trying with cookies]", error);
 
       // Fallback with cookies for age-restricted
       try {
-        await execFileAsync("yt-dlp", [
+        await execFileAsync(YTDLP_PATH, [
           "--cookies", COOKIE_PATH,
           ...baseArgs,
           url
