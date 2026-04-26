@@ -516,14 +516,44 @@ function DubbingTab({
                         );
                       }
                       if (platform === "tiktok") {
+                        const rawImage = linkPreview?.image || "";
+                        const isFallback = !rawImage || rawImage.includes("tiktokcdn");
                         return (
-                          <iframe
-                            src={embedUrl}
-                            className="w-full h-full"
-                            style={{ border: "none" }}
-                            allow="fullscreen"
-                            title="TikTok video preview"
-                          />
+                          <div className="relative w-full h-full flex items-center justify-center overflow-hidden rounded-2xl bg-black/40">
+                            {linkPreviewLoading ? (
+                              <div className="flex flex-col items-center gap-2">
+                                <Loader2 className="w-8 h-8 animate-spin" style={{ color: accent }} />
+                                <span className="text-xs font-semibold" style={{ color: subtextColor }}>Loading preview...</span>
+                              </div>
+                            ) : rawImage && !isFallback ? (
+                              <>
+                                <img
+                                  src={rawImage}
+                                  alt={linkPreview?.title || "TikTok Video"}
+                                  className="absolute inset-0 w-full h-full object-cover"
+                                  crossOrigin="anonymous"
+                                  onError={(e) => { e.currentTarget.style.display = "none"; }}
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                                <div className="absolute bottom-0 left-0 right-0 p-4">
+                                  <p className="text-white font-bold text-sm line-clamp-2">{linkPreview?.title || "TikTok Video"}</p>
+                                  <p className="text-white/60 text-xs mt-1">{linkPreview?.siteName || "tiktok.com"}</p>
+                                </div>
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: "rgba(0,0,0,0.6)" }}>
+                                    <Play className="w-8 h-8 text-white ml-1" />
+                                  </div>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="flex flex-col items-center justify-center gap-3">
+                                <svg className="w-16 h-16" viewBox="0 0 24 24" fill="none">
+                                  <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.34-6.34V8.97a8.19 8.19 0 004.76 1.52V7.04a4.84 4.84 0 01-1-.35z" fill="#00f2ea"/>
+                                </svg>
+                                <span className="text-xs font-semibold" style={{ color: subtextColor }}>TikTok Video</span>
+                              </div>
+                            )}
+                          </div>
                         );
                       }
                       return null;

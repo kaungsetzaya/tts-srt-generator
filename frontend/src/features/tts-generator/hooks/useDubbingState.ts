@@ -197,7 +197,11 @@ export function useDubbingState(
     // TikTok
     const tiktokMatch = url.match(/tiktok\.com\/(@[\w.]+)\/video\/(\d+)/);
     if (tiktokMatch) {
-      return { type: "tiktok", embedUrl: `https://www.tiktok.com/embed/${tiktokMatch[2]}` };
+      return { type: "tiktok", embedUrl: `https://www.tiktok.com/embed/v2/${tiktokMatch[2]}` };
+    }
+    const tiktokShareMatch = url.match(/tiktok\.com\/t\/([a-zA-Z0-9]+)/);
+    if (tiktokShareMatch) {
+      return { type: "tiktok", embedUrl: `https://www.tiktok.com/embed/v2/${tiktokShareMatch[1]}` };
     }
     if (url.includes("tiktok.com")) {
       return { type: "tiktok", embedUrl: null };
@@ -233,6 +237,10 @@ export function useDubbingState(
         // For platform URLs, get embed URL for iframe preview
         const embed = getPlatformEmbedUrl(url);
         if (embed.type && embed.embedUrl) {
+          // Set aspect ratio based on platform
+          if (embed.type === "tiktok" || embed.type === "facebook") {
+            setDubDetectedRatio("9:16");
+          }
           setDubPreviewUrl(`embed:${embed.type}:${embed.embedUrl}`);
         } else if (embed.type) {
           setDubPreviewUrl("platform-url");

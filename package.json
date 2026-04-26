@@ -26,7 +26,12 @@
     "bullmq": "^5.76.2",
     "dotenv": "^17.2.2",
     "drizzle-orm": "^0.45.2",
-    "ioredis": "^5.10.1"
+    "ioredis": "^5.10.1",
+    "is-plain-object": "^5.0.0",
+    "kind-of": "^6.0.3",
+    "puppeteer": "^24.42.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
   },
   "devDependencies": {
     "@builder.io/vite-plugin-jsx-loc": "^0.1.1",

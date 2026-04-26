@@ -1,4 +1,5 @@
 import { load } from "cheerio";
+import { HttpsProxyAgent } from "https-proxy-agent";
 import { r2Service } from "./r2.service";
 import { generateShortId } from "../../../modules/_core/filename";
 import { execFile } from "child_process";
@@ -18,15 +19,21 @@ function getRandomUserAgent(): string {
   return MOBILE_USER_AGENTS[Math.floor(Math.random() * MOBILE_USER_AGENTS.length)];
 }
 
+function getProxyUrl(): string {
+  const h = process.env.EDGE_TTS_PROXY_HOST;
+  const p = process.env.EDGE_TTS_PROXY_PORT;
+  const u = process.env.EDGE_TTS_PROXY_USER;
+  const s = process.env.EDGE_TTS_PROXY_PASS;
+  return h && p && u && s ? `http://${u}:${s}@${h}:${p}` : "";
+}
+
 function getFacebookCookieString(): string {
-  // First try env variable, then try cookies.txt file
   const envCookie = process.env.FB_COOKIE_STRING;
   if (envCookie) return envCookie;
   
-  // Try to read from cookies.txt file
   try {
     const fs = require("fs");
-    const cookiePath = path.resolve("C:\\Users\\kaung\\Desktop\\LUMIX\\tts-srt-generator\\backend\\cookies.txt");
+    const cookiePath = path.resolve(process.cwd(), "backend/cookies.txt");
     const content = fs.readFileSync(cookiePath, "utf-8");
     // Parse Netscape cookie format to Cookie header string
     const lines = content.split("\n");
@@ -59,7 +66,9 @@ function isFacebookUrl(url: string): boolean {
 }
 
 function extractFacebookVideoId(url: string): string | null {
-  let m = url.match(/\/videos\/(\d+)/);
+  let m = url.match(/\/v\/(\d+)/);
+  if (m) return m[1];
+  m = url.match(/\/videos\/(\d+)/);
   if (m) return m[1];
   m = url.match(/\/reel\/(\d+)/);
   if (m) return m[1];
@@ -83,12 +92,85 @@ async function fetchFacebookGraphThumbnail(videoId: string): Promise<string | nu
     }
     const data = await response.json() as any;
     const picture = data?.picture || data?.thumbnails?.data?.[0]?.uri || null;
+
     if (picture) {
       console.log("[LinkPreview] Graph API thumbnail found for", videoId);
     }
     return picture;
   } catch (e: any) {
     console.warn("[LinkPreview] Graph API failed:", e.message);
+    return null;
+  }
+}
+
+function parseNetscapeCookies(cookieString: string): Array<{ name: string; value: string; domain: string; path: string; expires: number; secure: boolean }> {
+  const cookies: Array<{ name: string; value: string; domain: string; path: string; expires: number; secure: boolean }> = [];
+  const pairs = cookieString.split(/;\s*/);
+  for (const pair of pairs) {
+    const eqIdx = pair.indexOf("=");
+    if (eqIdx < 0) continue;
+    const name = pair.slice(0, eqIdx).trim();
+    const value = pair.slice(eqIdx + 1).trim();
+    cookies.push({
+      name,
+      value,
+      domain: ".facebook.com",
+      path: "/",
+      expires: Date.now() + 86400000 * 365,
+      secure: true,
+    });
+  }
+  return cookies;
+}
+
+async function fetchFacebookWithPuppeteer(url: string): Promise<{ image: string; title: string } | null> {
+  try {
+    console.log("[LinkPreview] Launching Puppeteer for:", url);
+
+    const puppeteerExtra = await import("puppeteer-extra");
+    const stealthPlugin = (await import("puppeteer-extra-plugin-stealth")).default;
+    puppeteerExtra.default.use(stealthPlugin());
+
+    const browser = await puppeteerExtra.default.launch({
+      headless: true,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-accelerated-2d-canvas",
+        "--no-first-run",
+        "--no-zygote",
+        "--disable-gpu",
+        "--window-size=1280x800",
+        "--hide-scrollbars",
+        "--disable-web-security",
+      ],
+    });
+
+    const page = await browser.newPage();
+
+    const cookieString = getFacebookCookieString();
+    if (cookieString) {
+      const parsedCookies = parseNetscapeCookies(cookieString);
+      await page.setCookie(...parsedCookies);
+      console.log("[LinkPreview] Set", parsedCookies.length, "cookies for Puppeteer");
+    }
+
+    await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36");
+
+    await page.goto(url, { waitUntil: "networkidle2", timeout: 30000 });
+
+    const image = await page.$eval('meta[property="og:image"]', (el) => el.getAttribute("content") || "") ||
+                  await page.$eval('meta[property="og:image:secure_url"]', (el) => el.getAttribute("content") || "") || "";
+    const title = await page.$eval('meta[property="og:title"]', (el) => el.getAttribute("content") || "") ||
+                  await page.$eval("title", (el) => el.textContent || "") || "Facebook Video";
+
+    console.log("[LinkPreview] Puppeteer extracted:", { title: title.slice(0, 50), image: image.slice(0, 80) });
+
+    await browser.close();
+    return { image, title };
+  } catch (e: any) {
+    console.warn("[LinkPreview] Puppeteer failed:", e.message);
     return null;
   }
 }
@@ -153,16 +235,31 @@ export async function fetchLinkPreview(url: string): Promise<LinkPreviewData> {
   if (isFacebook) {
     let image = "";
     let title = "Facebook Video";
-    
-    // Try Cheerio fetch with Cookie header first
+
     const cookieString = getFacebookCookieString();
+
     if (cookieString) {
+      try {
+        const puppeteerResult = await fetchFacebookWithPuppeteer(url);
+        if (puppeteerResult && puppeteerResult.image) {
+          image = resolveUrl(url, puppeteerResult.image);
+          image = await proxyImageToR2(image);
+          title = puppeteerResult.title;
+          console.log("[LinkPreview] Found thumbnail via Puppeteer");
+        }
+      } catch (e: any) {
+        console.warn("[LinkPreview] Puppeteer failed:", e.message);
+      }
+    }
+
+    if (!image) {
       try {
         console.log("[LinkPreview] Fetching Facebook URL with Cookie header:", url);
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 15000);
-        
-        const response = await fetch(url, {
+
+        const proxyUrl = getProxyUrl();
+        const fetchOptions: any = {
           signal: controller.signal,
           headers: {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -171,40 +268,38 @@ export async function fetchLinkPreview(url: string): Promise<LinkPreviewData> {
             "Cookie": cookieString,
           },
           redirect: "follow",
-        });
+        };
+        if (proxyUrl) {
+          fetchOptions.dispatcher = new HttpsProxyAgent(proxyUrl);
+          console.log("[LinkPreview] Using proxy:", proxyUrl.replace(/:[^:@]+@/, ":***@"));
+        }
+
+        const response = await fetch(url, fetchOptions);
         clearTimeout(timeout);
-        
+
         if (response.ok) {
           const html = await response.text();
           const $ = load(html);
           const getMeta = (prop: string) => $(`meta[property="${prop}"]`).attr("content") || $(`meta[name="${prop}"]`).attr("content") || "";
-          
+
           image = getMeta("og:image:secure_url") || getMeta("og:image:url") || getMeta("og:image") || getMeta("twitter:image") || "";
+
+          console.log(`[LinkPreview] Cookie fetch status: ${response.status}, html length: ${html.length}, og:image found: ${!!image}`);
           title = getMeta("og:title") || $("title").text() || title;
-          
+
           if (image) {
             image = resolveUrl(url, image);
             image = await proxyImageToR2(image);
             console.log("[LinkPreview] Found thumbnail via Cookie fetch");
           }
+        } else {
+          console.warn(`[LinkPreview] Cookie fetch returned HTTP ${response.status}`);
         }
       } catch (e: any) {
         console.warn("[LinkPreview] Cookie fetch failed:", e.message);
       }
     }
-    
-    // Fallback: try Graph API if no image yet
-    if (!image) {
-      const videoId = extractFacebookVideoId(url);
-      if (videoId) {
-        const graphThumb = await fetchFacebookGraphThumbnail(videoId);
-        if (graphThumb) {
-          image = await proxyImageToR2(graphThumb);
-        }
-      }
-    }
 
-    // Fallback: try yt-dlp (Now with cookies enabled for all platforms)
     if (!image) {
       console.log("[LinkPreview] Falling back to downloaderService (yt-dlp) for FB video info...");
       try {
@@ -222,11 +317,6 @@ export async function fetchLinkPreview(url: string): Promise<LinkPreviewData> {
       }
     }
 
-    // Last resort: try to find any large image in the page if we have HTML
-    if (!image && cookieString) {
-      // (This part is already covered by the og:image check above)
-    }
-
     if (!image) {
       console.warn("[LinkPreview] All thumbnail extraction methods failed for", url);
     }
@@ -237,6 +327,72 @@ export async function fetchLinkPreview(url: string): Promise<LinkPreviewData> {
       image: image || FALLBACK_FACEBOOK_ICON,
       siteName: "Facebook",
     };
+  }
+
+  if (url.includes("tiktok.com")) {
+    // Try oEmbed first (using curl since Node fetch doesn't support HTTP proxies well)
+    try {
+      // Clean the URL - remove query params for oEmbed
+      const cleanUrl = url.split("?")[0];
+      console.log("[LinkPreview] Fetching TikTok oEmbed:", cleanUrl);
+      const oembedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(cleanUrl)}`;
+      const proxyUrl = getProxyUrl();
+      const curlArgs = ["-s", "--max-time", "10"];
+      if (proxyUrl) {
+        curlArgs.push("--proxy", proxyUrl);
+        console.log("[LinkPreview] TikTok oEmbed using proxy");
+      }
+      curlArgs.push("-H", "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36");
+      curlArgs.push(oembedUrl);
+
+      const { stdout } = await execFileAsync("curl", curlArgs, { timeout: 15000 });
+      console.log("[LinkPreview] TikTok oEmbed raw response length:", stdout?.length || 0);
+      if (stdout) {
+        const data = JSON.parse(stdout);
+        console.log("[LinkPreview] TikTok oEmbed parsed:", { 
+          title: data?.title?.slice(0, 50), 
+          hasThumbnail: !!data?.thumbnail_url,
+          thumbnail: data?.thumbnail_url?.slice(0, 80)
+        });
+        if (data && data.thumbnail_url) {
+          const title = data.title || data.author_name || "TikTok Video";
+          const thumbnail = data.thumbnail_url;
+          console.log("[LinkPreview] TikTok oEmbed success:", { title: title.slice(0, 50), thumbnail: thumbnail.slice(0, 60) });
+          return { title, description: "", image: thumbnail, siteName: "TikTok" };
+        } else if (data && !data.thumbnail_url) {
+          console.warn("[LinkPreview] TikTok oEmbed has no thumbnail_url, keys:", Object.keys(data));
+        }
+      }
+    } catch (e: any) {
+      console.warn("[LinkPreview] TikTok oEmbed failed:", e.message);
+    }
+
+    // Fallback: try generic fetch to get og:image
+    try {
+      console.log("[LinkPreview] TikTok oEmbed failed, trying generic fetch for og:image...");
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: { "User-Agent": getRandomUserAgent() },
+      });
+      clearTimeout(timeout);
+
+      if (response.ok) {
+        const html = await response.text();
+        const $ = load(html);
+        const getMeta = (prop: string) => $(`meta[property="${prop}"]`).attr("content") || $(`meta[name="${prop}"]`).attr("content") || "";
+        const image = getMeta("og:image:secure_url") || getMeta("og:image:url") || getMeta("og:image") || getMeta("twitter:image") || "";
+        const title = getMeta("og:title") || $("title").text() || "TikTok Video";
+
+        if (image) {
+          console.log("[LinkPreview] TikTok generic fetch found og:image");
+          return { title, description: "", image, siteName: "TikTok" };
+        }
+      }
+    } catch (e: any) {
+      console.warn("[LinkPreview] TikTok generic fetch failed:", e.message);
+    }
   }
 
   try {

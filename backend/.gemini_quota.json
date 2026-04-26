@@ -4,15 +4,15 @@
     "count": 7
   },
   "models/gemini-3.1-flash-lite-preview": {
-    "date": "2026-04-25",
-    "count": 17
+    "date": "2026-04-26",
+    "count": 2
   },
   "models/gemini-3-flash-preview": {
-    "date": "2026-04-25",
-    "count": 1
+    "date": "2026-04-26",
+    "count": 4
   },
   "models/gemini-2.5-flash-lite": {
-    "date": "2026-04-24",
-    "count": 2
+    "date": "2026-04-26",
+    "count": 1
   }
 }

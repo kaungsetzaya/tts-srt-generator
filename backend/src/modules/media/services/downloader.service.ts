@@ -67,7 +67,7 @@ function youtubeDelay() {
 
 // Common User-Agent
 const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
-const COOKIE_PATH = process.env.YTDL_COOKIE_PATH || path.resolve("C:\\Users\\kaung\\Desktop\\LUMIX\\tts-srt-generator\\backend\\cookies.txt");
+const COOKIE_PATH = process.env.YTDL_COOKIE_PATH || path.resolve(process.cwd(), "backend/cookies.txt");
 
 // Supported platforms
 const SUPPORTED_PLATFORMS = [
@@ -115,7 +115,7 @@ function isFacebookReel(url: string): boolean {
   return false;
 }
 
-const YTDLP_PATH = "C:\\Users\\kaung\\AppData\\Local\\Programs\\Python\\Python312\\Scripts\\yt-dlp.exe";
+const YTDLP_PATH = process.env.YTDL_PATH || "yt-dlp";
 
 export async function getVideoInfo(url: string): Promise<{ duration: number; filesize: number; title?: string; thumbnail?: string } | null> {
   if (!isAllowedVideoUrl(url)) {
