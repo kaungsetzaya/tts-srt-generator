@@ -574,57 +574,63 @@ function DubbingTab({
                     })()}
                   </div>
                 ) : (
-                  <div ref={containerRef} className="grid w-full h-full rounded-2xl" style={{ isolation: "isolate" }}>
-                    {/* Background Layer — blurred cinematic fill */}
-                    <video
-                      src={dubPreviewUrl}
-                      className="col-start-1 row-start-1 w-full h-full object-cover blur-3xl opacity-30 pointer-events-none"
-                      autoPlay
-                      muted
-                      loop
-                      playsInline
-                      preload="metadata"
-                    />
-                    {/* Video Layer — native browser compositing, no z-index needed in grid */}
-                    <video
-                      ref={dubPreviewRef}
-                      src={dubPreviewUrl}
-                      className="col-start-1 row-start-1 w-full h-full object-contain rounded-lg cursor-pointer"
-                      controls
-                      preload="metadata"
-                      onLoadedMetadata={(e) => {
-                        const v = e.currentTarget;
-                        setDubVideoWidth(v.videoWidth);
-                        setDubVideoHeight(v.videoHeight);
-                        setDubDetectedRatio(v.videoWidth < v.videoHeight ? "9:16" : "16:9");
-                      }}
-                      onError={() => {
-                        setVideoPreviewError("Failed to load video preview.");
-                      }}
-                      onClick={() => {
-                        const v = dubPreviewRef.current;
-                        if (!v) return;
-                        v.paused ? v.play() : v.pause();
-                      }}
-                    />
-                    {/* Real-time Subtitle Preview — comes AFTER video in DOM, stacks above naturally */}
-                    {srtEnabled && activeJobId === null && (
-                      <div 
-                        className="col-start-1 row-start-1"
-                        style={{ 
-                          pointerEvents: "none", 
-                          zIndex: 2,
-                          fontSize: `${(srtFontSizeContainerPct / 100) * containerHeight}px`
+                  <div className="relative w-full h-full">
+                    {/* Video container */}
+                    <div ref={containerRef} className="w-full h-full rounded-2xl overflow-hidden">
+                      {/* Background Layer — blurred cinematic fill */}
+                      <video
+                        src={dubPreviewUrl}
+                        className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-30 pointer-events-none"
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        preload="metadata"
+                      />
+                      {/* Main Video */}
+                      <video
+                        ref={dubPreviewRef}
+                        src={dubPreviewUrl}
+                        className="w-full h-full object-contain rounded-lg cursor-pointer"
+                        controls
+                        preload="metadata"
+                        onLoadedMetadata={(e) => {
+                          const v = e.currentTarget;
+                          setDubVideoWidth(v.videoWidth);
+                          setDubVideoHeight(v.videoHeight);
+                          setDubDetectedRatio(v.videoWidth < v.videoHeight ? "9:16" : "16:9");
                         }}
+                        onError={() => {
+                          setVideoPreviewError("Failed to load video preview.");
+                        }}
+                        onClick={() => {
+                          const v = dubPreviewRef.current;
+                          if (!v) return;
+                          v.paused ? v.play() : v.pause();
+                        }}
+                      />
+                    </div>
+
+                    {/* Subtitle Overlay — sibling of video container, stacks above via z-index */}
+                    {srtEnabled && activeJobId === null && (
+                      <div
+                        className="absolute inset-0 pointer-events-none"
+                        style={{ zIndex: 50 }}
                       >
-                        <div style={computeSrtPreviewStyle}>
+                        <div
+                          style={{
+                            ...computeSrtPreviewStyle,
+                            fontSize: `${(srtFontSizeContainerPct / 100) * containerHeight}px`,
+                          }}
+                        >
                           {lang === "mm" ? "ဤနေရာတွင် စာတန်းထိုးကို မြင်ရပါမည်" : "Subtitle preview"}
                         </div>
                       </div>
                     )}
+
                     {/* Dubbing Loader Overlay */}
                     {activeJobId !== null && (
-                      <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                      <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm">
                         <div className="flex flex-col items-center gap-3">
                           <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin" />
                           <div className="text-center">
@@ -634,9 +640,10 @@ function DubbingTab({
                         </div>
                       </div>
                     )}
+
                     {/* Video Preview Error */}
                     {videoPreviewError && activeJobId === null && (
-                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 px-4 py-2 rounded-xl" style={{ background: "rgba(220, 38, 38, 0.9)", border: "1px solid rgba(220, 38, 38, 0.5)" }}>
+                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 px-4 py-2 rounded-xl" style={{ background: "rgba(220, 38, 38, 0.9)", border: "1px solid rgba(220, 38, 38, 0.5)" }}>
                         <p className="text-xs font-semibold text-white">{videoPreviewError}</p>
                       </div>
                     )}
