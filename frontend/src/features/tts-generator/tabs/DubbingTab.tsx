@@ -574,51 +574,46 @@ function DubbingTab({
                     })()}
                   </div>
                 ) : (
-                  <div ref={containerRef} className="relative w-full h-full flex items-center justify-center rounded-2xl" style={{ isolation: "isolate" }}>
+                  <div ref={containerRef} className="grid w-full h-full rounded-2xl" style={{ isolation: "isolate" }}>
                     {/* Background Layer — blurred cinematic fill */}
                     <video
                       src={dubPreviewUrl}
-                      className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-30 pointer-events-none"
-                      style={{ transform: "translateZ(0)" }}
+                      className="col-start-1 row-start-1 w-full h-full object-cover blur-3xl opacity-30 pointer-events-none"
                       autoPlay
                       muted
                       loop
                       playsInline
                       preload="metadata"
                     />
-                    {/* Video Layer — forced into compositing layer with low z-index */}
-                    <div style={{ position: "absolute", inset: 0, zIndex: 1, transform: "translateZ(0)" }}>
-                      <video
-                        ref={dubPreviewRef}
-                        src={dubPreviewUrl}
-                        className="w-full h-full object-contain rounded-lg cursor-pointer"
-                        controls
-                        preload="metadata"
-                        onLoadedMetadata={(e) => {
-                          const v = e.currentTarget;
-                          setDubVideoWidth(v.videoWidth);
-                          setDubVideoHeight(v.videoHeight);
-                          setDubDetectedRatio(v.videoWidth < v.videoHeight ? "9:16" : "16:9");
-                        }}
-                        onError={() => {
-                          setVideoPreviewError("Failed to load video preview.");
-                        }}
-                        onClick={() => {
-                          const v = dubPreviewRef.current;
-                          if (!v) return;
-                          v.paused ? v.play() : v.pause();
-                        }}
-                      />
-                    </div>
-                    {/* Real-time Subtitle Preview — forced into compositing layer above video */}
+                    {/* Video Layer — native browser compositing, no z-index needed in grid */}
+                    <video
+                      ref={dubPreviewRef}
+                      src={dubPreviewUrl}
+                      className="col-start-1 row-start-1 w-full h-full object-contain rounded-lg cursor-pointer"
+                      controls
+                      preload="metadata"
+                      onLoadedMetadata={(e) => {
+                        const v = e.currentTarget;
+                        setDubVideoWidth(v.videoWidth);
+                        setDubVideoHeight(v.videoHeight);
+                        setDubDetectedRatio(v.videoWidth < v.videoHeight ? "9:16" : "16:9");
+                      }}
+                      onError={() => {
+                        setVideoPreviewError("Failed to load video preview.");
+                      }}
+                      onClick={() => {
+                        const v = dubPreviewRef.current;
+                        if (!v) return;
+                        v.paused ? v.play() : v.pause();
+                      }}
+                    />
+                    {/* Real-time Subtitle Preview — comes AFTER video in DOM, stacks above naturally */}
                     {srtEnabled && activeJobId === null && (
                       <div 
+                        className="col-start-1 row-start-1"
                         style={{ 
-                          position: "absolute", 
-                          inset: 0, 
                           pointerEvents: "none", 
-                          zIndex: 50,
-                          transform: "translateZ(1px)",
+                          zIndex: 2,
                           fontSize: `${(srtFontSizeContainerPct / 100) * containerHeight}px`
                         }}
                       >
