@@ -367,7 +367,9 @@ export function useDubbingState(
       right: `${sidePct}%`,
       // bottom% mirrors ASS MarginV = (srtMarginV/100)*videoH exactly
       bottom: `${bottomPct}%`,
-      zIndex: 10,
+      zIndex: 100,
+      transform: "translateZ(1px)",
+      isolation: "isolate",
       textAlign: "center" as const,
       pointerEvents: "none" as const,
       marginLeft: "auto",

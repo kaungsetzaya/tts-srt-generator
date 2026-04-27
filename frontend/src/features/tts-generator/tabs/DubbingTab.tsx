@@ -452,7 +452,7 @@ function DubbingTab({
                 </div>
                 <button onClick={() => { setDubVideoUrl(""); setDubPreviewUrl(""); setDubVideoFile(null); }} className="text-xs px-2 py-1 rounded hover:bg-red-500/20 text-red-400">✕</button>
               </div>
-              <div className="flex-1 min-h-0 p-2 relative flex justify-center items-center">
+              <div className="flex-1 min-h-0 p-2 relative flex justify-center items-center" style={{ isolation: "isolate" }}>
                 {videoLoading ? (
                   <div className="w-full h-64 rounded-xl flex flex-col items-center justify-center gap-3" style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}` }}>
                     <span className="text-xs font-semibold" style={{ color: subtextColor }}>Preparing preview...</span>
@@ -574,19 +574,20 @@ function DubbingTab({
                     })()}
                   </div>
                 ) : (
-                  <div ref={containerRef} className="relative w-full h-full flex items-center justify-center rounded-2xl overflow-hidden">
+                  <div ref={containerRef} className="relative w-full h-full flex items-center justify-center rounded-2xl" style={{ isolation: "isolate" }}>
                     {/* Background Layer — blurred cinematic fill */}
                     <video
                       src={dubPreviewUrl}
                       className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-30 pointer-events-none"
+                      style={{ transform: "translateZ(0)" }}
                       autoPlay
                       muted
                       loop
                       playsInline
                       preload="metadata"
                     />
-                    {/* Video Layer — wrapped to control stacking below subtitle */}
-                    <div style={{ position: "absolute", inset: 0, zIndex: 1 }}>
+                    {/* Video Layer — forced into compositing layer with low z-index */}
+                    <div style={{ position: "absolute", inset: 0, zIndex: 1, transform: "translateZ(0)" }}>
                       <video
                         ref={dubPreviewRef}
                         src={dubPreviewUrl}
@@ -609,7 +610,7 @@ function DubbingTab({
                         }}
                       />
                     </div>
-                    {/* Real-time Subtitle Preview — forced into own compositing layer above video */}
+                    {/* Real-time Subtitle Preview — forced into compositing layer above video */}
                     {srtEnabled && activeJobId === null && (
                       <div 
                         style={{ 
@@ -617,7 +618,7 @@ function DubbingTab({
                           inset: 0, 
                           pointerEvents: "none", 
                           zIndex: 50,
-                          willChange: "transform",
+                          transform: "translateZ(1px)",
                           fontSize: `${(srtFontSizeContainerPct / 100) * containerHeight}px`
                         }}
                       >
