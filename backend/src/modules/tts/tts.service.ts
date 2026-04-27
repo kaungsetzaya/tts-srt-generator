@@ -1,5 +1,5 @@
 /**
- * TTS Service Ã¢â‚¬â€ Unified text-to-speech generation
+ * TTS Service — Unified text-to-speech generation
  *
  * Supports:
  * - Tier 1: Edge-TTS Myanmar voices (Thiha, Nilar)
@@ -38,7 +38,7 @@ export interface GenerateResult {
 const OUTPUT_DIR = process.env.EDGE_TTS_OUTPUT_DIR || path.join(process.cwd(), "output");
 fs.mkdir(OUTPUT_DIR, { recursive: true }).catch(() => {});
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Murf API Key Rotation Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ─── Murf API Key Rotation ───────────────────────────────────────────────────
 let currentMurfKeyIndex = 0;
 export function getMurfKey(): string | undefined {
   const keysStr = process.env.MURF_API_KEY || "";
@@ -49,7 +49,7 @@ export function getMurfKey(): string | undefined {
   return key;
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Tier 1: Edge-TTS Myanmar Voices Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ─── Tier 1: Edge-TTS Myanmar Voices ─────────────────────────────────────────
 async function generateTier1Speech(
   text: string,
   voiceId: Tier1VoiceId,
@@ -248,7 +248,7 @@ async function generateTier1Speech(
       .save(enhancedWav);
   });
 
-  // Step 3: Encode to final MP3
+  // Step 4: Encode to final MP3
   await new Promise<void>((resolve, reject) => {
     (ffmpeg as any)(enhancedWav)
       .audioCodec('libmp3lame')
@@ -260,51 +260,8 @@ async function generateTier1Speech(
 
   const audioBuffer = await fs.readFile(finalMp3);
 
-  // Build SRT with proper line breaking (2-line max, balanced)
-  const config = BURMESE_SRT_CONFIG[aspectRatio] ?? BURMESE_SRT_CONFIG["16:9"];
-  const { charsPerLine } = config;
-  const srtLines: string[] = [];
-  let srtIdx = 0;
-
-  for (const seg of segments) {
-    const text = seg.text.trim();
-    if (!text) continue;
-
-    const lines = splitTextIntoLines(text, charsPerLine);
-
-    if (lines.length <= 2) {
-      // Fits in 2 lines, balance if needed
-      const balanced = lines.length === 2
-        ? balanceLines(text, charsPerLine)
-        : lines;
-      srtLines.push(`${srtIdx + 1}\n${msToSrtTime(seg.startMs)} --> ${msToSrtTime(seg.endMs - 20)}\n${balanced.join("\n")}\n`);
-      srtIdx++;
-    } else {
-      // Split into multiple SRT entries with proportional timing
-      const totalChars = graphemeLen(text);
-      const totalDuration = seg.endMs - seg.startMs;
-      let charOffset = 0;
-      let currentStartMs = seg.startMs;
-
-      for (let i = 0; i < lines.length; i += 2) {
-        const chunkLines = lines.slice(i, i + 2);
-        const chunkText = chunkLines.join(" ");
-        const chunkChars = graphemeLen(chunkText);
-        const chunkDuration = Math.round((chunkChars / totalChars) * totalDuration);
-        const chunkEndMs = i + 2 >= lines.length ? seg.endMs : currentStartMs + chunkDuration;
-
-        const balanced = chunkLines.length === 2
-          ? balanceLines(chunkLines.join(" "), charsPerLine)
-          : chunkLines;
-
-        srtLines.push(`${srtIdx + 1}\n${msToSrtTime(currentStartMs)} --> ${msToSrtTime(chunkEndMs - 20)}\n${balanced.join("\n")}\n`);
-        srtIdx++;
-        currentStartMs = chunkEndMs;
-      }
-    }
-  }
-
-  const srtContent = srtLines.join("\n");
+  // Build SRT using word-aware segmenter (fixes mid-word cuts in Burmese)
+  const srtContent = buildSRTFromSegments(segments, aspectRatio);
 
   // Cleanup temp dir
   await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
@@ -312,7 +269,7 @@ async function generateTier1Speech(
   return { audioBuffer, rawSrt: srtContent, srtContent, durationMs: currentMs };
 }
 
-// Ã¢Å"â‚¬Ã¢Å"â‚¬Ã¢Å"â‚¬ Tier 2: Murf AI Voice Cloning Ã¢Å"â‚¬Ã¢Å"â‚¬Ã¢Å"â‚¬
+// ─── Tier 2: Murf AI Voice Cloning ───────────────────────────────────────────
 async function generateTier2Speech(
   text: string,
   voiceId: Tier2VoiceId,
@@ -372,7 +329,7 @@ async function generateTier2Speech(
   };
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Tier 3: Google Gemini 3.1 Flash TTS Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ─── Tier 3: Google Gemini 3.1 Flash TTS ─────────────────────────────────────
 async function generateTier3Speech(
   text: string,
   voiceId: Tier3VoiceId,
@@ -393,7 +350,7 @@ async function generateTier3Speech(
   };
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Main Entry Points Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ─── Main Entry Points ───────────────────────────────────────────────────────
 
 /**
  * Generate speech for any voice (auto-detects tier)
@@ -433,7 +390,7 @@ export async function generateSpeechWithCharacter(
   return generateTier2Speech(text, characterId, rate, pitch, aspectRatio);
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Helper Functions Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ─── Helper Functions ────────────────────────────────────────────────────────
 
 function getProxyUrl(): string {
   const h = process.env.EDGE_TTS_PROXY_HOST;
@@ -467,137 +424,108 @@ function msToSrtTime(ms: number): string {
 
 function pad(n: number, len = 2): string { return String(n).padStart(len, "0"); }
 
-const segmenter = new Intl.Segmenter("my", { granularity: "grapheme" });
-function graphemeLen(s: string): number { return [...segmenter.segment(s)].length; }
-function getGraphemes(s: string): string[] { return [...segmenter.segment(s)].map(g => g.segment); }
+// ── Segmenters ────────────────────────────────────────────────────────────────
+const segmenterWord = new Intl.Segmenter("my", { granularity: "word" });
+const segmenterGrapheme = new Intl.Segmenter("my", { granularity: "grapheme" });
 
-const BURMESE_SRT_CONFIG = {
-  "16:9": { charsPerLine: 18, maxLines: 2 },
-  "9:16": { charsPerLine: 13, maxLines: 2 },
-} as const;
-
-function splitTextIntoLines(text: string, maxCharsPerLine: number): string[] {
-  const graphemes = getGraphemes(text);
-  const lines: string[] = [];
-  let currentLine = "";
-
-  for (const g of graphemes) {
-    if (graphemeLen(currentLine + g) > maxCharsPerLine && currentLine.length > 0) {
-      lines.push(currentLine.trim());
-      currentLine = g;
-    } else {
-      currentLine += g;
-    }
-  }
-  if (currentLine.trim()) lines.push(currentLine.trim());
-  return lines;
+function graphemeLen(s: string): number {
+  return [...segmenterGrapheme.segment(s)].length;
 }
 
-function balanceLines(text: string, maxCharsPerLine: number): string[] {
-  const graphemes = getGraphemes(text);
-  const totalLen = graphemes.length;
-
-  if (totalLen <= maxCharsPerLine) return [text];
-
-  // Try to split into 2 balanced lines
-  const idealSplit = Math.ceil(totalLen / 2);
-  // Find a good split point near the ideal (prefer spaces or natural breaks)
-  let splitIdx = idealSplit;
-  const textStr = graphemes.join("");
-
-  // Look for a space or natural break near the ideal split point
-  const searchRange = Math.min(5, Math.floor(maxCharsPerLine * 0.3));
-  for (let offset = 0; offset <= searchRange; offset++) {
-    // Try before ideal
-    const beforeIdx = idealSplit - offset;
-    if (beforeIdx > 0 && beforeIdx < textStr.length && textStr[beforeIdx] === " ") {
-      splitIdx = beforeIdx;
-      break;
-    }
-    // Try after ideal
-    const afterIdx = idealSplit + offset;
-    if (afterIdx > 0 && afterIdx < textStr.length && textStr[afterIdx] === " ") {
-      splitIdx = afterIdx;
-      break;
-    }
-  }
-
-  // If no space found, split at grapheme boundary
-  const line1Graphemes = graphemes.slice(0, splitIdx);
-  const line2Graphemes = graphemes.slice(splitIdx);
-  const line1 = line1Graphemes.join("").trim();
-  const line2 = line2Graphemes.join("").trim();
-
-  if (line2.length === 0) return [line1];
-  return [line1, line2];
+function getWords(s: string): string[] {
+  return [...segmenterWord.segment(s)].map(w => w.segment);
 }
 
-function buildSRTFromRaw(rawSrt: string, originalText: string, aspectRatio: "9:16" | "16:9"): string {
-  const config = BURMESE_SRT_CONFIG[aspectRatio] ?? BURMESE_SRT_CONFIG["16:9"];
-  const { charsPerLine, maxLines } = config;
-  const rawSegments = parseRawSrt(rawSrt);
-  if (rawSegments.length === 0) return "";
+function buildSRTFromSegments(
+  segments: { text: string; startMs: number; endMs: number }[],
+  aspectRatio: "9:16" | "16:9"
+): string {
+  const charsPerLine = aspectRatio === "9:16" ? 14 : 22;
+  const maxLines = 2;
 
-  const finalSegments: { startMs: number; endMs: number; text: string }[] = [];
+  const finalBlocks: { startMs: number; endMs: number; text: string }[] = [];
 
-  for (const seg of rawSegments) {
-    const text = seg.text.trim();
-    if (!text) continue;
+  for (const seg of segments) {
+    const superWords = seg.text.split(/\s+/).filter(Boolean);
+    const safeWords: string[] = [];
 
-    const lines = splitTextIntoLines(text, charsPerLine);
-
-    if (lines.length <= maxLines) {
-      // Fits within max lines, balance if 2 lines
-      const balanced = lines.length === 2
-        ? balanceLines(text, charsPerLine)
-        : lines;
-      finalSegments.push({
-        startMs: seg.startMs,
-        endMs: seg.endMs,
-        text: balanced.join("\n"),
-      });
-    } else {
-      // Too many lines: split into multiple SRT segments with proportional timing
-      const totalChars = graphemeLen(text);
-      const totalDuration = seg.endMs - seg.startMs;
-      let charOffset = 0;
-      let currentStartMs = seg.startMs;
-
-      for (let i = 0; i < lines.length; i += maxLines) {
-        const chunkLines = lines.slice(i, i + maxLines);
-        const chunkText = chunkLines.join("\n");
-        const chunkChars = graphemeLen(chunkText);
-
-        // Proportional timing
-        const chunkDuration = Math.round((chunkChars / totalChars) * totalDuration);
-        const chunkEndMs = i + maxLines >= lines.length
-          ? seg.endMs
-          : currentStartMs + chunkDuration;
-
-        // Balance if 2 lines
-        const balanced = chunkLines.length === 2
-          ? balanceLines(chunkLines.join(" "), charsPerLine)
-          : chunkLines;
-
-        finalSegments.push({
-          startMs: currentStartMs,
-          endMs: chunkEndMs,
-          text: balanced.join("\n"),
-        });
-
-        currentStartMs = chunkEndMs;
+    for (const sw of superWords) {
+      if (graphemeLen(sw) <= charsPerLine) {
+        safeWords.push(sw);
+      } else {
+        const words = getWords(sw);
+        let temp = "";
+        for (const w of words) {
+          if (graphemeLen(temp + w) <= charsPerLine) {
+            temp += w;
+          } else {
+            if (temp) safeWords.push(temp);
+            temp = w;
+          }
+        }
+        if (temp) safeWords.push(temp);
       }
     }
+
+    const blocks: { lines: string[] }[] = [];
+    let currentBlockLines: string[] = [];
+    let currentLine = "";
+
+    for (const word of safeWords) {
+      const candidateLine = currentLine ? currentLine + " " + word : word;
+
+      if (graphemeLen(candidateLine) <= charsPerLine) {
+        currentLine = candidateLine;
+      } else {
+        if (currentLine) {
+          currentBlockLines.push(currentLine);
+        }
+        currentLine = word;
+
+        if (currentBlockLines.length === maxLines) {
+          blocks.push({ lines: currentBlockLines });
+          currentBlockLines = [];
+        }
+      }
+    }
+    if (currentLine) {
+      currentBlockLines.push(currentLine);
+    }
+    if (currentBlockLines.length > 0) {
+      blocks.push({ lines: currentBlockLines });
+    }
+
+    const totalChars = blocks.reduce((sum, b) => sum + b.lines.reduce((s, l) => s + graphemeLen(l), 0), 0);
+    let currMs = seg.startMs;
+    const totalDur = seg.endMs - seg.startMs;
+
+    for (const b of blocks) {
+      const bChars = b.lines.reduce((s, l) => s + graphemeLen(l), 0);
+      const bDur = totalChars > 0 ? (bChars / totalChars) * totalDur : 0;
+      finalBlocks.push({
+        startMs: Math.round(currMs),
+        endMs: Math.round(currMs + bDur),
+        text: b.lines.join("\n")
+      });
+      currMs += bDur;
+    }
   }
 
-  return finalSegments
-    .filter(s => s.endMs > s.startMs)
+  return finalBlocks
+    .filter(s => s.endMs > s.startMs && s.text.trim())
     .map((s, idx) => {
       const start = msToSrtTime(s.startMs);
-      const end = msToSrtTime(s.endMs - 20);
+      const end = msToSrtTime(s.endMs - 15);
       return `${idx + 1}\n${start} --> ${end}\n${s.text}\n`;
     })
     .join("\n");
+}
+
+/** Legacy wrapper — kept for Tier 3 / other callers that pass raw edge_tts SRT */
+function buildSRTFromRaw(rawSrt: string, originalText: string, aspectRatio: "9:16" | "16:9"): string {
+  const rawSegments = parseRawSrt(rawSrt);
+  if (rawSegments.length === 0) return "";
+  return buildSRTFromSegments(rawSegments, aspectRatio);
 }
 
 function parseRawSrt(rawSrt: string): any[] {
@@ -608,11 +536,11 @@ function parseRawSrt(rawSrt: string): any[] {
     if (lines.length < 3) return null;
     const timeMatch = lines[1].match(/(\d{2}:\d{2}:\d{2},\d{3}) --> (\d{2}:\d{2}:\d{2},\d{3})/);
     if (!timeMatch) return null;
-    return { startMs: srtTimeToMs(timeMatch[1]), endMs: srtTimeToMs(timeMatch[2]), text: lines.slice(2).join(" ").trim() };
+    return { startMs: srtTimeToMs(timeMatch[1]), endMs: srtTimeToMs(timeMatch[2]), text: lines.slice(2).join("").trim() };
   }).filter(Boolean);
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Service Export Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ─── Service Export ──────────────────────────────────────────────────────────
 export const ttsService = {
   generateSpeech,
   generateSpeechWithCharacter,
