@@ -128,9 +128,9 @@ async function generateTier1Speech(
       }
     }
 
-    // Convert to WAV with aggressive silence trimming
+    // Convert to WAV: trim silence from both ends
     await new Promise<void>((resolve, reject) => {
-      const trimFilter = "silenceremove=start_periods=1:start_silence=0:start_threshold=-60dB,silenceremove=stop_periods=1:stop_silence=0:stop_threshold=-60dB";
+      const trimFilter = "silenceremove=start_periods=1:start_duration=0:start_threshold=-40dB,areverse,silenceremove=start_periods=1:start_duration=0:start_threshold=-40dB,areverse";
       (ffmpeg as any)(chunkMp3)
         .audioFilters(trimFilter)
         .audioCodec('pcm_s16le')
@@ -145,7 +145,7 @@ async function generateTier1Speech(
 
     audioParts.push(chunkTrimmedWav);
     segments.push({ text: chunk, startMs: currentMs, endMs: currentMs + chunkDurationMs });
-    currentMs += chunkDurationMs;
+    currentMs += chunkDurationMs + 250; // +250ms gap for natural pause
 
     // 100ms delay between chunks to avoid rate limiting
     if (i < chunks.length - 1) {
@@ -155,28 +155,71 @@ async function generateTier1Speech(
     await fs.unlink(chunkMp3).catch(() => {});
   }
 
-  // Merge all parts with acrossover fade for gapless stitching
-  const finalWav = path.join(tempDir, `final_${baseId}.wav`);
+  // Merge all parts: concat with silence gaps
   const finalMp3 = path.join(tempDir, `final_${baseId}.mp3`);
+  const silenceWav = path.join(tempDir, `silence_250ms.wav`);
 
-  // Use acrossover filter for seamless merging (d=0 means no delay)
-  const acrossoverList = audioParts.map((_, idx) => `[${idx}:a]`).join('');
-  const acrossoverInputs = audioParts.map(p => ['-i', p]).flat();
+  // Generate 250ms silence WAV
   await new Promise<void>((resolve, reject) => {
     (ffmpeg as any)()
-      .addInput(acrossoverInputs)
-      .complexFilter([
-        `${acrossoverList}acrossover=d=0[out]`,
-      ])
-      .output(finalWav)
+      .input('anullsrc=r=44100:cl=mono')
+      .inputOptions(['-f', 'lavfi', '-t', '0.25'])
+      .audioCodec('pcm_s16le')
+      .audioFrequency(44100)
+      .audioChannels(1)
       .on('end', () => resolve())
       .on('error', reject)
-      .run();
+      .save(silenceWav);
   });
 
-  // Convert merged WAV to MP3
+  // Build merged list: audio, silence, audio, silence, audio
+  const mergedParts: string[] = [];
+  audioParts.forEach((p, idx) => {
+    mergedParts.push(p);
+    if (idx < audioParts.length - 1) {
+      mergedParts.push(silenceWav);
+    }
+  });
+
+  // Create concat file list
+  const concatEntries = mergedParts.map(p => `file '${p}'`).join('\n');
+  const concatListPath = path.join(tempDir, 'concat_list.txt');
+  await fs.writeFile(concatListPath, concatEntries);
+
+  // Step 1: Concat merge to intermediate WAV
+  const mergedWav = path.join(tempDir, `merged_${baseId}.wav`);
   await new Promise<void>((resolve, reject) => {
-    (ffmpeg as any)(finalWav)
+    (ffmpeg as any)(concatListPath)
+      .inputOptions(['-f', 'concat', '-safe', '0'])
+      .audioCodec('pcm_s16le')
+      .audioFrequency(44100)
+      .audioChannels(1)
+      .on('end', () => resolve())
+      .on('error', reject)
+      .save(mergedWav);
+  });
+
+  // Step 2: Apply enhancement to merged audio
+  const enhancedWav = path.join(tempDir, `enhanced_${baseId}.wav`);
+  await new Promise<void>((resolve, reject) => {
+    const filters = [
+      "dynaudnorm=g=5:f=150",
+      "equalizer=f=1000:w=2000:g=3",
+      "equalizer=f=3000:w=2000:g=2",
+    ].join(',');
+    (ffmpeg as any)(mergedWav)
+      .audioFilters(filters)
+      .audioCodec('pcm_s16le')
+      .audioFrequency(44100)
+      .audioChannels(1)
+      .on('end', () => resolve())
+      .on('error', reject)
+      .save(enhancedWav);
+  });
+
+  // Step 3: Encode to final MP3
+  await new Promise<void>((resolve, reject) => {
+    (ffmpeg as any)(enhancedWav)
       .audioCodec('libmp3lame')
       .audioBitrate('128k')
       .on('end', () => resolve())
