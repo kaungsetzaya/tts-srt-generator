@@ -128,7 +128,8 @@ async function generateTier1Speech(
       }
     }
 
-    // Convert to WAV: trim silence from both ends
+    // Step 1: Trim silence from both ends
+    const trimmedTempWav = path.join(tempDir, `chunk_${i}_trimmed_temp.wav`);
     await new Promise<void>((resolve, reject) => {
       const trimFilter = "silenceremove=start_periods=1:start_duration=0:start_threshold=-40dB,areverse,silenceremove=start_periods=1:start_duration=0:start_threshold=-40dB,areverse";
       (ffmpeg as any)(chunkMp3)
@@ -138,14 +139,32 @@ async function generateTier1Speech(
         .audioChannels(1)
         .on('end', () => resolve())
         .on('error', reject)
+        .save(trimmedTempWav);
+    });
+
+    // Step 2: Get duration and apply 50ms fade out at end
+    const chunkDurationSec = (await ffmpegService.getAudioDurationMs(trimmedTempWav)) / 1000;
+    const fadeStartSec = Math.max(0, chunkDurationSec - 0.05);
+
+    await new Promise<void>((resolve, reject) => {
+      (ffmpeg as any)(trimmedTempWav)
+        .audioFilters(`afade=t=out:st=${fadeStartSec.toFixed(3)}:d=0.05`)
+        .audioCodec('pcm_s16le')
+        .audioFrequency(44100)
+        .audioChannels(1)
+        .on('end', () => resolve())
+        .on('error', reject)
         .save(chunkTrimmedWav);
     });
+
+    // Clean up temp file
+    await fs.unlink(trimmedTempWav).catch(() => {});
 
     const chunkDurationMs = await ffmpegService.getAudioDurationMs(chunkTrimmedWav);
 
     audioParts.push(chunkTrimmedWav);
     segments.push({ text: chunk, startMs: currentMs, endMs: currentMs + chunkDurationMs });
-    currentMs += chunkDurationMs + 250; // +250ms gap for natural pause
+    currentMs += chunkDurationMs + 100; // +100ms gap for natural pause
 
     // 100ms delay between chunks to avoid rate limiting
     if (i < chunks.length - 1) {
@@ -157,13 +176,13 @@ async function generateTier1Speech(
 
   // Merge all parts: concat with silence gaps
   const finalMp3 = path.join(tempDir, `final_${baseId}.mp3`);
-  const silenceWav = path.join(tempDir, `silence_250ms.wav`);
+  const silenceWav = path.join(tempDir, `silence_100ms.wav`);
 
-  // Generate 250ms silence WAV
+  // Generate 100ms pure silence
   await new Promise<void>((resolve, reject) => {
     (ffmpeg as any)()
-      .input('anullsrc=r=44100:cl=mono')
-      .inputOptions(['-f', 'lavfi', '-t', '0.25'])
+      .input('aevalsrc=0:d=0.1:s=44100')
+      .inputOptions(['-f', 'lavfi'])
       .audioCodec('pcm_s16le')
       .audioFrequency(44100)
       .audioChannels(1)
@@ -199,15 +218,27 @@ async function generateTier1Speech(
       .save(mergedWav);
   });
 
-  // Step 2: Apply enhancement to merged audio
+  // Step 2: Apply loudnorm to entire merged file (prevents volume pumping)
+  const normalizedWav = path.join(tempDir, `normalized_${baseId}.wav`);
+  await new Promise<void>((resolve, reject) => {
+    (ffmpeg as any)(mergedWav)
+      .audioFilters("loudnorm=I=-16:LRA=11:TP=-1.5")
+      .audioCodec('pcm_s16le')
+      .audioFrequency(44100)
+      .audioChannels(1)
+      .on('end', () => resolve())
+      .on('error', reject)
+      .save(normalizedWav);
+  });
+
+  // Step 3: Voice clarity EQ on normalized audio
   const enhancedWav = path.join(tempDir, `enhanced_${baseId}.wav`);
   await new Promise<void>((resolve, reject) => {
     const filters = [
-      "dynaudnorm=g=5:f=150",
       "equalizer=f=1000:w=2000:g=3",
       "equalizer=f=3000:w=2000:g=2",
     ].join(',');
-    (ffmpeg as any)(mergedWav)
+    (ffmpeg as any)(normalizedWav)
       .audioFilters(filters)
       .audioCodec('pcm_s16le')
       .audioFrequency(44100)
