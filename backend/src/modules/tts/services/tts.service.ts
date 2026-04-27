@@ -208,9 +208,63 @@ function pad(n: number, len = 2): string { return String(n).padStart(len, "0"); 
 
 const segmenter = new Intl.Segmenter("my", { granularity: "grapheme" });
 function graphemeLen(s: string): number { return [...segmenter.segment(s)].length; }
+function getGraphemes(s: string): string[] { return [...segmenter.segment(s)].map(g => g.segment); }
 
 const BURMESE_SRT_CONFIG = { "16:9": { charsPerLine: 18 }, "9:16": { charsPerLine: 12 } } as const;
-const BURMESE_BOUNDARY_RE = /[Ã¡Ââ€¹Ã¡ÂÅ ]/;
+
+/**
+ * Split text into max 2 lines with explicit \n breaks.
+ * Each line has at most charsPerLine graphemes.
+ * Never splits mid-grapheme (Burmese safe).
+ */
+function formatSrtText(text: string, charsPerLine: number): string {
+  const graphemes = getGraphemes(text);
+  const lines: string[] = [];
+  let currentLine: string[] = [];
+  let currentLen = 0;
+
+  for (const g of graphemes) {
+    if (currentLen + 1 > charsPerLine && currentLine.length > 0) {
+      // Line is full
+      if (lines.length >= 1) {
+        // Already have 1 line, this is the 2nd line
+        // If 2nd line is also full, we MUST cap at 2 lines
+        // Push what we have and start appending to line 2
+        if (lines.length >= 2) {
+          // Both lines full - append to line 2 anyway (safety)
+          lines[1] += g;
+          continue;
+        }
+        lines.push(currentLine.join(""));
+        currentLine = [g];
+        currentLen = 1;
+      } else {
+        // First line full, start second
+        lines.push(currentLine.join(""));
+        currentLine = [g];
+        currentLen = 1;
+      }
+    } else {
+      currentLine.push(g);
+      currentLen++;
+    }
+  }
+
+  // Push remaining
+  if (currentLine.length > 0) {
+    if (lines.length === 0) {
+      lines.push(currentLine.join(""));
+    } else if (lines.length === 1) {
+      lines.push(currentLine.join(""));
+    } else {
+      // Already 2 lines, append to line 2
+      lines[1] += currentLine.join("");
+    }
+  }
+
+  // Ensure max 2 lines
+  return lines.slice(0, 2).join("\n");
+}
 
 function buildSRTFromRaw(rawSrt: string, originalText: string, aspectRatio: "9:16" | "16:9"): string {
   const { charsPerLine } = BURMESE_SRT_CONFIG[aspectRatio] ?? BURMESE_SRT_CONFIG["16:9"];
@@ -225,47 +279,53 @@ function buildSRTFromRaw(rawSrt: string, originalText: string, aspectRatio: "9:1
   for (const seg of rawSegments) {
     const glen = graphemeLen(seg.text);
 
-    // If a SINGLE raw segment is already too long, we must split it.
+    // If a SINGLE raw segment exceeds the block limit, split it into multiple SRT entries
     if (glen > MAX_CHARS_PER_BLOCK) {
       // Flush current group first
       if (currentGroup.length > 0) {
         finalSegments.push({
           startMs: currentGroup[0].startMs,
           endMs: currentGroup[currentGroup.length - 1].endMs,
-          text: currentGroup.map(s => s.text).join(" ").trim()
+          text: formatSrtText(currentGroup.map(s => s.text).join(" ").trim(), charsPerLine)
         });
         currentGroup = [];
         currentChars = 0;
       }
 
-      // Split this long segment into smaller chunks
-      const graphemes = [...segmenter.segment(seg.text)].map(g => g.segment);
+      // Split this long segment into multiple SRT blocks with proportional timing
+      const graphemes = getGraphemes(seg.text);
       const totalDuration = seg.endMs - seg.startMs;
-      const numChunks = Math.ceil(glen / charsPerLine);
-      const chunkGraphemeCount = Math.ceil(graphemes.length / numChunks);
-      
-      for (let i = 0; i < numChunks; i++) {
-        const startIdx = i * chunkGraphemeCount;
-        const endIdx = Math.min(startIdx + chunkGraphemeCount, graphemes.length);
-        if (startIdx >= endIdx) break;
+      const charsPerBlock = MAX_CHARS_PER_BLOCK;
+      let charOffset = 0;
+      let blockStartMs = seg.startMs;
 
-        const chunkText = graphemes.slice(startIdx, endIdx).join("").trim();
-        const chunkDuration = (totalDuration * (endIdx - startIdx)) / graphemes.length;
-        
+      while (charOffset < graphemes.length) {
+        const chunkGraphemes = graphemes.slice(charOffset, charOffset + charsPerBlock);
+        const chunkText = chunkGraphemes.join("").trim();
+        const chunkChars = chunkGraphemes.length;
+        const chunkDuration = Math.round((chunkChars / graphemes.length) * totalDuration);
+        const chunkEndMs = charOffset + charsPerBlock >= graphemes.length
+          ? seg.endMs
+          : blockStartMs + chunkDuration;
+
         finalSegments.push({
-          startMs: Math.round(seg.startMs + (totalDuration * startIdx) / graphemes.length),
-          endMs: Math.round(seg.startMs + (totalDuration * endIdx) / graphemes.length),
-          text: chunkText
+          startMs: blockStartMs,
+          endMs: chunkEndMs,
+          text: formatSrtText(chunkText, charsPerLine)
         });
+
+        charOffset += charsPerBlock;
+        blockStartMs = chunkEndMs;
       }
       continue;
     }
 
+    // Normal grouping logic
     if (currentChars + glen > MAX_CHARS_PER_BLOCK && currentGroup.length > 0) {
       finalSegments.push({
         startMs: currentGroup[0].startMs,
         endMs: currentGroup[currentGroup.length - 1].endMs,
-        text: currentGroup.map(s => s.text).join(" ").trim()
+        text: formatSrtText(currentGroup.map(s => s.text).join(" ").trim(), charsPerLine)
       });
       currentGroup = [];
       currentChars = 0;
@@ -279,7 +339,7 @@ function buildSRTFromRaw(rawSrt: string, originalText: string, aspectRatio: "9:1
     finalSegments.push({
       startMs: currentGroup[0].startMs,
       endMs: currentGroup[currentGroup.length - 1].endMs,
-      text: currentGroup.map(s => s.text).join(" ").trim()
+      text: formatSrtText(currentGroup.map(s => s.text).join(" ").trim(), charsPerLine)
     });
   }
 

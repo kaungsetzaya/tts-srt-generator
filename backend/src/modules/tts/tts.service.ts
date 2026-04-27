@@ -260,12 +260,51 @@ async function generateTier1Speech(
 
   const audioBuffer = await fs.readFile(finalMp3);
 
-  // Build SRT from actual segment timings
-  const srtContent = segments.map((s, idx) => {
-    const start = msToSrtTime(s.startMs);
-    const end = msToSrtTime(s.endMs);
-    return `${idx + 1}\n${start} --> ${end}\n${s.text}\n`;
-  }).join("\n");
+  // Build SRT with proper line breaking (2-line max, balanced)
+  const config = BURMESE_SRT_CONFIG[aspectRatio] ?? BURMESE_SRT_CONFIG["16:9"];
+  const { charsPerLine } = config;
+  const srtLines: string[] = [];
+  let srtIdx = 0;
+
+  for (const seg of segments) {
+    const text = seg.text.trim();
+    if (!text) continue;
+
+    const lines = splitTextIntoLines(text, charsPerLine);
+
+    if (lines.length <= 2) {
+      // Fits in 2 lines, balance if needed
+      const balanced = lines.length === 2
+        ? balanceLines(text, charsPerLine)
+        : lines;
+      srtLines.push(`${srtIdx + 1}\n${msToSrtTime(seg.startMs)} --> ${msToSrtTime(seg.endMs - 20)}\n${balanced.join("\n")}\n`);
+      srtIdx++;
+    } else {
+      // Split into multiple SRT entries with proportional timing
+      const totalChars = graphemeLen(text);
+      const totalDuration = seg.endMs - seg.startMs;
+      let charOffset = 0;
+      let currentStartMs = seg.startMs;
+
+      for (let i = 0; i < lines.length; i += 2) {
+        const chunkLines = lines.slice(i, i + 2);
+        const chunkText = chunkLines.join(" ");
+        const chunkChars = graphemeLen(chunkText);
+        const chunkDuration = Math.round((chunkChars / totalChars) * totalDuration);
+        const chunkEndMs = i + 2 >= lines.length ? seg.endMs : currentStartMs + chunkDuration;
+
+        const balanced = chunkLines.length === 2
+          ? balanceLines(chunkLines.join(" "), charsPerLine)
+          : chunkLines;
+
+        srtLines.push(`${srtIdx + 1}\n${msToSrtTime(currentStartMs)} --> ${msToSrtTime(chunkEndMs - 20)}\n${balanced.join("\n")}\n`);
+        srtIdx++;
+        currentStartMs = chunkEndMs;
+      }
+    }
+  }
+
+  const srtContent = srtLines.join("\n");
 
   // Cleanup temp dir
   await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
@@ -430,45 +469,125 @@ function pad(n: number, len = 2): string { return String(n).padStart(len, "0"); 
 
 const segmenter = new Intl.Segmenter("my", { granularity: "grapheme" });
 function graphemeLen(s: string): number { return [...segmenter.segment(s)].length; }
+function getGraphemes(s: string): string[] { return [...segmenter.segment(s)].map(g => g.segment); }
 
-const BURMESE_SRT_CONFIG = { "16:9": { charsPerLine: 18 }, "9:16": { charsPerLine: 12 } } as const;
+const BURMESE_SRT_CONFIG = {
+  "16:9": { charsPerLine: 18, maxLines: 2 },
+  "9:16": { charsPerLine: 13, maxLines: 2 },
+} as const;
+
+function splitTextIntoLines(text: string, maxCharsPerLine: number): string[] {
+  const graphemes = getGraphemes(text);
+  const lines: string[] = [];
+  let currentLine = "";
+
+  for (const g of graphemes) {
+    if (graphemeLen(currentLine + g) > maxCharsPerLine && currentLine.length > 0) {
+      lines.push(currentLine.trim());
+      currentLine = g;
+    } else {
+      currentLine += g;
+    }
+  }
+  if (currentLine.trim()) lines.push(currentLine.trim());
+  return lines;
+}
+
+function balanceLines(text: string, maxCharsPerLine: number): string[] {
+  const graphemes = getGraphemes(text);
+  const totalLen = graphemes.length;
+
+  if (totalLen <= maxCharsPerLine) return [text];
+
+  // Try to split into 2 balanced lines
+  const idealSplit = Math.ceil(totalLen / 2);
+  // Find a good split point near the ideal (prefer spaces or natural breaks)
+  let splitIdx = idealSplit;
+  const textStr = graphemes.join("");
+
+  // Look for a space or natural break near the ideal split point
+  const searchRange = Math.min(5, Math.floor(maxCharsPerLine * 0.3));
+  for (let offset = 0; offset <= searchRange; offset++) {
+    // Try before ideal
+    const beforeIdx = idealSplit - offset;
+    if (beforeIdx > 0 && beforeIdx < textStr.length && textStr[beforeIdx] === " ") {
+      splitIdx = beforeIdx;
+      break;
+    }
+    // Try after ideal
+    const afterIdx = idealSplit + offset;
+    if (afterIdx > 0 && afterIdx < textStr.length && textStr[afterIdx] === " ") {
+      splitIdx = afterIdx;
+      break;
+    }
+  }
+
+  // If no space found, split at grapheme boundary
+  const line1Graphemes = graphemes.slice(0, splitIdx);
+  const line2Graphemes = graphemes.slice(splitIdx);
+  const line1 = line1Graphemes.join("").trim();
+  const line2 = line2Graphemes.join("").trim();
+
+  if (line2.length === 0) return [line1];
+  return [line1, line2];
+}
 
 function buildSRTFromRaw(rawSrt: string, originalText: string, aspectRatio: "9:16" | "16:9"): string {
-  const { charsPerLine } = BURMESE_SRT_CONFIG[aspectRatio] ?? BURMESE_SRT_CONFIG["16:9"];
+  const config = BURMESE_SRT_CONFIG[aspectRatio] ?? BURMESE_SRT_CONFIG["16:9"];
+  const { charsPerLine, maxLines } = config;
   const rawSegments = parseRawSrt(rawSrt);
   if (rawSegments.length === 0) return "";
 
   const finalSegments: { startMs: number; endMs: number; text: string }[] = [];
-  let currentGroup: typeof rawSegments = [];
-  let currentChars = 0;
-
-  const MAX_CHARS = charsPerLine * 2;
 
   for (const seg of rawSegments) {
-    const glen = graphemeLen(seg.text);
+    const text = seg.text.trim();
+    if (!text) continue;
 
-    const shouldFlush = currentChars + glen > MAX_CHARS;
+    const lines = splitTextIntoLines(text, charsPerLine);
 
-    if (shouldFlush && currentGroup.length > 0) {
+    if (lines.length <= maxLines) {
+      // Fits within max lines, balance if 2 lines
+      const balanced = lines.length === 2
+        ? balanceLines(text, charsPerLine)
+        : lines;
       finalSegments.push({
-        startMs: currentGroup[0].startMs,
-        endMs: currentGroup[currentGroup.length - 1].endMs,
-        text: currentGroup.map(s => s.text).join(" ").trim(),
+        startMs: seg.startMs,
+        endMs: seg.endMs,
+        text: balanced.join("\n"),
       });
-      currentGroup = [];
-      currentChars = 0;
+    } else {
+      // Too many lines: split into multiple SRT segments with proportional timing
+      const totalChars = graphemeLen(text);
+      const totalDuration = seg.endMs - seg.startMs;
+      let charOffset = 0;
+      let currentStartMs = seg.startMs;
+
+      for (let i = 0; i < lines.length; i += maxLines) {
+        const chunkLines = lines.slice(i, i + maxLines);
+        const chunkText = chunkLines.join("\n");
+        const chunkChars = graphemeLen(chunkText);
+
+        // Proportional timing
+        const chunkDuration = Math.round((chunkChars / totalChars) * totalDuration);
+        const chunkEndMs = i + maxLines >= lines.length
+          ? seg.endMs
+          : currentStartMs + chunkDuration;
+
+        // Balance if 2 lines
+        const balanced = chunkLines.length === 2
+          ? balanceLines(chunkLines.join(" "), charsPerLine)
+          : chunkLines;
+
+        finalSegments.push({
+          startMs: currentStartMs,
+          endMs: chunkEndMs,
+          text: balanced.join("\n"),
+        });
+
+        currentStartMs = chunkEndMs;
+      }
     }
-
-    currentGroup.push(seg);
-    currentChars += glen;
-  }
-
-  if (currentGroup.length > 0) {
-    finalSegments.push({
-      startMs: currentGroup[0].startMs,
-      endMs: currentGroup[currentGroup.length - 1].endMs,
-      text: currentGroup.map(s => s.text).join(" ").trim(),
-    });
   }
 
   return finalSegments
