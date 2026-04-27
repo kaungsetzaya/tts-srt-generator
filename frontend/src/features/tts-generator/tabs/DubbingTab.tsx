@@ -585,36 +585,39 @@ function DubbingTab({
                       playsInline
                       preload="metadata"
                     />
-                    {/* Foreground Layer — clean video fills container, object-contain preserves aspect ratio */}
-                    <video
-                      ref={dubPreviewRef}
-                      src={dubPreviewUrl}
-                      className="absolute inset-0 w-full h-full object-contain rounded-lg cursor-pointer z-10"
-                      controls
-                      preload="metadata"
-                      onLoadedMetadata={(e) => {
-                        const v = e.currentTarget;
-                        setDubVideoWidth(v.videoWidth);
-                        setDubVideoHeight(v.videoHeight);
-                        setDubDetectedRatio(v.videoWidth < v.videoHeight ? "9:16" : "16:9");
-                      }}
-                      onError={() => {
-                        setVideoPreviewError("Failed to load video preview.");
-                      }}
-                      onClick={() => {
-                        const v = dubPreviewRef.current;
-                        if (!v) return;
-                        v.paused ? v.play() : v.pause();
-                      }}
-                    />
-                    {/* Real-time Subtitle Preview */}
+                    {/* Video Layer — wrapped to control stacking below subtitle */}
+                    <div style={{ position: "absolute", inset: 0, zIndex: 1 }}>
+                      <video
+                        ref={dubPreviewRef}
+                        src={dubPreviewUrl}
+                        className="w-full h-full object-contain rounded-lg cursor-pointer"
+                        controls
+                        preload="metadata"
+                        onLoadedMetadata={(e) => {
+                          const v = e.currentTarget;
+                          setDubVideoWidth(v.videoWidth);
+                          setDubVideoHeight(v.videoHeight);
+                          setDubDetectedRatio(v.videoWidth < v.videoHeight ? "9:16" : "16:9");
+                        }}
+                        onError={() => {
+                          setVideoPreviewError("Failed to load video preview.");
+                        }}
+                        onClick={() => {
+                          const v = dubPreviewRef.current;
+                          if (!v) return;
+                          v.paused ? v.play() : v.pause();
+                        }}
+                      />
+                    </div>
+                    {/* Real-time Subtitle Preview — forced into own compositing layer above video */}
                     {srtEnabled && activeJobId === null && (
                       <div 
                         style={{ 
                           position: "absolute", 
                           inset: 0, 
                           pointerEvents: "none", 
-                          zIndex: 40,
+                          zIndex: 50,
+                          willChange: "transform",
                           fontSize: `${(srtFontSizeContainerPct / 100) * containerHeight}px`
                         }}
                       >
