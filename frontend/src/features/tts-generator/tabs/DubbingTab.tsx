@@ -435,15 +435,17 @@ function DubbingTab({
 
       {/* ── STEP: Video Preview + Settings ── */}
       {dubPreviewUrl && !dubResult && (
-        <div className="flex flex-col lg:flex-row gap-6 pb-20 lg:pb-0 items-stretch relative">
+        <div className="flex flex-col lg:flex-row gap-6 pb-20 lg:pb-4 items-start relative">
           {/* Preview - Left column */}
-          <div className="w-full lg:w-1/2 shrink-0 flex flex-col">
+          <div className="w-full lg:w-1/2 lg:sticky lg:top-4 shrink-0 flex flex-col">
             <div 
-              className={`relative border backdrop-blur-xl transition-all duration-300 rounded-3xl overflow-hidden shadow-2xl flex flex-col w-full mx-auto lg:h-full ${dubDetectedRatio === "9:16" ? "aspect-[9/16]" : "aspect-video"} lg:aspect-auto`} 
+              className="relative border backdrop-blur-xl transition-all duration-300 rounded-3xl overflow-hidden shadow-2xl flex flex-col w-full mx-auto" 
               style={{ 
                 background: cardBg, 
                 borderColor: cardBorder, 
                 boxShadow,
+                aspectRatio: dubDetectedRatio === "9:16" ? "9/16" : "16/9",
+                maxHeight: "calc(100vh - 140px)"
               }}
             >
               <div className="flex items-center justify-between px-3 pt-2 flex-shrink-0">
@@ -452,7 +454,7 @@ function DubbingTab({
                 </div>
                 <button onClick={() => { setDubVideoUrl(""); setDubPreviewUrl(""); setDubVideoFile(null); }} className="text-xs px-2 py-1 rounded hover:bg-red-500/20 text-red-400">✕</button>
               </div>
-              <div className="flex-1 min-h-0 p-2 relative flex justify-center items-center" style={{ isolation: "isolate" }}>
+              <div className="flex-1 min-h-0 p-2 relative flex justify-center items-center">
                 {videoLoading ? (
                   <div className="w-full h-64 rounded-xl flex flex-col items-center justify-center gap-3" style={{ background: "rgba(0,0,0,0.2)", border: `1px dashed ${cardBorder}` }}>
                     <span className="text-xs font-semibold" style={{ color: subtextColor }}>Preparing preview...</span>
@@ -574,7 +576,7 @@ function DubbingTab({
                     })()}
                   </div>
                 ) : (
-                  <div className="relative w-full h-full">
+                  <div className="relative w-full h-full overflow-hidden rounded-2xl">
                     {/* Video container */}
                     <div ref={containerRef} className="w-full h-full rounded-2xl overflow-hidden">
                       {/* Background Layer — blurred cinematic fill */}
@@ -611,31 +613,54 @@ function DubbingTab({
                       />
                     </div>
 
-                    {/* Subtitle Overlay — sibling of video container, stacks above via z-index */}
+                    {/* Real-time Subtitle Preview */}
                     {srtEnabled && activeJobId === null && (
-                      <div
-                        className="absolute inset-0 pointer-events-none"
-                        style={{ zIndex: 50 }}
-                      >
-                        <div
-                          style={{
-                            ...computeSrtPreviewStyle,
-                            fontSize: `${(srtFontSizeContainerPct / 100) * containerHeight}px`,
-                          }}
-                        >
+                      <div style={{ ...computeSrtPreviewStyle.outer }}>
+                        <span style={computeSrtPreviewStyle.inner}>
                           {lang === "mm" ? "ဤနေရာတွင် စာတန်းထိုးကို မြင်ရပါမည်" : "Subtitle preview"}
-                        </div>
+                        </span>
                       </div>
                     )}
 
                     {/* Dubbing Loader Overlay */}
                     {activeJobId !== null && (
-                      <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin" />
-                          <div className="text-center">
-                            <div className="text-white text-sm font-bold">Generating</div>
-                            <div className="text-white text-2xl font-black">{dubProgress}%</div>
+                      <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-4" style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(8px)" }}>
+                        <style>{`
+                          @keyframes loader-rotate {
+                            0% { transform: rotate(90deg); box-shadow: 0 10px 20px 0 #fff inset, 0 20px 30px 0 #ad5fff inset, 0 60px 60px 0 #471eec inset; }
+                            50% { transform: rotate(270deg); box-shadow: 0 10px 20px 0 #fff inset, 0 20px 10px 0 #d60a47 inset, 0 40px 60px 0 #311e80 inset; }
+                            100% { transform: rotate(450deg); box-shadow: 0 10px 20px 0 #fff inset, 0 20px 30px 0 #ad5fff inset, 0 60px 60px 0 #471eec inset; }
+                          }
+                          @keyframes loader-letter-anim {
+                            0%, 100% { opacity: 0.4; transform: translateY(0); }
+                            20% { opacity: 1; transform: scale(1.15); }
+                            40% { opacity: 0.7; transform: translateY(0); }
+                          }
+                          .dub-loader { position: absolute; top: 0; left: 0; width: 100%; aspect-ratio: 1/1; border-radius: 50%; animation: loader-rotate 2s linear infinite; z-index: 0; }
+                          .dub-letter { display: inline-block; opacity: 0.4; animation: loader-letter-anim 2s infinite; font-family: "Inter", sans-serif; font-weight: 700; color: white; }
+                          .dub-letter:nth-child(1) { animation-delay: 0s; }
+                          .dub-letter:nth-child(2) { animation-delay: 0.1s; }
+                          .dub-letter:nth-child(3) { animation-delay: 0.2s; }
+                          .dub-letter:nth-child(4) { animation-delay: 0.3s; }
+                          .dub-letter:nth-child(5) { animation-delay: 0.4s; }
+                          .dub-letter:nth-child(6) { animation-delay: 0.5s; }
+                          .dub-letter:nth-child(7) { animation-delay: 0.6s; }
+                          .dub-letter:nth-child(8) { animation-delay: 0.7s; }
+                          .dub-letter:nth-child(9) { animation-delay: 0.8s; }
+                          .dub-letter:nth-child(10) { animation-delay: 0.9s; }
+                        `}</style>
+                        <div style={{ position: "relative", width: "min(40vw, 180px)", aspectRatio: "1/1", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <div className="dub-loader" />
+                          <div style={{ position: "relative", zIndex: 1, fontSize: "min(4vw, 1.2em)", letterSpacing: "0.1em" }}>
+                            {"GENERATING".split("").map((ch, i) => (
+                              <span key={i} className="dub-letter">{ch}</span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-white text-2xl sm:text-3xl font-black">{dubProgress}%</div>
+                          <div className="text-white/60 text-xs font-semibold mt-1">
+                            {dubProgressMessage || (lang === "mm" ? "ဖန်တီးနေသည်..." : "Generating...")}
                           </div>
                         </div>
                       </div>
@@ -643,7 +668,7 @@ function DubbingTab({
 
                     {/* Video Preview Error */}
                     {videoPreviewError && activeJobId === null && (
-                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 px-4 py-2 rounded-xl" style={{ background: "rgba(220, 38, 38, 0.9)", border: "1px solid rgba(220, 38, 38, 0.5)" }}>
+                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 px-4 py-2 rounded-xl" style={{ background: "rgba(220, 38, 38, 0.9)", border: "1px solid rgba(220, 38, 38, 0.5)" }}>
                         <p className="text-xs font-semibold text-white">{videoPreviewError}</p>
                       </div>
                     )}
@@ -822,11 +847,11 @@ function DubbingTab({
             {srtAccordionOpen && (
             <div className="space-y-5">
               
-              {/* ── Group: Text ── */}
+              {/* ═══ TEXT SETTINGS ═══ */}
               <div>
                 <div className="section-header">
                   <span>✦</span>
-                  <span>{lang === "mm" ? "စာသား" : "TEXT"}</span>
+                  <span>{lang === "mm" ? "စာသား ဆက်တင်" : "TEXT SETTINGS"}</span>
                 </div>
 
                 {/* Font Size */}
@@ -861,6 +886,26 @@ function DubbingTab({
                   </div>
                 </div>
 
+                {/* Position */}
+                <div className="mb-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-xs font-semibold" style={{ color: subtextColor }}>
+                      {lang === "mm" ? "အောက်ခြေမှအကွာ" : "Position"}
+                    </span>
+                    <span className="text-xs font-bold" style={{ color: accent }}>
+                      {srtMarginV}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={srtMarginV}
+                    onChange={e => setSrtMarginV(Number(e.target.value))}
+                    className="premium-slider w-full"
+                  />
+                </div>
+
                 {/* Text Color */}
                 <div>
                   <span className="text-xs font-semibold block mb-2.5" style={{ color: subtextColor }}>
@@ -883,25 +928,19 @@ function DubbingTab({
                 </div>
               </div>
 
-              {/* ── Group: Background (includes Layout) ── */}
+              {/* ═══ BACKGROUND BLUR SETTINGS ═══ */}
               <div className="p-3 rounded-2xl" style={{
                 background: isDark ? "rgba(255,255,255,0.03)" : "rgba(192,111,48,0.03)",
                 backdropFilter: "blur(12px)",
                 WebkitBackdropFilter: "blur(12px)",
                 border: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "rgba(192,111,48,0.08)"}`,
               }}>
-                <div className="section-header">
-                  <span>❖</span>
-                  <span>{lang === "mm" ? "နောက်ခံ" : "BACKGROUND"}</span>
-                </div>
-
-                {/* Background Blur Toggle */}
-                <div className="flex items-center justify-between py-2.5 px-3 rounded-xl mb-3" style={{
+                <div className="flex items-center justify-between py-2 px-3 rounded-xl mb-3" style={{
                   background: isDark ? "rgba(255,255,255,0.03)" : "rgba(192,111,48,0.03)",
                   border: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "rgba(192,111,48,0.08)"}`,
                 }}>
                   <span className="text-xs font-semibold" style={{ color: subtextColor }}>
-                    {lang === "mm" ? "နောက်ခံ Blur" : "Background Blur"}
+                    {lang === "mm" ? "နောက်ခံ Blur ဆက်တင်" : "BACKGROUND BLUR"}
                   </span>
                   <button
                     onClick={() => setSrtBlurBg(!srtBlurBg)}
@@ -920,14 +959,14 @@ function DubbingTab({
                 </div>
 
                 {srtBlurBg && (
-                  <div className="space-y-3 pl-3 ml-1" style={{
+                  <div className="space-y-4 pl-3 ml-1" style={{
                     borderLeft: `2px solid ${isDark ? "rgba(192,111,48,0.2)" : "rgba(192,111,48,0.12)"}`,
                   }}>
                     {/* Blur Opacity */}
                     <div>
                       <div className="flex justify-between items-center mb-2">
                         <span className="text-xs font-semibold" style={{ color: subtextColor }}>
-                          {lang === "mm" ? "အလင်းပိတ်မှု" : "Opacity"}
+                          {lang === "mm" ? "အရောင်ပြင်းမှု" : "Opacity"}
                         </span>
                         <span className="text-xs font-bold" style={{ color: accent }}>
                           {srtBlurOpacity}%
@@ -943,10 +982,54 @@ function DubbingTab({
                       />
                     </div>
 
-                    {/* Blur Color */}
+                    {/* Box Height (Padding) */}
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-xs font-semibold" style={{ color: subtextColor }}>
+                          {lang === "mm" ? "အမြင့်" : "Height"}
+                        </span>
+                        <span className="text-xs font-bold" style={{ color: accent }}>
+                          {srtBoxPadding}
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min="2"
+                        max="20"
+                        value={srtBoxPadding}
+                        onChange={e => setSrtBoxPadding(Number(e.target.value))}
+                        className="premium-slider w-full"
+                      />
+                    </div>
+
+                    {/* Box Width (Full Width) */}
+                    <div className="flex items-center justify-between py-2.5 px-3 rounded-xl" style={{
+                      background: isDark ? "rgba(255,255,255,0.03)" : "rgba(192,111,48,0.03)",
+                      border: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "rgba(192,111,48,0.08)"}`,
+                    }}>
+                      <span className="text-xs font-semibold" style={{ color: subtextColor }}>
+                        {lang === "mm" ? "အပြည့်အစုံ အကျယ်" : "Full Width"}
+                      </span>
+                      <button
+                        onClick={() => setSrtFullWidth(!srtFullWidth)}
+                        className="relative w-11 h-6 rounded-full transition-all duration-300 flex-shrink-0 border-2 border-transparent"
+                        style={{
+                          background: srtFullWidth
+                            ? "linear-gradient(135deg, #C06F30, #F4B34F)"
+                            : isDark ? "rgba(255,255,255,0.1)" : "#E5E0D8",
+                          boxShadow: srtFullWidth ? "0 2px 8px rgba(192,111,48,0.25)" : "inset 0 1px 3px rgba(0,0,0,0.1)",
+                        }}
+                      >
+                        <div
+                          className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${srtFullWidth ? "translate-x-5" : "translate-x-0"}`}
+                        />
+                      </button>
+                    </div>
+
+                    {/* Background Color */}
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-semibold" style={{ color: subtextColor }}>
-                        {lang === "mm" ? "Blur အရောင်" : "Blur Color"}
+                        {lang === "mm" ? "အရောင်" : "Color"}
                       </span>
                       <div className="flex gap-2">
                         <button
@@ -989,89 +1072,15 @@ function DubbingTab({
                             boxShadow: srtBlurColor === "transparent" ? `0 2px 8px rgba(192,111,48,0.2)` : "none",
                           }}
                         >
-                          {lang === "mm" ? "ဖောက်ထွင်း" : "Glass"}
+                          {lang === "mm" ? "မထည့်" : "None"}
                         </button>
                       </div>
                     </div>
                   </div>
                 )}
               </div>
-              </div>
-            )}
-
-            {/* ── Layout (inside Background) ── */}
-            <div className="mt-4 pt-3" style={{ borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "rgba(192,111,48,0.08)"}` }}>
-              <div className="section-header mb-2">
-                <span>◈</span>
-                <span>{lang === "mm" ? "အနေအထား" : "LAYOUT"}</span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                {/* Box Height */}
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-xs font-semibold" style={{ color: subtextColor }}>
-                      {lang === "mm" ? "အမြင့်" : "Height"}
-                    </span>
-                    <span className="text-xs font-bold" style={{ color: accent }}>
-                      {srtBoxPadding}px
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min="2"
-                    max="20"
-                    value={srtBoxPadding}
-                    onChange={e => setSrtBoxPadding(Number(e.target.value))}
-                    className="premium-slider w-full"
-                  />
-                </div>
-
-                {/* Position */}
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-xs font-semibold" style={{ color: subtextColor }}>
-                      {lang === "mm" ? "အနေအထား" : "Position"}
-                    </span>
-                    <span className="text-[10px] font-semibold" style={{ color: subtextColor, opacity: 0.8 }}>
-                      {lang === "mm" ? "အောက် > အပေါ်" : "Bottom > Top"} ({srtMarginV}%)
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={srtMarginV}
-                    onChange={e => setSrtMarginV(Number(e.target.value))}
-                    className="premium-slider w-full"
-                  />
-                </div>
-              </div>
-
-              {/* Full Width Toggle */}
-              <div className="flex items-center justify-between mt-3 py-2.5 px-3 rounded-xl" style={{
-                background: isDark ? "rgba(255,255,255,0.03)" : "rgba(192,111,48,0.03)",
-                border: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "rgba(192,111,48,0.08)"}`,
-              }}>
-                <span className="text-xs font-semibold" style={{ color: subtextColor }}>
-                  {lang === "mm" ? "အပြည့်အစုံ" : "Full Width"}
-                </span>
-                <button
-                  onClick={() => setSrtFullWidth(!srtFullWidth)}
-                  className="relative w-11 h-6 rounded-full transition-all duration-300 flex-shrink-0 border-2 border-transparent"
-                  style={{
-                    background: srtFullWidth
-                      ? "linear-gradient(135deg, #C06F30, #F4B34F)"
-                      : isDark ? "rgba(255,255,255,0.1)" : "#E5E0D8",
-                    boxShadow: srtFullWidth ? "0 2px 8px rgba(192,111,48,0.25)" : "inset 0 1px 3px rgba(0,0,0,0.1)",
-                  }}
-                >
-                  <div
-                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${srtFullWidth ? "translate-x-5" : "translate-x-0"}`}
-                  />
-                </button>
-              </div>
             </div>
+            )}
           </div>
 
           {/* Progress Bar */}
@@ -1190,31 +1199,20 @@ function DubbingTab({
                 : "Auto Creator Generated Video"}
             </div>
             <div className="flex justify-center mt-2 p-2">
-              <div className="relative w-full overflow-hidden rounded-2xl shadow-2xl" style={{ maxHeight: '75vh', aspectRatio: dubDetectedRatio === "9:16" ? "9/16" : "16/9" }}>
-                {/* Background Layer — blurred cinematic fill */}
-                <video
-                  src={dubResult.videoUrl}
-                  className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-30 pointer-events-none"
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  preload="metadata"
-                />
-                {/* Foreground Layer — clean video */}
-                <video
-                  key={dubResult.videoUrl}
-                  ref={dubResultVideoRef}
-                  controls
-                  preload="metadata"
-                  className="absolute inset-0 w-full h-full object-contain rounded-lg z-10"
-                  src={dubResult.videoUrl}
-                  onError={() => {
-                    setVideoPreviewError("Failed to load the generated video. The download link may have expired. Try downloading instead.");
-                    }}
-                  />
-                </div>
-              </div>
+              <video
+                key={dubResult.videoUrl}
+                ref={dubResultVideoRef}
+                controls
+                playsInline
+                preload="auto"
+                className="w-full rounded-2xl shadow-2xl"
+                style={{ maxHeight: '75vh', objectFit: 'contain', background: '#000' }}
+                src={dubResult.videoUrl}
+                onError={() => {
+                  setVideoPreviewError("Failed to load the generated video. The download link may have expired. Try downloading instead.");
+                }}
+              />
+            </div>
             {videoPreviewError && (
               <div className="mt-3 p-3 rounded-xl mx-auto max-w-md" style={{ background: "rgba(220, 38, 38, 0.1)", border: "1px solid rgba(220, 38, 38, 0.3)" }}>
                 <p className="text-xs font-semibold text-center" style={{ color: "#dc2626" }}>{videoPreviewError}</p>

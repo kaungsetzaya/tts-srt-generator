@@ -71,7 +71,7 @@ export interface UseDubbingStateReturn {
   dubPreviewRef: React.RefObject<HTMLVideoElement | null>;
 
   // Computed
-  computeSrtPreviewStyle: React.CSSProperties;
+  computeSrtPreviewStyle: { outer: React.CSSProperties; inner: React.CSSProperties };
   // % of container height used as font-size base for subtitle preview wrapper
   // formula: (srtFontSize / 720) * 100  — mirrors ASS srtFontSize*(h/720)
   srtFontSizeContainerPct: number;
@@ -128,7 +128,7 @@ export function useDubbingState(
   const [srtColor, setSrtColor] = useState("#ffffff");
   const [srtDropShadow, setSrtDropShadow] = useState(true);
   const [srtBlurBg, setSrtBlurBg] = useState(true);
-  const [srtMarginV, setSrtMarginV] = useState(30);
+  const [srtMarginV, setSrtMarginV] = useState(5);
   const [srtBlurOpacity, setSrtBlurOpacity] = useState(50);
   const [srtBlurColor, setSrtBlurColor] = useState<"black" | "white" | "transparent">("black");
   const [srtFullWidth, setSrtFullWidth] = useState(false);
@@ -308,52 +308,41 @@ export function useDubbingState(
   }, [dubResult?.videoUrl]);
 
   const computeSrtPreviewStyle = useMemo(() => {
-    const vw = dubVideoWidth;   // actual video pixel width (for side margin calc)
+    // ── All settings use fixed values — independent of video size ──
+    // Font size is used directly as px, not scaled by video height.
+    // Padding is fixed px, not em-based.
+    // Position is % of container, not % of video height.
 
-    // ── Mirror ASS builder math exactly ──────────────────────────────────
-    // Backend: fontSize = round(srtFontSize * (videoHeight / 720))
-    // The preview container height is proportional to the video aspect ratio.
-    // We express font size as a % of container height so it auto-scales:
-    //   fontSizePct = (srtFontSize / 720) * 100
-    // → px = fontSizePct/100 * containerH = srtFontSize * containerH/720  ✓
-    const fontSizePct = ((srtFontSize ?? 24) / 720) * 100;
+    const bottomPct = Math.max(0, Math.min(95, srtMarginV ?? 5));
+    const bgAlpha = Math.max(0, Math.min(1, (srtBlurOpacity ?? 50) / 100));
+    const showBg = srtBlurBg && srtBlurColor !== "transparent";
+    const padPx = showBg ? Math.round((srtBoxPadding ?? 4) * 2) : 0;
+    const sidePct = srtFullWidth ? 0 : 5;
 
-    // Backend: marginV = (srtMarginV / 100) * videoHeight
-    // In the preview this maps directly to: bottom = srtMarginV% of container height.
-    // The UI slider range is 1–50 (representing % of video height).
-    // Clamp to keep text comfortably inside the video area.
-    const bottomPct = Math.max(2, Math.min(45, srtMarginV ?? 5));
+    const outer: React.CSSProperties = {
+      position: "absolute" as const,
+      left: 0,
+      right: 0,
+      bottom: `${bottomPct}%`,
+      textAlign: "center" as const,
+      pointerEvents: "none" as const,
+    };
 
-    const bgAlpha = srtBlurOpacity / 100;
-
-    // Backend: padPx = lineH * (boxPadding / 20), lineH = fontSize * 1.55
-    // In preview: padEm = (boxPadding / 20) * 1.55  (proportional to font-size)
-    const padEm = Math.max(0.15, ((srtBoxPadding ?? 4) / 20) * 1.55);
-
-    // Side margins: ASS uses 5% of PlayResX for marginL/R when not full-width
-    // We mirror this as CSS padding / maxWidth restriction
-    const sidePct = srtFullWidth ? 0 : (vw > 0 ? 5 : 5); // 5% each side
-
-    return {
-      // fontSize = 1em because the parent wrapper sets the base px font-size
-      // matching backend: srtFontSize * (containerH / 720)
-      fontSize: "1em",
+    const inner: React.CSSProperties = {
+      display: "inline-block" as const,
+      fontSize: `${srtFontSize ?? 24}px`,
       color: srtColor,
       fontWeight: "bold" as const,
       textShadow: srtDropShadow
         ? `0 1px 3px rgba(0,0,0,0.9), 0 -1px 2px rgba(0,0,0,0.6), 1px 0 2px rgba(0,0,0,0.8), -1px 0 2px rgba(0,0,0,0.8)`
         : "none",
-      background: srtBlurBg
+      background: showBg
         ? srtBlurColor === "black"
           ? `rgba(0,0,0,${bgAlpha})`
-          : srtBlurColor === "white"
-            ? `rgba(255,255,255,${bgAlpha})`
-            : "transparent"
+          : `rgba(255,255,255,${bgAlpha})`
         : "transparent",
-      backdropFilter: srtBlurBg && srtBlurColor !== "transparent" ? `blur(${Math.max(2, srtBlurOpacity / 15)}px)` : "none",
-      WebkitBackdropFilter: srtBlurBg && srtBlurColor !== "transparent" ? `blur(${Math.max(2, srtBlurOpacity / 15)}px)` : "none",
       borderRadius: srtBorderRadius === "rounded" ? "6px" : "0px",
-      padding: `${padEm.toFixed(3)}em ${(padEm * 1.5).toFixed(3)}em`,
+      padding: showBg ? `${padPx}px ${Math.round(padPx * 1.5)}px` : "0",
       width: srtFullWidth ? `${100 - sidePct * 2}%` : "fit-content",
       maxWidth: `${100 - sidePct * 2}%`,
       minWidth: 0,
@@ -361,22 +350,10 @@ export function useDubbingState(
       wordBreak: "break-word" as const,
       overflowWrap: "anywhere" as const,
       lineHeight: 1.55,
-      // Absolute positioning anchored to bottom inside the video container
-      position: "absolute" as const,
-      left: `${sidePct}%`,
-      right: `${sidePct}%`,
-      // bottom% mirrors ASS MarginV = (srtMarginV/100)*videoH exactly
-      bottom: `${bottomPct}%`,
-      // No z-index needed — subtitle wrapper in grid cell handles stacking
-      textAlign: "center" as const,
-      pointerEvents: "none" as const,
-      marginLeft: "auto",
-      marginRight: "auto",
     };
-  // Additional non-style values needed by DubbingTab for the wrapper font-size
-  // are exposed via computeSrtFontSizePct below.
+
+    return { outer, inner };
   }, [
-    dubVideoWidth,
     srtFontSize,
     srtMarginV,
     srtBlurOpacity,

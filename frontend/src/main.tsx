@@ -39,15 +39,14 @@ queryClient.getMutationCache().subscribe(event => {
 
 // Use choco.de5.net backend directly
 const getBackendUrl = () => {
-  // Direct choco.de5.net for all deployments
   if (typeof window !== 'undefined') {
     const host = window.location.hostname;
-    // If accessing via choco.de5.net or localhost, use that directly
-    if (host === 'choco.de5.net' || host === 'www.choco.de5.net' || host === 'localhost') {
-      return 'https://choco.de5.net';
+    // Local dev — use relative URLs so requests go to the same host
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return '';
     }
   }
-  // Default to choco.de5.net
+  // Production — use remote backend
   return 'https://choco.de5.net';
 };
 
