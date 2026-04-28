@@ -73,7 +73,13 @@ export async function generateSpeech(
   const srtPath = path.join(OUTPUT_DIR, `${id}.srt`);
   const tmpText = path.join(OUTPUT_DIR, `${id}.txt`);
 
-  await fs.writeFile(tmpText, text, "utf8");
+    const processedText = text
+    .replace(/၊/g, ', ')
+    .replace(/။/g, '. ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
+  await fs.writeFile(tmpText, processedText, "utf8");
 
   if (!text.trim()) {
     console.error(`[TTS Service] Attempted to generate speech for empty text (Voice: ${voice})`);
