@@ -49,6 +49,7 @@ export const ttsRouter = t.router({
 
       await acquireSlot();
       let result;
+      let creditsDeducted = false;
       try {
         const deducted = await deductCredits(
           userId,
@@ -62,6 +63,7 @@ export const ttsRouter = t.router({
             message: "Failed to deduct credits. Please try again."
           });
         }
+        creditsDeducted = true;
 
         result = await ttsService.generateSpeech(
           input.text,
@@ -93,7 +95,7 @@ export const ttsRouter = t.router({
         } catch (dbErr) {
           console.error("[TTS DB Log Error]", dbErr);
         }
-        if (error.code !== "BAD_REQUEST" && error.code !== "NOT_FOUND") {
+        if (creditsDeducted && error.code !== "BAD_REQUEST" && error.code !== "NOT_FOUND") {
           await addCredits(userId, creditsNeeded, "tts_refund", `Refund: ${voiceId} TTS failed`);
         }
         console.error("[TTS] Generation failed:", error);

@@ -69,7 +69,13 @@ export const videoRouter = t.router({
       }
 
       // Ã¢â€â‚¬Ã¢â€â‚¬ Gate 3: Deduct credits BEFORE creating job Ã¢â€â‚¬Ã¢â€â‚¬
-      await deductCredits(userId, 10, "video_dub", `Video Dub: ${input.voice}`);
+      const deducted = await deductCredits(userId, 10, "video_dub", `Video Dub: ${input.voice}`);
+      if (!deducted) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to deduct credits. Please try again.",
+        });
+      }
 
       // Gate 4: Save base64 to temp file, store only path in job (prevents OOM)
       const tempDir = path.join(tmpdir(), `lumix_uploads`);
@@ -179,7 +185,13 @@ export const videoRouter = t.router({
         console.warn("[video.router] Could not fetch video duration:", err.message);
       }
 
-      await deductCredits(userId, 10, "video_dub", `Video Dub Link: ${input.voice}`);
+      const deducted = await deductCredits(userId, 10, "video_dub", `Video Dub Link: ${input.voice}`);
+      if (!deducted) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to deduct credits. Please try again.",
+        });
+      }
 
       // Ã¢â€â‚¬Ã¢â€â‚¬ Gate 4: Create job Ã¢â€â‚¬Ã¢â€â‚¬
       try {
@@ -269,8 +281,14 @@ export const videoRouter = t.router({
       }
 
       // Ã¢â€â‚¬Ã¢â€â‚¬ Gate 3: Deduct credits BEFORE creating job Ã¢â€â‚¬Ã¢â€â‚¬
-      await deductCredits(userId, 5, "video_translate", "Video Translate");
-      
+      const deducted = await deductCredits(userId, 5, "video_translate", "Video Translate");
+      if (!deducted) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to deduct credits. Please try again.",
+        });
+      }
+
       // Gate 4: Save base64 to temp file, store only path in job (prevents OOM)
       const transTempDir = path.join(tmpdir(), `lumix_uploads`);
       await fs.mkdir(transTempDir, { recursive: true });
@@ -351,8 +369,14 @@ export const videoRouter = t.router({
         console.warn("[video.router] Could not fetch video duration:", err.message);
       }
 
-      await deductCredits(userId, 5, "video_translate", "Video Translate Link");
-      
+      const deducted = await deductCredits(userId, 5, "video_translate", "Video Translate Link");
+      if (!deducted) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to deduct credits. Please try again.",
+        });
+      }
+
       // Ã¢â€â‚¬Ã¢â€â‚¬ Gate 4: Create job Ã¢â€â‚¬Ã¢â€â‚¬
       const jobId = createJob("translate_link", { 
         url: input.url,

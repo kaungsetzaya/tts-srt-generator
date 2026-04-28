@@ -23,6 +23,16 @@ function escapeHtml(text: string): string {
 const errorLogLimits = new Map<string, { count: number; resetAt: number }>();
 const ERROR_LOG_MAX_PER_MIN = 10;
 
+// Clean up expired entries every 5 minutes to prevent unbounded growth
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, record] of errorLogLimits.entries()) {
+    if (now > record.resetAt) {
+      errorLogLimits.delete(ip);
+    }
+  }
+}, 5 * 60 * 1000);
+
 function checkErrorLogRateLimit(ip: string): boolean {
   const now = Date.now();
   const record = errorLogLimits.get(ip);

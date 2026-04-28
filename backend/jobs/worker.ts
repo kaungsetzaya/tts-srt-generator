@@ -23,6 +23,18 @@ let worker: Worker | null = null;
 // Track last progress update per job for throttling
 const lastProgressUpdate = new Map<string, number>();
 
+// Track which jobs have already been refunded to prevent double refunds on retries
+const refundedJobs = new Set<string>();
+
+async function safeRefund(jobId: string, userId: string, amount: number, type: string, reason: string) {
+  if (refundedJobs.has(jobId)) {
+    console.log(`[Credits] Skipping duplicate refund for job ${jobId}`);
+    return;
+  }
+  refundedJobs.add(jobId);
+  await addCredits(userId, amount, type, reason);
+}
+
 async function throttledUpdateProgress(job: BullMQJob, progress: number, message: string) {
   const last = lastProgressUpdate.get(job.id!) || 0;
   const now = Date.now();
@@ -40,9 +52,6 @@ async function processDubFile(job: BullMQJob) {
 
     await throttledUpdateProgress(job, 20, "Extracting audio & transcribing...");
     const result = await dubVideoPipeline.execute(buffer, filename, options, job.id!);
-
-    // Clean up temp upload file after reading
-    await fs.unlink(tempFilePath).catch(() => {});
 
     await throttledUpdateProgress(job, 70, "Uploading result...");
     if (result.filename) {
@@ -76,6 +85,7 @@ async function processDubFile(job: BullMQJob) {
     updateJob(job.id!, { status: "completed", progress: 100, result, message: "Completed" });
 
     await recordConversion({
+      jobId: job.id!,
       userId,
       feature: "dub_file",
       voice: options.voice,
@@ -84,11 +94,15 @@ async function processDubFile(job: BullMQJob) {
       status: "success",
     });
 
+    // Clean up temp upload file only after full success (retries need it)
+    await fs.unlink(tempFilePath).catch(() => {});
+
     return result;
   } catch (err: any) {
     console.error(`[Job ${job.id}] Dub file failed:`, err);
-    if (userId) await addCredits(userId, 10, "video_dub_refund", "Refund: Dub job failed");
+    if (userId) await safeRefund(job.id!, userId, 10, "video_dub_refund", "Refund: Dub job failed");
     await recordConversion({
+      jobId: job.id!,
       userId,
       feature: "dub_file",
       status: "fail",
@@ -136,6 +150,7 @@ async function processDubLink(job: BullMQJob) {
     updateJob(job.id!, { status: "completed", progress: 100, result, message: "Completed" });
 
     await recordConversion({
+      jobId: job.id!,
       userId,
       feature: "dub_link",
       voice: options.voice,
@@ -147,8 +162,9 @@ async function processDubLink(job: BullMQJob) {
     return result;
   } catch (err: any) {
     console.error(`[Job ${job.id}] Dub link failed:`, err);
-    if (userId) await addCredits(userId, 10, "video_dub_refund", "Refund: Dub link job failed");
+    if (userId) await safeRefund(job.id!, userId, 10, "video_dub_refund", "Refund: Dub link job failed");
     await recordConversion({
+      jobId: job.id!,
       userId,
       feature: "dub_link",
       status: "fail",
@@ -167,22 +183,25 @@ async function processTranslateFile(job: BullMQJob) {
     await throttledUpdateProgress(job, 20, "Extracting audio & translating...");
     const result = await translateVideoPipeline.execute(buffer, filename, userApiKey, job.id!);
 
-    await fs.unlink(tempFilePath).catch(() => {});
-
     await throttledUpdateProgress(job, 100, "Completed");
     updateJob(job.id!, { status: "completed", progress: 100, result, message: "Completed" });
 
     await recordConversion({
+      jobId: job.id!,
       userId,
       feature: "video_upload",
       text: result.myanmarText,
       status: "success",
     });
 
+    // Clean up temp upload file only after full success (retries need it)
+    await fs.unlink(tempFilePath).catch(() => {});
+
     return result;
   } catch (err: any) {
-    if (userId) await addCredits(userId, 5, "video_translate_refund", "Refund: Translate job failed");
+    if (userId) await safeRefund(job.id!, userId, 5, "video_translate_refund", "Refund: Translate job failed");
     await recordConversion({
+      jobId: job.id!,
       userId,
       feature: "video_upload",
       status: "fail",
@@ -202,6 +221,7 @@ async function processTranslateLink(job: BullMQJob) {
     updateJob(job.id!, { status: "completed", progress: 100, result, message: "Completed" });
 
     await recordConversion({
+      jobId: job.id!,
       userId,
       feature: "video_link",
       text: result.myanmarText,
@@ -211,8 +231,9 @@ async function processTranslateLink(job: BullMQJob) {
     return result;
   } catch (err: any) {
     console.error(`[Job ${job.id}] Translate link failed:`, err);
-    if (userId) await addCredits(userId, 5, "video_translate_refund", "Refund: Translate link job failed");
+    if (userId) await safeRefund(job.id!, userId, 5, "video_translate_refund", "Refund: Translate link job failed");
     await recordConversion({
+      jobId: job.id!,
       userId,
       feature: "video_link",
       status: "fail",
@@ -303,3 +324,12 @@ export function createWorker(): Worker | null {
 export function getWorker(): Worker | null {
   return worker;
 }
+
+// Periodically clean up refundedJobs set to prevent unbounded memory growth
+setInterval(() => {
+  const before = refundedJobs.size;
+  refundedJobs.clear();
+  if (before > 0) {
+    console.log(`[Credits] Cleaned up ${before} refunded job entries`);
+  }
+}, 60 * 60 * 1000); // every 1 hour

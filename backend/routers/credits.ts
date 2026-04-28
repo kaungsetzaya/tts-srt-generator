@@ -68,10 +68,14 @@ export async function addCredits(
 
   try {
     await db.transaction(async (tx: any) => {
-      await tx
+      const result = await tx
         .update(users)
         .set({ credits: sql`credits + ${amount}` })
         .where(eq(users.id, userId));
+
+      if (result.rowsAffected === 0) {
+        throw new Error(`User ${userId} not found — cannot add credits`);
+      }
 
       await tx.insert(creditTransactions).values({
         id: randomUUID(),

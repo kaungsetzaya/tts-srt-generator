@@ -32,6 +32,11 @@ function cleanupOldEntries() {
       videoProcessingLimits.delete(key);
     }
   }
+  for (const [key, entry] of ipRateLimits.entries()) {
+    if (now > entry.resetAt) {
+      ipRateLimits.delete(key);
+    }
+  }
 }
 
 // Start cleanup interval

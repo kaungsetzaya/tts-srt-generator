@@ -9,6 +9,18 @@ import { buildOutputFilename } from "./filename";
 import * as path from "path";
 import { promises as fs } from "fs";
 
+// Track which jobs have already been refunded to prevent double refunds
+const refundedJobs = new Set<string>();
+
+async function safeRefund(jobId: string, userId: string, amount: number, type: string, reason: string) {
+  if (refundedJobs.has(jobId)) {
+    console.log(`[Credits] Skipping duplicate refund for job ${jobId}`);
+    return;
+  }
+  refundedJobs.add(jobId);
+  await addCredits(userId, amount, type, reason);
+}
+
 /**
  * Centrally registers all background job processors.
  * Wiring up jobs to the new modular Pipelines.
@@ -21,9 +33,7 @@ export function registerAllProcessors() {
         try {
             const buffer = await fs.readFile(tempFilePath);
             const result = await dubVideoPipeline.execute(buffer, filename, options, job.id);
-            // Clean up temp upload file after reading
-            await fs.unlink(tempFilePath).catch(() => {});
-            
+
             // Upload to R2 and sign the download URL before completing
             if (result.filename) {
                 const localPath = path.join(process.cwd(), "static", "downloads", result.filename);
@@ -58,6 +68,7 @@ export function registerAllProcessors() {
 
             // Record success
             await recordConversion({
+                jobId: job.id,
                 userId,
                 feature: "dub_file",
                 voice: options.voice,
@@ -65,11 +76,15 @@ export function registerAllProcessors() {
                 durationMs: result.durationMs,
                 status: "success"
             });
+
+            // Clean up temp upload file only after full success (retries need it)
+            await fs.unlink(tempFilePath).catch(() => {});
         } catch (err: any) {
             console.error(`[Job ${job.id}] Failed:`, err);
-            if (userId) await addCredits(userId, 10, "video_dub_refund", "Refund: Dub job failed");
+            if (userId) await safeRefund(job.id, userId, 10, "video_dub_refund", "Refund: Dub job failed");
             
             await recordConversion({
+                jobId: job.id,
                 userId,
                 feature: "dub_file",
                 status: "fail",
@@ -119,6 +134,7 @@ export function registerAllProcessors() {
 
             // Record success
             await recordConversion({
+                jobId: job.id,
                 userId,
                 feature: "dub_link",
                 voice: options.voice,
@@ -128,9 +144,10 @@ export function registerAllProcessors() {
             });
         } catch (err: any) {
             console.error(`[Job ${job.id}] Failed:`, err);
-            if (userId) await addCredits(userId, 10, "video_dub_refund", "Refund: Dub link job failed");
+            if (userId) await safeRefund(job.id, userId, 10, "video_dub_refund", "Refund: Dub link job failed");
             
             await recordConversion({
+                jobId: job.id,
                 userId,
                 feature: "dub_link",
                 status: "fail",
@@ -146,19 +163,22 @@ export function registerAllProcessors() {
         try {
             const buffer = await fs.readFile(tempFilePath);
             const result = await translateVideoPipeline.execute(buffer, filename, userApiKey, job.id);
-            // Clean up temp upload file after reading
-            await fs.unlink(tempFilePath).catch(() => {});
             updateJob(job.id, { status: "completed", progress: 100, result });
 
             await recordConversion({
+                jobId: job.id,
                 userId,
                 feature: "video_upload",
                 text: result.myanmarText,
                 status: "success"
             });
+
+            // Clean up temp upload file only after full success (retries need it)
+            await fs.unlink(tempFilePath).catch(() => {});
         } catch (err: any) {
-            if (userId) await addCredits(userId, 5, "video_translate_refund", "Refund: Translate job failed");
+            if (userId) await safeRefund(job.id, userId, 5, "video_translate_refund", "Refund: Translate job failed");
             await recordConversion({
+                jobId: job.id,
                 userId,
                 feature: "video_upload",
                 status: "fail",
@@ -176,6 +196,7 @@ export function registerAllProcessors() {
             updateJob(job.id, { status: "completed", progress: 100, result });
 
             await recordConversion({
+                jobId: job.id,
                 userId,
                 feature: "video_link",
                 text: result.myanmarText,
@@ -183,8 +204,9 @@ export function registerAllProcessors() {
             });
         } catch (err: any) {
             console.error(`[Job ${job.id}] Failed:`, err);
-            if (userId) await addCredits(userId, 5, "video_translate_refund", "Refund: Translate link job failed");
+            if (userId) await safeRefund(job.id, userId, 5, "video_translate_refund", "Refund: Translate link job failed");
             await recordConversion({
+                jobId: job.id,
                 userId,
                 feature: "video_link",
                 status: "fail",
@@ -194,3 +216,12 @@ export function registerAllProcessors() {
         }
     });
 }
+
+// Periodically clean up refundedJobs set to prevent unbounded memory growth
+setInterval(() => {
+  const before = refundedJobs.size;
+  refundedJobs.clear();
+  if (before > 0) {
+    console.log(`[Credits] Cleaned up ${before} refunded job entries`);
+  }
+}, 60 * 60 * 1000); // every 1 hour
