@@ -251,7 +251,11 @@ export const videoRouter = t.router({
     }),
 
   translate: protectedProcedure
-    .input(z.object({ videoBase64: z.string(), filename: z.string() }))
+    .input(z.object({
+      videoBase64: z.string(),
+      filename: z.string(),
+      userApiKey: z.string().regex(/^[A-Za-z0-9_\-]{20,100}$/).optional(),
+    }))
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.user!.userId;
 
@@ -305,13 +309,22 @@ export const videoRouter = t.router({
       }
 
       // Gate 5: Create job with temp file path only
-      const jobId = createJob("translate_file", { 
-        tempFilePath: transTempFilePath,
-        filename: input.filename,
-        userId 
-      }, userId);
-      
-      return { jobId };
+      try {
+        const jobId = createJob("translate_file", {
+          tempFilePath: transTempFilePath,
+          filename: input.filename,
+          userId,
+          userApiKey: input.userApiKey,
+        }, userId);
+        return { jobId };
+      } catch (jobErr: any) {
+        await addCredits(userId, 5, "video_translate_refund", "Refund: Translate file job creation failed");
+        await fs.unlink(transTempFilePath).catch(() => {});
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to start translation job. Please try again.",
+        });
+      }
     }),
   
   getTranslateJob: protectedProcedure
@@ -332,7 +345,10 @@ export const videoRouter = t.router({
     }),
   
   translateLink: protectedProcedure
-    .input(z.object({ url: z.string() }))
+    .input(z.object({
+      url: z.string(),
+      userApiKey: z.string().regex(/^[A-Za-z0-9_\-]{20,100}$/).optional(),
+    }))
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.user!.userId;
 
@@ -378,12 +394,20 @@ export const videoRouter = t.router({
       }
 
       // Ã¢â€â‚¬Ã¢â€â‚¬ Gate 4: Create job Ã¢â€â‚¬Ã¢â€â‚¬
-      const jobId = createJob("translate_link", { 
-        url: input.url,
-        userId 
-      }, userId);
-      
-      return { jobId };
+      try {
+        const jobId = createJob("translate_link", {
+          url: input.url,
+          userId,
+          userApiKey: input.userApiKey,
+        }, userId);
+        return { jobId };
+      } catch (jobErr: any) {
+        await addCredits(userId, 5, "video_translate_refund", "Refund: Translate link job creation failed");
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to start translation job. Please try again.",
+        });
+      }
     }),
     
   getTranslateLinkJob: protectedProcedure

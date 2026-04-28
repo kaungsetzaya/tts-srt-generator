@@ -23,15 +23,16 @@ let worker: Worker | null = null;
 // Track last progress update per job for throttling
 const lastProgressUpdate = new Map<string, number>();
 
-// Track which jobs have already been refunded to prevent double refunds on retries
-const refundedJobs = new Set<string>();
+// Track which jobs have already been refunded to prevent double refunds
+// Map<jobId, timestamp> — older than 24h entries are cleaned up
+const refundedJobs = new Map<string, number>();
 
 async function safeRefund(jobId: string, userId: string, amount: number, type: string, reason: string) {
   if (refundedJobs.has(jobId)) {
     console.log(`[Credits] Skipping duplicate refund for job ${jobId}`);
     return;
   }
-  refundedJobs.add(jobId);
+  refundedJobs.set(jobId, Date.now());
   await addCredits(userId, amount, type, reason);
 }
 
@@ -325,11 +326,18 @@ export function getWorker(): Worker | null {
   return worker;
 }
 
-// Periodically clean up refundedJobs set to prevent unbounded memory growth
+// Cleanup: 24h ကျော်တာတွေပဲ ဖြုတ် (retry window ထဲ protection မပျောက်)
 setInterval(() => {
-  const before = refundedJobs.size;
-  refundedJobs.clear();
-  if (before > 0) {
-    console.log(`[Credits] Cleaned up ${before} refunded job entries`);
+  const now = Date.now();
+  const DAY = 24 * 60 * 60 * 1000;
+  let cleaned = 0;
+  for (const [jobId, ts] of refundedJobs.entries()) {
+    if (now - ts > DAY) {
+      refundedJobs.delete(jobId);
+      cleaned++;
+    }
+  }
+  if (cleaned > 0) {
+    console.log(`[Credits] Cleaned up ${cleaned} refunded job entries (remaining ${refundedJobs.size})`);
   }
 }, 60 * 60 * 1000); // every 1 hour

@@ -9,7 +9,6 @@ import { z } from "zod";
 import { t } from "./routers/trpc";
 import { authRouter } from "./routers/auth.router";
 import { ttsRouter } from "./routers/tts.router";
-import { dubRouter } from "./routers/dub.router";
 import { videoRouter } from "./routers/video.router";
 import { jobsRouter } from "./routers/jobs.router";
 import { historyRouter } from "./routers/history.router";
@@ -50,7 +49,6 @@ const aiRouter = t.router({
 export const appRouter = t.router({
   auth: authRouter,
   tts: ttsRouter,
-  dub: dubRouter,
   video: videoRouter,
   jobs: jobsRouter,
   history: historyRouter,

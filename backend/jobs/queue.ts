@@ -49,7 +49,7 @@ export function initVideoQueue(): Queue | null {
       defaultJobOptions: {
         removeOnComplete: { count: 100, age: 3600 },
         removeOnFail: { count: 50, age: 86400 },
-        attempts: 2,
+        attempts: 1,        // retry မလုပ်တော့ = double refund မဖြစ်
         backoff: {
           type: "exponential",
           delay: 5000,

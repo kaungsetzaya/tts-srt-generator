@@ -24,17 +24,28 @@ export async function deductCredits(
 
   try {
     await db.transaction(async (tx: any) => {
-      const result = await tx
+      // ── First verify balance ──
+      const userRow = await tx
+        .select({ credits: users.credits })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      if (!userRow[0]) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "User not found." });
+      }
+      if (userRow[0].credits < amount) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Insufficient credits. Need ${amount}, have ${userRow[0].credits}.`,
+        });
+      }
+
+      // ── Atomic deduct ──
+      await tx
         .update(users)
         .set({ credits: sql`credits - ${amount}` })
         .where(and(eq(users.id, userId), gte(users.credits, amount)));
-
-      if (result.rowsAffected === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: `Insufficient credits. Need ${amount}.`,
-        });
-      }
 
       await tx.insert(creditTransactions).values({
         id: randomUUID(),
