@@ -1176,7 +1176,7 @@ function DubbingTab({
 
       {/* Dubbing Result — Final Video + Download */}
       {dubResult && (
-        <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pb-6">
+        <div className="flex flex-col gap-3" style={{ height: 'calc(100vh - 140px)', maxHeight: 'calc(100vh - 140px)' }}>
           {/* Video Player */}
           <div
             className={box}
@@ -1184,6 +1184,10 @@ function DubbingTab({
               background: cardBg,
               borderColor: cardBorder,
               boxShadow,
+              flex: 1,
+              minHeight: 0,
+              display: 'flex',
+              flexDirection: 'column',
             }}
           >
             <div
@@ -1192,21 +1196,23 @@ function DubbingTab({
                 background: labelBg,
                 color: accent,
                 borderColor: cardBorder,
+                flexShrink: 0,
               }}
             >
               {lang === "mm"
                 ? "AI ဖန်တီးပြီး ဗီဒီယို"
                 : "Auto Creator Generated Video"}
             </div>
-            <div className="flex justify-center mt-2 p-2">
+            <div className="flex justify-center mt-2 p-2" style={{ flex: 1, minHeight: 0 }}>
               <video
                 key={dubResult.videoUrl}
                 ref={dubResultVideoRef}
                 controls
                 playsInline
                 preload="auto"
-                className="w-full rounded-2xl shadow-2xl"
-                style={{ maxHeight: '75vh', objectFit: 'contain', background: '#000' }}
+                crossOrigin="anonymous"
+                className="w-full h-full rounded-2xl shadow-2xl"
+                style={{ objectFit: 'contain', background: '#000', maxHeight: '100%' }}
                 src={dubResult.videoUrl}
                 onError={() => {
                   setVideoPreviewError("Failed to load the generated video. The download link may have expired. Try downloading instead.");
@@ -1214,14 +1220,14 @@ function DubbingTab({
               />
             </div>
             {videoPreviewError && (
-              <div className="mt-3 p-3 rounded-xl mx-auto max-w-md" style={{ background: "rgba(220, 38, 38, 0.1)", border: "1px solid rgba(220, 38, 38, 0.3)" }}>
+              <div className="mt-2 p-2 rounded-xl mx-auto max-w-md flex-shrink-0" style={{ background: "rgba(220, 38, 38, 0.1)", border: "1px solid rgba(220, 38, 38, 0.3)" }}>
                 <p className="text-xs font-semibold text-center" style={{ color: "#dc2626" }}>{videoPreviewError}</p>
               </div>
             )}
-            <div className="flex items-center justify-center gap-3 mt-4 flex-wrap">
+            <div className="flex items-center justify-center gap-3 mt-3 flex-wrap flex-shrink-0">
               <button
                 onClick={handleDubDownload}
-                className="flex items-center gap-2 px-5 sm:px-6 py-3 rounded-xl font-black text-sm uppercase tracking-wider transition-all hover:scale-105 shadow-lg text-white"
+                className="flex items-center gap-2 px-5 sm:px-6 py-2.5 rounded-xl font-black text-sm uppercase tracking-wider transition-all hover:scale-105 shadow-lg text-white"
                 style={{
                   background: `linear-gradient(135deg, ${accent}, ${accentSecondary})`,
                   boxShadow: `0 4px 12px rgba(0,0,0,0.15)`,
@@ -1230,14 +1236,13 @@ function DubbingTab({
                 <Download className="w-5 h-5" />{" "}
                 {lang === "mm" ? "MP4 ဒေါင်းလုတ်" : "Download MP4"}
               </button>
-
             </div>
           </div>
 
           {/* Reset */}
           <button
             onClick={handleDubReset}
-            className="w-full py-3 rounded-xl border font-bold text-xs uppercase tracking-wider transition-colors hover:opacity-100 opacity-70"
+            className="w-full py-2.5 rounded-xl border font-bold text-xs uppercase tracking-wider transition-colors hover:opacity-100 opacity-70 flex-shrink-0"
             style={{ borderColor: cardBorder, color: subtextColor }}
           >
             {lang === "mm"

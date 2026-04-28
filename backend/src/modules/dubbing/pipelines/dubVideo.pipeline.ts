@@ -3,6 +3,7 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import { tmpdir } from 'os';
 
+import ffmpeg from 'fluent-ffmpeg';
 import { ffmpegService } from '../../media/services/ffmpeg.service';
 import { getVideoInfo, downloadVideo } from '../../media/services/downloader.service';
 import { whisperService } from '../../translation/services/whisper.service';
@@ -435,30 +436,59 @@ export class DubVideoPipeline {
       console.log(`TOTAL: video=${totalVideoMs}ms audio=${totalAudioMs}ms diff=${totalVideoMs - totalAudioMs}ms`);
       console.log('=============\n');
 
-      // ── Concatenate video track ──
-      const processedVideoPath = path.join(tempDir, 'processed_video.mp4');
-      await ffmpegService.concatVideoFiles(slots.map(s => s.videoFile), processedVideoPath);
+      // ── Step 7: Final Audio Mastering & Video Merge ──
+      const videoListPath = path.join(tempDir, 'video_list.txt');
+      const audioListPath = path.join(tempDir, 'audio_list.txt');
 
-      // ── Concatenate audio track ──
-      const ttsTrackPath = path.join(tempDir, 'tts_track.wav');
-      await ffmpegService.concatAudioFiles(slots.map(s => s.audioFile), ttsTrackPath);
+      const videoEntries = slots.map(s => `file '${s.videoFile}'`).join('\n');
+      const audioEntries = slots.map(s => `file '${s.audioFile}'`).join('\n');
 
-      // ── Final duration check ──
-      const finalVideoDurMs = await ffmpegService.getAudioDurationMs(processedVideoPath);
-      const finalAudioDurMs = await ffmpegService.getAudioDurationMs(ttsTrackPath);
-      console.log(`[Dub] final video=${finalVideoDurMs}ms audio=${finalAudioDurMs}ms`);
+      await fs.writeFile(videoListPath, videoEntries);
+      await fs.writeFile(audioListPath, audioEntries);
 
-      let finalAudioPath = ttsTrackPath;
-      const finalDiff = finalVideoDurMs - finalAudioDurMs;
-      if (finalDiff > 50) {
-        finalAudioPath = path.join(tempDir, 'tts_padded.wav');
-        await ffmpegService.padAudioWithSilence(ttsTrackPath, finalAudioPath, finalVideoDurMs);
-        console.log(`[Dub] padded audio +${finalDiff}ms`);
-      } else if (finalDiff < -50) {
-        finalAudioPath = path.join(tempDir, 'tts_trimmed.wav');
-        await ffmpegService.trimAudioToduration(ttsTrackPath, finalAudioPath, finalVideoDurMs);
-        console.log(`[Dub] trimmed audio ${finalDiff}ms`);
-      }
+      const mergedVideoPath = path.join(tempDir, 'merged_video.mp4');
+
+      // ၁။ Video အပိုင်းအစလေးများကို တစ်ဆက်တည်း ပေါင်းမည် (No Quality Loss)
+      await new Promise<void>((resolve, reject) => {
+          ffmpeg(videoListPath)
+              .inputOptions(['-f', 'concat', '-safe', '0'])
+              .outputOptions(['-c', 'copy'])
+              .on('end', () => resolve())
+              .on('error', reject)
+              .save(mergedVideoPath);
+      });
+
+      const masteredAudioPath = path.join(tempDir, 'mastered_audio.wav');
+
+      // ၂။ Audio အပိုင်းအစများကို ပေါင်းပြီး Studio အဆင့် အသံညှိမည် (Loudnorm)
+      // ဤအဆင့်ကြောင့် အသံတိုး/ကျယ် မညီမညာဖြစ်ခြင်း လုံးဝ ပျောက်ကွယ်သွားပါမည်
+      await new Promise<void>((resolve, reject) => {
+          ffmpeg(audioListPath)
+              .inputOptions(['-f', 'concat', '-safe', '0'])
+              .audioFilters("loudnorm=I=-16:LRA=11:TP=-1.5")
+              .on('end', () => resolve())
+              .on('error', reject)
+              .save(masteredAudioPath);
+      });
+
+      const finalVideoPath = path.join(tempDir, 'final_mixed.mp4');
+
+      // ၃။ ပေါင်းစပ်ထားသော Video နှင့် Mastered Audio တို့ကို အချောသတ် ပေါင်းစပ်မည်
+      await new Promise<void>((resolve, reject) => {
+          ffmpeg()
+              .input(mergedVideoPath)
+              .input(masteredAudioPath)
+              .outputOptions([
+                  '-c:v', 'copy',      // Video အရည်အသွေးကို မကျစေဘဲ မူရင်းအတိုင်း ကူးယူမည်
+                  '-c:a', 'aac',       // Audio ကို MP4 နှင့် ကိုက်ညီသော aac သို့ ပြောင်းမည်
+                  '-b:a', '192k',      // Audio Bitrate ကို ကြည်လင်ပြတ်သားစွာ ထားမည်
+                  '-map', '0:v:0',
+                  '-map', '1:a:0'
+              ])
+              .on('end', () => resolve())
+              .on('error', reject)
+              .save(finalVideoPath);
+      });
 
       // ── Build subtitles from slot timing ──
       const maxCharsPerLine = Math.max(12, Math.round(40 - (options.srtFontSize ?? 24) * 0.5));
@@ -487,8 +517,7 @@ export class DubVideoPipeline {
         curMs += slot.durationMs;
       }
 
-      // ── Merge & export ──
-      if (jobId) updateJob(jobId, { progress: 85, message: "Merging video + audio..." });
+      // ၄။ အချိန်ကိုက် SRT မှတစ်ဆင့် မြန်မာစာတန်းထိုး (Hardsub) ထည့်သွင်းမည်
       const fontPath = process.env.MYANMAR_FONT_PATH ||
         (process.platform === 'win32'
           ? 'C:/Windows/Fonts/mmrtext.ttf'
@@ -501,18 +530,31 @@ export class DubVideoPipeline {
         await fs.writeFile(tempAssPath, assContent);
       }
 
-      await ffmpegService.mergeDubbedVideoSimple(
-        processedVideoPath,
-        finalAudioPath,
-        tempOutputPath,
-        {
-          subtitlesPath: hasSubtitles ? tempAssPath : undefined,
-          fontPath:      hasSubtitles ? fontPath    : undefined,
-          onProgress: (p) => {
-            if (jobId) updateJob(jobId, { progress: 85 + Math.floor(p / 100 * 10), message: "Finalizing..." });
-          },
-        }
-      );
+      if (jobId) updateJob(jobId, { progress: 85, message: "Merging video + audio..." });
+
+      if (hasSubtitles) {
+        await new Promise<void>((resolve, reject) => {
+          ffmpeg(finalVideoPath)
+            .videoFilters(`ass=${tempAssPath.replace(/\\/g, '/')}`)
+            .outputOptions(['-c:a', 'copy'])
+            .on('end', () => resolve())
+            .on('error', reject)
+            .save(tempOutputPath);
+        });
+      } else {
+        await fs.copyFile(finalVideoPath, tempOutputPath);
+      }
+
+      // Mastered Audio ကို သီးသန့် Save ရန် (MP3 အဖြစ်)
+      const finalAudioPath = path.join(tempDir, 'output.mp3');
+      await new Promise<void>((resolve, reject) => {
+          ffmpeg(masteredAudioPath)
+              .audioCodec('libmp3lame')
+              .audioBitrate('128k')
+              .on('end', () => resolve())
+              .on('error', reject)
+              .save(finalAudioPath);
+      });
 
       // ── Save output ──
       const finalFilename = buildOutputFilename(shortId, "DUB", "mp4");

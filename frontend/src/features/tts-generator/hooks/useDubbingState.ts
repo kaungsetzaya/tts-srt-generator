@@ -475,12 +475,26 @@ export function useDubbingState(
     reader.readAsDataURL(dubVideoFile);
   };
 
-  const handleDubDownload = () => {
+  const handleDubDownload = async () => {
+    const filename = `Dubbed_Myanmar_${Date.now()}.mp4`;
     if (dubResult?.videoUrl) {
-      const a = document.createElement("a");
-      a.href = dubResult.videoUrl;
-      a.download = `Dubbed_Myanmar_${Date.now()}.mp4`;
-      a.click();
+      try {
+        // Fetch as blob so cross-origin URLs can be downloaded reliably
+        const res = await fetch(dubResult.videoUrl);
+        if (!res.ok) throw new Error("Failed to fetch video");
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch {
+        // Fallback: open in new tab if fetch fails (e.g. CORS)
+        window.open(dubResult.videoUrl, "_blank");
+      }
     } else if (dubResult?.videoBase64) {
       const binary = atob(dubResult.videoBase64);
       const bytes = new Uint8Array(binary.length);
@@ -489,7 +503,7 @@ export function useDubbingState(
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `Dubbed_Myanmar_${Date.now()}.mp4`;
+      a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
     }

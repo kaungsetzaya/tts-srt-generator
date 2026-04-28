@@ -147,7 +147,7 @@ export class GeminiService {
      /**
       * Make text shorter to fit time slot
       */
-    async makeShorter(text: string, slotMs: number, userApiKey?: string): Promise<string | null> {
+     async makeShorter(text: string, slotMs: number, userApiKey?: string): Promise<string | null> {
         const allKeys = this.getAllKeys(userApiKey);
         // 90% of slot at 1.15x speed = effective target
         const targetSec = ((slotMs * 0.9) / 1000).toFixed(1);
@@ -169,6 +169,8 @@ export class GeminiService {
                             `Myanmar dubbing text editor. ` +
                             `Shorten text to fit time slot but keep at least 70% of the meaning. ` +
                             `Never make it TOO short — aim for natural speech pace. ` +
+                            `Return ONLY the translated Burmese text. ` +
+                            `ABSOLUTELY NO conversational filler, notes, or explanations like "Here is the shortened text" or "seconds" or "စက္ကန့်" or "ညှိပေး". ` +
                             `Return ONLY the Myanmar text.`
                         }] }
                     };

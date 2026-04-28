@@ -70,9 +70,8 @@ export async function generateSilenceWav(durationMs: number, outputPath: string)
   const durationSec = (durationMs / 1000).toFixed(6);
   return new Promise((resolve, reject) => {
     ffmpeg()
-      .input(`anullsrc=r=${AUDIO_SAMPLE_RATE}:cl=mono`)
+      .input(`anoisesrc=r=${AUDIO_SAMPLE_RATE}:d=${durationSec}:c=white:a=0.00005`)
       .inputFormat('lavfi')
-      .duration(parseFloat(durationSec))
       .audioCodec('pcm_s16le')
       .audioFrequency(AUDIO_SAMPLE_RATE)
       .audioChannels(AUDIO_CHANNELS)
