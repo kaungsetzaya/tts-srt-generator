@@ -14,12 +14,48 @@ import { promises as fs } from "fs";
 const refundedJobs = new Map<string, number>();
 
 async function safeRefund(jobId: string, userId: string, amount: number, type: string, reason: string) {
+  // ── Fast path: in-memory dedupe ──
   if (refundedJobs.has(jobId)) {
-    console.log(`[Credits] Skipping duplicate refund for job ${jobId}`);
+    console.log(`[Credits] Skipping duplicate refund for job ${jobId} (memory)`);
     return;
   }
+
+  // ── DB-level dedupe: survives server restart / worker crash ──
+  try {
+    const { getDb } = await import("../../../db");
+    const { creditTransactions } = await import("../../../../shared/drizzle/schema");
+    const { eq, and } = await import("drizzle-orm");
+    const db = await getDb();
+    if (db) {
+      const description = `${reason} (job:${jobId})`;
+      const existing = await db
+        .select({ id: creditTransactions.id })
+        .from(creditTransactions)
+        .where(
+          and(
+            eq(creditTransactions.userId, userId),
+            eq(creditTransactions.type, type),
+            eq(creditTransactions.description, description)
+          )
+        )
+        .limit(1);
+      if (existing.length > 0) {
+        console.log(`[Credits] Skipping duplicate refund for job ${jobId} (db)`);
+        refundedJobs.set(jobId, Date.now());
+        return;
+      }
+      // Only proceed if DB check passed
+      refundedJobs.set(jobId, Date.now());
+      await addCredits(userId, amount, type, description);
+      return;
+    }
+  } catch (e: any) {
+    console.error(`[Credits] DB dedupe check failed for job ${jobId}:`, e.message);
+  }
+
+  // Fallback if DB check failed: still try to refund (better than losing user credits)
   refundedJobs.set(jobId, Date.now());
-  await addCredits(userId, amount, type, reason);
+  await addCredits(userId, amount, type, `${reason} (job:${jobId})`);
 }
 
 /**
