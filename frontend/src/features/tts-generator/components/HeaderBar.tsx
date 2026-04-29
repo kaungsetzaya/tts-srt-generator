@@ -40,32 +40,6 @@ const HeaderBar: React.FC<HeaderBarProps> = React.memo(({
 }) => {
   return (
     <div className="flex flex-nowrap items-center justify-between py-1 px-2 sm:px-4 w-full h-full gap-1 sm:gap-2 overflow-hidden">
-      {/* Mobile Logo */}
-      <div className="flex items-center gap-2 md:hidden">
-        <div
-          className="w-8 h-8 rounded-lg flex items-center justify-center shadow-md"
-          style={{
-            background: `linear-gradient(135deg, ${accent}30, ${accentSecondary}20)`,
-            border: `1px solid ${isDark ? "rgba(192,111,48,0.5)" : "rgba(192,111,48,0.4)"}`,
-          }}
-        >
-          <span className="text-sm font-black" style={{ color: "#C06F30", textShadow: `0 0 8px ${accent}60` }}>
-            L
-          </span>
-        </div>
-        <span
-          className="text-sm font-black tracking-widest"
-          style={{
-            background: "linear-gradient(135deg, #C06F30, #F4B34F)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-          }}
-        >
-          LUMIX
-        </span>
-      </div>
-
       <div className="flex items-center gap-1 sm:gap-2 sm:ml-auto">
         {subLoading ? (
           <div className="flex items-center gap-2 px-2 py-1.5 rounded-xl">
