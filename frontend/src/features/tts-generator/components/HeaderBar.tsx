@@ -39,123 +39,126 @@ const HeaderBar: React.FC<HeaderBarProps> = React.memo(({
   t,
 }) => {
   return (
-    <div className="flex flex-nowrap items-center justify-between py-1 px-2 sm:px-4 w-full h-full gap-1 sm:gap-2 overflow-hidden">
-      <div className="flex items-center gap-1 sm:gap-2 sm:ml-auto">
-        {subLoading ? (
-          <div className="flex items-center gap-2 px-2 py-1.5 rounded-xl">
-            <div className="w-10 h-3 rounded animate-pulse" style={{ background: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)" }} />
-            <div className="w-5 h-3 rounded animate-pulse" style={{ background: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)" }} />
-          </div>
-        ) : (
+    <div className="flex items-center justify-end w-full h-full gap-1.5 sm:gap-3 px-2 sm:px-4">
+      {/* ── Credits / Plan Pill ── */}
+      {subLoading ? (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl">
+          <div className="w-8 h-3 rounded animate-pulse" style={{ background: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)" }} />
+        </div>
+      ) : (
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Plan badge — compact on mobile */}
+          {hasActiveSub && (
+            <span
+              className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider"
+              style={{
+                background: "linear-gradient(135deg, #C06F30, #F4B34F)",
+                color: "#fff",
+                boxShadow: "0 1px 4px rgba(192,111,48,0.3)",
+              }}
+            >
+              {isAdmin ? "Admin" : subStatus?.plan === "trial" ? (lang === "mm" ? "အစမ်း" : "Trial") : subStatus?.plan}
+            </span>
+          )}
+
+          {/* Credits display */}
           <div
-            className="flex items-center gap-1.5 sm:gap-3 px-2 sm:px-4 py-1 sm:py-2 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-semibold relative overflow-hidden"
+            className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-xs font-semibold"
             style={{
               background: hasActiveSub
-                ? "linear-gradient(135deg, rgba(192,111,48,0.25) 0%, rgba(244,179,79,0.15) 50%, rgba(192,111,48,0.25) 100%)"
+                ? isDark
+                  ? "rgba(192,111,48,0.15)"
+                  : "rgba(244,179,79,0.10)"
                 : isDark
-                  ? "rgba(75,85,99,0.3)"
-                  : "rgba(229,231,235,0.5)",
-              border: `1px solid ${hasActiveSub ? "rgba(244,179,79,0.5)" : "rgba(156,163,175,0.3)"}`,
+                  ? "rgba(255,255,255,0.06)"
+                  : "rgba(0,0,0,0.04)",
+              border: `1px solid ${hasActiveSub ? "rgba(244,179,79,0.35)" : isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)"}`,
             }}
           >
-            {hasActiveSub && (
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" style={{ animationDuration: "2s" }} />
-            )}
-            {hasActiveSub ? (
-              <>
-                <div className="relative z-10 flex items-center gap-1 sm:gap-2">
-                  <span
-                    className="px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-md text-[9px] sm:text-xs font-bold uppercase tracking-wider"
-                    style={{
-                      background: "linear-gradient(135deg, #C06F30 0%, #F4B34F 100%)",
-                      color: "#fff",
-                      boxShadow: "0 2px 8px rgba(192,111,48,0.4)",
-                    }}
-                  >
-                    {isAdmin ? "Admin" : subStatus?.plan === "trial" ? (lang === "mm" ? "အစမ်း" : "Trial") : subStatus?.plan}
-                  </span>
-                </div>
-                <div className="relative z-10 hidden sm:block flex-1 h-2 max-w-[100px] rounded-full overflow-hidden" style={{ background: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.1)" }}>
-                  <motion.div
-                    className="h-full rounded-full"
-                    initial={{ width: 0 }}
-                    animate={{ width: isAdmin ? "100%" : `${Math.min(100, ((subStatus?.credits ?? 0) / (planLimits?.maxCredits ?? 800)) * 100)}%` }}
-                    transition={{ duration: 0.8, ease: "easeOut" }}
-                    style={{
-                      background: "linear-gradient(90deg, #C06F30, #F4B34F, #FCD34D)",
-                      boxShadow: "0 0 10px rgba(244,179,79,0.5)",
-                    }}
-                  />
-                </div>
-                <div className="relative z-10 flex items-center gap-1 sm:gap-2 font-bold" style={{ color: isDark ? "#F4B34F" : "#B45309" }}>
-                  <span className="text-[11px] sm:text-sm">{isAdmin ? "Admin" : subStatus?.credits}</span>
-                  {!isAdmin && <span className="hidden sm:inline text-xs opacity-70 uppercase">credits</span>}
-                </div>
-              </>
-            ) : (
-              <>
-                <span className="relative z-10 text-[10px] sm:text-sm font-medium" style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
-                  {me ? (lang === "mm" ? "အခမဲ့" : "Free") : ""}
-                </span>
-                <div className="relative z-10 hidden sm:block flex-1 h-2 max-w-[100px] rounded-full overflow-hidden" style={{ background: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)" }}>
-                  <div className="h-full rounded-full" style={{ width: "0%", background: isDark ? "#4B5563" : "#9CA3AF" }} />
-                </div>
-                <span className="relative z-10 text-[11px] sm:text-sm" style={{ color: isDark ? "#6B7280" : "#9CA3AF" }}>
-                  {subStatus?.credits ?? 0}
-                </span>
-              </>
+            {/* Credit progress bar — desktop only */}
+            <div className="hidden sm:block w-12 h-1.5 rounded-full overflow-hidden" style={{ background: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.06)" }}>
+              <motion.div
+                className="h-full rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: isAdmin ? "100%" : `${Math.min(100, ((subStatus?.credits ?? 0) / (planLimits?.maxCredits ?? 800)) * 100)}%` }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+                style={{
+                  background: "linear-gradient(90deg, #C06F30, #F4B34F)",
+                }}
+              />
+            </div>
+
+            {/* Credit number */}
+            <span className="font-bold tabular-nums" style={{ color: hasActiveSub ? "#F4B34F" : isDark ? "#9CA3AF" : "#6B7280" }}>
+              {isAdmin ? "∞" : subStatus?.credits ?? 0}
+            </span>
+            {!isAdmin && (
+              <span className="hidden sm:inline text-[10px] opacity-60 uppercase">cr</span>
             )}
           </div>
-        )}
+        </div>
+      )}
+
+      {/* Divider */}
+      <div className="hidden sm:block w-px h-5 mx-0.5" style={{ background: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)" }} />
+
+      {/* ── Action Buttons ── */}
+      <div className="flex items-center gap-1 sm:gap-1.5">
+        {/* Username — desktop only */}
         <span
-          className="hidden sm:inline text-xs font-bold px-1.5 sm:px-2.5 py-1 rounded-full"
+          className="hidden sm:inline text-[11px] font-medium px-2 py-1 rounded-full"
           style={{
-            background: isDark ? "rgba(192,111,48,0.1)" : "rgba(244,179,79,0.06)",
-            color: accent,
+            background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)",
+            color: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)",
           }}
         >
           @{(me as any)?.username || me?.name}
         </span>
-        <div className="w-px h-5 mx-0.5" style={{ background: isDark ? "rgba(192,111,48,0.3)" : "rgba(192,111,48,0.12)" }} />
+
+        {/* Lang toggle */}
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setLang(lang === "mm" ? "en" : "mm")}
-          className="px-2.5 py-1 text-xs font-black rounded-lg uppercase tracking-widest transition-all"
+          className="w-8 h-8 sm:w-auto sm:h-auto sm:px-2.5 sm:py-1 flex items-center justify-center text-[11px] font-black rounded-lg uppercase tracking-wider transition-all"
           style={{
-            border: `1px solid ${isDark ? "rgba(192,111,48,0.35)" : "rgba(192,111,48,0.15)"}`,
-            background: isDark ? "rgba(192,111,48,0.1)" : "rgba(255,255,255,0.7)",
+            border: `1px solid ${isDark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.08)"}`,
+            background: isDark ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.6)",
             color: textColor,
           }}
         >
           {lang === "mm" ? "EN" : "MM"}
         </motion.button>
+
+        {/* Theme toggle */}
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={toggleTheme}
-          className="p-1.5 rounded-lg transition-all flex items-center justify-center"
+          className="w-8 h-8 flex items-center justify-center rounded-lg transition-all"
           style={{
-            border: `1px solid ${isDark ? "rgba(192,111,48,0.35)" : "rgba(192,111,48,0.15)"}`,
-            background: isDark ? "rgba(192,111,48,0.1)" : "rgba(255,255,255,0.7)",
+            border: `1px solid ${isDark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.08)"}`,
+            background: isDark ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.6)",
             color: textColor,
           }}
         >
-          {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          {isDark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
         </motion.button>
+
+        {/* Logout */}
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => logoutMutation.mutate()}
-          className="flex items-center gap-1.5 text-xs px-2.5 sm:px-3 py-1.5 rounded-lg font-bold uppercase tracking-wider transition-all"
+          className="w-8 h-8 sm:w-auto sm:h-auto sm:px-2.5 sm:py-1.5 flex items-center justify-center gap-1 rounded-lg transition-all"
           style={{
-            border: "1px solid rgba(239,68,68,0.3)",
-            background: isDark ? "rgba(239,68,68,0.08)" : "rgba(239,68,68,0.05)",
+            border: "1px solid rgba(239,68,68,0.2)",
+            background: isDark ? "rgba(239,68,68,0.06)" : "rgba(239,68,68,0.03)",
             color: "#ef4444",
           }}
         >
           <LogOut className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">{t.logout}</span>
+          <span className="hidden sm:inline text-[11px] font-bold">{t.logout}</span>
         </motion.button>
       </div>
     </div>
