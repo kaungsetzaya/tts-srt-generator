@@ -93,7 +93,7 @@ const HeaderBar: React.FC<HeaderBarProps> = React.memo(({
               {isAdmin ? "∞" : subStatus?.credits ?? 0}
             </span>
             {!isAdmin && (
-              <span className="hidden sm:inline text-[10px] opacity-60 uppercase">cr</span>
+              <span className="text-[9px] sm:text-[10px] opacity-50 uppercase">cr</span>
             )}
           </div>
         </div>
