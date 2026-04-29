@@ -8,7 +8,8 @@ import { ffmpegService } from '../../media/services/ffmpeg.service';
 import { getVideoInfo, downloadVideo } from '../../media/services/downloader.service';
 import { whisperService } from '../../translation/services/whisper.service';
 import { geminiService } from '../../translation/services/gemini.service';
-import { ttsService, CHARACTER_VOICES, CharacterKey, VoiceKey } from '../../tts/services/tts.service';
+import { ttsService } from '../../tts/tts.service';
+import { TIER2_VOICES, type VoiceId, type Tier2VoiceId } from '../../tts/voices';
 import { assBuilderService } from '../services/assBuilder.service';
 import { isAllowedVideoUrl } from '../../../../_core/security';
 import { updateJob } from '../../../../jobs';
@@ -221,23 +222,12 @@ export class DubVideoPipeline {
           .trim();
 
         console.log(`[TTS] seg ${seg.index}: "${ttsText.slice(0, 40)}..."`);
-        const isChar = options.voice in CHARACTER_VOICES;
-        let audioBuffer: Buffer;
-        if (isChar) {
-          const r = await ttsService.generateSpeechWithCharacter(
-            ttsText, options.voice as CharacterKey,
-            1.15,
-            "16:9", options.pitch ?? 0
-          );
-          audioBuffer = r.audioBuffer;
-        } else {
-          const r = await ttsService.generateSpeech(
-            ttsText, options.voice as VoiceKey,
-            1.15,
-            options.pitch ?? 0, "16:9"
-          );
-          audioBuffer = r.audioBuffer;
-        }
+        const r = await ttsService.generateSpeech(
+          ttsText, options.voice as VoiceId,
+          1.15,
+          options.pitch ?? 0, "16:9"
+        );
+        let audioBuffer = r.audioBuffer;
 
         const mp3Path  = path.join(tempDir, `tts_raw_${seg.index}.mp3`);
         const rawWav   = path.join(tempDir, `tts_raw_${seg.index}.wav`);
@@ -282,21 +272,12 @@ export class DubVideoPipeline {
               .replace(/\s+/g, ' ')
               .trim();
 
-            if (isChar) {
-              const r = await ttsService.generateSpeechWithCharacter(
-                retryTtsText, options.voice as CharacterKey,
-                1.15,
-                "16:9", options.pitch ?? 0
-              );
-              shortBuffer = r.audioBuffer;
-            } else {
-              const r = await ttsService.generateSpeech(
-                retryTtsText, options.voice as VoiceKey,
-                1.15,
-                options.pitch ?? 0, "16:9"
-              );
-              shortBuffer = r.audioBuffer;
-            }
+            const retryR = await ttsService.generateSpeech(
+              retryTtsText, options.voice as VoiceId,
+              1.15,
+              options.pitch ?? 0, "16:9"
+            );
+            shortBuffer = retryR.audioBuffer;
 
             await fs.writeFile(mp3Short, shortBuffer);
             await ffmpegService.convertToWav(mp3Short, wavShort);

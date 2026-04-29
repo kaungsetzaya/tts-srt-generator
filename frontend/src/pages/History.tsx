@@ -68,6 +68,7 @@ export default function History() {
   const isDark = theme === "dark";
   const accent = "#C06F30";
   const accentSecondary = "#F4B34F";
+  const accent15 = "rgba(192,111,48,0.15)";
   const cardBg = isDark ? "rgba(20, 18, 16, 0.7)" : "rgba(255, 255, 255, 0.9)";
   const cardBorder = isDark ? "rgba(192,111,48,0.2)" : "rgba(192,111,48,0.15)";
   const textColor = isDark ? "#EBE6D8" : "#2B1D1C";
@@ -100,7 +101,7 @@ export default function History() {
       opacity: 1,
       transition: { staggerChildren: 0.05 }
     }
-  };
+  } as const;
 
   const itemVariants = {
     hidden: { opacity: 0, y: 15, scale: 0.98 },

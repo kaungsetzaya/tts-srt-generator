@@ -14,18 +14,9 @@ import { r2Service, r2Key } from "../src/modules/media/services/r2.service";
 import { generateShortId, buildOutputFilename } from "../src/modules/_core/filename";
 import { generateSignedDownloadUrl } from "../_core/signedUrl";
 
-// All valid voice IDs for validation
-const ALL_VOICE_IDS = [
-  // Tier 1
-  "thiha", "nilar",
-  // Tier 2
-  "ryan", "ronnie", "lucas", "daniel", "evander", "michelle", "iris", "charlotte", "amara",
-  // Tier 3
-  "gemini_alex", "gemini_aria", "gemini_asha", "gemini_bÃ¤Â¸Â­Ã¥Â¹Â´", "gemini_dustin", "gemini_emma",
-  "gemini_eric", "gemini_female_01", "gemini_female_02", "gemini_kokoro", "gemini_male_01",
-  "gemini_male_02", "gemini_male_03", "gemini_puck", "gemini_soren", "gemini_studio_female",
-  "gemini_studio_male",
-] as const;
+// All valid voice IDs derived from actual voice definitions
+import { ALL_VOICES } from "../src/modules/tts/voices";
+const ALL_VOICE_IDS = Object.keys(ALL_VOICES) as [string, ...string[]];
 
 export const ttsRouter = t.router({
   generateAudio: protectedProcedure

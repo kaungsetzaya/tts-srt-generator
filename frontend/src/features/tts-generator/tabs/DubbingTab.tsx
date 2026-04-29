@@ -87,7 +87,7 @@ export interface DubbingTabProps {
   dubFileRef: React.RefObject<HTMLInputElement | null>;
   dubResultVideoRef: React.RefObject<HTMLVideoElement | null>;
   dubPreviewRef: React.RefObject<HTMLVideoElement | null>;
-  computeSrtPreviewStyle: React.CSSProperties;
+  computeSrtPreviewStyle: { outer: React.CSSProperties; inner: React.CSSProperties };
   // % of container height → font-size in px = (srtFontSizeContainerPct/100) * containerH
   srtFontSizeContainerPct: number;
   activeJobId: string | null;
