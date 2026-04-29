@@ -70,20 +70,31 @@ async function generateTier1Speech(
   const tempDir = path.join(OUTPUT_DIR, `tts_${baseId}`);
   await fs.mkdir(tempDir, { recursive: true });
 
-  const MAX_CHARS_PER_REQUEST = 2000;
+  const MAX_CHARS_PER_REQUEST = 1800; // Leave margin so last chunk isn't tiny
+  const MIN_CHUNK_CHARS = 10;         // Edge_tts can't synthesize < 10 chars
 
   // Split by sentence-ending punctuation first, filter empty
-  let sentences = text.split(/(?<=[။])/u).map(s => s.trim()).filter(s => s && s.length > 0);
+  let sentences = text.split(/(?<=[།。!.?])/u).map(s => s.trim()).filter(s => s && s.length > 0);
 
   // If any sentence exceeds limit, further split by characters
-  const chunks: string[] = [];
+  const rawChunks: string[] = [];
   for (const sentence of sentences) {
     if (sentence.length > MAX_CHARS_PER_REQUEST) {
       for (let i = 0; i < sentence.length; i += MAX_CHARS_PER_REQUEST) {
-        chunks.push(sentence.slice(i, i + MAX_CHARS_PER_REQUEST));
+        rawChunks.push(sentence.slice(i, i + MAX_CHARS_PER_REQUEST));
       }
     } else {
-      chunks.push(sentence);
+      rawChunks.push(sentence);
+    }
+  }
+
+  // Merge tiny last chunk into previous one (prevents 1-char chunks)
+  const chunks: string[] = [];
+  for (const c of rawChunks) {
+    if (chunks.length > 0 && c.length < MIN_CHUNK_CHARS) {
+      chunks[chunks.length - 1] += " " + c;
+    } else {
+      chunks.push(c);
     }
   }
 
@@ -92,9 +103,16 @@ async function generateTier1Speech(
   let currentMs = 0;
 
   for (let i = 0; i < chunks.length; i++) {
-    const chunk = chunks[i];
+    const chunk = chunks[i].trim();
+    if (chunk.length < MIN_CHUNK_CHARS) {
+      console.warn(`[TTS] Skipping chunk ${i} — too short (${chunk.length} chars): "${chunk.slice(0, 20)}"`);
+      continue;
+    }
+
     const chunkMp3 = path.join(tempDir, `chunk_${i}.mp3`);
     const chunkTrimmedWav = path.join(tempDir, `chunk_${i}_trimmed.wav`);
+
+    console.log(`[TTS] Chunk ${i}: ${chunk.length} chars — "${chunk.slice(0, 40)}..."`);
 
     // Generate TTS with proxy
     const proxyArg = getProxyUrl();
@@ -121,7 +139,7 @@ async function generateTier1Speech(
       } catch (err) {
         if (retry === 0) {
           console.warn(`[TTS] Chunk ${i} failed, retrying...`);
-          await new Promise(r => setTimeout(r, 100));
+          await new Promise(r => setTimeout(r, 1000)); // 1s delay before retry
         } else {
           throw err;
         }
@@ -172,6 +190,10 @@ async function generateTier1Speech(
     }
 
     await fs.unlink(chunkMp3).catch(() => {});
+  }
+
+  if (audioParts.length === 0) {
+    throw new Error("No valid audio chunks generated — text may be empty or contain only punctuation");
   }
 
   // Merge all parts: concat with silence gaps
