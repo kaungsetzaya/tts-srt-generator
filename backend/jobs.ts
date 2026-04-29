@@ -45,16 +45,19 @@ class AsyncSemaphore {
       this.permits--;
       return;
     }
+    // Wait until a permit is handed to us directly by release()
     await new Promise<void>((resolve) => this.queue.push(resolve));
-    this.permits--;
+    // Permit was already deducted by release() — do NOT decrement again
   }
 
   release(): void {
-    this.permits++;
     const next = this.queue.shift();
     if (next) {
-      this.permits--;
+      // Hand permit directly to waiter — permits count stays the same
       next();
+    } else {
+      // No one waiting — return permit to pool
+      this.permits++;
     }
   }
 
