@@ -283,6 +283,24 @@ async function generateTier2Speech(
   // Generate base speech using Tier 1 voice
   const baseResult = await generateTier1Speech(text, char.baseVoice, rate, pitch, aspectRatio);
 
+  // Boost volume before Murf (fixes "Volume is too low" error)
+  const murfTempDir = path.join(OUTPUT_DIR, `murf_${nanoid(8)}`);
+  await fs.mkdir(murfTempDir, { recursive: true });
+  const baseMp3 = path.join(murfTempDir, 'base.mp3');
+  const boostedMp3 = path.join(murfTempDir, 'boosted.mp3');
+  await fs.writeFile(baseMp3, baseResult.audioBuffer);
+  await new Promise<void>((resolve, reject) => {
+    (ffmpeg as any)(baseMp3)
+      .audioFilters('volume=6dB')
+      .audioCodec('libmp3lame')
+      .audioBitrate('128k')
+      .on('end', () => resolve())
+      .on('error', reject)
+      .save(boostedMp3);
+  });
+  const boostedBuffer = await fs.readFile(boostedMp3);
+  await fs.rm(murfTempDir, { recursive: true, force: true }).catch(() => {});
+
   // Convert using Murf AI
   const murfApiKey = getMurfKey();
   if (!murfApiKey) throw new Error("MURF_API_KEY not configured");
@@ -290,7 +308,7 @@ async function generateTier2Speech(
   const form = new FormData();
   form.set("voice_id", char.murfId);
   form.set("format", "MP3");
-  form.set("file", new Blob([new Uint8Array(baseResult.audioBuffer)], { type: "audio/mpeg" }), "audio.mp3");
+  form.set("file", new Blob([new Uint8Array(boostedBuffer)], { type: "audio/mpeg" }), "audio.mp3");
 
   console.log(`[TTS Tier2] Converting via Murf: ${char.name} (${char.murfId})`);
 
