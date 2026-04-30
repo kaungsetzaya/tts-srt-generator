@@ -3,13 +3,11 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import { tmpdir } from 'os';
 
-import ffmpeg from 'fluent-ffmpeg';
 import { ffmpegService } from '../../media/services/ffmpeg.service';
 import { getVideoInfo, downloadVideo } from '../../media/services/downloader.service';
 import { whisperService } from '../../translation/services/whisper.service';
 import { geminiService } from '../../translation/services/gemini.service';
-import { ttsService } from '../../tts/tts.service';
-import { TIER2_VOICES, type VoiceId, type Tier2VoiceId } from '../../tts/voices';
+import { ttsService, CHARACTER_VOICES, CharacterKey, VoiceKey } from '../../tts/services/tts.service';
 import { assBuilderService } from '../services/assBuilder.service';
 import { isAllowedVideoUrl } from '../../../../_core/security';
 import { updateJob } from '../../../../jobs';
@@ -105,8 +103,7 @@ export class DubVideoPipeline {
     const id = randomUUID();
     const tempVideoPath = path.join(tmpdir(), `dl_${id}.mp4`);
     try {
-      const dl = await downloadVideo(url, tempVideoPath);
-      if (!dl.success) throw new Error(dl.error || "Download failed");
+      await downloadVideo(url, tempVideoPath);
       const buffer = await fs.readFile(tempVideoPath);
       return await this.execute(buffer, "video.mp4", options, jobId);
     } finally {
@@ -209,25 +206,31 @@ export class DubVideoPipeline {
         const ttsText = seg.translatedText
           .replace(/\\n/g, ' ')
           .replace(/\n/g, ' ')
-          .replace(/\.\.\./g, '။')
-          .replace(/…/g, '။')
-          // ── Extra Gemini junk ဖြုတ် ──
-          .replace(/^\s*(Here is|Translation:|မြန်မာ:).*/gim, '')
-          .replace(/\*\*[^*]+\*\*/g, '')
-          .replace(/[#_*\[\]]/g, '')
-          // ── Punctuation normalize ──
-          .replace(/၊\s*/g, '၊ ')
-          .replace(/။\s*/g, '။ ')
+          .replace(/\.\.\./g, '။')     // ... → ။ (ellipsis ဖြုတ်)
+          .replace(/…/g, '။')          // unicode ellipsis
+          .replace(/။\s+/g, '။')       // ။ နောက် extra space ဖြုတ်
+          .replace(/၊\s+/g, '၊')       // ၊ နောက် extra space ဖြုတ်
           .replace(/\s+/g, ' ')
           .trim();
 
         console.log(`[TTS] seg ${seg.index}: "${ttsText.slice(0, 40)}..."`);
-        const r = await ttsService.generateSpeech(
-          ttsText, options.voice as VoiceId,
-          1.15,
-          options.pitch ?? 0, "16:9"
-        );
-        let audioBuffer = r.audioBuffer;
+        const isChar = options.voice in CHARACTER_VOICES;
+        let audioBuffer: Buffer;
+        if (isChar) {
+          const r = await ttsService.generateSpeechWithCharacter(
+            ttsText, options.voice as CharacterKey,
+            1.15,  // tts.service MYANMAR_SPEED_MULTIPLIER is now 1.0, so this is the real rate
+            "16:9", options.pitch ?? 0
+          );
+          audioBuffer = r.audioBuffer;
+        } else {
+          const r = await ttsService.generateSpeech(
+            ttsText, options.voice as VoiceKey,
+            1.15,  // tts.service MYANMAR_SPEED_MULTIPLIER is now 1.0, so this is the real rate
+            options.pitch ?? 0, "16:9"
+          );
+          audioBuffer = r.audioBuffer;
+        }
 
         const mp3Path  = path.join(tempDir, `tts_raw_${seg.index}.mp3`);
         const rawWav   = path.join(tempDir, `tts_raw_${seg.index}.wav`);
@@ -272,12 +275,21 @@ export class DubVideoPipeline {
               .replace(/\s+/g, ' ')
               .trim();
 
-            const retryR = await ttsService.generateSpeech(
-              retryTtsText, options.voice as VoiceId,
-              1.15,
-              options.pitch ?? 0, "16:9"
-            );
-            shortBuffer = retryR.audioBuffer;
+            if (isChar) {
+              const r = await ttsService.generateSpeechWithCharacter(
+                retryTtsText, options.voice as CharacterKey,
+                1.15,
+                "16:9", options.pitch ?? 0
+              );
+              shortBuffer = r.audioBuffer;
+            } else {
+              const r = await ttsService.generateSpeech(
+                retryTtsText, options.voice as VoiceKey,
+                1.15,
+                options.pitch ?? 0, "16:9"
+              );
+              shortBuffer = r.audioBuffer;
+            }
 
             await fs.writeFile(mp3Short, shortBuffer);
             await ffmpegService.convertToWav(mp3Short, wavShort);
@@ -299,7 +311,8 @@ export class DubVideoPipeline {
             if (newRatio <= 1.5) {
               finalWav = wavShort;
               finalDurationMs = shortDurMs;
-              finalText = shorterText;
+              // NOTE: finalText stays as seg.translatedText (original) for subtitles
+              // shorterText is only used for audio, not subtitle display
             }
           }
         }
