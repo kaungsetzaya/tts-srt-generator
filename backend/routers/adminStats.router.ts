@@ -342,6 +342,8 @@ export const adminStatsRouter = t.router({
         
         const intervalStr = `${Number(days)} DAY`;
         
+        console.log(`[getTopUsers] Querying with interval: ${intervalStr}, limit: ${limitNum}`);
+        
         const topUsers = await db
           .select({
             userId: ttsConversions.userId,
@@ -352,6 +354,8 @@ export const adminStatsRouter = t.router({
           .groupBy(ttsConversions.userId)
           .orderBy(desc(count()))
           .limit(limitNum);
+
+        console.log(`[getTopUsers] Found ${topUsers.length} top users`);
 
         if (topUsers.length === 0) return { users: [] };
 
