@@ -88,6 +88,7 @@ function getAllSystemKeys(): string[] {
 }
 
 import { PHONETIC_DICTIONARY } from "./phonetic-dictionary";
+import { sanitizeTranslation } from "./gemini-core.service";
 
 interface Segment {
     index: number;
@@ -116,40 +117,7 @@ export class GeminiService {
     }
 
     private sanitize(text: string): string {
-        if (!text || typeof text !== 'string') return "";
-        let cleaned = text.trim();
-
-        // \n တွေကို placeholder နဲ့ ကာကွယ်
-        const NL = '§NL§';
-        cleaned = cleaned.replace(/\\n/g, NL).replace(/\n/g, NL);
-
-        // Gemini ရဲ့ extra output တွေ ဖြုတ်
-        cleaned = cleaned.replace(/^(Here is|Here's|Translation:|Translated:|မြန်မာဘာသာပြန်:).*/gim, '');
-        cleaned = cleaned.replace(/\*\*[^*]+\*\*/g, '');   // **bold** ဖြုတ်
-        cleaned = cleaned.replace(/[#_*\[\]]/g, '');        // markdown ဖြုတ်
-        cleaned = cleaned.replace(/["]/g, '');              // double quote ဖြုတ်
-
-        // English punctuation → Myanmar punctuation
-        // ဒါပေမယ့် number ထဲ၊ abbreviation ထဲက . နဲ့ , တွေ မပြောင်းဘဲ
-        // sentence-ending . သာ ။ ဖြစ်ရမယ်
-        cleaned = cleaned.replace(/(?<=[^\d])\./g, '။');   // digit မဟုတ်တဲ့နောက်က . သာ ပြောင်း
-        cleaned = cleaned.replace(/(?<=[^\d]),(?=[^\d])/g, '၊'); // digit မဟုတ်တဲ့ side ရှိ , သာ ပြောင်း
-
-        // trailing ၊ → ။
-        cleaned = cleaned.replace(/၊\s*$/, '။');
-
-        // sentence end မပါရင် ။ ဖြည့်
-        if (cleaned.length > 0 && !/[။၊]$/.test(cleaned.replace(NL, '').trim())) {
-            cleaned += '။';
-        }
-
-        // \n ပြန်ထည့်
-        cleaned = cleaned.replace(new RegExp(NL, 'g'), '\n');
-
-        // multiple spaces/newlines normalize
-        cleaned = cleaned.replace(/[ \t]{2,}/g, ' ').trim();
-
-        return cleaned;
+        return sanitizeTranslation(text);
     }
 
      /**

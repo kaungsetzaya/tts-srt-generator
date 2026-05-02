@@ -25,6 +25,13 @@ import {
 import { generateGeminiSpeechWithSRT } from "./geminiTTS.service";
 import { ffmpegService } from "../media/services/ffmpeg.service";
 import ffmpeg from "fluent-ffmpeg";
+import {
+  srtTimeToMs,
+  msToSrtTime,
+  pad,
+  graphemeLen,
+  getWords,
+} from "../_core/srt.utils";
 
 const execFileAsync = promisify(execFile);
 
@@ -438,42 +445,6 @@ function getProxyUrl(): string {
   const u = process.env.EDGE_TTS_PROXY_USER;
   const s = process.env.EDGE_TTS_PROXY_PASS;
   return h && p && u && s ? `http://${u}:${s}@${h}:${p}` : "";
-}
-
-function parseLastEndTime(srt: string): number {
-  const normalized = srt.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-  const matches = [...normalized.matchAll(/\d{2}:\d{2}:\d{2},\d{3} --> (\d{2}:\d{2}:\d{2},\d{3})/g)];
-  if (matches.length === 0) return 0;
-  return srtTimeToMs(matches[matches.length - 1][1]);
-}
-
-function srtTimeToMs(time: string): number {
-  const [hms, ms] = time.split(",");
-  const [h, m, s] = hms.split(":").map(Number);
-  return (h * 3600 + m * 60 + s) * 1000 + Number(ms);
-}
-
-function msToSrtTime(ms: number): string {
-  ms = Math.max(0, ms);
-  const h = Math.floor(ms / 3600000);
-  const m = Math.floor((ms % 3600000) / 60000);
-  const s = Math.floor((ms % 60000) / 1000);
-  const mil = ms % 1000;
-  return `${pad(h)}:${pad(m)}:${pad(s)},${pad(mil, 3)}`;
-}
-
-function pad(n: number, len = 2): string { return String(n).padStart(len, "0"); }
-
-// ── Segmenters ────────────────────────────────────────────────────────────────
-const segmenterWord = new Intl.Segmenter("my", { granularity: "word" });
-const segmenterGrapheme = new Intl.Segmenter("my", { granularity: "grapheme" });
-
-function graphemeLen(s: string): number {
-  return [...segmenterGrapheme.segment(s)].length;
-}
-
-function getWords(s: string): string[] {
-  return [...segmenterWord.segment(s)].map(w => w.segment);
 }
 
 function buildSRTFromSegments(

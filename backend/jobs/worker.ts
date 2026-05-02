@@ -9,7 +9,6 @@ import { getVideoQueue } from "./queue";
 import { updateJob, registerBullMQJob, unregisterBullMQJob } from "../jobs";
 import { dubVideoPipeline } from "../src/modules/dubbing/pipelines/dubVideo.pipeline";
 import { translateVideoPipeline } from "../src/modules/translation/pipelines/translateVideo.pipeline";
-import { addCredits } from "../routers/credits";
 import { generateSignedDownloadUrl } from "../_core/signedUrl";
 import { r2Service, r2Key } from "../src/modules/media/services/r2.service";
 import { recordConversion } from "../src/modules/_core/stats";
@@ -23,54 +22,7 @@ let worker: Worker | null = null;
 // Track last progress update per job for throttling
 const lastProgressUpdate = new Map<string, number>();
 
-// Track which jobs have already been refunded to prevent double refunds
-// Map<jobId, timestamp> — older than 24h entries are cleaned up
-const refundedJobs = new Map<string, number>();
-
-async function safeRefund(jobId: string, userId: string, amount: number, type: string, reason: string) {
-  // ── Fast path: in-memory dedupe ──
-  if (refundedJobs.has(jobId)) {
-    console.log(`[Credits] Skipping duplicate refund for job ${jobId} (memory)`);
-    return;
-  }
-
-  // ── DB-level dedupe: survives server restart / worker crash ──
-  try {
-    const { getDb } = await import("../db");
-    const { creditTransactions } = await import("../../shared/drizzle/schema");
-    const { eq, and } = await import("drizzle-orm");
-    const db = await getDb();
-    if (db) {
-      const description = `${reason} (job:${jobId})`;
-      const existing = await db
-        .select({ id: creditTransactions.id })
-        .from(creditTransactions)
-        .where(
-          and(
-            eq(creditTransactions.userId, userId),
-            eq(creditTransactions.type, type),
-            eq(creditTransactions.description, description)
-          )
-        )
-        .limit(1);
-      if (existing.length > 0) {
-        console.log(`[Credits] Skipping duplicate refund for job ${jobId} (db)`);
-        refundedJobs.set(jobId, Date.now());
-        return;
-      }
-      // Only proceed if DB check passed
-      refundedJobs.set(jobId, Date.now());
-      await addCredits(userId, amount, type, description);
-      return;
-    }
-  } catch (e: any) {
-    console.error(`[Credits] DB dedupe check failed for job ${jobId}:`, e.message);
-  }
-
-  // Fallback if DB check failed: still try to refund (better than losing user credits)
-  refundedJobs.set(jobId, Date.now());
-  await addCredits(userId, amount, type, `${reason} (job:${jobId})`);
-}
+import { safeRefund } from "../src/modules/_core/processors/shared";
 
 async function throttledUpdateProgress(job: BullMQJob, progress: number, message: string) {
   const last = lastProgressUpdate.get(job.id!) || 0;
@@ -362,18 +314,4 @@ export function getWorker(): Worker | null {
   return worker;
 }
 
-// Cleanup: 24h ကျော်တာတွေပဲ ဖြုတ် (retry window ထဲ protection မပျောက်)
-setInterval(() => {
-  const now = Date.now();
-  const DAY = 24 * 60 * 60 * 1000;
-  let cleaned = 0;
-  for (const [jobId, ts] of refundedJobs.entries()) {
-    if (now - ts > DAY) {
-      refundedJobs.delete(jobId);
-      cleaned++;
-    }
-  }
-  if (cleaned > 0) {
-    console.log(`[Credits] Cleaned up ${cleaned} refunded job entries (remaining ${refundedJobs.size})`);
-  }
-}, 60 * 60 * 1000); // every 1 hour
+
