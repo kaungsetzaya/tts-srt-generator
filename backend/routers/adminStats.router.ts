@@ -338,17 +338,20 @@ export const adminStatsRouter = t.router({
       if (!db) return { users: [] };
       try {
         const days = input.days ?? 30;
-        const limit = input.limit ?? 20;
+        const limitNum = input.limit ?? 20;
+        
+        const intervalStr = `${Number(days)} DAY`;
+        
         const topUsers = await db
           .select({
             userId: ttsConversions.userId,
             count: count(),
           })
           .from(ttsConversions)
-          .where(sql`created_at > DATE_SUB(NOW(), INTERVAL ${days} DAY)`)
+          .where(sql`created_at > DATE_SUB(NOW(), INTERVAL ${intervalStr})`)
           .groupBy(ttsConversions.userId)
           .orderBy(desc(count()))
-          .limit(limit);
+          .limit(limitNum);
 
         if (topUsers.length === 0) return { users: [] };
 
