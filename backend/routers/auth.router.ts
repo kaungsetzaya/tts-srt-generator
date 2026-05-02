@@ -19,6 +19,18 @@ export const authRouter = t.router({
   }),
 
   logout: t.procedure.mutation(async ({ ctx }) => {
+    // Server-side token revocation: clear sessionToken in DB so the JWT
+    // can no longer be used even if the cookie is replayed.
+    if (ctx.user?.userId) {
+      const db = await getDb();
+      if (db) {
+        await db
+          .update(users)
+          .set({ sessionToken: null })
+          .where(eq(users.id, ctx.user.userId));
+      }
+    }
+
     ctx.res.setHeader(
       "Set-Cookie",
       `${COOKIE_NAME}=; HttpOnly; Path=/; Max-Age=0; SameSite=None; Secure`
@@ -134,12 +146,12 @@ export const authRouter = t.router({
       })
         .setProtectedHeader({ alg: "HS256" })
         .setIssuedAt()
-        .setExpirationTime("7d")
+        .setExpirationTime("1d")
         .sign(JWT_SECRET);
 
       ctx.res.setHeader(
         "Set-Cookie",
-        `${COOKIE_NAME}=${token}; HttpOnly; Path=/; Max-Age=${7 * 24 * 60 * 60}; SameSite=None; Secure`
+        `${COOKIE_NAME}=${token}; HttpOnly; Path=/; Max-Age=${24 * 60 * 60}; SameSite=None; Secure`
       );
 
       return { success: true, userId: user.id, role: user.role || "user" };
