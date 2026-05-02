@@ -388,6 +388,66 @@ export default function AdminDashboard() {
               <Stat label="Revenue" value={fmtMMK(analytics?.revenue ?? 0)} color={C_GOLD} sub={revenueMonth} />
             </div>
 
+            {/* Peak Hours + Feature Breakdown */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card className="p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs uppercase tracking-wider text-white/40 font-semibold">Peak Hours (24h)</p>
+                  <Zap className="w-4 h-4 text-amber-400" />
+                </div>
+                {generationOverview?.activeHours?.length === 0 ? (
+                  <p className="text-sm text-white/25 text-center py-4">No data yet</p>
+                ) : (
+                  <div className="flex items-end gap-[2px] h-16">
+                    {Array.from({ length: 24 }, (_, i) => {
+                      const hourData = generationOverview?.activeHours?.find((h: any) => h.hour === i);
+                      const count = hourData?.count ?? 0;
+                      const maxHour = Math.max(...(generationOverview?.activeHours?.map((h: any) => h.count) ?? [1]));
+                      const h = maxHour > 0 ? Math.round((count / maxHour) * 64) : 3;
+                      const isCurrentHour = new Date().getHours() === i;
+                      return (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                          <div
+                            title={`${i}:00 - ${count} gens`}
+                            className={`w-full rounded-t transition-colors ${isCurrentHour ? "bg-amber-400" : "bg-[#C06F30]/60 hover:bg-[#C06F30]"}`}
+                            style={{ height: `${Math.max(h, 3)}px` }}
+                          />
+                          {i % 6 === 0 && <span className="text-[8px] text-white/20">{i}</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </Card>
+
+              <Card className="p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs uppercase tracking-wider text-white/40 font-semibold">Feature Breakdown (30d)</p>
+                  <Activity className="w-4 h-4" style={{ color: C }} />
+                </div>
+                {voiceStats?.features?.length === 0 ? (
+                  <p className="text-sm text-white/25 text-center py-4">No feature data</p>
+                ) : (
+                  <div className="space-y-2">
+                    {voiceStats?.features?.slice(0, 5).map((f: any) => {
+                      const total = voiceStats?.total ?? 1;
+                      const pct = Math.round((f.count / total) * 100);
+                      const colors = ["#4ade80", "#60a5fa", "#f472b6", "#a78bfa", "#fbbf24"];
+                      return (
+                        <div key={f.feature} className="flex items-center gap-3">
+                          <div className="w-16 text-xs font-semibold text-white/70 truncate">{FEATURE_LABELS[f.feature] ?? f.feature}</div>
+                          <div className="flex-1 h-2 rounded-full bg-white/[0.06]">
+                            <div className="h-2 rounded-full transition-all" style={{ width: `${pct}%`, background: colors[voiceStats?.features?.indexOf(f) % colors.length] }} />
+                          </div>
+                          <div className="text-xs font-bold w-12 text-right text-white/50">{pct}%</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </Card>
+            </div>
+
             {/* Voice Stats */}
             <Card className="p-5">
               <div className="flex items-center justify-between mb-3">
@@ -448,38 +508,67 @@ export default function AdminDashboard() {
               </Card>
             </div>
 
-            {/* Churn */}
-            <Card className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-xs uppercase tracking-wider text-white/40 font-semibold">User Activity</p>
-                <div className="text-sm">
-                  <span className="text-white/20">New (30d):</span> <span className="font-bold text-green-400">{churnData?.newUsers ?? 0}</span>
-                  <span className="text-white/20 ml-3">Inactive (14d):</span> <span className="font-bold text-red-400">{churnData?.inactiveCount ?? 0}</span>
+            {/* Top Users + Plan Distribution */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card className="p-5 md:col-span-2">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs uppercase tracking-wider text-white/40 font-semibold">Top Users (30d)</p>
+                  <Crown className="w-4 h-4 text-amber-400" />
                 </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-white/30 mb-2 font-semibold">Active (7d)</p>
-                  {(churnData?.activeUsers ?? []).slice(0, 6).map((u: any) => (
-                    <div key={u.id} className="flex items-center justify-between py-2 border-b border-white/[0.04] last:border-0">
-                      <span className="text-sm font-semibold">{u.name}</span>
-                      <span className="text-xs text-white/25">{u.totalGens} gens · {u.credits}cr</span>
+                {(churnData?.activeUsers ?? []).length === 0 ? (
+                  <p className="text-sm text-white/25 text-center py-4">No user data</p>
+                ) : (
+                  <div className="space-y-2">
+                    {(churnData?.activeUsers ?? []).slice(0, 8).map((u: any, i: number) => (
+                      <div key={u.id} className="flex items-center gap-3 py-2 border-b border-white/[0.04] last:border-0">
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i === 0 ? "bg-amber-400 text-black" : i === 1 ? "bg-white/20 text-white" : i === 2 ? "bg-amber-600 text-white" : "bg-white/[0.06] text-white/30"}`}>
+                          {i + 1}
+                        </div>
+                        <button onClick={() => setUserDrawer({ id: u.id, name: u.name })} className="flex-1 text-left hover:opacity-70 transition-opacity">
+                          <span className="text-sm font-semibold">{u.name}</span>
+                          <span className="text-xs text-white/30 ml-2">@{u.username || "—"}</span>
+                        </button>
+                        <div className="text-right">
+                          <span className="text-sm font-bold" style={{ color: C }}>{u.totalGens}</span>
+                          <span className="text-xs text-white/30 ml-1">gens</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+
+              <Card className="p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs uppercase tracking-wider text-white/40 font-semibold">Plan Distribution</p>
+                  <Users className="w-4 h-4" style={{ color: C }} />
+                </div>
+                {(analytics?.planCounts ?? []).length === 0 ? (
+                  <p className="text-sm text-white/25 text-center py-4">No subscriptions</p>
+                ) : (
+                  <div className="space-y-3">
+                    {(analytics?.planCounts ?? []).map((p: any) => {
+                      const total = analytics?.totalUsers ?? 1;
+                      const pct = Math.round((p.count / total) * 100);
+                      const colors: Record<string, string> = { pro: "#a78bfa", creator: "#4ade80", starter: "#60a5fa", trial: "#fbbf24" };
+                      return (
+                        <div key={p.plan} className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ background: colors[p.plan] ?? "#666" }} />
+                          <span className="text-sm font-semibold flex-1">{PLAN_LABELS[p.plan as Plan] ?? p.plan}</span>
+                          <span className="text-sm font-bold" style={{ color: colors[p.plan] ?? C }}>{p.count}</span>
+                        </div>
+                      );
+                    })}
+                    <div className="pt-3 mt-2 border-t border-white/[0.06]">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-white/40">Free Users</span>
+                        <span className="font-bold text-white/60">{(analytics?.totalUsers ?? 0) - (analytics?.activeSubs ?? 0)}</span>
+                      </div>
                     </div>
-                  ))}
-                  {(churnData?.activeUsers ?? []).length === 0 && <p className="text-sm text-white/20 py-2">No active users</p>}
-                </div>
-                <div>
-                  <p className="text-xs text-white/30 mb-2 font-semibold">Inactive (14d+)</p>
-                  {(churnData?.inactiveUsers ?? []).slice(0, 6).map((u: any) => (
-                    <div key={u.id} className="flex items-center justify-between py-2 border-b border-white/[0.04] last:border-0">
-                      <span className="text-sm font-semibold text-white/50">{u.name}</span>
-                      <span className="text-xs text-white/20">{u.totalGens} gens</span>
-                    </div>
-                  ))}
-                  {(churnData?.inactiveUsers ?? []).length === 0 && <p className="text-sm text-white/20 py-2">No inactive users</p>}
-                </div>
-              </div>
-            </Card>
+                  </div>
+                )}
+              </Card>
+            </div>
           </div>
         )}
 
