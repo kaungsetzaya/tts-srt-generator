@@ -349,15 +349,19 @@ export const adminStatsRouter = t.router({
           .groupBy(ttsConversions.userId)
           .orderBy(desc(count()))
           .limit(limit);
-        
-        const userIds = topUsers.map((r: any) => r.userId);
+
+        if (topUsers.length === 0) return { users: [] };
+
+        const userIds = topUsers.map((r: any) => r.userId).filter(Boolean);
+        if (userIds.length === 0) return { users: [] };
+
         const userRows = await db
           .select()
           .from(users)
           .where(sql`id IN (${userIds.map((id: string) => `'${id}'`).join(',')})`);
-        
+
         const userMap = new Map(userRows.map((u: any) => [u.id, u]));
-        
+
         return {
           users: topUsers.map((r: any) => {
             const u = userMap.get(r.userId);
