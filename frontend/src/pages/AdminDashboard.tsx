@@ -686,16 +686,12 @@ export default function AdminDashboard() {
                   <Crown className="w-4 h-4 text-amber-400" />
                 </div>
                 {(() => {
-                  const users = topUsersData?.users?.length > 0 
-                    ? topUsersData.users 
-                    : (churnData?.activeUsers ?? [])
-                        .map((u: any) => ({ id: u.id, name: u.name, username: u.username, totalGens: u.totalGens }))
-                        .sort((a: any, b: any) => b.totalGens - a.totalGens);
-                  
-                  if (!users || users.length === 0) {
-                    return <p className="text-sm text-white/25 text-center py-4">No user data</p>;
-                  }
-                  
+                  const topUsers = topUsersData?.users ?? [];
+                  const fallback = (churnData?.activeUsers ?? [])
+                    .map((u: any) => ({ id: u.id, name: u.name, username: u.username, totalGens: u.totalGens }))
+                    .sort((a: any, b: any) => b.totalGens - a.totalGens);
+                  const users = topUsers.length > 0 ? topUsers : fallback;
+                  if (users.length === 0) return <p className="text-sm text-white/25 text-center py-4">No user data</p>;
                   return (
                     <div className="space-y-2">
                       {users.slice(0, 8).map((u: any, i: number) => (
