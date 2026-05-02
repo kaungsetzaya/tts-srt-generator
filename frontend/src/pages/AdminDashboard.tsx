@@ -686,11 +686,13 @@ export default function AdminDashboard() {
                   <Crown className="w-4 h-4 text-amber-400" />
                 </div>
                 {(() => {
-                  const topUsers = topUsersData?.users ?? [];
-                  const fallbackUsers = (churnData?.activeUsers ?? []).map((u: any) => ({ id: u.id, name: u.name, username: u.username, totalGens: u.totalGens }));
-                  const users = topUsers.length > 0 ? topUsers : fallbackUsers;
+                  const users = topUsersData?.users?.length > 0 
+                    ? topUsersData.users 
+                    : (churnData?.activeUsers ?? [])
+                        .map((u: any) => ({ id: u.id, name: u.name, username: u.username, totalGens: u.totalGens }))
+                        .sort((a: any, b: any) => b.totalGens - a.totalGens);
                   
-                  if (users.length === 0) {
+                  if (!users || users.length === 0) {
                     return <p className="text-sm text-white/25 text-center py-4">No user data</p>;
                   }
                   
@@ -698,7 +700,12 @@ export default function AdminDashboard() {
                     <div className="space-y-2">
                       {users.slice(0, 8).map((u: any, i: number) => (
                         <div key={u.id} className="flex items-center gap-3 py-2 border-b border-white/[0.04] last:border-0">
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i === 0 ? "bg-amber-400 text-black" : i === 1 ? "bg-white/20 text-white" : i === 2 ? "bg-amber-600 text-white" : "bg-white/[0.06] text-white/30"}`}>
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                            i === 0 ? "bg-amber-400 text-black" : 
+                            i === 1 ? "bg-white/20 text-white" : 
+                            i === 2 ? "bg-amber-600 text-white" : 
+                            "bg-white/[0.06] text-white/30"
+                          }`}>
                             {i + 1}
                           </div>
                           <button onClick={() => setUserDrawer({ id: u.id, name: u.name })} className="flex-1 text-left hover:opacity-70 transition-opacity">
