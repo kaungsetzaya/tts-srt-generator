@@ -36,7 +36,7 @@ export function useAuth(options?: UseAuthOptions) {
       }
       throw error;
     } finally {
-      localStorage.removeItem("gemini_key");
+      sessionStorage.removeItem("gemini_key");
       utils.auth.me.setData(undefined, null);
       await utils.auth.me.invalidate();
     }

@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import type { VoiceTier } from "@/lib/voices";
 
@@ -47,8 +47,17 @@ export function useTTSState(
   const [generatedFiles, setGeneratedFiles] = useState<GeneratedFiles | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
+  // Cleanup blob URL to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (generatedFiles?.audioObjectUrl) {
+        URL.revokeObjectURL(generatedFiles.audioObjectUrl);
+      }
+    };
+  }, [generatedFiles?.audioObjectUrl]);
+
   const [geminiKey, setGeminiKey] = useState("");
-  const [savedKey, setSavedKey] = useState(() => localStorage.getItem("gemini_key") || "");
+  const [savedKey, setSavedKey] = useState(() => sessionStorage.getItem("gemini_key") || "");
 
   const generateMutation = trpc.tts.generateAudio.useMutation({
     onSuccess: () => {

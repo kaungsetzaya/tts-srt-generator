@@ -114,6 +114,15 @@ export function useDubbingState(
   // Dubbing wizard state
   const [dubPreviewUrl, setDubPreviewUrl] = useState<string>("");
   const dubPreviewRef = useRef<HTMLVideoElement>(null);
+
+  // Cleanup blob URL to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (dubPreviewUrl && dubPreviewUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(dubPreviewUrl);
+      }
+    };
+  }, [dubPreviewUrl]);
   const [dubDetectedRatio, setDubDetectedRatio] = useState<"9:16" | "16:9">("16:9");
   const [dubVideoWidth, setDubVideoWidth] = useState(1920);
   const [dubVideoHeight, setDubVideoHeight] = useState(1080);
@@ -287,6 +296,17 @@ export function useDubbingState(
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeJobId, jobStatusQuery.data, jobStatusQuery.error]);
 
+  // Warn user if they try to leave while dubbing is in progress
+  useEffect(() => {
+    if (!activeJobId) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [activeJobId]);
+
   // Timeout guard: if dubbing takes > 15 minutes, surface an error
   useEffect(() => {
     if (!activeJobId) return;
@@ -402,7 +422,6 @@ export function useDubbingState(
   };
 
   const handleDubGenerate = async () => {
-    console.log("[GENERATE] Starting dubbing...");
     const dubVoiceToUse = dubSelectedVoice;
 
     setDubResult(null);
@@ -411,7 +430,6 @@ export function useDubbingState(
 
     if (dubVideoUrl.trim()) {
       try {
-        console.log("[GENERATE] Using URL:", dubVideoUrl.trim());
         const res = await startDubMutation.mutateAsync({
           url: dubVideoUrl.trim(),
           voice: dubVoiceToUse as any,
@@ -427,7 +445,6 @@ export function useDubbingState(
           srtDropShadow,
           srtBorderRadius,
         });
-        console.log("[GENERATE] Job started:", res.jobId);
         setActiveJobId(res.jobId);
         pollJobStatus(res.jobId);
       } catch (e: any) {
@@ -438,12 +455,12 @@ export function useDubbingState(
     }
 
     if (!dubVideoFile) {
-      console.log("[GENERATE] No video file or URL");
       return;
     }
-
-    console.log("[GENERATE] Using file:", dubVideoFile.name);
     const reader = new FileReader();
+    reader.onerror = () => {
+      showError("Failed to read video file. Please try again.");
+    };
     reader.onload = async () => {
       const base64 = (reader.result as string).split(",")[1];
       try {
@@ -463,7 +480,6 @@ export function useDubbingState(
           srtDropShadow,
           srtBorderRadius,
         });
-        console.log("[GENERATE] File job started:", res.jobId);
         setActiveJobId(res.jobId);
         pollJobStatus(res.jobId);
         utils.subscription.myStatus.invalidate();
@@ -511,15 +527,24 @@ export function useDubbingState(
 
   const isExternalVideoUrl = (url: string) => {
     if (!url) return false;
-    const lower = url.toLowerCase();
-    return (
-      lower.includes("youtube.com") ||
-      lower.includes("youtu.be") ||
-      lower.includes("tiktok.com") ||
-      lower.includes("facebook.com") ||
-      lower.includes("fb.watch") ||
-      lower.includes("fb.com")
-    );
+    try {
+      const hostname = new URL(url).hostname.toLowerCase();
+      return (
+        hostname === "youtube.com" ||
+        hostname === "www.youtube.com" ||
+        hostname === "youtu.be" ||
+        hostname === "www.youtu.be" ||
+        hostname === "tiktok.com" ||
+        hostname === "www.tiktok.com" ||
+        hostname === "facebook.com" ||
+        hostname === "www.facebook.com" ||
+        hostname === "fb.watch" ||
+        hostname === "fb.com" ||
+        hostname === "www.fb.com"
+      );
+    } catch {
+      return false;
+    }
   };
 
   const getYouTubeVideoId = (url: string): string | null => {

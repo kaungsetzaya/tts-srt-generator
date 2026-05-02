@@ -200,7 +200,7 @@ function SecondaryTabContent({
                     onClick={() => {
                       if (geminiKey.trim()) {
                         setSavedKey(geminiKey.trim());
-                        localStorage.setItem(
+                        sessionStorage.setItem(
                           "gemini_key",
                           geminiKey.trim()
                         );
@@ -216,7 +216,7 @@ function SecondaryTabContent({
                     <button
                       onClick={() => {
                         setSavedKey("");
-                        localStorage.removeItem("gemini_key");
+                        sessionStorage.removeItem("gemini_key");
                       }}
                       className="px-3 sm:px-4 font-bold text-sm border border-red-500 text-red-600 hover:bg-red-500/10 rounded-xl transition-colors"
                     >

@@ -22,6 +22,13 @@ type ChartContextProps = {
 
 const ChartContext = React.createContext<ChartContextProps | null>(null);
 
+// Sanitize CSS color values to prevent injection via dangerouslySetInnerHTML
+const VALID_CSS_COLOR = /^(#[0-9a-fA-F]{3,8}|rgb\([^)]+\)|rgba\([^)]+\)|hsl\([^)]+\)|hsla\([^)]+\)|[a-zA-Z]+)$/;
+function sanitizeCssColor(color: string | undefined): string | null {
+  if (!color) return null;
+  return VALID_CSS_COLOR.test(color.trim()) ? color.trim() : null;
+}
+
 function useChart() {
   const context = React.useContext(ChartContext);
 
@@ -85,9 +92,10 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
 ${prefix} [data-chart=${id}] {
 ${colorConfig
   .map(([key, itemConfig]) => {
-    const color =
+    const rawColor =
       itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
       itemConfig.color;
+    const color = sanitizeCssColor(rawColor);
     return color ? `  --color-${key}: ${color};` : null;
   })
   .join("\n")}

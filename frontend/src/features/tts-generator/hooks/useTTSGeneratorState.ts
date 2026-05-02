@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { useSystemTime } from "@/lib/useSystemTime";
 import { useDubbingState } from "@/features/tts-generator/hooks/useDubbingState";
@@ -40,16 +40,20 @@ export function useTTSGeneratorState() {
 
   // Error toast state
   const [errorToast, setErrorToast] = useState("");
+  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const showError = (msg: string) => {
     setErrorToast(friendlyError(msg));
-    setTimeout(() => setErrorToast(""), 5000);
+    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    errorTimeoutRef.current = setTimeout(() => setErrorToast(""), 5000);
   };
 
   // Success toast state
   const [successToast, setSuccessToast] = useState("");
+  const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const showSuccess = (msg: string) => {
     setSuccessToast(msg);
-    setTimeout(() => setSuccessToast(""), 3000);
+    if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
+    successTimeoutRef.current = setTimeout(() => setSuccessToast(""), 3000);
   };
 
   // tRPC utils — MUST be declared before hooks that use it
@@ -79,7 +83,7 @@ export function useTTSGeneratorState() {
     trpc.subscription.myStatus.useQuery();
   const logoutMutation = trpc.auth.logout.useMutation({
     onSuccess: () => {
-      localStorage.removeItem("gemini_key");
+      sessionStorage.removeItem("gemini_key");
       window.location.href = "/login";
     },
   });

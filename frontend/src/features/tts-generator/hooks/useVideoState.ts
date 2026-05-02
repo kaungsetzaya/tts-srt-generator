@@ -56,6 +56,7 @@ export function useVideoState(
   const [editedVideoText, setEditedVideoText] = useState("");
   const [videoCopied, setVideoCopied] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const videoCopyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Translation job polling state
   const [translateJobId, setTranslateJobId] = useState<string | null>(null);
@@ -158,6 +159,17 @@ export function useVideoState(
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [translateJobId, activeTranslateJobData, activeTranslateJobError]);
 
+  // Warn user if they try to leave while translation is in progress
+  useEffect(() => {
+    if (!translateJobId) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [translateJobId]);
+
   // Timeout guard: if translation takes > 10 minutes, surface an error
   useEffect(() => {
     if (!translateJobId) return;
@@ -205,6 +217,9 @@ export function useVideoState(
 
     if (!videoFile) return;
     const reader = new FileReader();
+    reader.onerror = () => {
+      showError("Failed to read video file. Please try again.");
+    };
     reader.onload = async () => {
       const base64 = (reader.result as string).split(",")[1];
       try {
@@ -226,7 +241,8 @@ export function useVideoState(
     try {
       await navigator.clipboard.writeText(editedVideoText);
       setVideoCopied(true);
-      setTimeout(() => setVideoCopied(false), 2000);
+      if (videoCopyTimeoutRef.current) clearTimeout(videoCopyTimeoutRef.current);
+      videoCopyTimeoutRef.current = setTimeout(() => setVideoCopied(false), 2000);
     } catch {
       /* fallback */
     }

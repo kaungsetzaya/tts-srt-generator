@@ -2,23 +2,23 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Padauk:wght@400;700&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap");
 
-/* Hide native video controls */
-video::-webkit-media-controls {
+/* Hide native video controls only for elements with .hide-video-controls class */
+video.hide-video-controls::-webkit-media-controls {
   display: none !important;
 }
-video::-webkit-media-controls-enclosure {
+video.hide-video-controls::-webkit-media-controls-enclosure {
   display: none !important;
 }
-video::-webkit-media-controls-panel {
+video.hide-video-controls::-webkit-media-controls-panel {
   display: none !important;
 }
-video::-webkit-media-controls-play-button,
-video::-webkit-media-controls-start-playback-button,
-video::-webkit-media-controls-timeline,
-video::-webkit-media-controls-current-time-display,
-video::-webkit-media-controls-time-remaining-display,
-video::-webkit-media-controls-volume-slider,
-video::-webkit-media-controls-mute-button {
+video.hide-video-controls::-webkit-media-controls-play-button,
+video.hide-video-controls::-webkit-media-controls-start-playback-button,
+video.hide-video-controls::-webkit-media-controls-timeline,
+video.hide-video-controls::-webkit-media-controls-current-time-display,
+video.hide-video-controls::-webkit-media-controls-time-remaining-display,
+video.hide-video-controls::-webkit-media-controls-volume-slider,
+video.hide-video-controls::-webkit-media-controls-mute-button {
   display: none !important;
 }
 
