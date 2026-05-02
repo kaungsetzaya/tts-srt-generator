@@ -618,3 +618,13 @@ video.hide-video-controls::-webkit-media-controls-mute-button {
 .dub-letter:nth-child(8) { animation-delay: 0.7s; }
 .dub-letter:nth-child(9) { animation-delay: 0.8s; }
 .dub-letter:nth-child(10) { animation-delay: 0.9s; }
+
+/* ── Sidebar under header ── */
+[data-slot="sidebar-container"] {
+  top: 56px !important;
+  height: calc(100vh - 56px) !important;
+}
+
+[data-slot="sidebar-gap"] {
+  margin-top: 56px;
+}

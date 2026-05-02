@@ -242,6 +242,7 @@ function TTSGeneratorSidebar({
             ? "1px solid rgba(255,255,255,0.08)"
             : "1px solid rgba(192,111,48,0.1)",
           "--sidebar-width-icon": "4rem",
+          "--sidebar-top": "56px",
         } as React.CSSProperties
       }
     >
