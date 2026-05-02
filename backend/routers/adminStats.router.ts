@@ -331,6 +331,50 @@ export const adminStatsRouter = t.router({
     }
   }),
 
+  getTopUsers: adminProcedure
+    .input(z.object({ days: z.number().optional(), limit: z.number().optional() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return { users: [] };
+      try {
+        const days = input.days ?? 30;
+        const limit = input.limit ?? 20;
+        const topUsers = await db
+          .select({
+            userId: ttsConversions.userId,
+            count: count(),
+          })
+          .from(ttsConversions)
+          .where(sql`created_at > DATE_SUB(NOW(), INTERVAL ${days} DAY)`)
+          .groupBy(ttsConversions.userId)
+          .orderBy(desc(count()))
+          .limit(limit);
+        
+        const userIds = topUsers.map((r: any) => r.userId);
+        const userRows = await db
+          .select()
+          .from(users)
+          .where(sql`id IN (${userIds.map((id: string) => `'${id}'`).join(',')})`);
+        
+        const userMap = new Map(userRows.map((u: any) => [u.id, u]));
+        
+        return {
+          users: topUsers.map((r: any) => {
+            const u = userMap.get(r.userId);
+            return {
+              id: r.userId,
+              name: u?.telegramFirstName || u?.name || "Unknown",
+              username: u?.telegramUsername || "",
+              totalGens: Number(r.count),
+            };
+          }),
+        };
+      } catch (e) {
+        console.error("[getTopUsers Error]", e);
+        return { users: [] };
+      }
+    }),
+
   getUserDetail: adminProcedure
     .input(z.object({ userId: z.string() }))
     .query(async ({ input }) => {

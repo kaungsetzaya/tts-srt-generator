@@ -231,6 +231,7 @@ export default function AdminDashboard() {
   const { data: errorData, refetch: refetchErrors } = trpc.adminStats.getErrorLogs.useQuery({ limit: 50, onlyUnresolved: false });
   const { data: churnData } = trpc.adminStats.getChurnStats.useQuery();
   const { data: onlineStats } = trpc.adminStats.onlineUsers.useQuery(undefined, { refetchInterval: 60000 });
+  const { data: topUsersData } = trpc.adminStats.getTopUsers.useQuery({ days: 30, limit: 20 });
   const { data: settingsData } = trpc.settings.get.useQuery(undefined);
 
   useEffect(() => {
@@ -515,11 +516,11 @@ export default function AdminDashboard() {
                   <p className="text-xs uppercase tracking-wider text-white/40 font-semibold">Top Users (30d)</p>
                   <Crown className="w-4 h-4 text-amber-400" />
                 </div>
-                {(churnData?.activeUsers ?? []).length === 0 ? (
+                {(topUsersData?.users ?? []).length === 0 ? (
                   <p className="text-sm text-white/25 text-center py-4">No user data</p>
                 ) : (
                   <div className="space-y-2">
-                    {(churnData?.activeUsers ?? []).slice(0, 8).map((u: any, i: number) => (
+                    {(topUsersData?.users ?? []).slice(0, 8).map((u: any, i: number) => (
                       <div key={u.id} className="flex items-center gap-3 py-2 border-b border-white/[0.04] last:border-0">
                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i === 0 ? "bg-amber-400 text-black" : i === 1 ? "bg-white/20 text-white" : i === 2 ? "bg-amber-600 text-white" : "bg-white/[0.06] text-white/30"}`}>
                           {i + 1}
