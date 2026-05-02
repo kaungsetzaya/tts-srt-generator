@@ -84,6 +84,11 @@ export async function generateSpeech(
   const clampedPitch = Math.max(-20, Math.min(20, pitch));
   const pitchStr = clampedPitch >= 0 ? `+${clampedPitch}Hz` : `${clampedPitch}Hz`;
 
+  if (!text.trim()) {
+    console.error(`[DubbingTTS] Attempted to generate speech for empty text (Voice: ${voice})`);
+    throw new Error("Cannot generate speech for empty text");
+  }
+
   const id = nanoid(10);
   const audioPath = path.join(OUTPUT_DIR, `${id}.mp3`);
   const srtPath = path.join(OUTPUT_DIR, `${id}.srt`);
@@ -96,11 +101,6 @@ export async function generateSpeech(
     .trim();
 
   await fs.writeFile(tmpText, processedText, "utf8");
-
-  if (!text.trim()) {
-    console.error(`[DubbingTTS] Attempted to generate speech for empty text (Voice: ${voice})`);
-    throw new Error("Cannot generate speech for empty text");
-  }
 
   const pythonCmd = process.platform === "win32" ? "python" : "python3";
   console.log(`[DubbingTTS] Generating: "${text.slice(0, 50)}..." [Voice: ${voiceConfig.shortName}, Rate: ${rateStr}]`);

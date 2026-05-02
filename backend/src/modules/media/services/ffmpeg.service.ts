@@ -196,7 +196,7 @@ export async function extractVideoSegment(
 export async function concatVideoFiles(videoParts: string[], outputPath: string): Promise<void> {
   if (videoParts.length === 0) throw new Error('No video parts to concatenate');
   const listPath = outputPath + '.vconcat_list.txt';
-  const lines = videoParts.map(p => `file '${p.replace(/'/g, "'\\''")}' `).join('\n');
+  const lines = videoParts.map(p => `file '${p.replace(/'/g, "'\\''")}'`).join('\n');
   await fs.writeFile(listPath, lines);
   return new Promise((resolve, reject) => {
     ffmpeg()
