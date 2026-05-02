@@ -6,8 +6,8 @@ import { tmpdir } from 'os';
 import { ffmpegService } from '../../media/services/ffmpeg.service';
 import { getVideoInfo, downloadVideo } from '../../media/services/downloader.service';
 import { whisperService } from '../../translation/services/whisper.service';
-import { geminiService } from '../../translation/services/gemini.service';
-import { ttsService, CHARACTER_VOICES, CharacterKey, VoiceKey } from '../../tts/services/tts.service';
+import { dubbingTranslationService } from '../services/dubbing-translate.service';
+import { dubbingTtsService, CHARACTER_VOICES, CharacterKey, VoiceKey } from '../services/dubbing-tts.service';
 import { assBuilderService } from '../services/assBuilder.service';
 import { isAllowedVideoUrl } from '../../../../_core/security';
 import { updateJob } from '../../../../jobs';
@@ -142,7 +142,7 @@ export class DubVideoPipeline {
 
       // ── Step 4: Translate ──
       if (jobId) updateJob(jobId, { progress: 50, message: "Translating to Myanmar..." });
-      const translatedSegments = await geminiService.translateSegments(
+      const translatedSegments = await dubbingTranslationService.translateSegments(
         segments.map((s, i) => ({ index: i, start: s.start, end: s.end, text: s.text })),
         options.userApiKey
       );
@@ -153,7 +153,7 @@ export class DubVideoPipeline {
 
       if (badSegs.length > 0) {
         console.warn(`[Dub] ${badSegs.length} segments still English, retrying...`);
-        const retried = await geminiService.translateSegments(
+        const retried = await dubbingTranslationService.translateSegments(
           badSegs.map(s => ({ index: s.index, start: s.start, end: s.end, text: s.text })),
           options.userApiKey
         );
@@ -217,14 +217,14 @@ export class DubVideoPipeline {
         const isChar = options.voice in CHARACTER_VOICES;
         let audioBuffer: Buffer;
         if (isChar) {
-          const r = await ttsService.generateSpeechWithCharacter(
+          const r = await dubbingTtsService.generateSpeechWithCharacter(
             ttsText, options.voice as CharacterKey,
             1.15,  // tts.service MYANMAR_SPEED_MULTIPLIER is now 1.0, so this is the real rate
             "16:9", options.pitch ?? 0
           );
           audioBuffer = r.audioBuffer;
         } else {
-          const r = await ttsService.generateSpeech(
+          const r = await dubbingTtsService.generateSpeech(
             ttsText, options.voice as VoiceKey,
             1.15,  // tts.service MYANMAR_SPEED_MULTIPLIER is now 1.0, so this is the real rate
             options.pitch ?? 0, "16:9"
@@ -258,7 +258,7 @@ export class DubVideoPipeline {
         if (durationMs / slotMs > 1.5) {
           console.warn(`[TTS] seg ${seg.index} ratio=${(durationMs/slotMs).toFixed(2)}x too high, retrying with shorter text...`);
           
-          const shorterText = await geminiService.makeShorter(seg.translatedText, slotMs, options.userApiKey);
+          const shorterText = await dubbingTranslationService.makeShorter(seg.translatedText, slotMs, options.userApiKey);
           if (shorterText) {
             const mp3Short = path.join(tempDir, `tts_short_${seg.index}.mp3`);
             const wavShort = path.join(tempDir, `tts_short_${seg.index}.wav`);
@@ -276,14 +276,14 @@ export class DubVideoPipeline {
               .trim();
 
             if (isChar) {
-              const r = await ttsService.generateSpeechWithCharacter(
+              const r = await dubbingTtsService.generateSpeechWithCharacter(
                 retryTtsText, options.voice as CharacterKey,
                 1.15,
                 "16:9", options.pitch ?? 0
               );
               shortBuffer = r.audioBuffer;
             } else {
-              const r = await ttsService.generateSpeech(
+              const r = await dubbingTtsService.generateSpeech(
                 retryTtsText, options.voice as VoiceKey,
                 1.15,
                 options.pitch ?? 0, "16:9"
@@ -522,8 +522,12 @@ export class DubVideoPipeline {
       // ── Save output ──
       const finalFilename = buildOutputFilename(shortId, "DUB", "mp4");
       const finalDir  = path.join(process.cwd(), 'static', 'downloads');
+      const finalPath = path.join(finalDir, finalFilename);
+      console.log(`[Dub] Saving to: ${finalPath} (cwd: ${process.cwd()})`);
       await fs.mkdir(finalDir, { recursive: true });
-      await fs.copyFile(tempOutputPath, path.join(finalDir, finalFilename));
+      await fs.copyFile(tempOutputPath, finalPath);
+      const exists = await fs.access(finalPath).then(() => true).catch(() => false);
+      console.log(`[Dub] Saved: ${finalPath}, exists: ${exists}`);
 
       const allTranslatedText = translatedSegments.map(s => s.translatedText).join('\n');
       const allSrtContent = processedForSrt.map((s, i) => {

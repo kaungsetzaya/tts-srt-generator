@@ -65,5 +65,5 @@ export const appRouter = t.router({
 export type AppRouter = typeof appRouter;
 
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Side-effect: register job processors Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-import { registerAllProcessors } from "./src/modules/_core/processors";
+import { registerAllProcessors } from "./src/modules/_core/processors/index";
 registerAllProcessors();

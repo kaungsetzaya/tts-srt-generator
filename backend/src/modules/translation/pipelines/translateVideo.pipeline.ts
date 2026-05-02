@@ -8,7 +8,7 @@ import { updateJob } from '../../../../jobs';
 import { ffmpegService } from '../../media/services/ffmpeg.service';
 import { getVideoInfo, downloadVideo } from '../../media/services/downloader.service';
 import { whisperService } from '../services/whisper.service';
-import { geminiService } from '../services/gemini.service';
+import { videoTranslateService } from '../../video-translate/services/video-translate.service';
 import { isAllowedVideoUrl } from '../../../../_core/security';
 
 export class TranslateVideoPipeline {
@@ -63,7 +63,7 @@ export class TranslateVideoPipeline {
 
             // Step 4: Translation
             if (jobId) updateJob(jobId, { progress: 85, message: "Translating to Myanmar..." });
-            const myanmarText = await geminiService.translateFullText(englishText, userApiKey);
+            const myanmarText = await videoTranslateService.translateFullText(englishText, userApiKey);
 
             return {
                 englishText,
