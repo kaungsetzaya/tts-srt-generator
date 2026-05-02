@@ -146,12 +146,12 @@ export const authRouter = t.router({
       })
         .setProtectedHeader({ alg: "HS256" })
         .setIssuedAt()
-        .setExpirationTime("1d")
+        .setExpirationTime("1h")
         .sign(JWT_SECRET);
 
       ctx.res.setHeader(
         "Set-Cookie",
-        `${COOKIE_NAME}=${token}; HttpOnly; Path=/; Max-Age=${24 * 60 * 60}; SameSite=None; Secure`
+        `${COOKIE_NAME}=${token}; HttpOnly; Path=/; Max-Age=${60 * 60}; SameSite=None; Secure`
       );
 
       return { success: true, userId: user.id, role: user.role || "user" };
