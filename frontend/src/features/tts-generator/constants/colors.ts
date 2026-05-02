@@ -1,4 +1,4 @@
-// Premium UI Colors (Derived from shared constants)
+// Premium UI Colors — Black & White Theme System
 import { ACCENT, ACCENT_SECONDARY } from "@shared/const";
 
 export const accent = ACCENT;
@@ -8,12 +8,13 @@ export const peach = "#ECCEB6";
 export const cream = "#EBE6D8";
 export const darkBrown = "#2B1D1C";
 
-// Premium color scheme for light mode — Warm Sand & Copper
-export const lightBg = "#FBF8F4";
+// ─── Premium B&W Light Theme ───
+// Pure white, deep blacks, minimal color for maximum impact
+export const lightBg = "#FFFFFF";
 export const lightCardBg = "#FFFFFF";
-export const lightCardBorder = "rgba(192,111,48,0.12)";
-export const lightText = "#2B1D1C";
-export const lightSubtext = "#8B7355";
+export const lightCardBorder = "rgba(0,0,0,0.08)";
+export const lightText = "#0A0A0A";
+export const lightSubtext = "#666666";
 
 // Helper: hex color + opacity → 8-digit hex
 export function withOpacity(color: string, opacity: number): string {

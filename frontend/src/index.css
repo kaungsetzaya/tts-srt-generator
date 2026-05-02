@@ -67,38 +67,38 @@ video.hide-video-controls::-webkit-media-controls-mute-button {
 }
 
 :root {
-  /* ═══ Premium Light Theme — Warm Sand & Copper ═══ */
-  --background: #FBF8F4;
-  --foreground: #2B1D1C;
+  /* ═══ Premium B&W Light Theme — Pure White, High-Contrast ═══ */
+  --background: #FFFFFF;
+  --foreground: #0A0A0A;
   --card: #FFFFFF;
-  --card-foreground: #2B1D1C;
+  --card-foreground: #0A0A0A;
   --popover: #FFFFFF;
-  --popover-foreground: #2B1D1C;
+  --popover-foreground: #0A0A0A;
   --primary: #C06F30;
   --primary-foreground: #ffffff;
   --secondary: #F4B34F;
-  --secondary-foreground: #2B1D1C;
-  --muted: #F5F0EA;
-  --muted-foreground: #8B7355;
+  --secondary-foreground: #0A0A0A;
+  --muted: #F5F5F5;
+  --muted-foreground: #666666;
   --accent: #C06F30;
   --accent-foreground: #ffffff;
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  --border: rgba(192,111,48,0.12);
-  --input: #F8F4EE;
+  --border: rgba(0,0,0,0.08);
+  --input: #F7F7F7;
   --ring: #C06F30;
-  --sidebar: rgba(255,255,255,0.92);
-  --sidebar-foreground: #2B1D1C;
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #0A0A0A;
   --sidebar-primary: #C06F30;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: rgba(192,111,48,0.08);
-  --sidebar-accent-foreground: #C06F30;
-  --sidebar-border: rgba(192,111,48,0.1);
+  --sidebar-accent: rgba(0,0,0,0.04);
+  --sidebar-accent-foreground: #0A0A0A;
+  --sidebar-border: rgba(0,0,0,0.06);
   --chart-1: #C06F30;
   --chart-2: #F4B34F;
-  --chart-3: #861C1C;
-  --chart-4: #ECCEB6;
-  --chart-5: #8B7355;
+  --chart-3: #333333;
+  --chart-4: #666666;
+  --chart-5: #999999;
   --radius: 0.75rem;
 }
 
