@@ -66,6 +66,8 @@ function MiniBar({ label, count, max, color = C }: { label: string; count: numbe
 function UserDetailDrawer({ userId, userName, onClose, tz }: { userId: string; userName: string; onClose: () => void; tz: string }) {
   const { data, isLoading } = trpc.adminStats.getUserDetail.useQuery({ userId }, { refetchInterval: 3000 });
   const { data: userCredits } = trpc.admin.getTransactions.useQuery({ userId }, { enabled: !!userId });
+  const banMutation = trpc.admin.banUser.useMutation();
+  const utils = trpc.useUtils();
 
   const fmtDuration = (ms: number) => {
     const s = Math.floor(ms / 1000);
@@ -74,120 +76,287 @@ function UserDetailDrawer({ userId, userName, onClose, tz }: { userId: string; u
   };
   const fmtTime = (d: any) =>
     !d ? "—" : new Date(d).toLocaleString("en-US", { timeZone: tz, day: "2-digit", month: "short", hour: "numeric", minute: "2-digit", hour12: true });
+  const fmtDate = (d: any) => !d ? "—" : new Date(d).toLocaleDateString("en-US", { timeZone: tz, day: "2-digit", month: "short", year: "numeric" });
 
   const maxVoice = Math.max(...(data?.voices?.map((v: any) => v.count) ?? [1]));
   const maxDaily = Math.max(...(data?.daily?.map((d: any) => d.count) ?? [1]));
+  const maxHour = Math.max(...(data?.activeHours?.map((h: any) => h.count) ?? [1]));
+
+  const handleBan = () => {
+    if (confirm(`Are you sure you want to ${data?.user?.banned ? "unban" : "ban"} this user?`)) {
+      banMutation.mutate({ userId, ban: !data?.user?.banned }, { onSuccess: () => utils.adminStats.getUserDetail.invalidate() });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 z-50 flex justify-end bg-black/70" onClick={onClose}>
+        <div className="w-full max-w-xl h-full bg-[#0a0a0a] border-l border-white/[0.06] flex items-center justify-center" onClick={e => e.stopPropagation()}>
+          <Loader2 className="w-8 h-8 animate-spin" style={{ color: C }} />
+        </div>
+      </div>
+    );
+  }
+
+  if (!data?.user) {
+    return (
+      <div className="fixed inset-0 z-50 flex justify-end bg-black/70" onClick={onClose}>
+        <div className="w-full max-w-xl h-full bg-[#0a0a0a] border-l border-white/[0.06] flex items-center justify-center" onClick={e => e.stopPropagation()}>
+          <p className="text-white/30">User not found</p>
+        </div>
+      </div>
+    );
+  }
+
+  const u = data.user;
+  const s = data.stats;
+  const isBanned = !!u.banned;
+  const successRate = data.stats.totalGens > 0 ? Math.round((data.statusBreakdown.success / data.stats.totalGens) * 100) : 100;
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/70" onClick={onClose}>
       <div className="w-full max-w-xl h-full overflow-y-auto bg-[#0a0a0a] border-l border-white/[0.06]" onClick={e => e.stopPropagation()}>
-        <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-white/[0.06] bg-[#0a0a0a]">
-          <div>
-            <p className="font-bold text-xl" style={{ color: C }}>{userName}</p>
-            <p className="text-xs text-white/25 font-mono">ID: {userId}</p>
+        {/* Header */}
+        <div className="sticky top-0 z-10 bg-[#0a0a0a] border-b border-white/[0.06]">
+          <div className="px-6 py-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#C06F30] to-[#a0522d] flex items-center justify-center text-xl font-black text-white">
+                  {(u.name || "U").charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className="font-bold text-lg flex items-center gap-2">
+                    {u.name || "Unknown"}
+                    {isBanned && <span className="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400 font-bold">BANNED</span>}
+                  </p>
+                  <p className="text-sm text-white/40">@{u.username || "—"}</p>
+                </div>
+              </div>
+              <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-lg transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-lg transition-colors">
-            <X className="w-5 h-5" />
-          </button>
+          {/* Quick Actions */}
+          <div className="px-6 pb-4 flex gap-2">
+            <button onClick={handleBan} className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-colors ${isBanned ? "border-green-500/30 text-green-400 hover:bg-green-500/10" : "border-red-500/30 text-red-400 hover:bg-red-500/10"}`}>
+              {isBanned ? "Unban User" : "Ban User"}
+            </button>
+            <button onClick={() => { setSelectedUser(userId); setShowSubModal(true); }} className="flex-1 py-2 rounded-lg text-xs font-bold border border-[#C06F30]/30 text-[#C06F30] hover:bg-[#C06F30]/10 transition-colors">
+              Give Sub
+            </button>
+          </div>
         </div>
 
-        {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <Loader2 className="w-8 h-8 animate-spin" style={{ color: C }} />
-          </div>
-        ) : !data ? (
-          <div className="p-8 text-center text-white/30 text-base">No data available</div>
-        ) : (
-          <div className="p-6 space-y-5">
-            <div className="grid grid-cols-2 gap-3">
-              <Stat label="All-Time Gens" value={data.allTimeGens ?? 0} color="#a78bfa" />
-              <Stat label="Gens (30d)" value={data.totalGens} />
-              <Stat label="Gens (7d)" value={data.recentGens} color="#4ade80" />
-              <Stat label="Duration (30d)" value={fmtDuration(data.totalDurationMs)} color={C_GOLD} />
+        <div className="p-6 space-y-4">
+          {/* User Info Card */}
+          <Card className="p-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs text-white/30 mb-1">Credits</p>
+                <p className="text-xl font-black text-amber-400">{u.credits ?? 0}</p>
+              </div>
+              <div>
+                <p className="text-xs text-white/30 mb-1">Member Since</p>
+                <p className="text-sm font-semibold text-white/70">{fmtDate(u.createdAt)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-white/30 mb-1">Last Active</p>
+                <p className="text-sm font-semibold text-white/70">{fmtTime(u.lastLoginAt)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-white/30 mb-1">Status</p>
+                <p className={`text-sm font-bold ${isBanned ? "text-red-400" : "text-green-400"}`}>{isBanned ? "Banned" : "Active"}</p>
+              </div>
             </div>
-
-            <Card className="p-5">
-              <p className="text-xs uppercase tracking-wider text-white/40 mb-3 font-semibold">Status (30d)</p>
-              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
-                  <span className="text-base font-bold text-green-400">{data.statusBreakdown.success} Success</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
-                  <span className="text-base font-bold text-red-400">{data.statusBreakdown.fail} Failed</span>
-                </div>
-                <div className="ml-auto text-sm text-white/30">
-                  {data.totalGens > 0 ? `${Math.round((data.statusBreakdown.success / data.totalGens) * 100)}% success` : "—"}
+            {data.subscription && (
+              <div className="mt-4 pt-4 border-t border-white/[0.06]">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Crown className="w-4 h-4 text-amber-400" />
+                    <span className="text-sm font-bold text-amber-400">{PLAN_LABELS[data.subscription.plan as Plan] || data.subscription.plan}</span>
+                  </div>
+                  <span className="text-xs text-white/30">Expires: {fmtDate(data.subscription.expiresAt)}</span>
                 </div>
               </div>
-            </Card>
+            )}
+          </Card>
 
-            <Card className="p-5">
-              <p className="text-xs uppercase tracking-wider text-white/40 mb-3 font-semibold flex items-center gap-2">
-                <History className="w-4 h-4" /> Credit History
-              </p>
-              <div className="space-y-1 max-h-56 overflow-y-auto">
-                {!userCredits?.length ? (
-                  <p className="text-sm text-white/25 text-center py-6">No credit transactions</p>
-                ) : (
-                  userCredits.map((t: any) => {
-                    const isPos = t.amount > 0;
-                    return (
-                      <div key={t.id} className="flex items-center gap-3 text-sm py-2.5 border-b border-white/[0.04] last:border-0">
-                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isPos ? "bg-green-400" : "bg-amber-400"}`} />
-                        <span className="capitalize text-white/40 w-24 flex-shrink-0 truncate">{(t.type || "").replace("_", " ")}</span>
-                        <span className="text-white/30 truncate flex-1">{t.description}</span>
-                        <span className={`font-bold flex-shrink-0 ${isPos ? "text-green-400" : "text-amber-500"}`}>{isPos ? "+" : ""}{t.amount}</span>
-                        <span className="text-white/20 flex-shrink-0 text-xs">{fmtTime(t.createdAt)}</span>
-                      </div>
-                    );
-                  })
-                )}
+          {/* Stats Grid */}
+          <div className="grid grid-cols-4 gap-2">
+            <div className="bg-[#141210] border border-white/[0.06] rounded-lg p-3 text-center">
+              <p className="text-xs text-white/30 mb-1">30d</p>
+              <p className="text-lg font-black" style={{ color: C }}>{s.totalGens}</p>
+            </div>
+            <div className="bg-[#141210] border border-white/[0.06] rounded-lg p-3 text-center">
+              <p className="text-xs text-white/30 mb-1">7d</p>
+              <p className="text-lg font-black text-green-400">{s.recentGens}</p>
+            </div>
+            <div className="bg-[#141210] border border-white/[0.06] rounded-lg p-3 text-center">
+              <p className="text-xs text-white/30 mb-1">All Time</p>
+              <p className="text-lg font-black text-purple-400">{s.allTimeGens}</p>
+            </div>
+            <div className="bg-[#141210] border border-white/[0.06] rounded-lg p-3 text-center">
+              <p className="text-xs text-white/30 mb-1">Avg/Day</p>
+              <p className="text-lg font-black text-amber-400">{s.avgDailyGens}</p>
+            </div>
+          </div>
+
+          {/* Insights */}
+          <Card className="p-4">
+            <p className="text-xs uppercase tracking-wider text-white/40 mb-3 font-semibold">Insights (30d)</p>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-black/20 rounded-lg p-3 border border-white/[0.04]">
+                <p className="text-xs text-white/25 mb-1">Top Feature</p>
+                <p className="text-sm font-bold text-green-400">{FEATURE_LABELS[s.topFeature ?? ""] ?? s.topFeature ?? "—"}</p>
+              </div>
+              <div className="bg-black/20 rounded-lg p-3 border border-white/[0.04]">
+                <p className="text-xs text-white/25 mb-1">Top Voice</p>
+                <p className="text-sm font-bold" style={{ color: C }}>{s.topVoice ?? "—"}</p>
+              </div>
+              <div className="bg-black/20 rounded-lg p-3 border border-white/[0.04]">
+                <p className="text-xs text-white/25 mb-1">Peak Hour</p>
+                <p className="text-sm font-bold text-amber-400">{s.peakHour ?? "—"}</p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Success Rate */}
+          <Card className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs uppercase tracking-wider text-white/40 font-semibold">Success Rate (30d)</p>
+              <span className={`text-sm font-bold ${successRate >= 90 ? "text-green-400" : successRate >= 70 ? "text-amber-400" : "text-red-400"}`}>
+                {successRate}%
+              </span>
+            </div>
+            <div className="h-2 rounded-full bg-white/[0.06]">
+              <div className="h-2 rounded-full transition-all" style={{ width: `${successRate}%`, background: successRate >= 90 ? "#4ade80" : successRate >= 70 ? "#fbbf24" : "#ef4444" }} />
+            </div>
+            <div className="flex justify-between mt-2 text-xs text-white/30">
+              <span>{data.statusBreakdown.success} success</span>
+              <span>{data.statusBreakdown.fail} failed</span>
+            </div>
+          </Card>
+
+          {/* Hourly Activity */}
+          {data.activeHours.length > 0 && (
+            <Card className="p-4">
+              <p className="text-xs uppercase tracking-wider text-white/40 mb-3 font-semibold">Hourly Activity</p>
+              <div className="flex items-end gap-[2px] h-12">
+                {Array.from({ length: 24 }, (_, i) => {
+                  const hourData = data.activeHours.find((h: any) => h.hour === i);
+                  const count = hourData?.count ?? 0;
+                  const h = maxHour > 0 ? Math.round((count / maxHour) * 48) : 2;
+                  return <div key={i} title={`${i}:00 - ${count}`} className="flex-1 rounded-t bg-[#C06F30]/50 hover:bg-[#C06F30] transition-colors" style={{ height: `${Math.max(h, 2)}px` }} />;
+                })}
+              </div>
+              <div className="flex justify-between text-[10px] text-white/20 mt-1">
+                <span>12am</span><span>6am</span><span>12pm</span><span>6pm</span><span>11pm</span>
               </div>
             </Card>
+          )}
 
-            <Card className="p-5">
-              <p className="text-xs uppercase tracking-wider text-white/40 mb-2 font-semibold">Feature Usage (30d)</p>
-              {data.features.map((f: any) => (
-                <MiniBar key={f.feature} label={FEATURE_LABELS[f.feature] ?? f.feature} count={f.count} max={data.totalGens} />
-              ))}
-            </Card>
-
-            <Card className="p-5">
-              <p className="text-xs uppercase tracking-wider text-white/40 mb-2 font-semibold">Voice Usage (30d)</p>
-              {data.voices.length === 0 ? <p className="text-sm text-white/25">No voice data</p> : data.voices.map((v: any) => (
-                <MiniBar key={v.name} label={v.name} count={v.count} max={maxVoice} color="#C06F30" />
-              ))}
-            </Card>
-
-            <Card className="p-5">
-              <p className="text-xs uppercase tracking-wider text-white/40 mb-2 font-semibold">Daily Activity (30d)</p>
-              <div className="flex items-end gap-[2px] h-14">
+          {/* Daily Activity */}
+          {data.daily.length > 0 && (
+            <Card className="p-4">
+              <p className="text-xs uppercase tracking-wider text-white/40 mb-3 font-semibold">Daily Activity (30d)</p>
+              <div className="flex items-end gap-[2px] h-12">
                 {data.daily.map((d: any) => {
-                  const h = maxDaily > 0 ? Math.round((d.count / maxDaily) * 56) : 3;
-                  return <div key={d.date} title={`${d.date}: ${d.count}`} className="flex-1 rounded-t bg-[#C06F30]/60 hover:bg-[#C06F30] transition-colors" style={{ height: `${Math.max(h, 3)}px` }} />;
+                  const h = maxDaily > 0 ? Math.round((d.count / maxDaily) * 48) : 2;
+                  return <div key={d.date} title={`${d.date}: ${d.count}`} className="flex-1 rounded-t bg-[#C06F30]/50 hover:bg-[#C06F30] transition-colors" style={{ height: `${Math.max(h, 2)}px` }} />;
                 })}
               </div>
             </Card>
+          )}
 
-            <Card className="p-5">
-              <p className="text-xs uppercase tracking-wider text-white/40 mb-2 font-semibold">Recent Logs</p>
-              <div className="space-y-2 max-h-56 overflow-y-auto">
-                {data.recentLogs.map((log: any) => (
-                  <div key={log.id} className="flex items-center gap-3 text-xs py-2 border-b border-white/[0.04] last:border-0">
-                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${log.status === "fail" ? "bg-red-400" : "bg-green-400"}`} />
-                    <span className="text-white/30 w-10 truncate">{FEATURE_LABELS[log.feature ?? "tts"]?.substring(0, 3)}</span>
-                    <span className="font-mono text-white/40 truncate max-w-[80px]">{log.voice ?? log.character ?? "—"}</span>
-                    <span className="text-white/25">{log.charCount}c</span>
-                    {log.status === "fail" && <span className="text-red-400 truncate flex-1">{log.errorMsg}</span>}
-                    <span className="ml-auto text-white/25 flex-shrink-0">{fmtTime(log.createdAt)}</span>
+          {/* Feature Usage */}
+          {data.features.length > 0 && (
+            <Card className="p-4">
+              <p className="text-xs uppercase tracking-wider text-white/40 mb-3 font-semibold">Feature Usage (30d)</p>
+              <div className="space-y-2">
+                {data.features.sort((a: any, b: any) => b.count - a.count).map((f: any) => (
+                  <div key={f.feature} className="flex items-center gap-3">
+                    <div className="w-20 text-xs font-semibold text-white/70 truncate">{FEATURE_LABELS[f.feature] ?? f.feature}</div>
+                    <div className="flex-1 h-2 rounded-full bg-white/[0.06]">
+                      <div className="h-2 rounded-full bg-green-400" style={{ width: `${Math.round((f.count / s.totalGens) * 100)}%` }} />
+                    </div>
+                    <div className="text-xs font-bold text-white/50 w-8">{f.count}</div>
                   </div>
                 ))}
               </div>
             </Card>
+          )}
+
+          {/* Voice Usage */}
+          {data.voices.length > 0 && (
+            <Card className="p-4">
+              <p className="text-xs uppercase tracking-wider text-white/40 mb-3 font-semibold">Voice Usage (30d)</p>
+              <div className="space-y-2">
+                {data.voices.sort((a: any, b: any) => b.count - a.count).slice(0, 6).map((v: any) => (
+                  <div key={v.name} className="flex items-center gap-3">
+                    <div className="w-20 text-xs font-semibold text-white/70 truncate">{v.name}</div>
+                    <div className="flex-1 h-2 rounded-full bg-white/[0.06]">
+                      <div className="h-2 rounded-full" style={{ width: `${Math.round((v.count / maxVoice) * 100)}%`, background: "#C06F30" }} />
+                    </div>
+                    <div className="text-xs font-bold text-white/50 w-8">{v.count}</div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Recent Activity */}
+          {data.recentLogs.length > 0 && (
+            <Card className="p-4">
+              <p className="text-xs uppercase tracking-wider text-white/40 mb-3 font-semibold">Recent Activity</p>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {data.recentLogs.map((log: any) => (
+                  <div key={log.id} className="flex items-center gap-2 py-2 border-b border-white/[0.04] last:border-0">
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${log.status === "fail" ? "bg-red-400" : "bg-green-400"}`} />
+                    <span className="text-xs text-white/40 w-10">{FEATURE_LABELS[log.feature ?? "tts"]?.substring(0, 3) ?? "TTS"}</span>
+                    <span className="text-xs text-white/60 truncate flex-1">{log.character || log.voice || "—"}</span>
+                    <span className="text-xs text-white/30">{log.charCount}c</span>
+                    <span className="text-xs text-white/20 flex-shrink-0">{fmtTime(log.createdAt)}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Credit History */}
+          {(userCredits?.length ?? 0) > 0 && (
+            <Card className="p-4">
+              <p className="text-xs uppercase tracking-wider text-white/40 mb-3 font-semibold flex items-center gap-2">
+                <History className="w-4 h-4" /> Credit History
+              </p>
+              <div className="space-y-1 max-h-48 overflow-y-auto">
+                {userCredits?.slice(0, 10).map((t: any) => {
+                  const isPos = t.amount > 0;
+                  return (
+                    <div key={t.id} className="flex items-center gap-2 text-xs py-2 border-b border-white/[0.04] last:border-0">
+                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isPos ? "bg-green-400" : "bg-amber-400"}`} />
+                      <span className="text-white/40 w-20 truncate capitalize">{(t.type || "").replace("_", " ")}</span>
+                      <span className="text-white/30 truncate flex-1">{t.description}</span>
+                      <span className={`font-bold ${isPos ? "text-green-400" : "text-amber-500"}`}>{isPos ? "+" : ""}{t.amount}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
+
+          {/* Chars & Duration */}
+          <div className="grid grid-cols-2 gap-3">
+            <Card className="p-4">
+              <p className="text-xs text-white/30 mb-1">Total Characters (30d)</p>
+              <p className="text-lg font-black text-blue-400">{s.totalChars.toLocaleString()}</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs text-white/30 mb-1">Total Duration (30d)</p>
+              <p className="text-lg font-black text-amber-400">{fmtDuration(s.totalDurationMs)}</p>
+            </Card>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

@@ -380,7 +380,8 @@ export const adminStatsRouter = t.router({
     .query(async ({ input }) => {
       const db = await getDb();
       const empty = {
-        totalGens: 0, recentGens: 0, allTimeGens: 0, totalChars: 0, totalDurationMs: 0,
+        user: null,
+        stats: { totalGens: 0, recentGens: 0, allTimeGens: 0, totalChars: 0, totalDurationMs: 0, avgDailyGens: 0, topFeature: null, topVoice: null, peakHour: null },
         statusBreakdown: { success: 0, fail: 0 },
         features: [], voices: [], activeHours: [], daily: [],
         recentLogs: [], subscription: null as any,
@@ -460,12 +461,39 @@ export const adminStatsRouter = t.router({
           .where(sql`user_id = ${input.userId} AND expires_at > NOW()`)
           .limit(1);
 
+        const [userRow] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, input.userId))
+          .limit(1);
+
+        const avgDailyGens = daily.length > 0 ? Math.round((stats30?.count || 0) / daily.length) : 0;
+        const topFeature = features.length > 0 ? features.sort((a: any, b: any) => b.count - a.count)[0] : null;
+        const topVoice = voices.length > 0 ? voices.sort((a: any, b: any) => b.count - a.count)[0] : null;
+        const peakHour = activeHours.length > 0 ? activeHours.sort((a: any, b: any) => b.count - a.count)[0] : null;
+
         return {
-          totalGens: stats30?.count || 0,
-          recentGens: stats7?.count || 0,
-          allTimeGens: statsAllTime?.count || 0,
-          totalChars: Number(stats30?.chars) || 0,
-          totalDurationMs: Number(stats30?.duration) || 0,
+          user: {
+            id: userRow?.id,
+            name: userRow?.telegramFirstName || userRow?.name || "Unknown",
+            username: userRow?.telegramUsername || "",
+            email: userRow?.email || "",
+            credits: userRow?.credits || 0,
+            createdAt: userRow?.createdAt,
+            lastLoginAt: userRow?.lastLoginAt,
+            banned: userRow?.banned,
+          },
+          stats: {
+            totalGens: stats30?.count || 0,
+            recentGens: stats7?.count || 0,
+            allTimeGens: statsAllTime?.count || 0,
+            totalChars: Number(stats30?.chars) || 0,
+            totalDurationMs: Number(stats30?.duration) || 0,
+            avgDailyGens,
+            topFeature: topFeature?.feature || null,
+            topVoice: topVoice?.name || null,
+            peakHour: peakHour ? `${peakHour.hour}:00` : null,
+          },
           statusBreakdown,
           features,
           voices,
