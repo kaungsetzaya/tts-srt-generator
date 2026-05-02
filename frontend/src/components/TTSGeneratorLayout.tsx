@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import React from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
   Sidebar,
@@ -24,6 +24,7 @@ import {
   FileVideo,
   Wand2,
   FolderOpen,
+  Star,
 } from "lucide-react";
 
 interface TTSGeneratorLayoutProps {
@@ -59,87 +60,81 @@ export function TTSGeneratorLayout({
   const accentSecondary = "#F4B34F";
 
   return (
-    <>
-      <SidebarProvider defaultOpen className="h-[100dvh] overflow-hidden">
-        <div className="flex flex-col h-full w-full overflow-hidden">
-          {/* ── Full Header Bar ── */}
-          <header
-            className="fixed top-0 left-0 right-0 z-[100] h-14 w-full border-b border-white/5 bg-background/80 backdrop-blur-xl flex items-center px-3 gap-3"
-            style={{
-              backgroundColor: isDark
-                ? "rgba(15, 15, 15, 0.95)"
-                : "rgba(255, 255, 255, 0.95)",
-              borderColor: isDark
-                ? "rgba(255,255,255,0.08)"
-                : "rgba(0,0,0,0.08)",
-            }}
-          >
-            {/* Sidebar Trigger */}
-            <SidebarTrigger className="hidden md:flex shrink-0 scale-110 active:scale-95 transition-transform" />
+    <SidebarProvider defaultOpen className="h-[100dvh] overflow-hidden">
+      <TTSGeneratorSidebar
+        currentTab={currentSecondaryTab}
+        onTabChange={onTabChange}
+        mainTab={mainTab}
+        setMainTab={setMainTab}
+        isDark={isDark}
+        lang={lang}
+        setLang={setLang}
+      />
+      <SidebarRail className="hidden md:block" />
+      <SidebarInset className="flex-1 min-h-0 overflow-hidden">
+        {/* ── Full Header Bar ── */}
+        <header
+          className="sticky top-0 z-[100] h-14 w-full border-b border-white/5 bg-background/80 backdrop-blur-xl flex items-center px-3 gap-3 shrink-0"
+          style={{
+            backgroundColor: isDark
+              ? "rgba(15, 15, 15, 0.95)"
+              : "rgba(255, 255, 255, 0.95)",
+            borderColor: isDark
+              ? "rgba(255,255,255,0.08)"
+              : "rgba(0,0,0,0.08)",
+          }}
+        >
+          {/* Sidebar Trigger */}
+          <SidebarTrigger className="hidden md:flex shrink-0 scale-110 active:scale-95 transition-transform" />
 
-            {/* Logo */}
-            {showLogo && (
-              <div className="flex items-center shrink-0">
-                {logoUrl ? (
-                  <img
-                    src={logoUrl}
-                    alt="LUMIX"
-                    className="h-7 w-auto object-contain"
-                  />
-                ) : (
-                  <span
-                    className="text-xl font-black tracking-widest"
-                    style={{
-                      background: "linear-gradient(135deg, #C06F30, #F4B34F)",
-                      WebkitBackgroundClip: "text",
-                      WebkitTextFillColor: "transparent",
-                      backgroundClip: "text",
-                      letterSpacing: "0.15em",
-                      filter: `drop-shadow(0 0 8px ${accent}40)`,
-                    }}
-                  >
-                    LUMIX
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Header Bar Content */}
-            {headerBar && (
-              <div className="flex-1 overflow-hidden">{headerBar}</div>
-            )}
-          </header>
-
-          <div className="flex flex-1 pt-14 w-full min-h-0 overflow-hidden">
-            {/* Sidebar — now under header */}
-            <div className="sticky top-14 h-[calc(100vh-3.5rem)] shrink-0">
-              <TTSGeneratorSidebar
-                currentTab={currentSecondaryTab}
-                onTabChange={onTabChange}
-                mainTab={mainTab}
-                setMainTab={setMainTab}
-                isDark={isDark}
-                lang={lang}
-                setLang={setLang}
-              />
+          {/* Logo */}
+          {showLogo && (
+            <div className="flex items-center shrink-0">
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt="LUMIX"
+                  className="h-7 w-auto object-contain"
+                />
+              ) : (
+                <span
+                  className="text-xl font-black tracking-widest"
+                  style={{
+                    background: "linear-gradient(135deg, #C06F30, #F4B34F)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    backgroundClip: "text",
+                    letterSpacing: "0.15em",
+                    filter: `drop-shadow(0 0 8px ${accent}40)`,
+                  }}
+                >
+                  LUMIX
+                </span>
+              )}
             </div>
-            <SidebarRail className="hidden md:block" />
-<SidebarInset className="flex-1 flex flex-col h-full min-h-0 overflow-hidden relative z-10">
-              <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative">
-                {children}
-              </main>
-              <MobileBottomNavigation
-                mainTab={mainTab}
-                setMainTab={setMainTab}
-                currentSecondaryTab={currentSecondaryTab}
-                onTabChange={onTabChange}
-                isDark={isDark}
-              />
-            </SidebarInset>
-          </div>
-        </div>
-      </SidebarProvider>
-    </>
+          )}
+
+          {/* Header Bar Content */}
+          {headerBar && (
+            <div className="flex-1 overflow-hidden">{headerBar}</div>
+          )}
+        </header>
+
+        {/* ── Main Content ── */}
+        <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative">
+          {children}
+        </main>
+
+        {/* ── Mobile Bottom Nav ── */}
+        <MobileBottomNavigation
+          mainTab={mainTab}
+          setMainTab={setMainTab}
+          currentSecondaryTab={currentSecondaryTab}
+          onTabChange={onTabChange}
+          isDark={isDark}
+        />
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
 
@@ -198,6 +193,13 @@ function TTSGeneratorSidebar({
       type: "secondary" as const,
     },
     {
+      id: "plan",
+      label: "Plan",
+      labelEn: "Plan",
+      icon: Star,
+      type: "secondary" as const,
+    },
+    {
       id: "files",
       label: "လိုင်ဘရီ",
       labelEn: "Library",
@@ -243,7 +245,6 @@ function TTSGeneratorSidebar({
         } as React.CSSProperties
       }
     >
-      {/* No SidebarHeader — logo moved to top header bar */}
       <SidebarContent className="bg-transparent px-2 py-4 overflow-y-auto">
         <SidebarGroup>
           <SidebarGroupContent>
@@ -358,98 +359,141 @@ function MobileBottomNavigation({
   onTabChange: (tab: any) => void;
   isDark?: boolean;
 }) {
+  const [moreOpen, setMoreOpen] = React.useState(false);
+
   const mainNavItems = [
-    { id: "dubbing" as const, icon: Wand2, label: "Auto Creator" },
+    { id: "dubbing" as const, icon: Wand2, label: "Auto" },
     { id: "video" as const, icon: FileVideo, label: "Video" },
     { id: "tts" as const, icon: Mic, label: "TTS" },
   ];
   const secondaryItems = [
     { id: "history", icon: History, label: "History" },
+    { id: "plan", icon: Star, label: "Plan" },
     { id: "files", icon: FolderOpen, label: "Library" },
+    { id: "guide", icon: BookOpen, label: "Guide" },
     { id: "settings", icon: Settings, label: "Settings" },
   ];
 
+  const isSecondaryActive = secondaryItems.some(s => s.id === currentSecondaryTab);
+
   return (
-    <div
-      className="md:hidden fixed bottom-0 left-0 right-0 z-[60] border-t backdrop-blur-2xl"
-      style={{
-        background: isDark ? "rgba(15,15,15,0.85)" : "rgba(255,255,255,0.85)",
-        borderColor: isDark ? "rgba(192,111,48,0.2)" : "rgba(192,111,48,0.1)",
-        boxShadow: isDark
-          ? "0 -10px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)"
-          : "0 -10px 40px rgba(192,111,48,0.1), inset 0 1px 0 rgba(255,255,255,0.5)",
-      }}
-    >
-      <div className="flex items-center justify-around py-3 px-4 gap-2">
-        {mainNavItems.map(({ id, icon: Icon, label }) => {
-          const isActive = mainTab === id && !currentSecondaryTab;
-          return (
-            <motion.button
-              key={id}
-              onClick={() => {
-                setMainTab(id);
-                onTabChange(null);
-              }}
-              whileTap={{ scale: 0.9 }}
-              className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl min-h-[44px] relative flex-1 transition-all duration-200"
-              style={{
-                color: isActive
-                  ? "#C06F30"
-                  : isDark
-                    ? "rgba(255,255,255,0.4)"
-                    : "rgba(0,0,0,0.4)",
-              }}
-            >
-              {isActive && (
-                <motion.div
-                  layoutId="mobileMainTab"
-                  className="absolute inset-0 rounded-xl"
-                  style={{
-                    background: "linear-gradient(135deg, rgba(192,111,48,0.15), rgba(244,179,79,0.1))",
-                    boxShadow: "0 0 15px #C06F3020"
-                  }}
-                  transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
-                />
-              )}
-              <Icon className="w-5 h-5 relative z-10" />
-              <span className="text-[10px] font-bold relative z-10 truncate">
-                {label}
-              </span>
-            </motion.button>
-          );
-        })}
-        {secondaryItems.map(({ id, icon: Icon, label }) => {
-          const isActive = currentSecondaryTab === id;
-          return (
-            <motion.button
-              key={id}
-              onClick={() => onTabChange(isActive ? null : id)}
-              whileTap={{ scale: 0.9 }}
-              className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl min-h-[44px] relative flex-1 transition-all duration-200"
-              style={{
-                color: isActive
-                  ? "#C06F30"
-                  : isDark
-                    ? "rgba(255,255,255,0.4)"
-                    : "rgba(0,0,0,0.4)",
-              }}
-            >
-              {isActive && (
-                <motion.div
-                  layoutId={"mobileTab-" + id}
-                  className="absolute inset-0 rounded-xl"
-                  style={{ background: "rgba(192,111,48,0.15)" }}
-                  transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
-                />
-              )}
-              <Icon className="w-5 h-5 relative z-10" />
-              <span className="text-[10px] font-bold relative z-10 truncate">
-                {label}
-              </span>
-            </motion.button>
-          );
-        })}
+    <>
+      <div
+        className="md:hidden fixed bottom-0 left-0 right-0 z-[60] border-t backdrop-blur-2xl"
+        style={{
+          background: isDark ? "rgba(15,15,15,0.85)" : "rgba(255,255,255,0.85)",
+          borderColor: isDark ? "rgba(192,111,48,0.2)" : "rgba(192,111,48,0.1)",
+          boxShadow: isDark
+            ? "0 -10px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)"
+            : "0 -10px 40px rgba(192,111,48,0.1), inset 0 1px 0 rgba(255,255,255,0.5)",
+        }}
+      >
+        <div className="flex items-center justify-around py-3 px-4 gap-2">
+          {mainNavItems.map(({ id, icon: Icon, label }) => {
+            const isActive = mainTab === id && !currentSecondaryTab;
+            return (
+              <motion.button
+                key={id}
+                onClick={() => {
+                  setMainTab(id);
+                  onTabChange(null);
+                  setMoreOpen(false);
+                }}
+                whileTap={{ scale: 0.9 }}
+                className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl min-h-[44px] relative flex-1 transition-all duration-200"
+                style={{
+                  color: isActive
+                    ? "#C06F30"
+                    : isDark
+                      ? "rgba(255,255,255,0.4)"
+                      : "rgba(0,0,0,0.4)",
+                }}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="mobileMainTab"
+                    className="absolute inset-0 rounded-xl"
+                    style={{
+                      background: "linear-gradient(135deg, rgba(192,111,48,0.15), rgba(244,179,79,0.1))",
+                      boxShadow: "0 0 15px #C06F3020"
+                    }}
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
+                  />
+                )}
+                <Icon className="w-5 h-5 relative z-10" />
+                <span className="text-[10px] font-bold relative z-10">{label}</span>
+              </motion.button>
+            );
+          })}
+          {/* More menu button */}
+          <motion.button
+            onClick={() => setMoreOpen(!moreOpen)}
+            whileTap={{ scale: 0.9 }}
+            className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl min-h-[44px] relative flex-1 transition-all duration-200"
+            style={{
+              color: isSecondaryActive || moreOpen
+                ? "#C06F30"
+                : isDark
+                  ? "rgba(255,255,255,0.4)"
+                  : "rgba(0,0,0,0.4)",
+            }}
+          >
+            {(isSecondaryActive || moreOpen) && (
+              <motion.div
+                layoutId="mobileMoreTab"
+                className="absolute inset-0 rounded-xl"
+                style={{ background: "rgba(192,111,48,0.15)" }}
+                transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
+              />
+            )}
+            <svg className="w-5 h-5 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              {moreOpen ? <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /> : <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />}
+            </svg>
+            <span className="text-[10px] font-bold relative z-10">{moreOpen ? "Close" : "More"}</span>
+          </motion.button>
+        </div>
       </div>
-    </div>
+
+      {/* More menu sheet */}
+      <AnimatePresence>
+        {moreOpen && (
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            className="md:hidden fixed bottom-[72px] left-2 right-2 z-[55] rounded-2xl border p-3 shadow-2xl"
+            style={{
+              background: isDark ? "rgba(25,25,25,0.95)" : "rgba(255,255,255,0.95)",
+              borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)",
+            }}
+          >
+            <div className="grid grid-cols-3 gap-2">
+              {secondaryItems.map(({ id, icon: Icon, label }) => {
+                const isActive = currentSecondaryTab === id;
+                return (
+                  <motion.button
+                    key={id}
+                    onClick={() => {
+                      onTabChange(isActive ? null : id);
+                      setMoreOpen(false);
+                    }}
+                    whileTap={{ scale: 0.95 }}
+                    className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl transition-all"
+                    style={{
+                      background: isActive ? "rgba(192,111,48,0.15)" : "transparent",
+                      color: isActive ? "#C06F30" : isDark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.6)",
+                    }}
+                  >
+                    <Icon className="w-5 h-5" />
+                    <span className="text-[11px] font-semibold">{label}</span>
+                  </motion.button>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

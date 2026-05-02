@@ -9,7 +9,6 @@ import {
   AlertCircle,
   Mic,
 } from "lucide-react";
-import CircularLoader from "@/features/tts-generator/components/CircularLoader";
 import {
   ALL_VOICES,
   TIER1_VOICES,
@@ -132,8 +131,13 @@ function TextInputCard({
   styles,
   charLimit,
 }: TTSTabProps & { styles: ReturnType<typeof useThemeStyles>; charLimit: number }) {
-  const counter = styles.charCounter(text.length, charLimit, isAdmin);
   const isOverLimit = !isAdmin && text.length >= charLimit;
+  const pct = isAdmin ? 0 : Math.min((text.length / charLimit) * 100, 100);
+  const isWarn = !isAdmin && text.length > charLimit * 0.9 && !isOverLimit;
+
+  let barColor = "#C06F30";
+  if (isOverLimit) barColor = "#dc2626";
+  else if (isWarn) barColor = "#f59e0b";
 
   return (
     <section {...styles.card}>
@@ -153,31 +157,52 @@ function TextInputCard({
           disabled={!hasPlan}
           aria-invalid={isOverLimit}
           aria-describedby="char-count"
-          className={`${styles.input.className} h-28 sm:h-32 md:h-40 p-3 sm:p-4 pr-28 resize-none text-sm leading-relaxed`}
+          className={`${styles.input.className} h-28 sm:h-32 md:h-40 p-3 sm:p-4 resize-none text-sm leading-relaxed`}
           style={{
             ...styles.input.style,
             borderColor: isOverLimit
               ? "#dc2626"
-              : !isAdmin && text.length > charLimit * 0.9
+              : isWarn
                 ? "#f59e0b"
                 : styles.input.style.borderColor,
             fontFamily: lang === "mm" ? "'Pyidaungsu', sans-serif" : "inherit",
+            borderBottomLeftRadius: 0,
+            borderBottomRightRadius: 0,
           }}
         />
+        {/* Progress bar */}
+        <div className="h-[3px] w-full" style={{ background: styles.isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)" }}>
+          <div
+            className="h-full transition-all duration-300 ease-out rounded-r-full"
+            style={{ width: `${pct}%`, background: barColor }}
+          />
+        </div>
+        {/* Counter footer */}
         <div
           id="char-count"
-          className={counter.className}
-          style={counter.style}
+          className="flex items-center justify-between px-3 py-2 rounded-b-xl border-t-0 border"
+          style={{
+            background: styles.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.015)",
+            borderColor: isOverLimit
+              ? "#dc2626"
+              : isWarn
+                ? "#f59e0b"
+                : styles.inputBorder,
+            borderTop: "none",
+          }}
           aria-live="polite"
         >
-          {text.length.toLocaleString()} /{" "}
-          {!isAdmin && hasPlan ? charLimit.toLocaleString() : "∞"}
+          <span className="text-[11px] font-semibold" style={{ color: styles.subtextColor }}>
+            {lang === "mm" ? "စာလုံး" : "characters"}
+          </span>
+          <span className="text-[11px] font-bold tabular-nums" style={{ color: barColor }}>
+            {text.length.toLocaleString()}
+            <span className="opacity-40 mx-0.5" style={{ color: styles.subtextColor }}>/</span>
+            <span style={{ color: styles.subtextColor }}>
+              {!isAdmin && hasPlan ? charLimit.toLocaleString() : "∞"}
+            </span>
+          </span>
         </div>
-      </div>
-      <div className="mt-2 flex justify-end">
-        <span className="text-[10px] font-semibold opacity-60" style={{ color: subtextColor }}>
-          {lang === "mm" ? "စာလုံး" : "characters"}
-        </span>
       </div>
     </section>
   );
@@ -399,7 +424,7 @@ function ActionCard({
   downloadFile,
   styles,
   themeValues,
-}: TTSTabProps & { styles: ReturnType<typeof useThemeStyles> }) {
+}: TTSTabProps & { styles: ReturnType<typeof useThemeStyles>; charLimit: number }) {
   const { isDark } = themeValues;
   const isDisabled =
     isGenerating || !text.trim() || !hasPlan || (!isAdmin && text.length > charLimit);
@@ -453,7 +478,6 @@ function ActionCard({
               <Loader2 className="w-6 h-6" />
             </motion.div>
             <span>{t.generating}</span>
-            <CircularLoader size={20} />
           </>
         ) : (
           <>

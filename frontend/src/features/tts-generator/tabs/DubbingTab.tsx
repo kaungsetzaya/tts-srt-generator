@@ -448,11 +448,11 @@ function DubbingTab({
                 maxHeight: "calc(100vh - 140px)"
               }}
             >
-              <div className="flex items-center justify-between px-3 pt-2 flex-shrink-0">
-                <div className={labelStyle} style={{ background: labelBg, color: accent, borderColor: cardBorder }}>
+              <div className="flex items-center justify-between px-3 pt-3 pb-1 flex-shrink-0">
+                <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: accent }}>
                   {lang === "mm" ? "ဗီဒီယိုကြိုကြည့်" : "Video Preview"}
-                </div>
-                <button onClick={() => { setDubVideoUrl(""); setDubPreviewUrl(""); setDubVideoFile(null); }} className="text-xs px-2 py-1 rounded hover:bg-red-500/20 text-red-400">✕</button>
+                </span>
+                <button onClick={() => { setDubVideoUrl(""); setDubPreviewUrl(""); setDubVideoFile(null); }} className="text-xs px-2 py-1 rounded hover:bg-red-500/20 text-red-400 transition-colors">✕</button>
               </div>
               <div className="flex-1 min-h-0 p-2 relative flex justify-center items-center">
                 {videoLoading ? (
@@ -626,31 +626,7 @@ function DubbingTab({
                     {/* Dubbing Loader Overlay */}
                     {activeJobId !== null && (
                       <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-4" style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(8px)" }}>
-                        <style>{`
-                          @keyframes loader-rotate {
-                            0% { transform: rotate(90deg); box-shadow: 0 10px 20px 0 #fff inset, 0 20px 30px 0 #ad5fff inset, 0 60px 60px 0 #471eec inset; }
-                            50% { transform: rotate(270deg); box-shadow: 0 10px 20px 0 #fff inset, 0 20px 10px 0 #d60a47 inset, 0 40px 60px 0 #311e80 inset; }
-                            100% { transform: rotate(450deg); box-shadow: 0 10px 20px 0 #fff inset, 0 20px 30px 0 #ad5fff inset, 0 60px 60px 0 #471eec inset; }
-                          }
-                          @keyframes loader-letter-anim {
-                            0%, 100% { opacity: 0.4; transform: translateY(0); }
-                            20% { opacity: 1; transform: scale(1.15); }
-                            40% { opacity: 0.7; transform: translateY(0); }
-                          }
-                          .dub-loader { position: absolute; top: 0; left: 0; width: 100%; aspect-ratio: 1/1; border-radius: 50%; animation: loader-rotate 2s linear infinite; z-index: 0; }
-                          .dub-letter { display: inline-block; opacity: 0.4; animation: loader-letter-anim 2s infinite; font-family: "Inter", sans-serif; font-weight: 700; color: white; }
-                          .dub-letter:nth-child(1) { animation-delay: 0s; }
-                          .dub-letter:nth-child(2) { animation-delay: 0.1s; }
-                          .dub-letter:nth-child(3) { animation-delay: 0.2s; }
-                          .dub-letter:nth-child(4) { animation-delay: 0.3s; }
-                          .dub-letter:nth-child(5) { animation-delay: 0.4s; }
-                          .dub-letter:nth-child(6) { animation-delay: 0.5s; }
-                          .dub-letter:nth-child(7) { animation-delay: 0.6s; }
-                          .dub-letter:nth-child(8) { animation-delay: 0.7s; }
-                          .dub-letter:nth-child(9) { animation-delay: 0.8s; }
-                          .dub-letter:nth-child(10) { animation-delay: 0.9s; }
-                        `}</style>
-                        <div style={{ position: "relative", width: "min(40vw, 180px)", aspectRatio: "1/1", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <div className="relative flex items-center justify-center" style={{ width: "min(40vw, 180px)", aspectRatio: "1/1" }}>
                           <div className="dub-loader" />
                           <div style={{ position: "relative", zIndex: 1, fontSize: "min(4vw, 1.2em)", letterSpacing: "0.1em" }}>
                             {"GENERATING".split("").map((ch, i) => (
