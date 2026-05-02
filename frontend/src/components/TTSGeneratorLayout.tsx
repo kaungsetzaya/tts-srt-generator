@@ -78,10 +78,10 @@ export function TTSGeneratorLayout({
           style={{
             backgroundColor: isDark
               ? "rgba(15, 15, 15, 0.95)"
-              : "rgba(255, 255, 255, 0.98)",
+              : "rgba(255, 255, 255, 0.95)",
             borderColor: isDark
               ? "rgba(255,255,255,0.08)"
-              : "rgba(0,0,0,0.06)",
+              : "rgba(192,111,48,0.1)",
           }}
         >
           {/* Sidebar Trigger */}
@@ -237,10 +237,10 @@ function TTSGeneratorSidebar({
         {
           backgroundColor: isDark
             ? "rgba(15, 15, 15, 0.95)"
-            : "rgba(255, 255, 255, 0.98)",
+            : "rgba(255, 255, 255, 0.95)",
           borderRight: isDark
             ? "1px solid rgba(255,255,255,0.08)"
-            : "1px solid rgba(0,0,0,0.06)",
+            : "1px solid rgba(192,111,48,0.1)",
           "--sidebar-width-icon": "4rem",
         } as React.CSSProperties
       }
@@ -282,19 +282,15 @@ function TTSGeneratorSidebar({
                         style={
                           isActive
                             ? {
-                                background: isDark
-                                  ? `linear-gradient(135deg, ${accent}40, ${accentSecondary}30)`
-                                  : "#F5F5F5",
-                                color: isDark ? "#ECCEB6" : "#0A0A0A",
+                                background: `linear-gradient(135deg, ${accent}40, ${accentSecondary}30)`,
+                                color: isDark ? "#ECCEB6" : "#2B1D1C",
                                 borderLeft: `3px solid ${accent}`,
-                                boxShadow: isDark
-                                  ? `0 0 20px ${accent}40, inset 0 1px 0 rgba(255,255,255,0.1)`
-                                  : "0 1px 4px rgba(0,0,0,0.06)",
+                                boxShadow: `0 0 20px ${accent}40, inset 0 1px 0 rgba(255,255,255,0.1)`,
                               }
                             : {
                                 color: isDark
                                   ? "rgba(236,206,182,0.6)"
-                                  : "rgba(0,0,0,0.5)",
+                                  : "rgba(43,29,28,0.6)",
                                 borderLeft: "3px solid transparent",
                               }
                         }
@@ -385,11 +381,11 @@ function MobileBottomNavigation({
       <div
         className="md:hidden fixed bottom-0 left-0 right-0 z-[60] border-t backdrop-blur-2xl"
         style={{
-          background: isDark ? "rgba(15,15,15,0.85)" : "rgba(255,255,255,0.95)",
-          borderColor: isDark ? "rgba(192,111,48,0.2)" : "rgba(0,0,0,0.06)",
+          background: isDark ? "rgba(15,15,15,0.85)" : "rgba(255,255,255,0.85)",
+          borderColor: isDark ? "rgba(192,111,48,0.2)" : "rgba(192,111,48,0.1)",
           boxShadow: isDark
             ? "0 -10px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)"
-            : "0 -4px 16px rgba(0,0,0,0.04)",
+            : "0 -10px 40px rgba(192,111,48,0.1), inset 0 1px 0 rgba(255,255,255,0.5)",
         }}
       >
         <div className="flex items-center justify-around py-3 px-4 gap-2">
@@ -418,12 +414,8 @@ function MobileBottomNavigation({
                     layoutId="mobileMainTab"
                     className="absolute inset-0 rounded-xl"
                     style={{
-                      background: isDark
-                        ? "linear-gradient(135deg, rgba(192,111,48,0.15), rgba(244,179,79,0.1))"
-                        : "#F5F5F5",
-                      boxShadow: isDark
-                        ? "0 0 15px #C06F3020"
-                        : "0 1px 4px rgba(0,0,0,0.06)"
+                      background: "linear-gradient(135deg, rgba(192,111,48,0.15), rgba(244,179,79,0.1))",
+                      boxShadow: "0 0 15px #C06F3020"
                     }}
                     transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
                   />
@@ -472,8 +464,8 @@ function MobileBottomNavigation({
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
             className="md:hidden fixed bottom-[72px] left-2 right-2 z-[55] rounded-2xl border p-3 shadow-2xl"
             style={{
-              background: isDark ? "rgba(25,25,25,0.95)" : "rgba(255,255,255,0.98)",
-              borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
+              background: isDark ? "rgba(25,25,25,0.95)" : "rgba(255,255,255,0.95)",
+              borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(192,111,48,0.1)",
             }}
           >
             <div className="grid grid-cols-3 gap-2">
@@ -489,10 +481,8 @@ function MobileBottomNavigation({
                     whileTap={{ scale: 0.95 }}
                     className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl transition-all"
                     style={{
-                      background: isActive
-                        ? isDark ? "rgba(192,111,48,0.15)" : "#F5F5F5"
-                        : "transparent",
-                      color: isActive ? "#C06F30" : isDark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.5)",
+                      background: isActive ? "rgba(192,111,48,0.15)" : "transparent",
+                      color: isActive ? "#C06F30" : isDark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.6)",
                     }}
                   >
                     <Icon className="w-5 h-5" />
