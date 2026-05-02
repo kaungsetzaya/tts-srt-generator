@@ -340,32 +340,27 @@ export const adminStatsRouter = t.router({
         const days = input.days ?? 30;
         const limitNum = input.limit ?? 20;
         
-        const intervalStr = `${Number(days)} DAY`;
-        
-        console.log(`[getTopUsers] Querying with interval: ${intervalStr}, limit: ${limitNum}`);
-        
         const topUsers = await db
           .select({
             userId: ttsConversions.userId,
             count: count(),
           })
           .from(ttsConversions)
-          .where(sql`created_at > DATE_SUB(NOW(), INTERVAL ${intervalStr})`)
+          .where(sql`user_id IS NOT NULL AND created_at > DATE_SUB(NOW(), INTERVAL ${days} DAY)`)
           .groupBy(ttsConversions.userId)
           .orderBy(desc(count()))
           .limit(limitNum);
-
-        console.log(`[getTopUsers] Found ${topUsers.length} top users`);
 
         if (topUsers.length === 0) return { users: [] };
 
         const userIds = topUsers.map((r: any) => r.userId).filter(Boolean);
         if (userIds.length === 0) return { users: [] };
 
+        const idList = userIds.map((id: string) => `'${id}'`).join(',');
         const userRows = await db
           .select()
           .from(users)
-          .where(sql`id IN (${userIds.map((id: string) => `'${id}'`).join(',')})`);
+          .where(sql`id IN (${idList})`);
 
         const userMap = new Map(userRows.map((u: any) => [u.id, u]));
 
