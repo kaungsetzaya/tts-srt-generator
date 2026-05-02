@@ -50,8 +50,8 @@ export const videoRouter = t.router({
           message: "Invalid video file format.",
         });
       }
-      const videoSize = input.videoBase64.length * 0.75;
-      if (videoSize > 25 * 1024 * 1024) {
+      const maxBase64Chars = Math.ceil((25 * 1024 * 1024 * 4) / 3);
+      if (input.videoBase64.length > maxBase64Chars) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "File too large. Max 25MB.",
@@ -226,7 +226,7 @@ export const videoRouter = t.router({
       }
     }),
 
-  previewLink: t.procedure
+  previewLink: protectedProcedure
     .input(z.object({ url: z.string() }))
     .mutation(async ({ input }) => {
       try {
@@ -266,8 +266,8 @@ export const videoRouter = t.router({
           message: "Invalid video file format.",
         });
       }
-      const videoSize = input.videoBase64.length * 0.75;
-      if (videoSize > 25 * 1024 * 1024) {
+      const maxBase64Chars = Math.ceil((25 * 1024 * 1024 * 4) / 3);
+      if (input.videoBase64.length > maxBase64Chars) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "File too large. Max 25MB.",

@@ -96,8 +96,8 @@ export async function transcribeAudio(
     let mimeType: string;
     try {
       const parsedUrl = new URL(options.audioUrl);
-      const allowedHosts = ["storage.googleapis.com", "s3.amazonaws.com", "choco.de5.net", "localhost", "127.0.0.1"];
-      if (!allowedHosts.includes(parsedUrl.hostname) && !parsedUrl.hostname.endsWith(".vercel.app")) {
+      const allowedHosts = ["storage.googleapis.com", "s3.amazonaws.com", "choco.de5.net"];
+      if (!allowedHosts.includes(parsedUrl.hostname)) {
         return {
           error: "Audio URL host is not allowed",
           code: "SERVICE_ERROR",

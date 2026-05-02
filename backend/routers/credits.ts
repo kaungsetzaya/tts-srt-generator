@@ -42,10 +42,17 @@ export async function deductCredits(
       }
 
       // ── Atomic deduct ──
-      await tx
+      const result = await tx
         .update(users)
         .set({ credits: sql`credits - ${amount}` })
         .where(and(eq(users.id, userId), gte(users.credits, amount)));
+
+      if (result.rowsAffected === 0) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Credit deduction failed due to concurrent update. Please retry.",
+        });
+      }
 
       await tx.insert(creditTransactions).values({
         id: randomUUID(),

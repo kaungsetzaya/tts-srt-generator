@@ -365,7 +365,12 @@ async function generateTier2Speech(
     throw new Error(`Murf API Error: ${result.error_message} (${result.error_code})`);
   }
 
-  const audioResponse = await fetch(result.audio_file);
+  // Validate Murf audio URL to prevent SSRF
+  const audioUrl = result.audio_file;
+  if (!audioUrl || !audioUrl.startsWith("https://")) {
+    throw new Error("Murf returned an invalid audio URL");
+  }
+  const audioResponse = await fetch(audioUrl);
   const convertedBuffer = Buffer.from(await audioResponse.arrayBuffer());
 
   return {

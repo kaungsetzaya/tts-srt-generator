@@ -153,7 +153,7 @@ export async function getVideoInfo(url: string): Promise<{ duration: number; fil
 
   // Try without cookies first
   try {
-    const { stdout } = await execFileAsync(YTDLP_PATH, [...baseArgs, url], { timeout: 60000 });
+    const { stdout } = await execFileAsync(YTDLP_PATH, [...baseArgs, "--", url], { timeout: 60000 });
     const info = JSON.parse(stdout);
     return {
       duration: info.duration || 0,
@@ -216,7 +216,7 @@ export async function downloadVideo(url: string, outputPath: string, options: { 
     }
 
     try {
-      await execFileAsync(YTDLP_PATH, [...baseArgs, url], { timeout: options.timeout || 300000 });
+      await execFileAsync(YTDLP_PATH, [...baseArgs, "--", url], { timeout: options.timeout || 300000 });
       return { success: true };
     } catch (error: any) {
       console.error("[Downloader Error - Trying with cookies]", error);

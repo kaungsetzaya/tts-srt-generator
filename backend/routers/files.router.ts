@@ -2,6 +2,7 @@
  * Files Router — list user's generated files from R2
  */
 import { z } from "zod";
+import path from "path";
 import { t, protectedProcedure } from "./trpc";
 import { r2Service } from "../src/modules/media/services/r2.service";
 
@@ -29,10 +30,12 @@ export const filesRouter = t.router({
     .input(z.object({ key: z.string().min(1) }))
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.user!.userId;
-      if (!input.key.startsWith(`users/${userId}/`)) {
+      const normalizedKey = path.normalize(input.key);
+      const expectedPrefix = `users/${userId}/`;
+      if (!normalizedKey.startsWith(expectedPrefix)) {
         throw new Error("Unauthorized");
       }
-      await r2Service.deleteFile(input.key);
+      await r2Service.deleteFile(normalizedKey);
       return { success: true };
     }),
 });

@@ -184,7 +184,7 @@ export const jobsRouter = t.router({
         status: job.status,
         progress: job.progress,
         message: job.message ?? "",
-        error: job.error,
+        error: job.status === "failed" ? "Processing failed. Please try again." : undefined,
         result: job.status === "completed" ? job.result : undefined,
       };
     }),

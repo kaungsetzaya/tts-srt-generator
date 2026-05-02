@@ -33,7 +33,7 @@ export async function generateGeminiSpeech(
   };
 
   let lastError;
-  console.log(`[Gemini TTS] Key prefix: ${apiKey?.slice(0, 10)}...`);
+  console.log(`[Gemini TTS] Using API key (hidden)`);
   console.log(`[Gemini TTS] Request:`, JSON.stringify(requestBody, null, 2));
   
   for (let i = 0; i < maxRetries; i++) {

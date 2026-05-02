@@ -268,7 +268,12 @@ export async function extractAndWarpVideoSegment(
 ): Promise<void> {
   const originalDurationSec = endSec - startSec;
   const targetDurationSec = targetDurationMs / 1000;
-  
+
+  // Guard against zero or negative duration to prevent division by zero / Infinity
+  if (originalDurationSec <= 0 || targetDurationSec <= 0) {
+    throw new Error(`Invalid segment duration: original=${originalDurationSec}s, target=${targetDurationSec}s`);
+  }
+
   // Always warp to ensure precise duration matching, even if ratio is close to 1
   const ratio = targetDurationSec / originalDurationSec;
   
