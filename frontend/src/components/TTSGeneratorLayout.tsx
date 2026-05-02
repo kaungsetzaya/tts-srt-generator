@@ -61,79 +61,82 @@ export function TTSGeneratorLayout({
 
   return (
     <SidebarProvider defaultOpen className="h-[100dvh] overflow-hidden">
-      <TTSGeneratorSidebar
-        currentTab={currentSecondaryTab}
-        onTabChange={onTabChange}
-        mainTab={mainTab}
-        setMainTab={setMainTab}
-        isDark={isDark}
-        lang={lang}
-        setLang={setLang}
-      />
-      <SidebarRail className="hidden md:block" />
-      <SidebarInset className="flex-1 min-h-0 overflow-hidden">
-        {/* ── Full Header Bar ── */}
-        <header
-          className="sticky top-0 z-[100] h-14 w-full border-b backdrop-blur-xl flex items-center px-3 gap-3 shrink-0"
-          style={{
-            backgroundColor: isDark
-              ? "rgba(15, 15, 15, 0.95)"
-              : "rgba(255, 255, 255, 0.95)",
-            borderColor: isDark
-              ? "rgba(255,255,255,0.08)"
-              : "rgba(192,111,48,0.1)",
-          }}
-        >
-          {/* Sidebar Trigger */}
-          <SidebarTrigger className="hidden md:flex shrink-0 scale-110 active:scale-95 transition-transform" />
+      {/* ── Full Width Header Bar ── */}
+      <header
+        className="fixed top-0 left-0 right-0 z-[200] h-14 w-full border-b backdrop-blur-xl flex items-center px-3 gap-3"
+        style={{
+          backgroundColor: isDark
+            ? "rgba(15, 15, 15, 0.95)"
+            : "rgba(255, 255, 255, 0.95)",
+          borderColor: isDark
+            ? "rgba(255,255,255,0.08)"
+            : "rgba(192,111,48,0.1)",
+        }}
+      >
+        {/* Sidebar Trigger */}
+        <SidebarTrigger className="hidden md:flex shrink-0 scale-110 active:scale-95 transition-transform" />
 
-          {/* Logo */}
-          {showLogo && (
-            <div className="flex items-center shrink-0">
-              {logoUrl ? (
-                <img
-                  src={logoUrl}
-                  alt="LUMIX"
-                  className="h-7 w-auto object-contain"
-                />
-              ) : (
-                <span
-                  className="text-xl font-black tracking-widest"
-                  style={{
-                    background: "linear-gradient(135deg, #C06F30, #F4B34F)",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    backgroundClip: "text",
-                    letterSpacing: "0.15em",
-                    filter: `drop-shadow(0 0 8px ${accent}40)`,
-                  }}
-                >
-                  LUMIX
-                </span>
-              )}
-            </div>
-          )}
+        {/* Logo */}
+        {showLogo && (
+          <div className="flex items-center shrink-0">
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt="LUMIX"
+                className="h-7 w-auto object-contain"
+              />
+            ) : (
+              <span
+                className="text-xl font-black tracking-widest"
+                style={{
+                  background: "linear-gradient(135deg, #C06F30, #F4B34F)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                  letterSpacing: "0.15em",
+                  filter: `drop-shadow(0 0 8px ${accent}40)`,
+                }}
+              >
+                LUMIX
+              </span>
+            )}
+          </div>
+        )}
 
-          {/* Header Bar Content */}
-          {headerBar && (
-            <div className="flex-1 overflow-hidden">{headerBar}</div>
-          )}
-        </header>
+        {/* Header Bar Content */}
+        {headerBar && (
+          <div className="flex-1 overflow-hidden">{headerBar}</div>
+        )}
+      </header>
 
-        {/* ── Main Content ── */}
-        <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative">
-          {children}
-        </main>
-
-        {/* ── Mobile Bottom Nav ── */}
-        <MobileBottomNavigation
+      {/* ── Sidebar + Content below header ── */}
+      <div className="flex pt-14 h-full w-full">
+        <TTSGeneratorSidebar
+          currentTab={currentSecondaryTab}
+          onTabChange={onTabChange}
           mainTab={mainTab}
           setMainTab={setMainTab}
-          currentSecondaryTab={currentSecondaryTab}
-          onTabChange={onTabChange}
           isDark={isDark}
+          lang={lang}
+          setLang={setLang}
         />
-      </SidebarInset>
+        <SidebarRail className="hidden md:block" />
+        <SidebarInset className="flex-1 min-h-0 overflow-hidden">
+          {/* ── Main Content ── */}
+          <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative">
+            {children}
+          </main>
+
+          {/* ── Mobile Bottom Nav ── */}
+          <MobileBottomNavigation
+            mainTab={mainTab}
+            setMainTab={setMainTab}
+            currentSecondaryTab={currentSecondaryTab}
+            onTabChange={onTabChange}
+            isDark={isDark}
+          />
+        </SidebarInset>
+      </div>
     </SidebarProvider>
   );
 }
